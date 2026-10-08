@@ -78,7 +78,11 @@ struct SetupView: View {
 
                 CheckCard(title: "Toolchain", state: model.toolchainText == nil ? .missing : .ok,
                           detail: model.toolchainText ?? L("Not installed yet. The toolchain translates the games for the Vision Pro.", "Noch nicht installiert. Die Toolchain übersetzt die Spiele für die Vision Pro.")) {
-                    Button(L("Install Toolchain Package …", "Toolchain-Paket installieren …")) { chooseToolchain() }
+                    Text(L("The toolchain comes with the app and installs itself. You only need the button below to use a different package.",
+                           "Die Toolchain kommt mit dem Programm und installiert sich selbst. Den Knopf brauchst du nur für ein anderes Paket."))
+                        .font(.callout).foregroundStyle(.secondary)
+                    Button(L("Use Another Package …", "Anderes Paket verwenden …")) { chooseToolchain() }
+                        .controlSize(.small)
                 }
             }
             .padding(24)
