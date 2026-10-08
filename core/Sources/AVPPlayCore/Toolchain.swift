@@ -212,6 +212,7 @@ public struct Toolchain: Sendable {
         env["KLEPTON_APP_VERSION"] = AppStamp.short(versionName: recipe.versionName)
         env["KLEPTON_APP_BUILD"] = AppStamp.build(versionCode: recipe.versionCode, toolchainVersion: version())
         if let bundleId { env["KLEPTON_BUNDLE_ID"] = bundleId }
+        env.merge(Toolchain.genericEnvironment(recipe: recipe)) { _, new in new }
         env.merge(extraEnvironment) { _, new in new }
 
         FileManager.default.createFile(atPath: log.path, contents: nil)

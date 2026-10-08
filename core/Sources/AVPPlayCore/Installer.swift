@@ -298,8 +298,16 @@ public struct Installer: Sendable {
 
     /// Ergänzend kopieren: nur was auf dem Gerät fehlt oder eine andere Größe hat.
     func stage() throws {
-        let local = try localFiles()
         let (device, bundle, toolchain) = try target()
+        // Ein Entwurf lässt offen, wo die Haupt-Datendatei hingehört; jetzt, mit entpacktem APK, weiß es die Toolchain.
+        var obb: String?
+        let local = try localFiles().map { entry -> (file: RecipeFile, url: URL, size: Int64) in
+            guard entry.file.dest == DraftRecipe.obbPlaceholder else { return entry }
+            if obb == nil { obb = toolchain.obbDestination(recipe: recipe) ?? "android-files/obb" }
+            var file = entry.file
+            file.dest = obb
+            return (file, entry.url, entry.size)
+        }
         guard try control.apps(device: device).contains(where: { $0.bundleIdentifier == bundle }) else {
             throw InstallError.appNotInstalled(bundle)
         }

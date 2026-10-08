@@ -128,18 +128,17 @@ extension AppModel {
                     throw Stop(L("This game is not in your Meta account. Nothing is looked up or downloaded.",
                                  "Dieses Spiel gehört nicht zu deinem Meta-Konto. Es wird nichts nachgeschlagen oder geladen."))
                 }
-                guard let target = detail.target, !target.isEmpty, let kind = toolchain.targetKind(target) else {
-                    throw Stop(L("The toolchain does not know this game yet, so there is nothing to build it with. It can be listed and you can mark it as a favourite; trying it comes with a later version.",
-                                 "Die Toolchain kennt dieses Spiel noch nicht – es gibt also nichts, womit es gebaut werden könnte. Du kannst es als Favorit merken; der Versuch kommt mit einer späteren Fassung."))
-                }
+                // Kennt die Toolchain das Spiel, gilt ihr Eintrag; sonst wird es mit dem allgemeinen Versuchs-Target
+                // gebaut, das sich nur nach der Engine richtet.
+                let named = detail.target.flatMap { $0.isEmpty || toolchain.targetKind($0) == nil ? nil : $0 }
+                let target = named ?? DraftRecipe.genericTarget(appId: entry.appId)
                 try MetaTool(url: tool).verify()
                 await say(L("Asking Meta's tool for the files of build \(build.version) …", "Metas Werkzeug wird nach den Dateien von Build \(build.version) gefragt …"))
                 var files = try MetaListing.list(.build, buildId: build.buildId, tool: tool, token: token)
                 try await Task.sleep(for: .seconds(5))
                 // Weitere Dateien hat nicht jedes Spiel; sagt das Werkzeug dazu nichts oder lehnt ab, bleibt es bei APK und OBB.
                 if let assets = try? MetaListing.list(.assets, buildId: build.buildId, tool: tool, token: token) { files += assets }
-                let recipe = try DraftRecipe.make(game: detail, build: build, files: files, target: target, unreal: kind == "ue4",
-                                                  minCommit: toolchain.commit())
+                let recipe = try DraftRecipe.make(game: detail, build: build, files: files, target: target, minCommit: toolchain.commit())
                 try FileManager.default.createDirectory(at: drafts, withIntermediateDirectories: true)
                 let encoder = JSONEncoder()
                 encoder.outputFormatting = [.sortedKeys, .prettyPrinted]

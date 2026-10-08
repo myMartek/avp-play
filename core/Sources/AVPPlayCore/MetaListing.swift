@@ -126,10 +126,20 @@ public enum DraftRecipe {
                icon: nil, trees: nil)
     }
 
-    /// - Parameters:
-    ///   - target: der Name des Spiels in der Toolchain.
-    ///   - unreal: ob das Spiel ein Unreal-Spiel ist. Daran hängt, wo es seine Datendateien sucht.
-    public static func make(game: CatalogGame, build: CatalogBuild, files: [ListedFile], target: String, unreal: Bool,
+    /// Der Name, unter dem die Toolchain ein Spiel versucht, das sie nicht kennt: `x` und die Kennung der Store-App.
+    /// Er ist zugleich Ordner, APK-Name und – über die Bundle-ID – die Kennung der App auf dem Gerät.
+    public static func genericTarget(appId: String) -> String { "x\(appId)" }
+
+    public static func isGeneric(_ target: String) -> Bool {
+        target.hasPrefix("x") && CatalogGame.isIdentifier(String(target.dropFirst()))
+    }
+
+    /// Steht als Ziel der Haupt-Datendatei im Entwurf. Wo ein Spiel sie sucht, hängt von seiner Engine ab, und
+    /// die kennt erst die Toolchain, wenn das APK entpackt ist – deshalb wird der Ort beim Kopieren eingesetzt.
+    public static let obbPlaceholder = "@obb"
+
+    /// - Parameter target: der Name des Spiels in der Toolchain – ein Eintrag ihrer Tabelle oder `genericTarget`.
+    public static func make(game: CatalogGame, build: CatalogBuild, files: [ListedFile], target: String,
                             minCommit: String) throws -> Recipe {
         guard let apk = files.first(where: { $0.kind == "APK" }) else { throw ListingError.nothingListed }
         let androidObb = "android-files/Android/obb/\(game.package)"
@@ -138,9 +148,9 @@ public enum DraftRecipe {
         var seen: Set<String> = [apk.name]
         for file in files where file.kind != "APK" && seen.insert(file.name).inserted {
             let isMain = file.kind == "OBB"
-            // Unity fragt Android nach seinem OBB-Ordner und bekommt den der App; Unreal sucht am üblichen Ort
-            // unter Android/obb/<Paket>. Weitere Dateien liegen auf einer Quest immer dort.
-            let dest = isMain && !unreal ? "android-files/obb" : androidObb
+            // Weitere Dateien liegen auf einer Quest immer unter Android/obb/<Paket>; den Ort der Haupt-Datendatei
+            // setzt die Toolchain ein.
+            let dest = isMain ? obbPlaceholder : androidObb
             list.append(RecipeFile(name: file.name, role: isMain ? "main-obb" : "content-bundle", id: file.id, size: nil, sha256: nil,
                                    required: true, dest: dest, localName: nil, locale: nil, source: nil))
         }

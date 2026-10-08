@@ -15,6 +15,34 @@ extension Toolchain {
         return "\(prefix).\(target)"
     }
 
+    /// Was die Toolchain zusätzlich erfahren muss, wenn ein Spiel als Versuch gebaut wird: Name und Titel. Alles
+    /// andere liest sie am entpackten APK ab. Für ein Target ihrer Tabelle ist das leer.
+    public static func genericEnvironment(recipe: Recipe) -> [String: String] {
+        guard DraftRecipe.isGeneric(recipe.toolchain.target) else { return [:] }
+        return ["KLEPTON_GENERIC_TARGET": recipe.toolchain.target, "KLEPTON_GENERIC_DISPLAY": String(recipe.title.prefix(60))]
+    }
+
+    /// Wo das Spiel seine Haupt-Datendatei sucht, relativ zum Datenordner der App – gefragt bei der Toolchain,
+    /// die es am entpackten APK erkennt (Versuch) oder aus ihrer Tabelle weiß. `nil`, wenn sie das Target nicht kennt.
+    public func obbDestination(recipe: Recipe) -> String? {
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
+        p.arguments = [root.appendingPathComponent("visionos/targets.py").path, recipe.toolchain.target, "obb"]
+        p.currentDirectoryURL = root.appendingPathComponent("visionos")
+        var env = ["PATH": "/usr/bin:/bin:/usr/sbin:/sbin", "HOME": NSHomeDirectory(), "USER": NSUserName()]
+        env.merge(Toolchain.genericEnvironment(recipe: recipe)) { _, new in new }
+        p.environment = env
+        let out = Pipe()
+        p.standardOutput = out
+        p.standardError = FileHandle.nullDevice
+        guard (try? p.run()) != nil else { return nil }
+        let data = out.fileHandleForReading.readDataToEndOfFile()
+        p.waitUntilExit()
+        let obb = String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard p.terminationStatus == 0, !obb.isEmpty, Recipe.isSafeRelativePath(obb) else { return nil }
+        return "android-files/\(obb)"
+    }
+
     /// Was die Toolchain über ein Target weiß: seine Art (`unity`, `ue4`, …), oder `nil`, wenn sie es nicht kennt.
     /// Gefragt wird die Tabelle der Toolchain selbst; sie braucht dafür die Spieldateien nicht.
     public func targetKind(_ target: String) -> String? {
