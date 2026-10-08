@@ -8,6 +8,8 @@ enum Probe {
         var games: [Game] = []
         var loadProblem: String?
         var device: Device?
+        /// Alle gekoppelten, erreichbaren Headsets.
+        var devices: [Device] = []
         var deviceProblem: String?
         var toolchainText: String?
         var toolPresent = false
@@ -26,22 +28,29 @@ enum Probe {
         let free: Bool
     }
 
-    static func run(paths: Paths, bundlePrefix: String) -> Snapshot {
+    static func run(paths: Paths, bundlePrefix: String, preferredDevice: String? = nil) -> Snapshot {
         var s = Snapshot()
 
         let control = DeviceControl()
         var apps: [InstalledApp]?
         do {
-            let device = try control.pick(udid: nil)
-            s.device = device
-            if !device.developerMode {
-                s.deviceProblem = L("Developer Mode is off on the Vision Pro (Settings › Privacy & Security › Developer Mode).", "Auf der Vision Pro ist der Entwicklermodus aus (Einstellungen › Datenschutz & Sicherheit › Entwicklermodus).")
+            // Alle gekoppelten, erreichbaren Headsets. Bei genau einem ist die Wahl klar; bei mehreren gilt das
+            // zuletzt gewählte, und ohne Wahl wird gefragt statt geraten.
+            let usable = try control.devices().filter { $0.paired && $0.reachable }
+            s.devices = usable
+            let device = usable.first { $0.udid == preferredDevice } ?? (usable.count == 1 ? usable[0] : nil)
+            if let device {
+                s.device = device
+                if !device.developerMode {
+                    s.deviceProblem = L("Developer Mode is off on the Vision Pro (Settings › Privacy & Security › Developer Mode).", "Auf der Vision Pro ist der Entwicklermodus aus (Einstellungen › Datenschutz & Sicherheit › Entwicklermodus).")
+                }
+                apps = try? control.apps(device: device)
+            } else if usable.isEmpty {
+                s.deviceProblem = L("The Vision Pro is not reachable. Turn it on, put it on or unlock it, and connect it to the same Wi-Fi as this Mac.", "Die Vision Pro ist nicht erreichbar. Einschalten, aufsetzen oder entsperren und im selben WLAN wie dieser Mac anmelden.")
+            } else {
+                s.deviceProblem = L("Several Vision Pros are reachable. Choose the one to use under “Setup”.",
+                                    "Es sind mehrere Vision Pros erreichbar. Wähle unter „Einrichtung“, welche benutzt werden soll.")
             }
-            apps = try? control.apps(device: device)
-        } catch DeviceError.noDevice {
-            s.deviceProblem = L("The Vision Pro is not reachable. Turn it on, put it on or unlock it, and connect it to the same Wi-Fi as this Mac.", "Die Vision Pro ist nicht erreichbar. Einschalten, aufsetzen oder entsperren und im selben WLAN wie dieser Mac anmelden.")
-        } catch DeviceError.ambiguous(let names) {
-            s.deviceProblem = L("Several devices are reachable (\(names.joined(separator: ", "))). Please leave only one switched on.", "Es sind mehrere Geräte erreichbar (\(names.joined(separator: ", "))). Bitte nur eines eingeschaltet lassen.")
         } catch {
             s.deviceProblem = "\(error)"
         }

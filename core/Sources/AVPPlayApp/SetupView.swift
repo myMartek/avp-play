@@ -21,10 +21,19 @@ struct SetupView: View {
                     }
                 }
 
-                CheckCard(title: "Vision Pro", state: model.device == nil ? .missing : (model.deviceProblem == nil ? .ok : .warning),
+                CheckCard(title: "Vision Pro", state: model.device == nil ? (model.devices.count > 1 ? .warning : .missing) : (model.deviceProblem == nil ? .ok : .warning),
                           detail: model.device.map { d in model.deviceProblem ?? L("\(d.name) with visionOS \(d.osVersion) is reachable.", "\(d.name) mit visionOS \(d.osVersion) ist erreichbar.") }
                               ?? model.deviceProblem ?? L("Searching …", "Wird gesucht …")) {
-                    if model.device == nil {
+                    if model.devices.count > 1 {
+                        Picker(L("Use this one", "Dieses benutzen"), selection: Binding(
+                            get: { model.device?.udid ?? "" },
+                            set: { model.chosenDevice = $0; model.refresh() })) {
+                            if model.device == nil { Text(L("Choose …", "Auswählen …")).tag("") }
+                            ForEach(model.devices, id: \.udid) { d in Text("\(d.name) · visionOS \(d.osVersion)").tag(d.udid) }
+                        }
+                        .fixedSize()
+                    }
+                    if model.device == nil, model.devices.isEmpty {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(L("If this is the first time, the Vision Pro has to be paired with this Mac once:",
                                    "Beim ersten Mal muss die Vision Pro einmal mit diesem Mac gekoppelt werden:"))

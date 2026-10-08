@@ -97,8 +97,9 @@ The repository:
 | `core/Sources/avpplay` | a command-line tool with the same functions |
 | `recipes/` | the recipes |
 
-Code comments and the command-line tool are currently in German; the app and all messages of the library are
-in English and German.
+The format of the recipes is described in [docs/recipes.md](docs/recipes.md); how to report a problem or
+contribute in [CONTRIBUTING.md](CONTRIBUTING.md). Code comments are mostly German; everything a user sees is in
+English and German.
 
 ## The toolchain
 

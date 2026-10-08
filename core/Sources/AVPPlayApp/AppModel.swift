@@ -63,6 +63,9 @@ final class AppModel: ObservableObject {
     @Published var games: [Game] = []
     @Published var loadProblem: String?
     @Published var device: Device?
+    @Published var devices: [Device] = []
+    /// Das gewählte Headset, wenn mehrere erreichbar sind; leer heißt: das einzige.
+    @AppStorage("deviceUDID") var chosenDevice = ""
     @Published var deviceProblem: String?
     @Published var refreshing = false
     @Published var toolchainText: String?
@@ -298,8 +301,9 @@ final class AppModel: ObservableObject {
         refreshing = true
         let paths = paths
         let prefix = bundlePrefix
+        let wanted = chosenDevice.isEmpty ? nil : chosenDevice
         Task.detached(priority: .userInitiated) {
-            let snapshot = Probe.run(paths: paths, bundlePrefix: prefix)
+            let snapshot = Probe.run(paths: paths, bundlePrefix: prefix, preferredDevice: wanted)
             await MainActor.run {
                 self.apply(snapshot)
                 self.refreshing = false
@@ -311,6 +315,7 @@ final class AppModel: ObservableObject {
         games = s.games
         loadProblem = s.loadProblem
         device = s.device
+        devices = s.devices
         deviceProblem = s.deviceProblem
         toolchainText = s.toolchainText
         toolPresent = s.toolPresent
