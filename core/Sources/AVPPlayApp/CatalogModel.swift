@@ -75,12 +75,18 @@ extension AppModel {
 
     /// Gibt es zu dem, was gerade gezeigt wird, noch eine Seite? Bei einer Suche die nächsten Treffer, sonst die
     /// nächste Seite des ganzen Katalogs. Mit einem Filter, der nur auf diesem Mac entschieden wird, nicht: was
-    /// gekauft, installiert oder gemerkt ist, steht schon vollständig da.
+    /// installiert oder gemerkt ist, steht schon vollständig da.
     var canLoadMore: Bool {
-        guard onlineCatalog, !filterPurchased, !filterInstalled, !filterFavourites else { return false }
+        guard onlineCatalog, !filterInstalled, !filterFavourites else { return false }
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        if query.isEmpty { return catalogMore }
-        return query == searchedQuery && searchMore
+        guard query.isEmpty else { return query == searchedQuery && searchMore }
+        // Geprüftes und von Nutzern Bestätigtes steht im Katalog vorn. Ist einer dieser Filter gesetzt, lohnt
+        // Nachladen nur, solange die geladenen Seiten noch ganz aus solchen Spielen bestehen.
+        if filterVerified || filterCommunity {
+            let labelled = catalog.filter { $0.status == "verified" || $0.status == "community" }.count
+            if labelled < catalogNextPage * 60 { return false }
+        }
+        return catalogMore
     }
 
     /// Lädt die nächste Seite nach – ausgelöst, wenn das Ende der Liste in Sicht kommt.

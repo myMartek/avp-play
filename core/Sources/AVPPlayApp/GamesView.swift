@@ -16,7 +16,6 @@ struct GamesView: View {
                         Text(L("Show only:", "Nur zeigen:")).foregroundStyle(.secondary)
                         Toggle(L("Verified", "Geprüft"), isOn: $model.filterVerified)
                         if model.onlineCatalog { Toggle(L("Community Verified", "Von Nutzern bestätigt"), isOn: $model.filterCommunity) }
-                        Toggle(L("Purchased", "Gekauft"), isOn: $model.filterPurchased)
                         Toggle(L("Installed", "Installiert"), isOn: $model.filterInstalled)
                         Toggle(L("Favourites", "Favoriten"), isOn: $model.filterFavourites)
                         Spacer()
@@ -46,9 +45,6 @@ struct GamesView: View {
                                            description: Text(!model.searchText.isEmpty
                                                ? (model.catalogProblem ?? L("The catalogue knows no game by that name, or a filter above hides it.",
                                                                             "Der Katalog kennt kein Spiel mit diesem Namen, oder ein Filter oben blendet es aus."))
-                                               : model.filterPurchased && model.account != .signedIn
-                                               ? L("Sign in to Meta under “Setup” to see which games you have purchased.",
-                                                   "Melde dich unter „Einrichtung“ bei Meta an, um zu sehen, welche Spiele du gekauft hast.")
                                                : L("Turn off a filter above to see more.", "Schalte oben einen Filter aus, um mehr zu sehen.")))
                         .padding(.top, 80)
                 } else {

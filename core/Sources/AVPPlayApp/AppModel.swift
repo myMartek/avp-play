@@ -162,7 +162,6 @@ final class AppModel: ObservableObject {
     @Published private var options: [String: GameOptions] = [:]
     /// Die Filter der Übersicht; mehrere zugleich engen weiter ein.
     @AppStorage("filterVerified") var filterVerified = false
-    @AppStorage("filterPurchased") var filterPurchased = false
     @AppStorage("filterInstalled") var filterInstalled = false
     private var routed = false
     @AppStorage("teamId") var teamId = ""
@@ -194,22 +193,13 @@ final class AppModel: ObservableObject {
         return record.owned ? .yes : .no
     }
 
-    /// Gekauft – oder, bei einer Sonderapp, mit den eigenen Spieldateien vollständig vorhanden.
-    func isPurchased(_ game: Game) -> Bool {
-        switch owned(game) {
-        case .yes: return true
-        case .notApplicable: return game.status.stockComplete
-        case .no, .unknown: return false
-        }
-    }
-
     /// Die Spiele, die zu den gesetzten Filtern passen.
     var shownGames: [Game] {
         let words = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         return allGames.filter { game in
             // „Geprüft“ und „Von Nutzern bestätigt“ ergänzen einander; alle anderen Filter engen weiter ein.
             ((!filterVerified && !filterCommunity) || (filterVerified && game.trust == .verified) || (filterCommunity && game.trust == .community))
-                && (!filterPurchased || isPurchased(game)) && (!filterInstalled || game.installed)
+                && (!filterInstalled || game.installed)
                 && (!filterFavourites || isFavourite(game))
                 && (words.isEmpty || game.recipe.title.lowercased().contains(words) || game.recipe.package.lowercased().contains(words))
         }.sorted { a, b in

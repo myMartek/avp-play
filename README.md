@@ -56,13 +56,24 @@ recipes in [`recipes/`](recipes) are:
 | Doom 3 (Doom3Quest) | free port + your own Doom 3 files | you provide `pak000`–`pak008.pk4` from your copy of Doom 3 |
 | Half-Life: Alyx | your own Steam copy (Linux build) | you also provide Steam Linux Runtime and xrizer as folders; see the recipe |
 
-These seven are marked **Verified**: the project has tested them on a Vision Pro. The app also lists other
-games from the Meta Store as **Untested**. If you own one and the toolchain knows it, you can try it – it may
-well not start – and tell the project how it went, or let an AI coding assistant try to fix it ("Fix with AI")
-and send the fix in for review.
+These seven are marked **Verified**: the project has tested them on a Vision Pro. The app also lists every other
+Quest title from the Meta Store – some 17,000, loaded page by page as you scroll. What you see on each is a label:
 
-All seven were installed with this app on the author's headset. "Reported as working" in the app means
-exactly that: one user's report, not a guarantee. A recipe is tied to one build of a game; other builds need
+| Label | Meaning |
+|---|---|
+| **Verified** | tested by the project, with a recipe in this repository |
+| **Community Verified** | more users report that it runs than that it does not |
+| **Untested** | nobody has reported yet, or the reports are tied |
+| **Incompatible** | more users report that it does not run |
+
+If you own a game, you can try it: the app looks up its files with your account and builds it – with the
+toolchain's own entry for that game where there is one, otherwise with a generic one that only goes by the
+engine. Each verified game needed its own adjustments before it ran, so expect an untested game not to start.
+Afterwards say how it went with one click (that is what the labels are made of), or let an AI coding assistant
+try to fix it ("Fix with AI") and send the fix in for review.
+
+All seven were installed with this app on the author's headset. "Community Verified" means exactly what it
+says: reports from users, not a guarantee. A recipe is tied to one build of a game; other builds need
 their own recipe.
 
 ## How it handles your accounts
