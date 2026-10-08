@@ -180,14 +180,15 @@ struct JobDetail: View {
                 // Der Stand kommt aus dem Bestand selbst (vorhandene und angefangene Dateien), alle zwei Sekunden.
                 TimelineView(.periodic(from: .now, by: 2)) { _ in
                     if let progress = model.downloadProgress(job) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            ProgressView(value: Double(progress.done), total: Double(progress.total))
-                            Text(L("\(Installer.gigabytes(progress.done)) of \(Installer.gigabytes(progress.total)) downloaded",
-                                   "\(Installer.gigabytes(progress.done)) von \(Installer.gigabytes(progress.total)) geladen"))
-                                .font(.callout).foregroundStyle(.secondary).monospacedDigit()
-                        }
+                        ProgressLine(done: progress.done, total: progress.total,
+                                     verb: L("downloaded", "geladen")).id("fetch-\(job.id)")
                     }
                 }
+            }
+            if phase == .running, job.current == .stage, let progress = model.copyProgress[job.id], progress.total > 0 {
+                // Das Gerät meldet nur ganze Dateien; bei wenigen großen Dateien steht der Balken dazwischen still.
+                ProgressLine(done: progress.done, total: progress.total,
+                             verb: L("copied to the Vision Pro", "auf die Vision Pro kopiert")).id("stage-\(job.id)")
             }
 
             HStack {
@@ -253,6 +254,46 @@ struct JobDetail: View {
         } else {
             Image(systemName: "circle").foregroundStyle(.tertiary)
         }
+    }
+}
+
+/// Ein Balken mit Stand in Gigabyte und, sobald es etwas zu rechnen gibt, der geschätzten Restzeit.
+/// Die Schätzung beginnt bei dem Stand, den die Zeile beim ersten Erscheinen sieht – was vorher schon da war
+/// (ein fortgesetzter Download), zählt nicht als Tempo.
+struct ProgressLine: View {
+    let done: Int64
+    let total: Int64
+    let verb: String
+    @State private var start: (date: Date, done: Int64)?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            ProgressView(value: Double(min(done, total)), total: Double(max(total, 1)))
+            Text("\(Installer.gigabytes(done)) \(L("of", "von")) \(Installer.gigabytes(total)) \(verb)\(remaining.map { " · " + $0 } ?? "")")
+                .font(.callout).foregroundStyle(.secondary).monospacedDigit()
+        }
+        .onAppear { if start == nil { start = (Date(), done) } }
+    }
+
+    private var remaining: String? {
+        guard let start, done > start.done, done < total else { return nil }
+        let elapsed = Date().timeIntervalSince(start.date)
+        guard elapsed >= 10 else { return nil }
+        let seconds = Double(total - done) / (Double(done - start.done) / elapsed)
+        return ProgressLine.remainingText(seconds: seconds)
+    }
+
+    /// „noch etwa 12 Minuten“ – grob, denn genauer ist die Schätzung nicht.
+    static func remainingText(seconds: Double) -> String? {
+        guard seconds.isFinite, seconds > 0 else { return nil }
+        if seconds < 90 { return L("about a minute left", "noch etwa eine Minute") }
+        if seconds < 3600 * 1.5 {
+            let m = Int((seconds / 60).rounded())
+            return L("about \(m) minutes left", "noch etwa \(m) Minuten")
+        }
+        let h = (seconds / 3600 * 2).rounded() / 2
+        let text = h == h.rounded() ? String(Int(h)) : String(format: "%.1f", h)
+        return L("about \(text) hours left", "noch etwa \(text.replacingOccurrences(of: ".", with: ",")) Stunden")
     }
 }
 

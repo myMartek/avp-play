@@ -88,6 +88,8 @@ final class AppModel: ObservableObject {
     @Published var lookingForTool = false
     private var toolWatch: Task<Void, Never>?
     @Published var freeBytes: Int64?
+    /// Wie weit das Kopieren aufs Gerät im laufenden Auftrag ist.
+    @Published var copyProgress: [String: InstallProgress] = [:]
     /// Eine neuere veröffentlichte Fassung, falls es eine gibt.
     @Published var update: AppRelease?
     @Published var updateState: UpdateState = .idle
@@ -638,7 +640,9 @@ final class AppModel: ObservableObject {
             }
         }
         runningTask = Task.detached {
-            let installer = Installer(recipe: job.recipe, request: job.request, store: paths.store) { feed.yield("    " + $0) }
+            let installer = Installer(recipe: job.recipe, request: job.request, store: paths.store,
+                                      progress: { p in Task { @MainActor in self.copyProgress[id] = p } },
+                                      report: { feed.yield("    " + $0) })
             let now = (try? Toolchain(root: URL(fileURLWithPath: job.request.toolchain)).commit()) ?? "unbekannt"
             do {
                 _ = try await JobRunner(store: paths.jobs).run(job, currentToolchain: now, log: { feed.yield($0) }) { step, _ in
@@ -662,6 +666,7 @@ final class AppModel: ObservableObject {
         if cancelled { _ = try? JobRunner(store: paths.jobs).cancel(id) }
         runningTask = nil
         runningJob = nil
+        copyProgress[id] = nil
         if !cancelled, let job = try? paths.jobs.load(id) { notify(job) }
         refresh()
         pump()

@@ -86,18 +86,34 @@ public enum InstallStep: String, Codable, Sendable, CaseIterable {
     }
 }
 
+/// Wie weit ein Schritt ist, in Bytes. Für Schritte, die Datei für Datei arbeiten.
+public struct InstallProgress: Sendable, Equatable {
+    public var step: InstallStep
+    public var done: Int64
+    public var total: Int64
+    public init(step: InstallStep, done: Int64, total: Int64) {
+        self.step = step
+        self.done = done
+        self.total = total
+    }
+}
+
 public struct Installer: Sendable {
     public let recipe: Recipe
     public let request: InstallRequest
     public let store: ContentStore
     let control = DeviceControl()
     let report: @Sendable (String) -> Void
+    let progress: @Sendable (InstallProgress) -> Void
 
-    public init(recipe: Recipe, request: InstallRequest, store: ContentStore, report: @escaping @Sendable (String) -> Void) {
+    public init(recipe: Recipe, request: InstallRequest, store: ContentStore,
+                progress: @escaping @Sendable (InstallProgress) -> Void = { _ in },
+                report: @escaping @Sendable (String) -> Void) {
         self.recipe = recipe
         self.request = request
         self.store = store
         self.report = report
+        self.progress = progress
     }
 
     var isStoreTitle: Bool { recipe.store.appId != nil || recipe.files.contains { $0.source == nil } || recipe.addons != nil }
@@ -304,8 +320,13 @@ public struct Installer: Sendable {
                      + "\(items.count) zu kopieren (\(total))."))
         }
         let copyStart = Date()
+        let copyTotal = items.map(\.size).reduce(0, +)
+        var copied: Int64 = 0
+        if copyTotal > 0 { progress(InstallProgress(step: .stage, done: 0, total: copyTotal)) }
         for (n, item) in items.enumerated() {
             try copyWithRetry(item, to: device, bundle: bundle)
+            copied += item.size
+            progress(InstallProgress(step: .stage, done: copied, total: copyTotal))
             if items.count <= 20 || (n + 1) % 10 == 0 || n + 1 == items.count {
                 let name = item.destination.split(separator: "/").last ?? ""
                 report(L("  copied \(n + 1)/\(items.count): \(name)", "  kopiert \(n + 1)/\(items.count): \(name)"))

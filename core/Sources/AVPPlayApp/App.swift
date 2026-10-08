@@ -17,6 +17,19 @@ struct AVPPlayApp: App {
         .environment(\.locale, L10n.locale)
         .commands {
             CommandGroup(replacing: .newItem) {}
+            CommandGroup(replacing: .appInfo) {
+                Button(L("About AVP Play", "Über AVP Play")) { AboutPanel.show() }
+                Button(L("Check for Updates …", "Nach Updates suchen …")) {
+                    Task {
+                        await model.checkForUpdate(manual: true)
+                        switch model.updateState {
+                        case .upToDate: model.notice = L("AVP Play \(model.appVersion) is the latest version.", "AVP Play \(model.appVersion) ist die neueste Fassung.")
+                        case .failed(let why): model.notice = why
+                        default: break
+                        }
+                    }
+                }
+            }
             CommandGroup(after: .toolbar) {
                 Button(L("Check Again", "Neu prüfen")) { model.refresh() }.keyboardShortcut("r")
             }
@@ -59,6 +72,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         alert.addButton(withTitle: L("Keep Running", "Weiterlaufen lassen"))
         alert.addButton(withTitle: L("Quit", "Beenden"))
         return alert.runModal() == .alertSecondButtonReturn ? .terminateNow : .terminateCancel
+    }
+}
+
+/// Das Fenster „Über AVP Play“: Version, wem was gehört, und dass das Projekt zu niemandem gehört.
+enum AboutPanel {
+    static func show() {
+        let text = L("Installs VR games you already own on your Apple Vision Pro.\n\nAVP Play is an independent open-source project (MIT licence). It is not affiliated with, endorsed by or supported by Apple, Meta or any game publisher. Games are translated with a fork of Klepton by Max Thomas (MIT); the toolchain also contains ANGLE (BSD) and MoltenVK (Apache 2.0).\n\ngithub.com/myMartek/avp-play",
+                     "Installiert VR-Spiele, die dir schon gehören, auf deiner Apple Vision Pro.\n\nAVP Play ist ein unabhängiges Open-Source-Projekt (MIT-Lizenz). Es ist nicht mit Apple, Meta oder einem Spielehersteller verbunden und wird von ihnen weder unterstützt noch empfohlen. Übersetzt werden die Spiele mit einem Fork von Klepton von Max Thomas (MIT); die Toolchain enthält außerdem ANGLE (BSD) und MoltenVK (Apache 2.0).\n\ngithub.com/myMartek/avp-play")
+        let credits = NSAttributedString(string: text, attributes: [
+            .font: NSFont.systemFont(ofSize: NSFont.smallSystemFontSize),
+            .foregroundColor: NSColor.labelColor,
+        ])
+        NSApp.orderFrontStandardAboutPanel(options: [.credits: credits, .applicationName: "AVP Play"])
+        NSApp.activate(ignoringOtherApps: true)
     }
 }
 
@@ -209,6 +236,18 @@ enum Snapshot {
         model.section = .jobs
         await pause(1.2)
         capture("3-auftraege", dir)
+        // `--fake-copy`: so tun, als kopiere der erste Auftrag gerade – nur für das Bild des Balkens.
+        if CommandLine.arguments.contains("--fake-copy"), let job = model.jobs.first(where: { $0.current == .stage }) {
+            model.selectedJob = job.id
+            model.runningJob = job.id
+            model.copyProgress[job.id] = InstallProgress(step: .stage, done: 12_400_000_000, total: 33_500_000_000)
+            await pause(1.2)
+            capture("3-auftrag-kopiert", dir)
+            model.runningJob = nil
+            model.copyProgress[job.id] = nil
+        }
+        // `--update-check`: nur nachsehen (mit `AVPPLAY_UPDATE_FEED` auch gegen eine erfundene Liste), nichts einspielen.
+        if CommandLine.arguments.contains("--update-check") { await model.checkForUpdate(manual: true) }
         model.section = .setup
         await pause(1.2)
         capture("4-einrichtung", dir)
@@ -251,7 +290,8 @@ enum Snapshot {
         await pause(0.2)
         hideWindows()
         await pause(1.3)
-        let settings = NSApp.keyWindow
+        // Ohne Aktivierung gibt es kein „vorderstes“ Fenster; das der Einstellungen ist an seiner Kennung zu erkennen.
+        let settings = NSApp.windows.first { $0.identifier?.rawValue.lowercased().contains("settings") == true } ?? NSApp.keyWindow
         capture("5-einstellungen", dir, window: settings)
         // `--switch-language`: die Sprache im laufenden Programm wechseln, beide Fenster zeigen, zurückstellen.
         if CommandLine.arguments.contains("--switch-language") {

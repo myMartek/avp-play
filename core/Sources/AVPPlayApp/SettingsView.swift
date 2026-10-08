@@ -46,7 +46,27 @@ struct SettingsView: View {
                         }
                     }
                     Button(L("Check Now", "Jetzt nachsehen")) { Task { await model.checkForUpdate(manual: true) } }
-                        .disabled(model.updateState == .checking)
+                        .disabled([.checking, .downloading, .installing].contains(model.updateState))
+                }
+                if let release = model.update {
+                    HStack {
+                        switch model.updateState {
+                        case .downloading:
+                            ProgressView().controlSize(.small)
+                            Text(L("Downloading version \(release.version) …", "Version \(release.version) wird geladen …"))
+                        case .installing:
+                            ProgressView().controlSize(.small)
+                            Text(L("Checking and installing …", "Wird geprüft und eingespielt …"))
+                        default:
+                            Button(model.canSelfUpdate ? L("Install Version \(release.version) and Relaunch", "Version \(release.version) einspielen und neu starten")
+                                                       : L("Open Download Page", "Download-Seite öffnen")) {
+                                Task { await model.installUpdate() }
+                            }
+                            .buttonStyle(.borderedProminent)
+                            Link(L("What’s new", "Was ist neu"), destination: release.page)
+                        }
+                        Spacer()
+                    }
                 }
                 Text(L("The check asks GitHub for the latest release of AVP Play and sends nothing else. A new version is only installed if it is signed by the same developer and notarised by Apple.",
                        "Dabei wird GitHub nach der neuesten Veröffentlichung von AVP Play gefragt, sonst wird nichts gesendet. Eine neue Fassung wird nur eingespielt, wenn sie vom selben Entwickler signiert und von Apple beglaubigt ist."))
