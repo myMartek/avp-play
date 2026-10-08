@@ -548,6 +548,22 @@ struct GameDetail: View {
                                 .font(.callout).foregroundStyle(.secondary)
                         }
                     }
+                    if game.installed {
+                        Divider()
+                        HStack(alignment: .firstTextBaseline) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(L("Bought something new?", "Etwas Neues gekauft?"))
+                                Text(model.syncBlocker(for: game)
+                                     ?? L("Asks Meta again what you have purchased, downloads what is missing and adds it to the installed game – without building it again.",
+                                          "Fragt Meta neu, was du gekauft hast, lädt das Fehlende und legt es zum installierten Spiel – ohne es neu zu bauen."))
+                                    .font(.callout).foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            Spacer()
+                            Button(L("Sync DLCs", "DLCs abgleichen")) { model.syncAddons(game) }
+                                .disabled(model.syncBlocker(for: game) != nil)
+                        }
+                    }
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading).padding(6)

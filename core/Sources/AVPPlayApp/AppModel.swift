@@ -600,18 +600,42 @@ final class AppModel: ObservableObject {
     // MARK: Aufträge
 
     func install(_ game: Game) {
-        guard blocker(for: game) == nil, let toolchain else { return }
+        guard blocker(for: game) == nil else { return }
+        enqueue(game, steps: InstallStep.allCases)
+    }
+
+    /// Was dem Abgleich der Zusatzinhalte im Weg steht. Anders als eine Installation braucht er kein Xcode und
+    /// kein Apple-Team – aber das Spiel muss schon auf dem Gerät sein.
+    func syncBlocker(for game: Game) -> String? {
+        if toolchain == nil { return L("The toolchain is not installed yet (see “Setup”).", "Die Toolchain ist noch nicht installiert (siehe „Einrichtung“).") }
+        if device == nil { return deviceProblem ?? L("The Vision Pro is not reachable.", "Die Vision Pro ist nicht erreichbar.") }
+        if !game.installed { return L("Install the game first – this only adds to a game that is on the Vision Pro.", "Erst das Spiel installieren – das hier ergänzt nur ein Spiel, das schon auf der Vision Pro ist.") }
+        if account != .signedIn { return L("Sign in to Meta first (see “Setup”).", "Erst bei Meta anmelden (siehe „Einrichtung“).") }
+        if owned(game) == .no { return L("This game is not in your Meta account, so nothing is downloaded.", "Dieses Spiel gehört nicht zu deinem Meta-Konto. Es wird nichts geladen.") }
+        if isBusy(game.id) { return L("A job for this game is already running.", "Für dieses Spiel läuft schon ein Auftrag.") }
+        return nil
+    }
+
+    /// Fragt Meta neu, welche Zusatzinhalte gekauft sind, lädt die fehlenden und legt sie zum installierten Spiel –
+    /// ohne es neu zu bauen.
+    func syncAddons(_ game: Game) {
+        guard game.recipe.addons != nil, syncBlocker(for: game) == nil else { return }
+        enqueue(game, steps: InstallStep.addonSync, addons: true)
+    }
+
+    private func enqueue(_ game: Game, steps: [InstallStep], addons: Bool? = nil) {
+        guard let toolchain else { return }
         var request = InstallRequest(toolchain: toolchain.root.path)
         request.team = teamId
         request.device = device?.udid
         let chosen = options(for: game)
         request.locales = chosen.locales
         request.optionalNames = chosen.optionalNames
-        request.addons = chosen.addons
+        request.addons = addons ?? chosen.addons
         if !customBundlePrefix.isEmpty { request.bundleId = "\(customBundlePrefix).\(game.recipe.toolchain.target)" }
         do {
             // Eingefroren wird der Stand, mit dem der Auftrag beginnt.
-            let job = Job(recipe: game.recipe, request: request, toolchainCommit: toolchain.commit())
+            let job = Job(recipe: game.recipe, request: request, steps: steps, toolchainCommit: toolchain.commit())
             try paths.jobs.save(job)
             queued.append(job.id)
             reloadJobs()
@@ -729,7 +753,10 @@ final class AppModel: ObservableObject {
                     try Task.checkCancellation()
                     try await installer.perform(step)
                 }
-                feed.yield(L("Done: \(job.recipe.title) is ready on the device.", "Fertig: \(job.recipe.title) ist auf dem Gerät bereit."))
+                feed.yield(job.isAddonSync
+                    ? L("Done: the add-on content of \(job.recipe.title) is up to date. If the game is running, quit it and start it again so that it sees the new content.",
+                        "Fertig: Die Zusatzinhalte von \(job.recipe.title) sind auf dem Stand. Läuft das Spiel gerade, beende es und starte es neu, damit es die neuen Inhalte sieht.")
+                    : L("Done: \(job.recipe.title) is ready on the device.", "Fertig: \(job.recipe.title) ist auf dem Gerät bereit."))
             } catch is CancellationError {
                 feed.yield(L("Stopped.", "Angehalten."))
             } catch {
@@ -772,7 +799,8 @@ final class AppModel: ObservableObject {
         let content = UNMutableNotificationContent()
         content.title = job.recipe.title
         switch job.state {
-        case .finished: content.body = L("Ready on your Vision Pro.", "Auf deiner Vision Pro bereit.")
+        case .finished: content.body = job.isAddonSync ? L("Add-on content is up to date.", "Zusatzinhalte sind auf dem Stand.")
+                                                       : L("Ready on your Vision Pro.", "Auf deiner Vision Pro bereit.")
         case .failed: content.body = L("The installation has stopped and needs your attention.", "Die Installation ist angehalten und braucht dich.")
         default: return
         }

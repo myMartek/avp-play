@@ -75,6 +75,11 @@ public enum InstallStep: String, Codable, Sendable, CaseIterable {
     /// Zusatzinhalte freischalten.
     case unlock
 
+    /// Nur die Zusatzinhalte eines schon installierten Spiels abgleichen: Käufe neu bei Meta abfragen, Fehlendes
+    /// laden, aufs Gerät legen und freischalten. Gebaut und installiert wird dabei nichts – das Programm auf dem
+    /// Gerät bleibt, wie es ist.
+    public static let addonSync: [InstallStep] = [.account, .fetch, .stage, .unlock]
+
     public var title: String {
         switch self {
         case .account: return L("Check account and ownership", "Konto und Besitz prüfen")

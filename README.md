@@ -82,7 +82,9 @@ their own recipe.
   to that tool and is not stored. The access token Meta returns is kept in the macOS keychain and nowhere else.
   It is sent only to Meta, only as a request header, and never appears in logs.
 - **Ownership** is asked of Meta before anything is downloaded, and once a day so the app can show which games
-  are yours. Add-on content is downloaded only for purchases Meta confirms.
+  are yours. Add-on content is downloaded only for purchases Meta confirms. Bought
+  something later? **Sync DLCs** on the game's page asks again, downloads what is new and adds it to the installed
+  game without building it again.
 - **Requests to Meta are throttled** and stop at the first unexpected answer. The app never tries a file to see
   whether Meta will serve it.
 - **Apple signing** uses the team you are signed in with in Xcode. The app reads the list of teams from Xcode's

@@ -262,6 +262,19 @@ enum Snapshot {
             while model.runningJob != nil { await pause(1) }
             await pause(1.5)
         }
+        // `--sync <Kennung>`: die Zusatzinhalte eines installierten Spiels über die Oberfläche abgleichen.
+        if let i = CommandLine.arguments.firstIndex(of: "--sync"), i + 1 < CommandLine.arguments.count,
+           let game = model.games.first(where: { $0.id == CommandLine.arguments[i + 1] }) {
+            model.gamePath = [game.id]
+            await pause(1.5)
+            capture("2-spiel-\(game.id)-abgleich", dir)
+            model.gamePath = []
+            if let why = model.syncBlocker(for: game) { model.notice = why } else { model.syncAddons(game) }
+            await pause(3)
+            while model.runningJob != nil { await pause(1) }
+            await pause(1.5)
+            try? "Hinweis: \(model.notice ?? "-")\n".write(to: dir.appendingPathComponent("abgleich.txt"), atomically: true, encoding: .utf8)
+        }
         model.section = .jobs
         await pause(1.2)
         capture("3-auftraege", dir)

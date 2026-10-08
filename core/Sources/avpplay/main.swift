@@ -107,6 +107,7 @@ avpplay – command line for the AVP Play core library
              --icon <image file>     use your own app icon (takes priority over everything else)
              --no-store-art          don't fetch the cover image from the store page (the icon from the APK is used instead)
              --replace-running       install even if the game is running (it will be quit)
+             --addons-only           job start: only sync purchased add-on content of an installed game (no build, no --team)
 
 Selection: --locale de-DE      also include a language variant (can be repeated)
            --with <file name>  also include an optional file (can be repeated)
@@ -145,6 +146,7 @@ avpplay – Kommandozeile zur Kern-Bibliothek von AVP Play
              --icon <Bilddatei>      eigenes App-Icon hinterlegen (hat Vorrang vor allem anderen)
              --no-store-art          kein Titelbild von der Store-Seite holen (dann Icon aus dem APK)
              --replace-running       auch installieren, wenn das Spiel gerade läuft (es wird dabei beendet)
+             --addons-only           job start: nur gekaufte Zusatzinhalte eines installierten Spiels abgleichen (kein Bau, kein --team)
 
 Auswahl:   --locale de-DE      Sprachvariante dazunehmen (mehrfach möglich)
            --with <Dateiname>  wählbare Datei dazunehmen (mehrfach möglich)
@@ -622,7 +624,10 @@ case "job":
         do {
             let now = (try? Toolchain(root: URL(fileURLWithPath: job.request.toolchain)).commit()) ?? L("unknown", "unbekannt")
             let done = try await runner.run(job, currentToolchain: now, log: { print($0) }) { step, _ in try await installer.perform(step) }
-            print(L("Job \(done.id) finished: \(done.recipe.title) is ready on the device.",
+            print(done.isAddonSync
+                ? L("Job \(done.id) finished: the add-on content of \(done.recipe.title) is up to date.",
+                    "Auftrag \(done.id) abgeschlossen: Die Zusatzinhalte von \(done.recipe.title) sind auf dem Stand.")
+                : L("Job \(done.id) finished: \(done.recipe.title) is ready on the device.",
                     "Auftrag \(done.id) abgeschlossen: \(done.recipe.title) ist auf dem Gerät bereit."))
         } catch let error as JobError {
             fail("\(error)")          // hier gibt es nichts fortzusetzen
@@ -633,16 +638,18 @@ case "job":
     }
     switch o.positional[1] {
     case "start":
-        if o.value("team") == nil {
+        let addonsOnly = o.flags.contains("addons-only")
+        if o.value("team") == nil, !addonsOnly {
             fail(L("For a job, give the Apple Team ID with --team.", "Für einen Auftrag die Apple-Team-ID mit --team angeben."))
         }
         let r: Recipe
         do { r = try RecipeStore(directory: recipesDirectory(o)).load(id: o.positional[2]) } catch { fail("\(error)") }
-        let request = installRequest(o)
+        var request = installRequest(o)
+        if addonsOnly { request.addons = true }
         do {
             // Eingefroren wird der Stand, mit dem der Auftrag beginnt.
             let commit = try Toolchain(root: URL(fileURLWithPath: request.toolchain)).commit()
-            let job = Job(recipe: r, request: request, toolchainCommit: commit)
+            let job = Job(recipe: r, request: request, steps: addonsOnly ? InstallStep.addonSync : InstallStep.allCases, toolchainCommit: commit)
             try jobs.save(job)
             print(L("Job \(job.id) created (\(r.title), toolchain \(commit)).", "Auftrag \(job.id) angelegt (\(r.title), Toolchain \(commit))."))
             await run(job)

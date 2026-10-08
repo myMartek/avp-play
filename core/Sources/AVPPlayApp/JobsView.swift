@@ -91,7 +91,7 @@ struct JobRow: View {
         HStack(spacing: 10) {
             Image(systemName: phase.symbol).foregroundStyle(phase.color).frame(width: 18)
             VStack(alignment: .leading, spacing: 2) {
-                Text(job.recipe.title).font(.headline).lineLimit(1)
+                Text(job.recipe.title + (job.isAddonSync ? L(" – DLC sync", " – DLC-Abgleich") : "")).font(.headline).lineLimit(1)
                 Text(L("\(phase.text) · \(job.completed.count) of \(job.steps.count) steps", "\(phase.text) · \(job.completed.count) von \(job.steps.count) Schritten"))
                     .font(.caption).foregroundStyle(.secondary)
                 Text(job.created.formatted(date: .abbreviated, time: .shortened))
@@ -111,7 +111,7 @@ struct JobDetail: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(job.recipe.title).font(.title2.bold())
+                    Text(job.recipe.title + (job.isAddonSync ? L(" – DLC sync", " – DLC-Abgleich") : "")).font(.title2.bold())
                     Label(phase.text, systemImage: phase.symbol).foregroundStyle(phase.color)
                 }
                 Spacer()

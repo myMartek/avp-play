@@ -61,6 +61,8 @@ public struct Job: Codable, Sendable, Identifiable, Equatable {
     }
 
     public var remaining: [InstallStep] { steps.filter { !completed.contains($0) } }
+    /// Ein Auftrag, der nur die Zusatzinhalte abgleicht und nichts baut.
+    public var isAddonSync: Bool { !steps.contains(.build) }
 
     public static func == (a: Job, b: Job) -> Bool {
         a.id == b.id && a.state == b.state && a.completed == b.completed && a.current == b.current
