@@ -5,6 +5,7 @@ public enum ToolchainError: Error, CustomStringConvertible {
     case tooOld(have: String, need: String)
     case buildFailed(log: URL, hint: String)
     case syncFailed(log: URL, hint: String)
+    case installFailed(log: URL, hint: String)
 
     public var description: String {
         switch self {
@@ -16,6 +17,10 @@ public enum ToolchainError: Error, CustomStringConvertible {
             let detail = hint.isEmpty ? "" : ": \(hint)"
             return L("Syncing the game data failed\(detail). Log: \(log.path)",
                      "Abgleich der Spieldaten fehlgeschlagen\(detail). Protokoll: \(log.path)")
+        case .installFailed(let log, let hint):
+            let detail = hint.isEmpty ? "" : ": \(hint)"
+            return L("The game was built, but installing it on the Vision Pro failed\(detail). Log: \(log.path)",
+                     "Das Spiel wurde gebaut, aber die Installation auf der Vision Pro ist gescheitert\(detail). Protokoll: \(log.path)")
         case .buildFailed(let log, let hint):
             let detail = hint.isEmpty ? "" : ": \(hint)"
             return L("Build or installation failed\(detail). Log: \(log.path)",
@@ -46,6 +51,13 @@ public struct Toolchain: Sendable {
         let out = (try? Toolchain.capture(["/usr/bin/git", "-C", root.path, "rev-parse", "--short=7", "HEAD"]))?
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return out.isEmpty ? "unbekannt" : out
+    }
+
+    /// Ab welcher Nummer ein gebautes Spiel als aktuell gilt: der letzte Stand, der an den Spielen selbst etwas
+    /// geändert hat. Ohne diese Angabe (ältere Pakete) die Nummer des Stands.
+    public func appRevision() -> Int {
+        if let m = manifest { return m.appRevision ?? m.version }
+        return ToolchainPackager.appRevision(checkout: root) ?? version()
     }
 
     /// Die fortlaufende Nummer des Stands (Zahl der Commits); 0, wenn sie sich nicht ermitteln lässt.
@@ -186,7 +198,9 @@ public struct Toolchain: Sendable {
             throw RecipeError.invalid(L("team ID '\(team)' (expected: 10 characters)", "Team-ID '\(team)' (erwartet: 10 Zeichen)"))
         }
         var env = ProcessInfo.processInfo.environment
-        env["PATH"] = "/opt/homebrew/bin:" + (env["PATH"] ?? "/usr/bin:/bin")
+        // Nur was macOS und Xcode mitbringen – auf jedem Mac dasselbe, ob dort Homebrew oder ein anderes
+        // Python liegt oder nicht. Sonst baut es beim einen mit Werkzeugen, die dem anderen fehlen.
+        env["PATH"] = "/usr/bin:/bin:/usr/sbin:/sbin"
         env["KLEPTON_TEAM"] = team                      // nie die Zertifikats-Erkennung der Toolchain benutzen
         env["KLEPTON_TARGET"] = recipe.toolchain.target
         env["KLEPTON_DEVICE"] = device.udid
@@ -214,6 +228,11 @@ public struct Toolchain: Sendable {
         try p.run()
         p.waitUntilExit()
         let text = (try? String(contentsOf: log, encoding: .utf8)) ?? ""
+        // Gebaut, aber nicht aufs Gerät gekommen: das ist kein Baufehler und braucht einen anderen Rat.
+        if p.terminationStatus != 0, let line = text.split(separator: "\n").last(where: { $0.hasPrefix("!! install FAILED") }) {
+            let why = line.dropFirst("!! install FAILED:".count).trimmingCharacters(in: .whitespaces)
+            throw ToolchainError.installFailed(log: log, hint: String(why.prefix(200)))
+        }
         guard p.terminationStatus == 0, text.contains("BUILD SUCCEEDED") else {
             let hint = text.split(separator: "\n").last { $0.contains("error:") || $0.contains("No profiles") || $0.contains("No Account") }
             throw ToolchainError.buildFailed(log: log, hint: hint.map { String($0.prefix(160)) } ?? "")

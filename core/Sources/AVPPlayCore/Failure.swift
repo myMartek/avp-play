@@ -44,6 +44,7 @@ public enum FailureKind: String, Codable, Sendable {
             switch e {
             case .buildFailed: return .build
             case .syncFailed: return .copy
+            case .installFailed: return .device
             case .notAToolchain, .tooOld: return .setup
             }
         case is FetchError, is URLError: return .download

@@ -82,6 +82,9 @@ final class AppModel: ObservableObject {
     @Published var checkingOwnership = false
     /// Was zuletzt beim Einrichten von Metas Werkzeug herauskam – steht in der Karte „Meta-Konto“.
     @Published var toolNote: String?
+    /// Der Dialog „Ein Problem melden“ ist offen; `reportJob` nennt den Auftrag, um den es geht.
+    @Published var showReport = false
+    @Published var reportJob: Job?
     @Published var lookingForTool = false
     private var toolWatch: Task<Void, Never>?
     @Published var freeBytes: Int64?

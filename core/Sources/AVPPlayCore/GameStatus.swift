@@ -29,6 +29,8 @@ public struct GameStatus: Sendable, Equatable {
 
     public var stockComplete: Bool { filesPresent == filesRequired && treesPresent == treesRequired }
 
+    /// - Parameter toolchainVersion: ab welcher Toolchain-Nummer ein gebautes Spiel als aktuell gilt
+    ///   (`Toolchain.appRevision()`), nicht zwingend die Nummer der installierten Toolchain.
     /// - Parameter bundlePrefix: das Präfix, unter dem die Spiele installiert werden; ohne Angabe das übliche.
     public static func of(recipe r: Recipe, store: ContentStore, apps: [InstalledApp]?, toolchainVersion: Int?,
                           bundlePrefix: String? = nil) -> GameStatus {

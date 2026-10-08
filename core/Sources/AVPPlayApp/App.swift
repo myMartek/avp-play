@@ -20,6 +20,15 @@ struct AVPPlayApp: App {
             CommandGroup(after: .toolbar) {
                 Button(L("Check Again", "Neu prüfen")) { model.refresh() }.keyboardShortcut("r")
             }
+            CommandGroup(replacing: .help) {
+                Button(L("AVP Play on GitHub", "AVP Play auf GitHub")) {
+                    NSWorkspace.shared.open(URL(string: "https://github.com/myMartek/avp-play#readme")!)
+                }
+                Button(L("Report a Problem …", "Ein Problem melden …")) {
+                    model.reportJob = nil
+                    model.showReport = true
+                }
+            }
         }
 
         Settings {
@@ -97,6 +106,7 @@ struct RootView: View {
         }
         // Die Texte werden beim Zeichnen gewählt; mit der Sprache als Kennung entsteht die Ansicht neu.
         .id(model.language)
+        .sheet(isPresented: $model.showReport) { ReportSheet(job: model.reportJob).environmentObject(model) }
         .task {
             model.installBundledToolchainIfNewer()
             model.refresh()
@@ -210,6 +220,14 @@ enum Snapshot {
             await model.installUpdate(relaunch: false)
             try? "gefunden: \(found)\nkann sich ersetzen: \(model.canSelfUpdate)\nZustand danach: \(model.updateState)\n"
                 .write(to: dir.appendingPathComponent("update.txt"), atomically: true, encoding: .utf8)
+        }
+        if CommandLine.arguments.contains("--report") {
+            try? model.problemReport().write(to: dir.appendingPathComponent("bericht.txt"), atomically: true, encoding: .utf8)
+            model.showReport = true
+            await pause(1.5)
+            capture("4-problem-melden", dir, window: NSApp.windows.first { $0.isSheet })
+            model.showReport = false
+            await pause(0.8)
         }
         // `--choose-tool <Datei>`: dieselbe Stelle, die „Choose File …“ aufruft.
         if let i = CommandLine.arguments.firstIndex(of: "--choose-tool"), i + 1 < CommandLine.arguments.count {

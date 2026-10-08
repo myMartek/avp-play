@@ -25,8 +25,22 @@ struct SetupView: View {
                           detail: model.device.map { d in model.deviceProblem ?? L("\(d.name) with visionOS \(d.osVersion) is reachable.", "\(d.name) mit visionOS \(d.osVersion) ist erreichbar.") }
                               ?? model.deviceProblem ?? L("Searching …", "Wird gesucht …")) {
                     if model.device == nil {
-                        Text(L("The first time: put Vision Pro and Mac on the same Wi-Fi, then pair them in Xcode under Window › Devices and Simulators.", "Beim ersten Mal: Vision Pro und Mac ins selbe WLAN, dann in Xcode unter Window › Devices and Simulators koppeln."))
-                            .font(.callout).foregroundStyle(.secondary)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(L("If this is the first time, the Vision Pro has to be paired with this Mac once:",
+                                   "Beim ersten Mal muss die Vision Pro einmal mit diesem Mac gekoppelt werden:"))
+                            Text(L("1.  Put the Vision Pro and the Mac on the same Wi-Fi.", "1.  Vision Pro und Mac ins selbe WLAN."))
+                            Text(L("2.  On the Vision Pro: Settings › General › Remote Devices. Leave that page open.",
+                                   "2.  Auf der Vision Pro: Einstellungen › Allgemein › Entfernte Geräte. Die Seite offen lassen."))
+                            Text(L("3.  On the Mac: open Xcode › Window › Devices and Simulators, select the Vision Pro, click Pair and enter the code shown in the headset.",
+                                   "3.  Am Mac: Xcode › Window › Devices and Simulators öffnen, die Vision Pro wählen, auf „Pair“ klicken und den Code aus dem Headset eingeben."))
+                            Text(L("4.  On the Vision Pro: Settings › Privacy & Security › Developer Mode, turn it on and restart when asked.",
+                                   "4.  Auf der Vision Pro: Einstellungen › Datenschutz & Sicherheit › Entwicklermodus einschalten und bei Aufforderung neu starten."))
+                            Text(L("Afterwards the headset only has to be on, unlocked and on the same Wi-Fi.",
+                                   "Danach muss das Headset nur noch an, entsperrt und im selben WLAN sein."))
+                        }
+                        .font(.callout).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        Button(L("Check Again", "Neu prüfen")) { model.refresh() }.controlSize(.small)
                     }
                 }
 

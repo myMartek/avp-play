@@ -16,6 +16,10 @@ public struct ToolchainManifest: Codable, Sendable, Equatable {
     public var archive: String?
     public var sha256: String?
     public var size: Int64?
+    /// Die Nummer des letzten Stands, der etwas an den gebauten Spielen geändert hat. Ein Spiel, das mit diesem
+    /// oder einem späteren Stand gebaut wurde, ist aktuell – auch wenn die Toolchain seither neuere Nummern
+    /// bekommen hat, etwa für ein geändertes Bauskript. Fehlt bei älteren Paketen; dann gilt `version`.
+    public var appRevision: Int?
 
     public func contains(commit wanted: String) -> Bool {
         guard wanted.count >= 7, wanted.allSatisfy({ $0.isHexDigit }) else { return false }
@@ -96,6 +100,7 @@ public struct ToolchainPackager: Sendable {
         let ancestors = try git(["rev-list", "--abbrev-commit", "--abbrev=7", "HEAD"]).split(separator: "\n").map(String.init)
         var manifest = ToolchainManifest(format: ToolchainManifest.currentFormat, version: version, commit: head,
                                          ancestors: ancestors, created: now, archive: nil, sha256: nil, size: nil)
+        manifest.appRevision = ToolchainPackager.appRevision(checkout: checkout)
 
         let stage = fm.temporaryDirectory.appendingPathComponent("qi-toolchain-\(UUID().uuidString)", isDirectory: true)
         try fm.createDirectory(at: stage, withIntermediateDirectories: true)
@@ -122,6 +127,22 @@ public struct ToolchainPackager: Sendable {
         manifest.size = ContentStore.fileSize(archive)
         try encoder.encode(manifest).write(to: sidecar(for: archive), options: .atomic)
         return (archive, manifest)
+    }
+
+    /// Was am Fork die gebauten Spiele nicht verändert: Bau- und Installationsskripte, Texte, Tests und die
+    /// Grafiken, die ohnehin beim Bauen aus dem Bestand des Nutzers entstehen.
+    static let pathsWithoutEffectOnApps = ["visionos/run.sh", "visionos/stage_assets.sh", "visionos/Assets.xcassets", "build_run_*.sh",
+                                           "*.md", "tests", "spikes", ".gitignore", "third-party-licenses", "LICENSE"]
+
+    /// Die Nummer des letzten Commits, der etwas außerhalb dieser Pfade geändert hat; `nil`, wenn Git nichts sagt.
+    public static func appRevision(checkout: URL) -> Int? {
+        func git(_ args: [String]) -> String? {
+            (try? run(["/usr/bin/git", "-C", checkout.path] + args))?.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        let spec = ["."] + pathsWithoutEffectOnApps.map { ":(exclude,glob)\($0)" } + pathsWithoutEffectOnApps.map { ":(exclude,glob)\($0)/**" }
+        guard let commit = git(["log", "-1", "--format=%H", "--"] + spec), !commit.isEmpty,
+              let count = git(["rev-list", "--count", commit]) else { return nil }
+        return Int(count)
     }
 
     /// Die Beschreibung liegt neben dem Archiv: `<Archiv>.json`.

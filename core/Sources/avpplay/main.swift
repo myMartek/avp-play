@@ -456,7 +456,7 @@ case "status":
         let toolchain = try? Toolchain(root: URL(fileURLWithPath: installRequest(o).toolchain))
         if let toolchain { print("Toolchain: Version \(toolchain.version()) (\(toolchain.commit()))") }
         for r in try RecipeStore(directory: recipesDirectory(o)).loadAll() {
-            let st = GameStatus.of(recipe: r, store: store, apps: apps, toolchainVersion: toolchain?.version())
+            let st = GameStatus.of(recipe: r, store: store, apps: apps, toolchainVersion: toolchain?.appRevision())
             var bestand = "\(st.filesPresent)/\(st.filesRequired) Dateien"
             if st.treesRequired > 0 { bestand += ", \(st.treesPresent)/\(st.treesRequired) Ordner" }
             let geraet: String

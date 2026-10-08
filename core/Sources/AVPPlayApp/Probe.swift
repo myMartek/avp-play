@@ -57,7 +57,7 @@ enum Probe {
             do {
                 s.games = try RecipeStore(directory: recipes).loadAll().map { r in
                     Game(recipe: r,
-                         status: GameStatus.of(recipe: r, store: paths.store, apps: apps, toolchainVersion: toolchain?.version(),
+                         status: GameStatus.of(recipe: r, store: paths.store, apps: apps, toolchainVersion: toolchain?.appRevision(),
                                                 bundlePrefix: bundlePrefix),
                          cover: StartHero.choose(recipe: r, store: paths.store).flatMap { NSImage(data: $0.image) },
                          storeBytes: directorySize(paths.store.directory(for: r)))

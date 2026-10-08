@@ -150,6 +150,10 @@ struct JobDetail: View {
                             case .gameRunning, .download, .other:
                                 EmptyView()
                             }
+                            Button(L("Report This Problem …", "Dieses Problem melden …")) {
+                                model.reportJob = job
+                                model.showReport = true
+                            }
                         }
                         Text(L("“Resume” continues where it stopped. Whatever has been downloaded or copied is kept.", "Mit „Fortsetzen“ geht es an derselben Stelle weiter. Was schon geladen oder kopiert ist, bleibt erhalten."))
                             .font(.callout).foregroundStyle(.secondary)

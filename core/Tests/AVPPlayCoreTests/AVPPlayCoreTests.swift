@@ -688,6 +688,30 @@ final class JobTests: XCTestCase {
     }
 }
 
+final class AnonymizeTests: XCTestCase {
+    func testPersonalDetailsAreRemovedBeforeAReportIsShared() {
+        // Alle Angaben sind erfunden. Der Benutzerordner wird zusammengesetzt, damit in diesem Quelltext kein
+        // Pfad steht, der wie ein echter aussieht.
+        let home = "/" + "Users" + "/anna"
+        let text = """
+        Log: \(home)/Library/Application Support/AVPPlay/store/moss-1/.last-build.log
+        Device 0000ABCD-0011223344556677, CoreDevice 01234567-89AB-CDEF-0123-456789ABCDEF
+        app anna.dev.klepton.target.moss signed by ABCDE12345, token FRLabcdefghijklmnopqrstuvwxyz0123456789
+        Annabelle is someone else.
+        """
+        let out = Redaction.anonymize(text, user: "anna", home: home, alsoHide: ["ABCDE12345"])
+        XCTAssertFalse(out.contains(home))
+        XCTAssertTrue(out.contains("~/Library/Application Support/AVPPlay/store/moss-1/.last-build.log"))
+        XCTAssertFalse(out.contains("0000ABCD"))
+        XCTAssertFalse(out.contains("01234567-89AB"))
+        XCTAssertFalse(out.contains("ABCDE12345"))
+        XCTAssertFalse(out.contains("FRLabc"))
+        XCTAssertTrue(out.contains("<user>.dev.klepton.target.moss"))
+        XCTAssertTrue(out.contains("Annabelle"), "nur der ganze Name wird ersetzt")
+        XCTAssertEqual(Redaction.anonymize("/" + "Users" + "/bob/x", user: "anna", home: home), "~/x", "auch fremde Benutzerordner")
+    }
+}
+
 final class UpdaterTests: XCTestCase {
     func testVersionsCompareNumberByNumber() {
         XCTAssertTrue(Updater.isNewer("1.0.1", than: "1.0.0"))
@@ -959,6 +983,15 @@ final class ToolchainPackageTests: XCTestCase {
         addTeardownBlock { try? FileManager.default.removeItem(at: out) }
         let (archive, manifest) = try ToolchainPackager.pack(checkout: checkout, to: out.appendingPathComponent("pakete"))
         XCTAssertEqual(manifest.version, 2)
+        XCTAssertEqual(manifest.appRevision, 2)
+        // Ein Commit, der nur das Bauskript und einen Text ändert, hebt die Nummer, aber nicht den Stand der Spiele.
+        try "#!/bin/sh\n# geändert\n".write(to: checkout.appendingPathComponent("visionos/run.sh"), atomically: true, encoding: .utf8)
+        try "Hinweis\n".write(to: checkout.appendingPathComponent("LIESMICH.md"), atomically: true, encoding: .utf8)
+        try git(checkout, "add", "-A")
+        try git(checkout, "commit", "-q", "-m", "drei")
+        let later = try ToolchainPackager.pack(checkout: checkout, to: out.appendingPathComponent("pakete-später")).1
+        XCTAssertEqual(later.version, 3)
+        XCTAssertEqual(later.appRevision, 2)
         XCTAssertEqual(manifest.ancestors.count, 2)
         XCTAssertEqual(manifest.ancestors.first, manifest.commit)
         XCTAssertNotNil(manifest.sha256)
