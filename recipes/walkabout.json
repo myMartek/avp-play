@@ -1,0 +1,1178 @@
+{
+ "schema": 1,
+ "id": "walkabout",
+ "title": "Walkabout Mini Golf",
+ "package": "com.MightyCoconut.WalkaboutMiniGolf",
+ "versionName": "6.7",
+ "versionCode": 60366,
+ "store": {
+  "appId": "2462678267173943"
+ },
+ "toolchain": {
+  "target": "walkabout",
+  "minCommit": "6d185aa"
+ },
+ "files": [
+  {
+   "name": "WalkaboutMiniGolf.apk",
+   "role": "apk",
+   "id": "27353254667689625",
+   "required": true,
+   "size": 107112323,
+   "sha256": "8040af0d8e3f91fe2fe896389c1e015c53ef14edfed53d810fcbfa6ac4ac10b8",
+   "dest": "",
+   "localName": "walkabout.apk"
+  },
+  {
+   "name": "main.60366.com.MightyCoconut.WalkaboutMiniGolf.obb",
+   "role": "main-obb",
+   "id": "27353240181024407",
+   "required": true,
+   "size": 897916444,
+   "sha256": "75df9b2d7360ceba25838389ef4aa6f9379c69bb90ded69bda7c1fdd5d4d1b36",
+   "dest": "android-files/obb"
+  },
+  {
+   "name": "arizonamoderncommon_assets_.bundle",
+   "role": "content-bundle",
+   "id": "27353250787690013",
+   "required": true,
+   "size": 31631942,
+   "sha256": "b97d3cda0a13064dfb5dc3f0b2d7c81981bac58f7c192d81075cc2b6e7d23551",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "seagullstackscommon_assets_.bundle",
+   "role": "content-bundle",
+   "id": "27353250191023406",
+   "required": true,
+   "size": 26258263,
+   "sha256": "4655a144835dd8105894ee429bc966a36f7e6b6a1778da4c175fcac1d8190229",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "tethysstationcommon_assets_.bundle",
+   "role": "content-bundle",
+   "id": "27353249961023429",
+   "required": true,
+   "size": 36469006,
+   "sha256": "505549269c3ec1a7d91bcbaee25dbca30ecde2cde31b8bd1dce085d6b0079470",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "expansion-files-config.json",
+   "role": "manifest",
+   "id": "27353249947690097",
+   "required": false,
+   "size": 16207,
+   "sha256": "0c80c5dde0ef452811888e8a2be7b5d18957d4591161ca51b8bb09aee0b21acf"
+  },
+  {
+   "name": "originalgothiccommon_assets_.bundle",
+   "role": "content-bundle",
+   "id": "27353249934356765",
+   "required": true,
+   "size": 7208015,
+   "sha256": "3b084482f656aef8a1df7c7ef30f8b0f867efe8dad1be2f8ff3ad15776f35cad",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "villains8bitcommon_scenes_homestarrunner_easy.bundle",
+   "role": "content-bundle",
+   "id": "27353249871023438",
+   "required": true,
+   "size": 31498887,
+   "sha256": "869da3a29a1ea8d3f3ace1a66cb9bdfe1c8bb266709a4ccdb0e3dea71280488e",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "quixhotevalleycommon_assets_.bundle",
+   "role": "content-bundle",
+   "id": "27353249757690116",
+   "required": true,
+   "size": 37766096,
+   "sha256": "e0f9d2dc799b6072ad9d1f8c5bb175e1a766d4c90953d0f783a8d24fb96747d7",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "20kcommon_assets_.bundle",
+   "role": "content-bundle",
+   "id": "27353249727690119",
+   "required": true,
+   "size": 37373773,
+   "sha256": "9c423a5ba7815cb3ce8d1df42c9e68d4d7722f786cf41fcd8da7a46bcca24ea3",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "bogeysbonanzacommon_assets_.bundle",
+   "role": "content-bundle",
+   "id": "27353249707690121",
+   "required": true,
+   "size": 31152828,
+   "sha256": "315703d50a2a49e56c3865eb3c97f67e780599b145bf99a3482ba1e677884149",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "shangri-lacommon_assets_.bundle",
+   "role": "content-bundle",
+   "id": "27353249691023456",
+   "required": true,
+   "size": 36426729,
+   "sha256": "5889d4b6dd6fdb3a14361ff9c0dfaf3f1f622f038efff1c74927025eae21647e",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "babyloncommon_assets_.bundle",
+   "role": "content-bundle",
+   "id": "27353249567690135",
+   "required": true,
+   "size": 30353026,
+   "sha256": "b0482a810b7d441f90c7df8bfc69e6f93c115aba46b33f04965fb31bbf1c1086",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "laserlaircommon_assets_.bundle",
+   "role": "content-bundle",
+   "id": "27353249517690140",
+   "required": true,
+   "size": 50576304,
+   "sha256": "865df6af119c23c08bb1cbebcdaed94af2937a961e53a13c0b3d7e283427ba7c",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "sweetopiacommon_assets_.bundle",
+   "role": "content-bundle",
+   "id": "27353249397690152",
+   "required": true,
+   "size": 27477631,
+   "sha256": "4e7c211dc9932d70803ffe0c4e90df2fd5dffa1bb6e34162771b9f918f647ea6",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "aroundtheworldcommon_assets_.bundle",
+   "role": "content-bundle",
+   "id": "27353249241023501",
+   "required": true,
+   "size": 50062403,
+   "sha256": "711241f39526ccfd492946037405147aa2a3c472bc04fdb36f54da28b2013122",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "touristtrapcommon_assets_.bundle",
+   "role": "content-bundle",
+   "id": "27353249181023507",
+   "required": true,
+   "size": 43773437,
+   "sha256": "6654ac8c6993d94e1b56d8a6b20ee759fa49d7b73e50307b8174e91ad479a4b4",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "alfheimcommon_assets_.bundle",
+   "role": "content-bundle",
+   "id": "27353249117690180",
+   "required": true,
+   "size": 40165851,
+   "sha256": "a019eca54652b28700db335a6a52b5018e21238cc8d1557bbfe668015496eb1f",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "atlantiscommon_assets_.bundle",
+   "role": "content-bundle",
+   "id": "27353249111023514",
+   "required": true,
+   "size": 40499830,
+   "sha256": "b633ad085ae59165a4b2c645aab6f9c8402a9c53bca1f4cb082440f2b4ccaf57",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "villainsarcticcommon_assets_.bundle",
+   "role": "content-bundle",
+   "id": "27353249094356849",
+   "required": true,
+   "size": 48798436,
+   "sha256": "cee984810010ff9cc19021e4f6f13cd33f868d64f9731e218f27b9fcc79532e3",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "christmascommon_assets_.bundle",
+   "role": "content-bundle",
+   "id": "27353249054356853",
+   "required": true,
+   "size": 52582243,
+   "sha256": "0817aca6b15f4d56505ddc6608faa9c11766a5b7e4578b377e2ab142716b00a2",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "seagullstackscommon_scenes_celtic_hard.bundle",
+   "role": "content-bundle",
+   "id": "27353248977690194",
+   "required": true,
+   "size": 74173564,
+   "sha256": "d12c072abe8e4c1cd10ee9e967f48eaad8e01d2e50d9fa8b42bddcb95af636e0",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "blokhavencommon_assets_.bundle",
+   "role": "content-bundle",
+   "id": "27353248837690208",
+   "required": true,
+   "size": 42412998,
+   "sha256": "75f8eafed3d72dac53faf64abe24f5ba49a69aac17624d9fd83559634a7679ee",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "vegascommon_assets_.bundle",
+   "role": "content-bundle",
+   "id": "27353248817690210",
+   "required": true,
+   "size": 49977234,
+   "sha256": "2a50c0630cc572997480227616eb2a27a66c91c98f605e5facad89e6ac998b39",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "wallaceandgromitcommon_assets_.bundle",
+   "role": "content-bundle",
+   "id": "27353248801023545",
+   "required": true,
+   "size": 70114787,
+   "sha256": "b73722999478bc8944727f231c825cba7e2c93cef1c96e6a6ad19bae05010ef7",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "mystcommon_assets_.bundle",
+   "role": "content-bundle",
+   "id": "27353248784356880",
+   "required": true,
+   "size": 49453357,
+   "sha256": "23731fe4f36cf55bd088e9a42cc873b70cf40f97c008c3017ab27a098a41b29f",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "journeycommon_assets_.bundle",
+   "role": "content-bundle",
+   "id": "27353248524356906",
+   "required": true,
+   "size": 50030501,
+   "sha256": "ab54696276aa15281709e24ed491fd272823b8ad85304efb62439ae8e4db1b7a",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "zerzuracommon_assets_.bundle",
+   "role": "content-bundle",
+   "id": "27353248447690247",
+   "required": true,
+   "size": 58937156,
+   "sha256": "105eefe0f5797400485a0acf6a79925878bc56f3a7fa73be42560ecd7b16bd04",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "cherryblossomcommon_assets_.bundle",
+   "role": "content-bundle",
+   "id": "27353248444356914",
+   "required": true,
+   "size": 56411505,
+   "sha256": "5afc7533b21dc07bd628019b0039bcf85c169523e16865fd0a64ddeedd270600",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "marscommon_assets_.bundle",
+   "role": "content-bundle",
+   "id": "27353248394356919",
+   "required": true,
+   "size": 60613845,
+   "sha256": "57467538c863528187f03fe99e586cb02bf63d28c21d61e843161096ea1f8e38",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "eldoradocommon_assets_.bundle",
+   "role": "content-bundle",
+   "id": "27353248244356934",
+   "required": true,
+   "size": 69255285,
+   "sha256": "648360f762c6baff994450c7f919455fbc2bfcef01e5894793ee88e333be51b4",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "widowswalkaboutcommon_assets_.bundle",
+   "role": "content-bundle",
+   "id": "27353248094356949",
+   "required": true,
+   "size": 69858686,
+   "sha256": "e4cc1b76c3741ae24847372a8df71d245eb11f3f2f70680bb0afa047f55f1bbe",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "tokyocommon_assets_.bundle",
+   "role": "content-bundle",
+   "id": "27353248034356955",
+   "required": true,
+   "size": 79377640,
+   "sha256": "327fe1f1815e1c56016d15e5378ae506e3e21be1f8132a101e89190bbcd0cf7f",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "babyloncommon_scenes_babylon_easy.bundle",
+   "role": "content-bundle",
+   "id": "27353247994356959",
+   "required": true,
+   "size": 104834262,
+   "sha256": "23fa696572f0fb709f9a715a46e2340ca16a4d44d750dc276284144df92e363d",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "amusementparkcommon_assets_.bundle",
+   "role": "content-bundle",
+   "id": "27353247971023628",
+   "required": true,
+   "size": 74999033,
+   "sha256": "bee8b92e871e620252297d50bfaa65ca5a4a37d5dec789b0474500f294f306b2",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "villains8bitcommon_assets_.bundle",
+   "role": "content-bundle",
+   "id": "27353247964356962",
+   "required": true,
+   "size": 65212505,
+   "sha256": "ca27a2a42f76d38cc53d637937bf89e072b1f7b9590d76d0f80b1c4b419bcbb6",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "seagullstackscommon_scenes_celtic_v001.bundle",
+   "role": "content-bundle",
+   "id": "27353247931023632",
+   "required": true,
+   "size": 75799215,
+   "sha256": "e529f04441046a85adfce9cd72c04b943532922f03c9d294b5dc544b1907067b",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "crystallaircommon_assets_.bundle",
+   "role": "content-bundle",
+   "id": "27353247914356967",
+   "required": true,
+   "size": 65727276,
+   "sha256": "e8be2640fadf455381373a61fb930519529a7da9e1a8cc50853d4f0d6bda1d02",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "bogeysbonanzacommon_scenes_frontier_easy.bundle",
+   "role": "content-bundle",
+   "id": "27353247867690305",
+   "required": true,
+   "size": 83546803,
+   "sha256": "c10dd6328f41a5ecda19edca5d3397abbb8507acf1924b79511f8302daa71a62",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "villains8bitcommon_scenes_villains8bit_hard.bundle",
+   "role": "content-bundle",
+   "id": "27353247794356979",
+   "required": true,
+   "size": 90781501,
+   "sha256": "c50b2012a88f344b6c2404009fcbd622104396aa1be066906d35bbf292b1711a",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "labyrinthcommon_assets_.bundle",
+   "role": "content-bundle",
+   "id": "27353247764356982",
+   "required": true,
+   "size": 70130108,
+   "sha256": "50cf6f5e0dff4a8495edc38b80052ed0f8a374c3e2a8f321ed7a3e2e8d7010b7",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "glooplaircommon_assets_.bundle",
+   "role": "content-bundle",
+   "id": "27353247731023652",
+   "required": true,
+   "size": 85048938,
+   "sha256": "c8329a14a13c569d34a3326b5aef3afa677255f7e31bfded2d3dfd0ffe5de2a8",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "tethysstationcommon_scenes_spacestation.bundle",
+   "role": "content-bundle",
+   "id": "27353247721023653",
+   "required": true,
+   "size": 83487480,
+   "sha256": "ab8a09c41e85babe5417c7f17605f2b18107131c626689ae5c7deb6d8a40f680",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "arizonamoderncommon_scenes_arizona_hard.bundle",
+   "role": "content-bundle",
+   "id": "27353247641023661",
+   "required": true,
+   "size": 92348922,
+   "sha256": "621713429113d31b2210507bd4f75d958522999531f98ef04ea9c9a636b2344a",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "bogeysbonanzacommon_scenes_frontier_hard.bundle",
+   "role": "content-bundle",
+   "id": "27353247537690338",
+   "required": true,
+   "size": 92042984,
+   "sha256": "907bf4ae5c67fdecc753f3b6d5a8133462f40174ded9f5293b0e3ff8a302f527",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "tethysstationcommon_scenes_spacestation_hard.bundle",
+   "role": "content-bundle",
+   "id": "27353247444357014",
+   "required": true,
+   "size": 82726134,
+   "sha256": "258b3de96e7b4e47f1d0f375e1da79fe7bc08a3e82ad9813c86d76c673f78793",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "villains8bitcommon_scenes_villains8bit_easy.bundle",
+   "role": "content-bundle",
+   "id": "27353247437690348",
+   "required": true,
+   "size": 83499572,
+   "sha256": "6e1d9859e67d67189571f1643c5212cc65c8d6966867a489a74b62b4c8cf2dcf",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "arizonamoderncommon_scenes_arizona_v001.bundle",
+   "role": "content-bundle",
+   "id": "27353247317690360",
+   "required": true,
+   "size": 84020684,
+   "sha256": "2c36d8072f3b5fa77c8934eaa6467f2ca673d968cac4a4464d7bc4dba8562cca",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "venicecommon_assets_.bundle",
+   "role": "content-bundle",
+   "id": "27353247154357043",
+   "required": true,
+   "size": 80326534,
+   "sha256": "056297ebd49612ac3a4dd2e5f26650991a49fca3889a9a671b284d07c1f8fa55",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "hollywoodcommon_assets_.bundle",
+   "role": "content-bundle",
+   "id": "27353246994357059",
+   "required": true,
+   "size": 83472363,
+   "sha256": "abd68b9df4920c32ab9fb6a03db2d2685f5bcce7568a5975f0248c4d6c79f25f",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "mystcommon_scenes_myst_easy.bundle",
+   "role": "content-bundle",
+   "id": "27353246934357065",
+   "required": true,
+   "size": 107909226,
+   "sha256": "e53f820ff38f1053fc3b681d4e6d36171c6b0b1efae1bd622036488bef00efe3",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "babyloncommon_scenes_babylon_hard.bundle",
+   "role": "content-bundle",
+   "id": "27353246641023761",
+   "required": true,
+   "size": 107563292,
+   "sha256": "19c00600a3b12263a836150a56a28f0aad17be44e04c961243f33e3671c5df7f",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "gravitycommon_assets_.bundle",
+   "role": "content-bundle",
+   "id": "27353246614357097",
+   "required": true,
+   "size": 106938957,
+   "sha256": "3a9c2408e2d9311b7b63c6146c216d8123ff8a538dbd6961d4c5fb5d8bfd6121",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "laserlaircommon_scenes_villainstropical_easy.bundle",
+   "role": "content-bundle",
+   "id": "27353246314357127",
+   "required": true,
+   "size": 114810920,
+   "sha256": "681acc5b68723c17abc95b3706242128175c962e360f36b49f23815a03b58dbe",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "meowwolfcommon_assets_.bundle",
+   "role": "content-bundle",
+   "id": "27353246244357134",
+   "required": true,
+   "size": 95465180,
+   "sha256": "7906ea5670d29c521a784fe844e9aa29127bd30a5a74fe41c63ca6f9d2e8ef67",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "shangri-lacommon_scenes_shangrila_easy.bundle",
+   "role": "content-bundle",
+   "id": "27353245857690506",
+   "required": true,
+   "size": 108284948,
+   "sha256": "54781f5c59501132fdf5c7d4c5dd4137523ad9d385f36484549dfb66387932e9",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "alicecommon_scenes_alice_easy.bundle",
+   "role": "content-bundle",
+   "id": "27353245834357175",
+   "required": true,
+   "size": 109439638,
+   "sha256": "2e9dfa8180c68816b4c4c08983a2effe7dab7cafbc9f01108d2373fb1eefb559",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "journeycommon_scenes_journey_easy.bundle",
+   "role": "content-bundle",
+   "id": "27353245724357186",
+   "required": true,
+   "size": 117922361,
+   "sha256": "cce40e519f98a9822653b21e915bd6b7eb904c08bdf385e30c243cd7b97f98d8",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "dinotrekcommon_scenes_dinotrek_easy.bundle",
+   "role": "content-bundle",
+   "id": "27353245704357188",
+   "required": true,
+   "size": 113640967,
+   "sha256": "d156fff1029624f2347169efa495256fc347cb3d29d0f3f133e8d34ca4c978eb",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "mystcommon_scenes_myst_hard.bundle",
+   "role": "content-bundle",
+   "id": "27353245367690555",
+   "required": true,
+   "size": 115387580,
+   "sha256": "cdd3eaa9203a1836e654f27e8afffb8107f81843c37b9979c9f7d24b3d8514cf",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "gravitycommon_scenes_gravity_hard.bundle",
+   "role": "content-bundle",
+   "id": "27353245247690567",
+   "required": true,
+   "size": 113689516,
+   "sha256": "8f1cdf165a8e3148c2cdffc21e33aa428ad0172c38eb3bfe6a75079fa1f8906e",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "journeycommon_scenes_journey_hard.bundle",
+   "role": "content-bundle",
+   "id": "27353245187690573",
+   "required": true,
+   "size": 117258118,
+   "sha256": "0772c794a297d1e72a3e2c735f7bdec87fea2479f84e75101594b623fe03721d",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "quixhotevalleycommon_scenes_windmills_hard.bundle",
+   "role": "content-bundle",
+   "id": "27353244981023927",
+   "required": true,
+   "size": 116440109,
+   "sha256": "8b42a3c3128d356df9e8436b9f7d52b505716e623c33c399a95c95bf0151c742",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "atlantiscommon_scenes_atlantis_easy.bundle",
+   "role": "content-bundle",
+   "id": "27353244914357267",
+   "required": true,
+   "size": 119734988,
+   "sha256": "5ce0be20541b31bc3c3ad7f562ec4365795ab33390a1415ea178f23a459c5726",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "tikicommon_assets_.bundle",
+   "role": "content-bundle",
+   "id": "27353244877690604",
+   "required": true,
+   "size": 109632894,
+   "sha256": "251cd14c99013b52f0b881de3bbb13c5f7798c00d97e73cb4ecba54dc9358434",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "blokhavencommon_scenes_blokhaven_easy.bundle",
+   "role": "content-bundle",
+   "id": "27353244837690608",
+   "required": true,
+   "size": 119368565,
+   "sha256": "676019cedd7e2428d0a8df4e998665894200956c774f2f013dcc78b2333d9ccd",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "shangri-lacommon_scenes_shangrila_hard.bundle",
+   "role": "content-bundle",
+   "id": "27353243771024048",
+   "required": true,
+   "size": 119656018,
+   "sha256": "c6f592ed6dc721496f146aae9c22d3ab72f41aa382a700c69c5ae5a1886c507c",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "sweetopiacommon_scenes_sweetopia_easy.bundle",
+   "role": "content-bundle",
+   "id": "27353243734357385",
+   "required": true,
+   "size": 124648871,
+   "sha256": "030ca62268de3af1ec87df4bef6750dbb15504fceb3e1e6f689ac31bb837a75d",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "alicecommon_scenes_alice_hard.bundle",
+   "role": "content-bundle",
+   "id": "27353243584357400",
+   "required": true,
+   "size": 120223029,
+   "sha256": "42e298be6eb68e92fe2907ce5b97ddbed6b978f52d57e47099683a2e78d0ddc3",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "atlantiscommon_scenes_atlantis_hard.bundle",
+   "role": "content-bundle",
+   "id": "27353243571024068",
+   "required": true,
+   "size": 123991206,
+   "sha256": "47ca941d9c8babc949a840a4e1ab20e745003e1d4f23450bbd052300a059fbd6",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "blokhavencommon_scenes_blokhaven_hard.bundle",
+   "role": "content-bundle",
+   "id": "27353243551024070",
+   "required": true,
+   "size": 125397429,
+   "sha256": "54801881d1f363a3772cc09dd4ed927cff098497149bac0b60e0a6f18d446379",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "alicecommon_assets_.bundle",
+   "role": "content-bundle",
+   "id": "27353243374357421",
+   "required": true,
+   "size": 118595466,
+   "sha256": "42d4ed168910b42fbc00897893dc01e23b6db633181e5f5eb3790553b776cf55",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "widowswalkaboutcommon_scenes_haunted_hard.bundle",
+   "role": "content-bundle",
+   "id": "27353243341024091",
+   "required": true,
+   "size": 127003443,
+   "sha256": "f2e8f6396e9f1fcd6f9a3020f45607e9404df3784681a02330b4296f752dcaa5",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "cherryblossomcommon_scenes_cherryblossom_v001.bundle",
+   "role": "content-bundle",
+   "id": "27353243174357441",
+   "required": true,
+   "size": 127616390,
+   "sha256": "5290a1fe10022a49bc51205b21fd2a7cd62a7486468b7b35aa21c174cb2b19fd",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "touristtrapcommon_scenes_touristtrap_v001.bundle",
+   "role": "content-bundle",
+   "id": "27353242721024153",
+   "required": true,
+   "size": 130307882,
+   "sha256": "80246cb6e520b52ffd50c1b7753d83d3e2f148301346f370ea5ac98473daea0b",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "aroundtheworldcommon_scenes_aroundtheworld_hard.bundle",
+   "role": "content-bundle",
+   "id": "27353242637690828",
+   "required": true,
+   "size": 126876273,
+   "sha256": "3c9ce396d40639a98a915714f82e439c623b7a91309f08e2304e3e2c83ea364c",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "sweetopiacommon_scenes_sweetopia_hard.bundle",
+   "role": "content-bundle",
+   "id": "27353242631024162",
+   "required": true,
+   "size": 127194674,
+   "sha256": "a69bb5424fccd82e9884987f0f689c61c16308ceda2c092b3d57378f4064f509",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "widowswalkaboutcommon_scenes_haunted_easy.bundle",
+   "role": "content-bundle",
+   "id": "27353242414357517",
+   "required": true,
+   "size": 127787569,
+   "sha256": "33b3f7cdeb722b9f8f37ffc1b42e41ef082c7670382c0ac4d5318a2c2e4e540a",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "gravitycommon_scenes_gravity_easy.bundle",
+   "role": "content-bundle",
+   "id": "27353242197690872",
+   "required": true,
+   "size": 129169451,
+   "sha256": "98ec3705fe57f882778d4b914080927938731cf14148633be6c3b2ac558eaa6c",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "olympuscommon_assets_.bundle",
+   "role": "content-bundle",
+   "id": "27353242004357558",
+   "required": true,
+   "size": 125086068,
+   "sha256": "4f8168463cb3bad39440608cfade3810ec5acbb39674ead6a834f6c17e1b2669",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "laserlaircommon_scenes_villainstropical_hard.bundle",
+   "role": "content-bundle",
+   "id": "27353241834357575",
+   "required": true,
+   "size": 132059547,
+   "sha256": "75b78d0dda9687fc14f6fa9ddf050683a2e45b2659ba67c402a6b49711db5605",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "aroundtheworldcommon_scenes_aroundtheworld_easy.bundle",
+   "role": "content-bundle",
+   "id": "27353241797690912",
+   "required": true,
+   "size": 133529024,
+   "sha256": "0526d518e7996e8646207a063866f69d7f8b4619c9f498eeeb5e2c46f3a69090",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "touristtrapcommon_scenes_touristtrap_hard.bundle",
+   "role": "content-bundle",
+   "id": "27353241701024255",
+   "required": true,
+   "size": 134265792,
+   "sha256": "2adb0f6067438985c0f7dc8edc1772ecbce96f6c6c44104e6d9ea249934dc49e",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "cherryblossomcommon_scenes_cherryblossom_hard.bundle",
+   "role": "content-bundle",
+   "id": "27353241571024268",
+   "required": true,
+   "size": 136837565,
+   "sha256": "855e70059d81079ec038f078015aa330ef8ba87c6529efb5615d59f773c660cb",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "quixhotevalleycommon_scenes_windmills_easy.bundle",
+   "role": "content-bundle",
+   "id": "27353241327690959",
+   "required": true,
+   "size": 132831063,
+   "sha256": "e7aabd441297dcbfb4a50c5027ead53a7d94c2d9be2b738eb33e47b867742f46",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "wallaceandgromitcommon_scenes_wallaceandgromit_hard.bundle",
+   "role": "content-bundle",
+   "id": "27353241324357626",
+   "required": true,
+   "size": 135966642,
+   "sha256": "712ae992e0f70c1b4a85ba9b59e287c2a928cfecb029c29e66dcbf23bc9d78de",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "originalgothiccommon_scenes_transylvania.bundle",
+   "role": "content-bundle",
+   "id": "27353241007690991",
+   "required": true,
+   "size": 136334250,
+   "sha256": "98196917244f237590d0006d759ef1da874c13e7d303eb5375c82dbab117e1e8",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "glooplaircommon_scenes_glooplair_hard.bundle",
+   "role": "content-bundle",
+   "id": "27353240944357664",
+   "required": true,
+   "size": 136044413,
+   "sha256": "ee96c8c253b236c8cda29c62784a354529c41272d5bb98e5bfedddf0d3877570",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "villainsarcticcommon_scenes_villainsarctic_easy.bundle",
+   "role": "content-bundle",
+   "id": "27353240897691002",
+   "required": true,
+   "size": 137406612,
+   "sha256": "f1bbd60c97ea1e0fb9974e96816027d160240fe45a55ea6734700edcad618da3",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "glooplaircommon_scenes_glooplair_easy.bundle",
+   "role": "content-bundle",
+   "id": "27353240361024389",
+   "required": true,
+   "size": 137978283,
+   "sha256": "3746fcce3c848126eeb00e73c84849e40c3cd033b773c99e45b8224195ad624b",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "zerzuracommon_scenes_zerzura_hard.bundle",
+   "role": "content-bundle",
+   "id": "27353240321024393",
+   "required": true,
+   "size": 138475786,
+   "sha256": "04f2c58130c437a25e978c9b873249c5bbc7234657e7c192e70c55e3eaddcdc9",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "villainsarcticcommon_scenes_villainsarctic_hard.bundle",
+   "role": "content-bundle",
+   "id": "27353240237691068",
+   "required": true,
+   "size": 141097664,
+   "sha256": "287a552783ec68a10273636672ce9197e230caec3c6fa1c1b9744a1bad5eb244",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "crystallaircommon_scenes_crystallair_easy.bundle",
+   "role": "content-bundle",
+   "id": "27353240097691082",
+   "required": true,
+   "size": 144042813,
+   "sha256": "ffea93cfd74dc38cbd2392c122f8d96cc1849076b7f0c17516e6e717089078c9",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "marscommon_scenes_mars_hard.bundle",
+   "role": "content-bundle",
+   "id": "27353239897691102",
+   "required": true,
+   "size": 143887690,
+   "sha256": "5e494f045594c67e539c7a548998012feb716ef387847452e2ddfacc3e986f28",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "crystallaircommon_scenes_crystallair_hard.bundle",
+   "role": "content-bundle",
+   "id": "27353239774357781",
+   "required": true,
+   "size": 142739341,
+   "sha256": "9bb646a09767269ac9145f2e928f4e453d2a3c6a9ccb2c5679410cacf33520a3",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "vegascommon_scenes_vegas_easy.bundle",
+   "role": "content-bundle",
+   "id": "27353239627691129",
+   "required": true,
+   "size": 148726913,
+   "sha256": "c2fd1c9fae2c1981d8e0520e711c04a35ee089d22e561ccfb1d7957f3a42961e",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "christmascommon_scenes_christmas_easy.bundle",
+   "role": "content-bundle",
+   "id": "27353239491024476",
+   "required": true,
+   "size": 146529771,
+   "sha256": "5ff801826cd0efbf2160bd4d2747248f747b42d5fb2d36935959ded5cea83e2a",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "labyrinthcommon_scenes_labyrinth_easy.bundle",
+   "role": "content-bundle",
+   "id": "27353239094357849",
+   "required": true,
+   "size": 144580807,
+   "sha256": "7b46bd1913b520c125df54ae81f8748508e1805de139cd214e93e334692e3fa4",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "hollywoodcommon_scenes_hollywood_easy.bundle",
+   "role": "content-bundle",
+   "id": "27353238857691206",
+   "required": true,
+   "size": 146828487,
+   "sha256": "5f83c819a8c2cedce0f61b45ea00b13253f700176ddbb3ed344d4ca3acf17709",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "20kcommon_scenes_nautilus_easy.bundle",
+   "role": "content-bundle",
+   "id": "27353238831024542",
+   "required": true,
+   "size": 149453177,
+   "sha256": "0dc76c800a1b6213238020527a09bec54bc3a022aa443c57a03ded76af9736ef",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "christmascommon_scenes_christmas_hard.bundle",
+   "role": "content-bundle",
+   "id": "27353238584357900",
+   "required": true,
+   "size": 148398035,
+   "sha256": "9222b37321c565610dcd4d62b1b9909dfb934b79c5ffba876183086a70803d0c",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "dinotrekcommon_scenes_dinotrek_hard.bundle",
+   "role": "content-bundle",
+   "id": "27353238561024569",
+   "required": true,
+   "size": 152591140,
+   "sha256": "2e13e62aa087e84413e0a6578f009f5cc2cf0b3545ea49b9a66eea1b46bd193a",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "originalgothiccommon_scenes_transylvania_hard.bundle",
+   "role": "content-bundle",
+   "id": "27353238224357936",
+   "required": true,
+   "size": 151196752,
+   "sha256": "98c5affe1e265826e229bcb4f06f4f2ca5a4c6f54e26dcf31a6b80bd0d059bf5",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "zerzuracommon_scenes_zerzura_easy.bundle",
+   "role": "content-bundle",
+   "id": "27353238134357945",
+   "required": true,
+   "size": 148758070,
+   "sha256": "25f8b76f8e6c705262ee92a69731ba32d815e0d00bf78f69eac85c6bc10c70d4",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "alfheimcommon_scenes_alfheim_easy.bundle",
+   "role": "content-bundle",
+   "id": "27353238131024612",
+   "required": true,
+   "size": 150816731,
+   "sha256": "27eb4961cc3bc068a058fb75ff24a7e33e727fd6afcb73668b482f6127d5beb8",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "vegascommon_scenes_vegas_hard.bundle",
+   "role": "content-bundle",
+   "id": "27353238021024623",
+   "required": true,
+   "size": 148977966,
+   "sha256": "4ec502dc8db7071527c9572add60b8668bcadf660fe6d7ec86197a804ed998e0",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "marscommon_scenes_mars_easy.bundle",
+   "role": "content-bundle",
+   "id": "27353237707691321",
+   "required": true,
+   "size": 150291495,
+   "sha256": "e4029ecca8f237a834ff15dc82b33d10b6bfd46e710ea982a31f0987d3782be0",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "20kcommon_scenes_nautilus_hard.bundle",
+   "role": "content-bundle",
+   "id": "27353237471024678",
+   "required": true,
+   "size": 152612186,
+   "sha256": "519c3b8b7cc78bf7adf532cd87f0518ac0751071f02f9904efdff919b3dae888",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "venicecommon_scenes_venice_easy.bundle",
+   "role": "content-bundle",
+   "id": "27353237211024704",
+   "required": true,
+   "size": 152196626,
+   "sha256": "bf6530572fc388beb268587f10075b75ae56e35c8e1b4bed6b209e38ca5a5680",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "amusementparkcommon_scenes_amusementpark_easy.bundle",
+   "role": "content-bundle",
+   "id": "27353237121024713",
+   "required": true,
+   "size": 154051357,
+   "sha256": "fd817cff44eb7308cfbed7f14139218901f6176aa6482664716cb10fe05f20f9",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "eldoradocommon_scenes_eldorado_easy.bundle",
+   "role": "content-bundle",
+   "id": "27353236851024740",
+   "required": true,
+   "size": 161432374,
+   "sha256": "ccf4744295236cc6211ba372956ea79bea9e9eb204af824b57ee86e1ec16100f",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "alfheimcommon_scenes_alfheim_hard.bundle",
+   "role": "content-bundle",
+   "id": "27353236647691427",
+   "required": true,
+   "size": 153792928,
+   "sha256": "ba5927ef697eb5f29d7c5e30b48998652f87387e50c0b994090550267dd8b209",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "venicecommon_scenes_venice_hard.bundle",
+   "role": "content-bundle",
+   "id": "27353236611024764",
+   "required": true,
+   "size": 154142680,
+   "sha256": "08d4dc9de304f814621856726e80679106f3c005a5ac308fbcf2f69a8c24fbc7",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "amusementparkcommon_scenes_amusementpark_hard.bundle",
+   "role": "content-bundle",
+   "id": "27353236247691467",
+   "required": true,
+   "size": 156385677,
+   "sha256": "c1ec305e9c952d2a90404aa938fe96e250433ca83191c32af5feb15e2484e8ef",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "hollywoodcommon_scenes_hollywood_hard.bundle",
+   "role": "content-bundle",
+   "id": "27353236141024811",
+   "required": true,
+   "size": 159161407,
+   "sha256": "949031efb5dadc5e03ebe6b37a56d879005946355ebe1b2d60e7437fad8e63ab",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "tokyocommon_scenes_tokyo_easy.bundle",
+   "role": "content-bundle",
+   "id": "27353235757691516",
+   "required": true,
+   "size": 159390158,
+   "sha256": "3f8fbf190669e61d3e511c1b93020923c005913cf6440995b40ffdab89db6170",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "wallaceandgromitcommon_scenes_wallaceandgromit_easy.bundle",
+   "role": "content-bundle",
+   "id": "27353235554358203",
+   "required": true,
+   "size": 162543563,
+   "sha256": "5fb1cb69b96e25b1ceb86858c150771d772c44f4342b6e77b1c33b255c8af3ad",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "tokyocommon_scenes_tokyo_hard.bundle",
+   "role": "content-bundle",
+   "id": "27353235221024903",
+   "required": true,
+   "size": 169291708,
+   "sha256": "b3cdd9c512515b8dc087437b98636d3bc709076a7b1a400c04646884176679e3",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "meowwolfcommon_scenes_meowwolf_easy.bundle",
+   "role": "content-bundle",
+   "id": "27353234631024962",
+   "required": true,
+   "size": 187925154,
+   "sha256": "4bb2a62e75cd99077d0b628974dd5ac036d9e5da1c11035ea5f67f3f2189c4fe",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "meowwolfcommon_scenes_meowwolf_hard.bundle",
+   "role": "content-bundle",
+   "id": "27353234574358301",
+   "required": true,
+   "size": 193939709,
+   "sha256": "12338b214046d3280f9c9542d171c2eb836b803a910c61b26b4153c95cdc0748",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "labyrinthcommon_scenes_labyrinth_hard.bundle",
+   "role": "content-bundle",
+   "id": "27353234541024971",
+   "required": true,
+   "size": 167720660,
+   "sha256": "83a9734e1301ce3dd3439f7a7c0b0aa543b1a9b612a803ae4dd6994ac57d0fa8",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "eldoradocommon_scenes_eldorado_hard.bundle",
+   "role": "content-bundle",
+   "id": "27353234501024975",
+   "required": true,
+   "size": 172538544,
+   "sha256": "d9c9def49d280a31c1c982bef83685addd8fe927b7bf98dc53b6532abd0f5ed0",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "olympuscommon_scenes_olympus_easy.bundle",
+   "role": "content-bundle",
+   "id": "27353234141025011",
+   "required": true,
+   "size": 194217032,
+   "sha256": "fddbc5461cc9c6eb5d6006630d180d3bb4846b18955649f10ebcbfd62fc38e60",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "tikicommon_scenes_tiki_hard.bundle",
+   "role": "content-bundle",
+   "id": "27353233697691722",
+   "required": true,
+   "size": 200098133,
+   "sha256": "75edbbabca8ceecd2083dac047c8ce075444a42c1ee4b883a132efa697e3d573",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "tikicommon_scenes_tiki_easy.bundle",
+   "role": "content-bundle",
+   "id": "27353233597691732",
+   "required": true,
+   "size": 195729008,
+   "sha256": "d1173433b774674b43a23a738f1e54c999bf808c375313409d9c6debd1648319",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "olympuscommon_scenes_olympus_hard.bundle",
+   "role": "content-bundle",
+   "id": "27353233511025074",
+   "required": true,
+   "size": 202522852,
+   "sha256": "89d3dc5644af2412625404e93d9d6655526d29a10d304fc6c3afb72dec535359",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  },
+  {
+   "name": "dinotrekcommon_assets_.bundle",
+   "role": "content-bundle",
+   "id": "27353233404358418",
+   "required": true,
+   "size": 187903350,
+   "sha256": "26233c83db958428a2697788595b9a6ff85dc1b6af1f15649fe6dca4616d77f5",
+   "dest": "android-files/Android/obb/com.MightyCoconut.WalkaboutMiniGolf"
+  }
+ ],
+ "status": {
+  "playability": "reported",
+  "download": "partial",
+  "notes": [
+   {
+    "en": "Checksums of the 120 course files for build 60366 were recorded at the first download (2026-10-08) and not confirmed from a second source.",
+    "de": "Prüfsummen der 120 Kursdateien für Build 60366 beim ersten Download erfasst (2026-10-08), nicht aus einer zweiten Quelle bestätigt."
+   },
+   {
+    "en": "Paid courses only with a confirmed purchase list.",
+    "de": "Kaufkurse nur mit bestätigter Kaufliste."
+   }
+  ]
+ },
+ "addons": {
+  "kind": "purchase-list",
+  "dest": "android-files"
+ }
+}

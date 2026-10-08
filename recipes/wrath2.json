@@ -1,0 +1,847 @@
+{
+ "schema": 1,
+ "id": "wrath2",
+ "title": "Asgard's Wrath 2",
+ "package": "com.Sanzaru.Wrath2",
+ "versionName": "12.1.1689309",
+ "versionCode": 5513,
+ "store": {
+  "appId": "2603836099654226"
+ },
+ "toolchain": {
+  "target": "wrath2",
+  "minCommit": "6d185aa"
+ },
+ "files": [
+  {
+   "name": "Wrath2-Android-Shipping-arm64.apk",
+   "role": "apk",
+   "id": "8904428142928292",
+   "required": true,
+   "size": 92319851,
+   "sha256": "fb2d8978ec98afaf250786820bff2de292a5ef753ca061ccf7158e6e126f53c1",
+   "dest": "",
+   "localName": "wrath2.apk"
+  },
+  {
+   "name": "main.5513.com.Sanzaru.Wrath2.obb",
+   "role": "main-obb",
+   "id": "8904427186261721",
+   "required": true,
+   "size": 4294726486,
+   "sha256": "c60e6f8399e282a0db8e198001f3fca19059c342426089c2d53c60f2040209cf",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.0.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904416629596110",
+   "required": true,
+   "size": 275856524,
+   "sha256": "25a0d639f8851fa7465f1ae9589fb800910e6aa9c362eaf5e139faa91f8c118b",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk0-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904418062929300",
+   "required": true,
+   "size": 808646773,
+   "sha256": "0362cdfe0ce348437b0630ef18ac22de7cd4946fc5fe7803b1ca0a5ac4e30c48",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk0optional-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904417192929387",
+   "required": true,
+   "size": 182021291,
+   "sha256": "fbdd878e892943c9b7a4c043b6c28b0bd20c9e7a1744bc710b88380127a10079",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk1-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904416626262777",
+   "required": true,
+   "size": 337150658,
+   "sha256": "ce77c8fa4a2b8eaa93e7e51e3a9ab456fe456572edba8ae444a30ae658b077ce",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk10-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904417926262647",
+   "required": true,
+   "size": 59067735,
+   "sha256": "0df0bc0bfde2c180c8e194b2abc5ef041a4b35f1eb95bb4416765011f84de721",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk11-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904419272929179",
+   "required": true,
+   "size": 1174049507,
+   "sha256": "0cbd9da63b86ac83c5af781f0f0acacd0b999992134c07700fe89ab152e9cb65",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk11optional-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904418059595967",
+   "required": true,
+   "size": 16104223,
+   "sha256": "ec78ca2afab7f02fb01eda2e312aef2c235a4aaecf570b6ee7af3f2d200b3f0d",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk13-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904418069595966",
+   "required": true,
+   "size": 16442157,
+   "sha256": "1165231d04ff884b381d3537d4f1ff671184e4dd965a8174cc68b84a85e52767",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk18-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904418152929291",
+   "required": true,
+   "size": 1695,
+   "sha256": "ad2e1cdbb689eee484ca290b39b09d2ca2c8102396584fdd7cea60263e06cea6",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk1optional-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904417559596017",
+   "required": true,
+   "size": 8120472,
+   "sha256": "2a2b73bc8746ab63a5da1bfeb7e85527ddd81049c9515c1261807e86160217ef",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk2-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904417149596058",
+   "required": true,
+   "size": 160251684,
+   "sha256": "f1fc6978861be709aa82be79d4cf88a832cd32d891527beeb6deee7dd3c2c154",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk20-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904418039595969",
+   "required": true,
+   "size": 3448,
+   "sha256": "631198fce95b2e9b0a1ca72ae106ce415a230424cfaa27ac645fd02208ac50b7",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk21-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904418112929295",
+   "required": true,
+   "size": 7108,
+   "sha256": "cf642c17306c7c951cf156ed42cb20081dbed7a1525ddb6daa69a9f7abe5dfe0",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk22-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904418129595960",
+   "required": true,
+   "size": 7027867,
+   "sha256": "b97117361e6353832fecf8b6350d2344d9f6c55ca780735bb9f28a49147b76d4",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk24-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904417592929347",
+   "required": true,
+   "size": 118241,
+   "sha256": "d45d21c91d926b6860eb206e12a8388ec4ba5a808ffe8c62a75aadb44e0572cd",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk27-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904423199595453",
+   "required": true,
+   "size": 2831495358,
+   "sha256": "28664ee48c28f444c5c887e22d7db0c653a2adc5bfc60c4d2bf7be2f4180f39b",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk27_s1-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904418176262622",
+   "required": true,
+   "size": 2989071685,
+   "sha256": "595e7806063355af357a83e182313fc9c1c2f0ac191cbc4e91862edf9abd3068",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk27_s1optional-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904417742929332",
+   "required": true,
+   "size": 103506825,
+   "sha256": "ba4679f858539da03931a37af147613649d78b48668aed2c26248a2832afbe95",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk27_s2-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904421906262249",
+   "required": true,
+   "size": 1796489883,
+   "sha256": "57021767e6b8e28ec71f46471c2b71f174144929b5cfdf4de788554022d319c4",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk27_s2optional-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904416392929467",
+   "required": true,
+   "size": 420346917,
+   "sha256": "456163101e0225565df8f72e17c93d4153de4b6b98a0cf27292fd53cc716ddff",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk27_s3-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904420602929046",
+   "required": true,
+   "size": 1426929951,
+   "sha256": "6f7fb7885a5e891d3ac5d1d3ab46dfd7e02a038f63ba64f93dba4f86055db5b9",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk27_s3optional-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904417169596056",
+   "required": true,
+   "size": 197107171,
+   "sha256": "ba33585ede82c9044ebbaafe6ae650b81cf4fb4270dd43a0ecb3d4c9978fb22c",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk27_s4-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904416542929452",
+   "required": true,
+   "size": 670541235,
+   "sha256": "8d5d80f5ad071ad8edfb7aeb375599be6fa14ac0e9471b54876b4c92f83d5801",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk27_s4optional-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904417706262669",
+   "required": true,
+   "size": 128224133,
+   "sha256": "d28b553a5bd526b1ddeb52b0e3cb0a3f72562c4d3bd91e44e3646edff84c34fd",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk27optional-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904418146262625",
+   "required": true,
+   "size": 27249358,
+   "sha256": "7ad9c9e185c0edf5186a6ebb8b1cb9a1a08b47e07e21da7d89650e19bc62288b",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk28-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904417499596023",
+   "required": true,
+   "size": 15095211,
+   "sha256": "993d27b01f6072486946b79828cecef0ce4a9567b16b5a020c8ecb6c9e7d4a4b",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk2optional-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904418179595955",
+   "required": true,
+   "size": 507504,
+   "sha256": "d49e4bfce95184ebd9e905e5281ae4cde75ca4ab5294a97512c9c6104ffb8460",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk3-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904420292929077",
+   "required": true,
+   "size": 1465779446,
+   "sha256": "6bb951dd50b1bbfbcdb4d52b82e43dbf52d2cd30dc2083c02d6dadcdb7f47b95",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk30-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904417712929335",
+   "required": true,
+   "size": 15574350,
+   "sha256": "486c1502ab7bfad39c00cc9539b807049b831426f864b1d558c81f01a2b052cd",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk31-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904417036262736",
+   "required": true,
+   "size": 139895778,
+   "sha256": "2fd7ab53e2b76d3e89a186c2de114b22bc6f950d91d8f6d28468d468f7a42d32",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk32-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904417862929320",
+   "required": true,
+   "size": 401723189,
+   "sha256": "0fdcbbb55026313b25d97a2c147b903a6d659a046508795182065e503ddb8787",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk33-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904420506262389",
+   "required": true,
+   "size": 1545796981,
+   "sha256": "47debb68130d46580e8f70ec39166c9b8af17e38cdc70aae4921d025c7117c7d",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk33_s1-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904417646262675",
+   "required": true,
+   "size": 405216167,
+   "sha256": "8e1728e264c6b4bf0a7e6a801ec6e0d25d0cd15ff404c294eb162574110a2db5",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk33_s1optional-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904417469596026",
+   "required": true,
+   "size": 28461231,
+   "sha256": "3c864e53367d1f65cd94fe5d0b3395a51a69b1c78949969de0d1d2dbdce5a214",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk33optional-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904417266262713",
+   "required": true,
+   "size": 122889385,
+   "sha256": "bb47ef04abbd75dcb01bb6009d971e8f0fe187c3a47b42bbcf400d32c2ceb3f3",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk34-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904417759595997",
+   "required": true,
+   "size": 9380,
+   "sha256": "90402d7fc689c6f18301325d962115ecb6db3c1b8738b617d78119c91e5aedf2",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk35-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904416922929414",
+   "required": true,
+   "size": 255137938,
+   "sha256": "64c878d00f36b9b966edeffda2895bbbc7f060b68805c8eded86fa3098464581",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk35optional-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904417476262692",
+   "required": true,
+   "size": 11267124,
+   "sha256": "8360f152932c49853044ac43763857462b6e9ba11ec07ecd8d5d442fcdcefaa9",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk36-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904416609596112",
+   "required": true,
+   "size": 298557548,
+   "sha256": "fed5bd29e2b0a2fc8ad3d2ddfe76848e4b5a2c9d707cda042be4849c092a5ebe",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk36optional-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904417579596015",
+   "required": true,
+   "size": 112323687,
+   "sha256": "e16dcbd84023f4af2bc10ac1aaa402b736d4dae773d1c368a3b56f5430f63cbf",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk37-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904417686262671",
+   "required": true,
+   "size": 122963156,
+   "sha256": "4a52708faabac10014f6410912aa34ff4633866ebc7d8f33e4b61200a26f50f3",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk38-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904416599596113",
+   "required": true,
+   "size": 485285481,
+   "sha256": "f3a10acd6249c59cc409ca67adc16fb6e5524e9bbc4489ac826b5f4c3aa231b7",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk38optional-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904417979595975",
+   "required": true,
+   "size": 110374778,
+   "sha256": "d7c48f040d76fbe0feac7e911a976dd5c7f81f2566c4ea98a1c951f563a9ee93",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk39-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904415749596198",
+   "required": true,
+   "size": 549323099,
+   "sha256": "fcfb2a9fd93d8d71343873ac673b89c3b17c8bc71545393daedb7e8913c6a427",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk39optional-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904417972929309",
+   "required": true,
+   "size": 19123398,
+   "sha256": "7512679e00a78a69bfe0d1eb3fe70ec304a7370722614b4ef77e413956f2b9ce",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk4-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904418089595964",
+   "required": true,
+   "size": 975849849,
+   "sha256": "c23aafbaa6000892162013d7078ac6b6337f653cf495bd3cbf33cab769c7e3fd",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk40-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904415469596226",
+   "required": true,
+   "size": 946002327,
+   "sha256": "7c6bdb73d9ca29c61c931395792d96bfd6a2c9ba329cdda5ada7571b180f794c",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk40optional-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904417356262704",
+   "required": true,
+   "size": 54126792,
+   "sha256": "60b805c35ede745756b5f316e481a3325abb3b94c897d0de2621a6f39a612272",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk41-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904417839595989",
+   "required": true,
+   "size": 41036156,
+   "sha256": "95812217b3377694149823dcc59a6c30e83774e7cb585a4d0161b2db0cc17c1a",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk41optional-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904417976262642",
+   "required": true,
+   "size": 3738471,
+   "sha256": "1965820c820e08a7cd4ba4ff283c6dd2006e4b2a433ad3ecf6d86476c46b7b91",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk42-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904417552929351",
+   "required": true,
+   "size": 54414743,
+   "sha256": "0e3a3d358897e1ff69b3dc7c25c10138eb21a5e2ffafee018a964aeea87ae848",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk43-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904417326262707",
+   "required": true,
+   "size": 916921092,
+   "sha256": "316299af2a417f2844ebadc50cd9e1186479f9ece2bd3e6f1fde974e3110e111",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk43_s1-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904417236262716",
+   "required": true,
+   "size": 913360982,
+   "sha256": "8717e4b439abb9d913ae1050d9de33e3cb62472a776a034742349710c907ca26",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk43_s1optional-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904418026262637",
+   "required": true,
+   "size": 36283188,
+   "sha256": "6da58704e84e0388867b83ab816e854b9b974a9a5d2be5e4dec540d5e7b5b5d2",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk43optional-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904416996262740",
+   "required": true,
+   "size": 178034676,
+   "sha256": "93b5fccf5b1f33d3aeabc110f3c7d4a4ad941637bed071ad9e0f3e95587053e1",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk44-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904416522929454",
+   "required": true,
+   "size": 366094132,
+   "sha256": "5a2b768250dfb5ef529e047a527b66fb4a4a7afc90ed22e7d6b2f721f45df458",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk44optional-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904417822929324",
+   "required": true,
+   "size": 9727215,
+   "sha256": "516868980278379aa1acb92c41e112d0992f1a33c707aabdec492edb9cefeea8",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk45-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904416452929461",
+   "required": true,
+   "size": 343908081,
+   "sha256": "92bfb87b143833df5f3d7cf3ed08cd02a3ca18b41e2aef019844a5317adf314e",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk45optional-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904418029595970",
+   "required": true,
+   "size": 10859874,
+   "sha256": "534f20eea349482ba249e223df983021917f64a91a1246c9013f81a809ee148f",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk46-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904416502929456",
+   "required": true,
+   "size": 418081924,
+   "sha256": "8ed6b94af45b1b3e8239e430bba9222984964fc17ca2bc35240d5e4025c03f5d",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk46optional-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904417342929372",
+   "required": true,
+   "size": 79026844,
+   "sha256": "cc0b6a58d66884b2233aefc566bfe0fa36de0ddb0e30bddaeb552fbf9b80f71f",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk47-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904417639596009",
+   "required": true,
+   "size": 294497114,
+   "sha256": "58a424f052a7afdd8885a32b53720c8ea391d25f2cd8378f4c1db7f51921d091",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk47optional-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904417412929365",
+   "required": true,
+   "size": 36833323,
+   "sha256": "59e2301a018937e75975505be63f492eda1c7a0913ff513c80dc75fc1359d90a",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk48-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904417762929330",
+   "required": true,
+   "size": 36615177,
+   "sha256": "32bdc3abcf4a43a2e616153e0151888871f10ca754c3733373e50166aa3e5ab4",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk49-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904418292929277",
+   "required": true,
+   "size": 83788479,
+   "sha256": "f557d4f2fd3f5e803e0cecfa3dc1750c1b8e485756fbd5db5f9e589e81ccea9b",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk5-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904421626262277",
+   "required": true,
+   "size": 1723582252,
+   "sha256": "4a1f4804656e9bcc645b8988cbb7c6fd5251167c4f821bb832594709cc0c6d37",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk50-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904417419596031",
+   "required": true,
+   "size": 83553375,
+   "sha256": "4b1e71eac0bf4bc86edf86478a9a0fa2cdcea2135f6f82a1ba24286e9e0c484a",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk51-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904418242929282",
+   "required": true,
+   "size": 56122493,
+   "sha256": "2ade41ca29c91cf12849e4506137807be1b9a5d263684b1cc4a39ea9830a63f8",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk52-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904418232929283",
+   "required": true,
+   "size": 87989767,
+   "sha256": "c848d30e55b9b7438ab6a3f4d183dd2514377350e4312085b6e2e142414ca8d9",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk53-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904417532929353",
+   "required": true,
+   "size": 130972095,
+   "sha256": "4ce6a03dc4e8494c4f2f0ea13d7d97916440d4c4bcc04f304332980d1e5bfde5",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk54-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904416632929443",
+   "required": true,
+   "size": 438904315,
+   "sha256": "4b74a79713052a8bda88a46036c455de1da333ae36e9e03a776ca6cb040b61cc",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk55-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904418009595972",
+   "required": true,
+   "size": 246203492,
+   "sha256": "bdb29e3917c54ff6f0fb165ba8edd420e062f4b4b1035324e9bb490f9e91fdea",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk55optional-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904417786262661",
+   "required": true,
+   "size": 21776659,
+   "sha256": "5e25729d7e584a05b26c943c87760b24b25f26e09305afefe72cfd07910e818d",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk5_s1-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904418426262597",
+   "required": true,
+   "size": 234538549,
+   "sha256": "de09db016883c9e4fe4757058dd3558180f2b841e16eea5dac9b7e9ac4ee363b",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk5optional-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904418136262626",
+   "required": true,
+   "size": 77675085,
+   "sha256": "83c157404ffb689d60824dbabc7e9eb66e10dc4bd716e9ac455d93e00c6782c9",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk6-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904418182929288",
+   "required": true,
+   "size": 7102,
+   "sha256": "78c8442e707c9778215a665f967a024d1f1f8e8e3079f5a5ef69df4b73084c1b",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk7-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904417879595985",
+   "required": true,
+   "size": 182649636,
+   "sha256": "288be43faf48bc1f04f43b8dae9a7e99c821325f53fb7674bc2372d0c60bca0e",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk7optional-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904417779595995",
+   "required": true,
+   "size": 36274857,
+   "sha256": "432f4afb53de7dfb845885747a40b2d81f7dad01c467d12025ca53e757dbd295",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk8-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904417039596069",
+   "required": true,
+   "size": 145489045,
+   "sha256": "10ef1d29ac37c89c6f14336ab8ad27575cda352f649ec5edb040034c49152367",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk8optional-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904417652929341",
+   "required": true,
+   "size": 30977238,
+   "sha256": "23bba51f6378d8a116b0abaa62a0aa08f66b3cf7ee468bb653e7a19b25dd4246",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk9-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904417749595998",
+   "required": true,
+   "size": 68273588,
+   "sha256": "5c57cc749b8e1b2fdee7af63fef63a961d0c34649a7ee02d5298027177dd15dc",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "patch.pakchunk9optional-Android_ASTC.com.Sanzaru.Wrath2.obb",
+   "role": "patch-obb",
+   "id": "8904418036262636",
+   "required": true,
+   "size": 4182384,
+   "sha256": "c4b62468db520f1a59a5bed9151fb99209c9af9b622e6d83ddc6fdc4c3ab00aa",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2"
+  },
+  {
+   "name": "ko.lang",
+   "role": "language-pack",
+   "id": "8904416282929478",
+   "required": false,
+   "size": 422035004,
+   "sha256": "2a7a3ee456dba19619380cddbbc2ad866059762925d951edb6bb006cb5a7d290",
+   "locale": "ko"
+  },
+  {
+   "name": "zh.lang",
+   "role": "language-pack",
+   "id": "8904415929596180",
+   "required": false,
+   "size": 426294524,
+   "sha256": "0a83c40421a0f6879fa6a82621bbbc58752d91730712fffcf3d9895a74944752",
+   "locale": "zh"
+  },
+  {
+   "name": "ja.lang",
+   "role": "language-pack",
+   "id": "8904415689596204",
+   "required": false,
+   "size": 463348284,
+   "sha256": "d027a02dce974b4acbcf7003213da699d5877b2396e7885551df3932fac23675",
+   "locale": "ja"
+  },
+  {
+   "name": "it.lang",
+   "role": "language-pack",
+   "id": "8904415616262878",
+   "required": false,
+   "size": 452032732,
+   "sha256": "b8f56283b7ba2b85dc4df51f79c60061e04624867bc3503e4edac94136a3eb6c",
+   "locale": "it"
+  },
+  {
+   "name": "de.lang",
+   "role": "language-pack",
+   "id": "8904414632929643",
+   "required": false,
+   "size": 498866364,
+   "sha256": "8568c731f251ed57a316e6ead48ad70d88b1b9ced74e4ce4aa3e93c51c4e3cdf",
+   "locale": "de"
+  },
+  {
+   "name": "fr.lang",
+   "role": "language-pack",
+   "id": "8904414589596314",
+   "required": false,
+   "size": 500523740,
+   "sha256": "2a2c277d0f094b6a5f61e5c4e6e3b37af6c46464337c4a9f4dba97e875c6d0da",
+   "locale": "fr"
+  },
+  {
+   "name": "es.lang",
+   "role": "language-pack",
+   "id": "8904414459596327",
+   "required": false,
+   "size": 494834908,
+   "sha256": "11294a495b413a1fa5007940849b80f8c39c25f9f3844bf2fb98372d622c4b33",
+   "locale": "es"
+  }
+ ],
+ "status": {
+  "playability": "reported",
+  "download": "proven",
+  "notes": [
+   {
+    "en": "All 84 files verified by SHA-256 from a clean download.",
+    "de": "Alle 84 Dateien per SHA-256 aus reinem Download belegt."
+   }
+  ]
+ }
+}

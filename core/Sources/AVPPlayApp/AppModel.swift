@@ -1,0 +1,660 @@
+import AppKit
+import AVPPlayCore
+import SwiftUI
+import UserNotifications
+
+/// Ein Spiel in der Übersicht: sein Rezept, sein Stand und sein Titelbild.
+struct Game: Identifiable {
+    let recipe: Recipe
+    var status: GameStatus
+    var cover: NSImage?
+    /// Was das Spiel auf diesem Mac belegt.
+    var storeBytes: Int64 = 0
+    var id: String { recipe.id }
+    /// Sonderapps kommen nicht aus dem Meta-Store; für sie wird kein Meta-Konto gebraucht.
+    var needsMetaAccount: Bool { recipe.store.appId != nil }
+}
+
+/// Gehört das Spiel dem angemeldeten Konto? Sonderapps haben keinen Store-Titel; bei ihnen stellt sich die Frage nicht.
+enum Owned { case notApplicable, unknown, yes, no }
+
+/// Was der Nutzer für ein Spiel zusätzlich gewählt hat.
+struct GameOptions: Codable, Equatable {
+    /// Sprachen, deren wählbare Dateien mitkommen (Kürzel wie im Rezept).
+    var locales: [String] = []
+    /// Weitere wählbare Dateien, mit Namen.
+    var optionalNames: [String] = []
+    /// Gekaufte Zusatzinhalte laden und freischalten.
+    var addons = true
+}
+
+enum AccountState: Equatable {
+    case unknown, checking, signedOut, signedIn
+    /// Ein Token liegt im Schlüsselbund, Meta nimmt ihn aber nicht (mehr) an – oder ist nicht erreichbar.
+    case problem(String)
+}
+
+enum AppSection: String, CaseIterable, Identifiable {
+    case games, jobs, setup
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .games: return L("Games", "Spiele")
+        case .jobs: return L("Jobs", "Aufträge")
+        case .setup: return L("Setup", "Einrichtung")
+        }
+    }
+    var symbol: String {
+        switch self {
+        case .games: return "square.grid.2x2"
+        case .jobs: return "list.bullet.clipboard"
+        case .setup: return "checklist"
+        }
+    }
+}
+
+/// Der Zustand der Oberfläche. Alles, was länger dauert (Gerät fragen, laden, bauen), läuft außerhalb des
+/// Hauptfadens; hier landen nur die Ergebnisse.
+@MainActor
+final class AppModel: ObservableObject {
+    @Published var section: AppSection = .games
+    /// Das geöffnete Spiel in der Übersicht (leer: das Raster).
+    @Published var gamePath: [String] = []
+    @Published var games: [Game] = []
+    @Published var loadProblem: String?
+    @Published var device: Device?
+    @Published var deviceProblem: String?
+    @Published var refreshing = false
+    @Published var toolchainText: String?
+    @Published var account: AccountState = .unknown
+    @Published var toolPresent = false
+    @Published var xcodeText: String?
+    @Published var xcodeProblem: String?
+    @Published var jobs: [Job] = []
+    @Published var selectedJob: String?
+    @Published var runningJob: String?
+    @Published var queued: [String] = []
+    @Published var logs: [String: [String]] = [:]
+    @Published var notice: String?
+    @Published var teamCandidates: [Probe.Team] = []
+    /// Metas letzte Antworten auf die Besitzfrage, je Store-App.
+    @Published var ownership: [String: OwnershipRecord] = [:]
+    @Published var checkingOwnership = false
+    @Published var freeBytes: Int64?
+    private var awake: NSObjectProtocol?
+    @Published private var options: [String: GameOptions] = [:]
+    @AppStorage("onlyMine") var onlyMine = false
+    private var routed = false
+    @AppStorage("teamId") var teamId = ""
+    /// Die Sprache, in der das Programm gerade spricht. Ansichten hängen daran und bauen sich beim Wechsel neu.
+    @Published private(set) var language: Language = .en
+    @AppStorage("language") private var languageRaw = LanguageChoice.system.rawValue
+    /// Vom Nutzer gesetztes Präfix der App-Kennungen; leer heißt Standard.
+    @AppStorage("bundlePrefix") var customBundlePrefix = ""
+
+    /// Vor allem anderen: Daten aus der Zeit vor dem Namen „AVP Play“ übernehmen (der Ordner wird umbenannt).
+    let paths: Paths = {
+        DataLocation.adoptLegacyData()
+        return Paths()
+    }()
+    private var runningTask: Task<Void, Never>?
+    private var stopRequested: Set<String> = []
+
+    init() {
+        applyLanguage()
+        if let data = UserDefaults.standard.data(forKey: "gameOptions"),
+           let saved = try? JSONDecoder().decode([String: GameOptions].self, from: data) { options = saved }
+    }
+
+    // MARK: Besitz
+
+    func owned(_ game: Game) -> Owned {
+        guard let app = game.recipe.store.appId else { return .notApplicable }
+        guard let record = ownership[app] else { return .unknown }
+        return record.owned ? .yes : .no
+    }
+
+    /// „Meine Spiele“: gekauft, schon auf dem Gerät, oder eine Sonderapp, deren Dateien bereitliegen.
+    func isMine(_ game: Game) -> Bool {
+        switch game.status.onDevice {
+        case .current, .olderToolchain, .unstamped: return true
+        case .notInstalled, .unknown: break
+        }
+        switch owned(game) {
+        case .yes: return true
+        case .notApplicable: return game.status.stockComplete
+        case .no, .unknown: return false
+        }
+    }
+
+    /// Fragt Meta für jedes Store-Spiel, ob das Konto es besitzt – eine dokumentierte Abfrage je Spiel, mit
+    /// Abstand dazwischen, höchstens einmal am Tag. Beim ersten unerwarteten Ergebnis ist Schluss; was bis
+    /// dahin beantwortet ist, bleibt stehen.
+    func checkOwnership(force: Bool = false) {
+        guard account == .signedIn, !checkingOwnership, !games.isEmpty else { return }
+        let cache = OwnershipCache(store: paths.store)
+        let known = cache.load()
+        ownership = known
+        let due = games.compactMap { $0.recipe.store.appId }.filter { force || OwnershipCache.needsCheck(known[$0]) }
+        guard !due.isEmpty else { return }
+        checkingOwnership = true
+        Task.detached {
+            var records = known
+            let gate = RequestGate()
+            do {
+                let client = MetaClient(token: try TokenStore().read())
+                let user = try await client.me()
+                for app in due {
+                    try await gate.waitForTurn()
+                    let owned = try await client.ownsApp(appId: app, userId: user)
+                    await gate.requestFinished()
+                    records[app] = OwnershipRecord(owned: owned, checked: Date())
+                    try? cache.save(records)
+                    let now = records
+                    await MainActor.run { self.ownership = now }
+                }
+            } catch {}
+            await MainActor.run { self.checkingOwnership = false }
+        }
+    }
+
+    // MARK: Auswahl je Spiel
+
+    func options(for game: Game) -> GameOptions {
+        options[game.id] ?? AppModel.defaultOptions(recipe: game.recipe, store: paths.store)
+    }
+
+    func setOptions(_ value: GameOptions, for game: Game) {
+        options[game.id] = value
+        if let data = try? JSONEncoder().encode(options) { UserDefaults.standard.set(data, forKey: "gameOptions") }
+    }
+
+    /// Ohne eigene Wahl: was schon im Bestand liegt, bleibt gewählt; sonst die Sprache des Systems, wenn es
+    /// dafür Dateien gibt. Englisch braucht bei Sprachpaketen nichts – es ist die Fassung des Spiels selbst.
+    nonisolated static func defaultOptions(recipe: Recipe, store: ContentStore,
+                                           preferred: [String] = Locale.preferredLanguages) -> GameOptions {
+        let optional = recipe.files.filter { !$0.required }
+        func present(_ f: RecipeFile) -> Bool { if case .present = store.state(of: f, in: recipe) { return true }; return false }
+        var result = GameOptions()
+        var locales = Set(optional.filter(present).compactMap(\.locale))
+        let available = Set(optional.compactMap(\.locale))
+        if locales.isEmpty {
+            for language in preferred {
+                let code = language.split(separator: "-").first.map(String.init) ?? language
+                if let match = available.first(where: { $0 == language }) ?? available.sorted().first(where: { $0 == code || $0.hasPrefix(code + "-") }) {
+                    locales.insert(match)
+                    break
+                }
+                if code == "en" { break }
+            }
+        }
+        result.locales = locales.sorted()
+        result.optionalNames = optional.filter { $0.locale == nil && present($0) }.map(\.name).sorted()
+        return result
+    }
+
+    /// Wie weit der Download eines Auftrags ist: vorhandene und angefangene Bytes gegen die bekannte Summe.
+    func downloadProgress(_ job: Job) -> (done: Int64, total: Int64)? {
+        var selection = FetchSelection(locales: Set(job.request.locales), optionalNames: Set(job.request.optionalNames))
+        if job.recipe.addons?.kind == .deliveredAssets, job.request.addons,
+           let purchases = PurchaseRecord.load(store: paths.store, recipe: job.recipe) { selection.ownedSKUs = Set(purchases.skus) }
+        var done: Int64 = 0, total: Int64 = 0
+        for file in FetchPlan.wantedFiles(recipe: job.recipe, selection: selection) where file.source?.kind != .user {
+            guard let size = file.size else { continue }
+            total += size
+            switch paths.store.state(of: file, in: job.recipe) {
+            case .present(let have), .partial(let have): done += min(have, size)
+            case .missing: break
+            }
+        }
+        return total > 0 ? (done, total) : nil
+    }
+
+    var languageChoice: LanguageChoice {
+        get { LanguageChoice(rawValue: languageRaw) ?? .system }
+        set {
+            languageRaw = newValue.rawValue
+            applyLanguage()
+            // Was schon als Satz im Zustand liegt (Gerät, Xcode, Toolchain), entsteht beim Prüfen neu.
+            refresh()
+        }
+    }
+
+    /// Stellt die Sprache ein: die gewählte, sonst die erste bevorzugte des Systems. Eine feste Wahl wird
+    /// auch als `AppleLanguages` dieses Programms hinterlegt, damit die Menüs von macOS beim nächsten Start
+    /// dieselbe Sprache haben.
+    private func applyLanguage() {
+        let choice = LanguageChoice(rawValue: languageRaw) ?? .system
+        let chosen: Language
+        if choice == .system {
+            UserDefaults.standard.removeObject(forKey: "AppleLanguages")
+            let system = CFPreferencesCopyValue("AppleLanguages" as CFString, kCFPreferencesAnyApplication,
+                                                kCFPreferencesCurrentUser, kCFPreferencesAnyHost) as? [String]
+            chosen = L10n.systemLanguage(preferred: system ?? Locale.preferredLanguages)
+        } else {
+            chosen = Language(rawValue: choice.rawValue) ?? .en
+            UserDefaults.standard.set([chosen.rawValue], forKey: "AppleLanguages")
+        }
+        L10n.language = chosen
+        language = chosen
+    }
+
+    /// Das Präfix, unter dem die Spiele installiert werden: das gewählte, sonst der Standard.
+    var bundlePrefix: String { customBundlePrefix.isEmpty ? Toolchain.defaultBundlePrefix() : customBundlePrefix }
+
+    var teamValid: Bool { teamId.range(of: "^[A-Z0-9]{10}$", options: .regularExpression) != nil }
+    /// Das gewählte Team, soweit Xcode es kennt.
+    var team: Probe.Team? { teamCandidates.first { $0.id == teamId } }
+    var toolchain: Toolchain? { paths.toolchain() }
+
+    /// Was einer Installation im Weg steht, als Satz mit der nächsten Handlung – oder `nil`.
+    func blocker(for game: Game) -> String? {
+        if xcodeProblem != nil { return L("Xcode is missing. “Setup” tells you what to do.", "Xcode fehlt. Unter „Einrichtung“ steht, was zu tun ist.") }
+        if toolchain == nil { return L("The toolchain is not installed yet (see “Setup”).", "Die Toolchain ist noch nicht installiert (siehe „Einrichtung“).") }
+        if !teamValid { return L("The Apple team ID is still missing (see “Setup”).", "Die Apple-Team-ID fehlt noch (siehe „Einrichtung“).") }
+        if device == nil { return deviceProblem ?? L("The Vision Pro is not reachable.", "Die Vision Pro ist nicht erreichbar.") }
+        if game.needsMetaAccount, account != .signedIn { return L("Sign in to Meta first (see “Setup”).", "Erst bei Meta anmelden (siehe „Einrichtung“).") }
+        if owned(game) == .no {
+            return L("This game is not in your Meta account, so nothing is downloaded.",
+                     "Dieses Spiel gehört nicht zu deinem Meta-Konto. Es wird nichts geladen.")
+        }
+        if !game.status.userProvidedMissing.isEmpty { return L("Files that you provide yourself are missing (see below).", "Es fehlen Dateien, die du selbst bereitstellst (siehe unten).") }
+        if let t = toolchain, !t.satisfies(minCommit: game.recipe.toolchain.minCommit) {
+            return L("This game needs a newer toolchain than the one installed.", "Dieses Spiel braucht eine neuere Toolchain als die installierte.")
+        }
+        if isBusy(game.id) { return L("A job for this game is already running.", "Für dieses Spiel läuft schon ein Auftrag.") }
+        // Platz für den Download, mit zwei Gigabyte Luft für Bau und Zwischenstände.
+        if let free = freeBytes, game.status.bytesToDownload > 0, game.status.bytesToDownload + 2_000_000_000 > free {
+            return L("Not enough free space on this Mac: \(Installer.gigabytes(game.status.bytesToDownload)) to download, \(Installer.gigabytes(free)) free.",
+                     "Auf diesem Mac ist zu wenig Platz: \(Installer.gigabytes(game.status.bytesToDownload)) zu laden, \(Installer.gigabytes(free)) frei.")
+        }
+        return nil
+    }
+
+    func isBusy(_ recipeId: String) -> Bool {
+        jobs.contains { $0.recipe.id == recipeId && ($0.id == runningJob || queued.contains($0.id)) }
+    }
+
+    // MARK: Lage feststellen
+
+    func refresh() {
+        guard !refreshing else { return }
+        refreshing = true
+        let paths = paths
+        let prefix = bundlePrefix
+        Task.detached(priority: .userInitiated) {
+            let snapshot = Probe.run(paths: paths, bundlePrefix: prefix)
+            await MainActor.run {
+                self.apply(snapshot)
+                self.refreshing = false
+            }
+        }
+    }
+
+    private func apply(_ s: Probe.Snapshot) {
+        games = s.games
+        loadProblem = s.loadProblem
+        device = s.device
+        deviceProblem = s.deviceProblem
+        toolchainText = s.toolchainText
+        toolPresent = s.toolPresent
+        xcodeText = s.xcodeText
+        xcodeProblem = s.xcodeProblem
+        teamCandidates = s.teamCandidates
+        freeBytes = s.freeBytes
+        // Genau ein bezahltes Team: das ist es. Sonst entscheidet der Nutzer.
+        let paid = s.teamCandidates.filter { !$0.free }
+        if teamId.isEmpty, paid.count == 1 { teamId = paid[0].id }
+        reloadJobs()
+        ownership = OwnershipCache(store: paths.store).load()
+        checkOwnership()
+        // Beim ersten Start dorthin, wo etwas zu tun ist. Ein ausgeschaltetes Headset zählt nicht dazu.
+        if !routed {
+            routed = true
+            if xcodeProblem != nil || !teamValid || toolchainText == nil { section = .setup }
+        }
+    }
+
+    func reloadJobs() {
+        jobs = paths.jobs.all().sorted { $0.created > $1.created }
+        if selectedJob == nil || !jobs.contains(where: { $0.id == selectedJob }) { selectedJob = jobs.first?.id }
+    }
+
+    /// Fragt Meta, ob der hinterlegte Token gilt. Eine einzige Abfrage; gezeigt wird nie mehr als ja oder nein.
+    func checkAccount() {
+        guard account != .checking else { return }
+        account = .checking
+        Task.detached {
+            let state: AccountState
+            do {
+                let token = try TokenStore().read()
+                do {
+                    _ = try await MetaClient(token: token).me()
+                    state = .signedIn
+                } catch {
+                    state = .problem(Redaction.redact("\(error)"))
+                }
+            } catch {
+                state = .signedOut
+            }
+            await MainActor.run {
+                self.account = state
+                self.checkOwnership()
+            }
+        }
+    }
+
+    func signOut() {
+        _ = try? TokenStore().delete()
+        account = .signedOut
+        OwnershipCache(store: paths.store).clear()
+        ownership = [:]
+    }
+
+    // MARK: Dateien des Nutzers übernehmen
+
+    /// Sucht in einem vom Nutzer gewählten Ordner nach den Dateien und Ordnern, die das Rezept verlangt.
+    func adopt(_ game: Game, from folder: URL) {
+        let paths = paths
+        notice = L("Searching the folder …", "Ordner wird durchsucht …")
+        Task.detached {
+            var found: [String] = []
+            var problem: String?
+            do {
+                let r = try Adopter(store: paths.store).adopt(recipe: game.recipe, from: [folder])
+                found += r.adopted
+                if !r.mismatched.isEmpty { problem = L("Not the expected version: \(r.mismatched.joined(separator: ", "))", "Nicht die erwartete Fassung: \(r.mismatched.joined(separator: ", "))") }
+                if !(game.recipe.trees ?? []).isEmpty {
+                    found += try TreeStore(store: paths.store).adopt(recipe: game.recipe, from: [folder]).adopted
+                }
+            } catch {
+                problem = "\(error)"
+            }
+            let text = problem ?? (found.isEmpty ? L("Nothing matching was found in this folder.", "In diesem Ordner wurde nichts Passendes gefunden.")
+                                                 : L("Added: \(found.joined(separator: ", "))", "Übernommen: \(found.joined(separator: ", "))"))
+            await MainActor.run {
+                self.notice = text
+                self.refresh()
+            }
+        }
+    }
+
+    // MARK: Toolchain
+
+    /// Das Programmpaket bringt eine Toolchain mit. Ist keine installiert oder nur eine ältere, wird die
+    /// mitgelieferte installiert – geprüft wie jedes andere Paket (Größe, Prüfsumme, Inhalt).
+    func installBundledToolchainIfNewer() {
+        guard let folder = Bundle.main.resourceURL?.appendingPathComponent("toolchain", isDirectory: true),
+              let archive = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil))?
+                  .first(where: { $0.lastPathComponent.hasSuffix(".tar.gz") }) else { return }
+        let paths = paths
+        Task.detached {
+            guard let bundled = Paths.manifest(beside: archive) else { return }
+            if let installed = paths.packager.installed().first?.manifest, installed.version >= bundled.version { return }
+            let text: String
+            do {
+                let t = try paths.packager.install(archive: archive)
+                text = L("Toolchain version \(t.version()) has been installed.", "Toolchain Version \(t.version()) wurde installiert.")
+            } catch {
+                text = L("The toolchain that comes with this app could not be installed: \(error)",
+                         "Die mitgelieferte Toolchain konnte nicht installiert werden: \(error)")
+            }
+            await MainActor.run {
+                self.notice = text
+                self.refresh()
+            }
+        }
+    }
+
+    func installToolchain(archive: URL) {
+        let paths = paths
+        notice = L("Checking and unpacking the toolchain package …", "Toolchain-Paket wird geprüft und entpackt …")
+        Task.detached {
+            let text: String
+            do {
+                let t = try paths.packager.install(archive: archive)
+                text = L("Toolchain version \(t.version()) is installed.", "Toolchain Version \(t.version()) ist installiert.")
+            } catch {
+                text = "\(error)"
+            }
+            await MainActor.run {
+                self.notice = text
+                self.refresh()
+            }
+        }
+    }
+
+    // MARK: Aufträge
+
+    func install(_ game: Game) {
+        guard blocker(for: game) == nil, let toolchain else { return }
+        var request = InstallRequest(toolchain: toolchain.root.path)
+        request.team = teamId
+        request.device = device?.udid
+        let chosen = options(for: game)
+        request.locales = chosen.locales
+        request.optionalNames = chosen.optionalNames
+        request.addons = chosen.addons
+        if !customBundlePrefix.isEmpty { request.bundleId = "\(customBundlePrefix).\(game.recipe.toolchain.target)" }
+        do {
+            // Eingefroren wird der Stand, mit dem der Auftrag beginnt.
+            let job = Job(recipe: game.recipe, request: request, toolchainCommit: toolchain.commit())
+            try paths.jobs.save(job)
+            queued.append(job.id)
+            reloadJobs()
+            selectedJob = job.id
+            section = .jobs
+            pump()
+        } catch {
+            notice = "\(error)"
+        }
+    }
+
+    /// Spiele, für die es eine neuere Fassung gibt und denen nichts im Weg steht.
+    var updatable: [Game] {
+        games.filter { game in
+            switch game.status.onDevice {
+            case .olderToolchain, .unstamped: return blocker(for: game) == nil
+            case .current, .notInstalled, .unknown: return false
+            }
+        }
+    }
+
+    /// Legt für jedes aktualisierbare Spiel einen Auftrag an; sie laufen nacheinander.
+    func updateAll() {
+        let list = updatable
+        for game in list { install(game) }
+        if let first = list.first, let job = jobs.first(where: { $0.recipe.id == first.id }) { selectedJob = job.id }
+    }
+
+    /// Löscht, was dieses Programm für ein Spiel auf dem Mac abgelegt hat. Auf dem Gerät ändert sich nichts.
+    func removeFiles(_ game: Game) {
+        guard !isBusy(game.id) else { return }
+        let directory = paths.store.directory(for: game.recipe)
+        notice = L("Removing files …", "Dateien werden entfernt …")
+        Task.detached {
+            let problem: String?
+            do {
+                if FileManager.default.fileExists(atPath: directory.path) { try FileManager.default.removeItem(at: directory) }
+                problem = nil
+            } catch {
+                problem = "\(error.localizedDescription)"
+            }
+            await MainActor.run {
+                self.notice = problem ?? L("The files of \(game.recipe.title) have been removed from this Mac.",
+                                           "Die Dateien von \(game.recipe.title) wurden von diesem Mac entfernt.")
+                self.refresh()
+            }
+        }
+    }
+
+    func resume(_ job: Job) {
+        guard job.id != runningJob, !queued.contains(job.id) else { return }
+        queued.append(job.id)
+        pump()
+    }
+
+    /// Hält einen Auftrag an. Läuft gerade ein Schritt, endet der Auftrag danach; Downloads brechen sofort ab.
+    /// Geladene Dateien und Daten auf dem Gerät bleiben in jedem Fall erhalten.
+    func cancel(_ job: Job) {
+        if job.id == runningJob {
+            stopRequested.insert(job.id)
+            runningTask?.cancel()
+            append(job.id, L("Cancel requested – the current step will finish first.", "Abbruch angefordert – der laufende Schritt wird noch beendet."))
+        } else {
+            queued.removeAll { $0 == job.id }
+            _ = try? JobRunner(store: paths.jobs).cancel(job.id)
+            reloadJobs()
+        }
+    }
+
+    func log(for id: String) -> [String] {
+        if let lines = logs[id] { return lines }
+        let text = (try? String(contentsOf: paths.logURL(job: id), encoding: .utf8)) ?? ""
+        return text.split(separator: "\n").map(String.init)
+    }
+
+    private func append(_ id: String, _ line: String) {
+        let clean = Redaction.redact(line)
+        logs[id, default: log(for: id)].append(clean)
+        if let handle = try? FileHandle(forWritingTo: paths.logURL(job: id)) {
+            defer { try? handle.close() }
+            _ = try? handle.seekToEnd()
+            try? handle.write(contentsOf: Data((clean + "\n").utf8))
+        } else {
+            try? Data((clean + "\n").utf8).write(to: paths.logURL(job: id))
+        }
+    }
+
+    /// Es läuft immer nur ein Auftrag: alle bauen im selben Toolchain-Ordner und sprechen dasselbe Gerät an.
+    private func pump() {
+        guard runningTask == nil, let id = queued.first else { return }
+        queued.removeFirst()
+        guard let job = try? paths.jobs.load(id) else { return pump() }
+        runningJob = id
+        // Der Mac soll nicht einschlafen, während geladen, gebaut oder kopiert wird.
+        if awake == nil {
+            awake = ProcessInfo.processInfo.beginActivity(options: [.idleSystemSleepDisabled, .suddenTerminationDisabled],
+                                                          reason: "Installing a game on Apple Vision Pro")
+        }
+        askForNotifications()
+        let paths = paths
+        let (lines, feed) = AsyncStream<String>.makeStream()
+        let reader = Task { @MainActor in
+            for await line in lines {
+                self.append(id, line)
+                if line.hasPrefix("[") { self.reloadJobs() }
+            }
+        }
+        runningTask = Task.detached {
+            let installer = Installer(recipe: job.recipe, request: job.request, store: paths.store) { feed.yield("    " + $0) }
+            let now = (try? Toolchain(root: URL(fileURLWithPath: job.request.toolchain)).commit()) ?? "unbekannt"
+            do {
+                _ = try await JobRunner(store: paths.jobs).run(job, currentToolchain: now, log: { feed.yield($0) }) { step, _ in
+                    try Task.checkCancellation()
+                    try await installer.perform(step)
+                }
+                feed.yield(L("Done: \(job.recipe.title) is ready on the device.", "Fertig: \(job.recipe.title) ist auf dem Gerät bereit."))
+            } catch is CancellationError {
+                feed.yield(L("Stopped.", "Angehalten."))
+            } catch {
+                feed.yield(L("Stopped: \(error)", "Angehalten: \(error)"))
+            }
+            feed.finish()
+            await reader.value
+            await MainActor.run { self.finished(id) }
+        }
+    }
+
+    private func finished(_ id: String) {
+        let cancelled = stopRequested.remove(id) != nil
+        if cancelled { _ = try? JobRunner(store: paths.jobs).cancel(id) }
+        runningTask = nil
+        runningJob = nil
+        if !cancelled, let job = try? paths.jobs.load(id) { notify(job) }
+        refresh()
+        pump()
+        if runningJob == nil, let token = awake {
+            ProcessInfo.processInfo.endActivity(token)
+            awake = nil
+        }
+    }
+
+    // MARK: Mitteilungen
+
+    /// Mitteilungen gibt es nur für das Programmpaket; ohne Paket (beim Entwickeln) kennt macOS den Absender nicht.
+    private var canNotify: Bool { Bundle.main.bundleIdentifier != nil && Snapshot.directory == nil }
+
+    private func askForNotifications() {
+        guard canNotify else { return }
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+    }
+
+    /// Sagt Bescheid, wenn ein Auftrag fertig ist oder hängt – aber nur, wenn das Programm nicht vorn ist.
+    private func notify(_ job: Job) {
+        guard canNotify, !NSApp.isActive else { return }
+        let content = UNMutableNotificationContent()
+        content.title = job.recipe.title
+        switch job.state {
+        case .finished: content.body = L("Ready on your Vision Pro.", "Auf deiner Vision Pro bereit.")
+        case .failed: content.body = L("The installation has stopped and needs your attention.", "Die Installation ist angehalten und braucht dich.")
+        default: return
+        }
+        content.sound = .default
+        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: job.id, content: content, trigger: nil))
+    }
+}
+
+/// Wo Rezepte, Bestand, Aufträge und Toolchains liegen.
+struct Paths: Sendable {
+    let recipes: URL?
+    let store: ContentStore
+    let jobs: JobStore
+    let packager: ToolchainPackager
+
+    init() {
+        let env = ProcessInfo.processInfo.environment
+        func dir(_ key: String) -> URL? { env[key].map { URL(fileURLWithPath: $0) } }
+        store = ContentStore(root: dir("AVPPLAY_STORE") ?? ContentStore.defaultRoot)
+        jobs = JobStore(directory: dir("AVPPLAY_JOBS") ?? JobStore.defaultDirectory)
+        packager = ToolchainPackager(root: dir("AVPPLAY_TOOLCHAINS") ?? ToolchainPackager.defaultRoot)
+        recipes = dir("AVPPLAY_RECIPES") ?? Paths.findRecipes()
+    }
+
+    /// Im Programmpaket liegen die Rezepte unter `Resources/recipes`; beim Entwickeln neben dem Quelltext.
+    private static func findRecipes() -> URL? {
+        let fm = FileManager.default
+        if let bundled = Bundle.main.resourceURL?.appendingPathComponent("recipes", isDirectory: true),
+           fm.fileExists(atPath: bundled.path) { return bundled }
+        for start in [Bundle.main.bundleURL, URL(fileURLWithPath: fm.currentDirectoryPath)] {
+            var dir = start
+            for _ in 0..<6 {
+                let candidate = dir.appendingPathComponent("recipes", isDirectory: true)
+                if fm.fileExists(atPath: candidate.path) { return candidate }
+                dir.deleteLastPathComponent()
+            }
+        }
+        return nil
+    }
+
+    /// Das neueste installierte Paket; beim Entwickeln ersatzweise das Arbeitsverzeichnis neben den Rezepten.
+    func toolchain() -> Toolchain? {
+        if let env = ProcessInfo.processInfo.environment["AVPPLAY_TOOLCHAIN"] { return try? Toolchain(root: URL(fileURLWithPath: env)) }
+        if let installed = packager.installed().first { return installed }
+        guard let recipes else { return nil }
+        return try? Toolchain(root: recipes.deletingLastPathComponent().appendingPathComponent("klepton-fork-test"))
+    }
+
+    /// Die Beschreibung, die neben einem Toolchain-Archiv liegt.
+    static func manifest(beside archive: URL) -> ToolchainManifest? {
+        guard let data = try? Data(contentsOf: ToolchainPackager.sidecar(for: archive)) else { return nil }
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return try? decoder.decode(ToolchainManifest.self, from: data)
+    }
+
+    func logURL(job id: String) -> URL {
+        try? FileManager.default.createDirectory(at: jobs.directory, withIntermediateDirectories: true)
+        return jobs.directory.appendingPathComponent("\(id).log")
+    }
+}

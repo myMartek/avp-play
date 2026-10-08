@@ -1,0 +1,198 @@
+{
+ "schema": 1,
+ "id": "doom3quest",
+ "title": "Doom 3",
+ "package": "com.drbeef.doom3quest",
+ "versionName": "1.4.8",
+ "versionCode": 48,
+ "store": {},
+ "toolchain": {
+  "target": "doom3quest",
+  "minCommit": "108b339"
+ },
+ "files": [
+  {
+   "name": "doom3quest148.apk",
+   "role": "apk",
+   "id": "",
+   "size": 465109302,
+   "sha256": "070c5996d073291ba715c9d4110e664ab30c74f899c9ed6cfd977a550c7e4be7",
+   "required": true,
+   "dest": "",
+   "localName": "doom3quest.apk",
+   "source": {
+    "kind": "url",
+    "url": "https://github.com/Team-Beef-Studios/Doom3Quest/releases/download/v1.4.8/doom3quest148.apk",
+    "hint": {
+     "en": "Free port by Team Beef (Doom3Quest 1.4.8).",
+     "de": "Freier Port von Team Beef (Doom3Quest 1.4.8)."
+    }
+   }
+  },
+  {
+   "name": "pak000.pk4",
+   "role": "game-data",
+   "id": "",
+   "size": 353159257,
+   "sha256": "220513bba8cc51191738b52b4ea320cd3376736e13147e240aa503622aa926ce",
+   "required": true,
+   "dest": "android-files/Doom3Quest/base",
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "pak000–pak008.pk4 from the 'base' folder of your own Doom 3 (Steam, app 9050).",
+     "de": "pak000–pak008.pk4 aus dem Ordner 'base' deines eigenen Doom 3 (Steam, App 9050)."
+    }
+   }
+  },
+  {
+   "name": "pak001.pk4",
+   "role": "game-data",
+   "id": "",
+   "size": 229649726,
+   "sha256": "dc85da3d731793f2973ffb7ef31be17057e88dee0b1157531c7f26a7b33c8fc0",
+   "required": true,
+   "dest": "android-files/Doom3Quest/base",
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "pak000–pak008.pk4 from the 'base' folder of your own Doom 3 (Steam, app 9050).",
+     "de": "pak000–pak008.pk4 aus dem Ordner 'base' deines eigenen Doom 3 (Steam, App 9050)."
+    }
+   }
+  },
+  {
+   "name": "pak002.pk4",
+   "role": "game-data",
+   "id": "",
+   "size": 416937674,
+   "sha256": "52d50dc300c87c484a0d7bc28c64777cafd7d581a91b5eeb6222991e328b7f1c",
+   "required": true,
+   "dest": "android-files/Doom3Quest/base",
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "pak000–pak008.pk4 from the 'base' folder of your own Doom 3 (Steam, app 9050).",
+     "de": "pak000–pak008.pk4 aus dem Ordner 'base' deines eigenen Doom 3 (Steam, App 9050)."
+    }
+   }
+  },
+  {
+   "name": "pak003.pk4",
+   "role": "game-data",
+   "id": "",
+   "size": 317590154,
+   "sha256": "a946bf100ba931edb1d814d78baccc5b8279a52b1351ab00bb049bce993e365a",
+   "required": true,
+   "dest": "android-files/Doom3Quest/base",
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "pak000–pak008.pk4 from the 'base' folder of your own Doom 3 (Steam, app 9050).",
+     "de": "pak000–pak008.pk4 aus dem Ordner 'base' deines eigenen Doom 3 (Steam, App 9050)."
+    }
+   }
+  },
+  {
+   "name": "pak004.pk4",
+   "role": "game-data",
+   "id": "",
+   "size": 237752384,
+   "sha256": "eac10316182f06832b7c087dbac4dad98c4e3243e6aecf7d9906ff7ba9514ba3",
+   "required": true,
+   "dest": "android-files/Doom3Quest/base",
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "pak000–pak008.pk4 from the 'base' folder of your own Doom 3 (Steam, app 9050).",
+     "de": "pak000–pak008.pk4 aus dem Ordner 'base' deines eigenen Doom 3 (Steam, App 9050)."
+    }
+   }
+  },
+  {
+   "name": "pak005.pk4",
+   "role": "game-data",
+   "id": "",
+   "size": 552334,
+   "sha256": "d50a114eb655cb7f55da38870e1a992a9f4efe5c52910f83eba8fe6dbbe85657",
+   "required": true,
+   "dest": "android-files/Doom3Quest/base",
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "pak000–pak008.pk4 from the 'base' folder of your own Doom 3 (Steam, app 9050).",
+     "de": "pak000–pak008.pk4 aus dem Ordner 'base' deines eigenen Doom 3 (Steam, App 9050)."
+    }
+   }
+  },
+  {
+   "name": "pak006.pk4",
+   "role": "game-data",
+   "id": "",
+   "size": 218751,
+   "sha256": "a0d28ebada2697f5a8d4d1f06a705d2335044bab9aee805679a2bd0c3b7d59b1",
+   "required": true,
+   "dest": "android-files/Doom3Quest/base",
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "pak000–pak008.pk4 from the 'base' folder of your own Doom 3 (Steam, app 9050).",
+     "de": "pak000–pak008.pk4 aus dem Ordner 'base' deines eigenen Doom 3 (Steam, App 9050)."
+    }
+   }
+  },
+  {
+   "name": "pak007.pk4",
+   "role": "game-data",
+   "id": "",
+   "size": 192031,
+   "sha256": "e5d57ede9def75c7cbb0542ceef6ad56147c9a2162c8517f716410b9092965a0",
+   "required": true,
+   "dest": "android-files/Doom3Quest/base",
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "pak000–pak008.pk4 from the 'base' folder of your own Doom 3 (Steam, app 9050).",
+     "de": "pak000–pak008.pk4 aus dem Ordner 'base' deines eigenen Doom 3 (Steam, App 9050)."
+    }
+   }
+  },
+  {
+   "name": "pak008.pk4",
+   "role": "game-data",
+   "id": "",
+   "size": 12243,
+   "sha256": "57be0712bb180943ad51757b48486bc590e9242fd885704771c0a7102953d4b7",
+   "required": true,
+   "dest": "android-files/Doom3Quest/base",
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "pak000–pak008.pk4 from the 'base' folder of your own Doom 3 (Steam, app 9050).",
+     "de": "pak000–pak008.pk4 aus dem Ordner 'base' deines eigenen Doom 3 (Steam, App 9050)."
+    }
+   }
+  }
+ ],
+ "icon": {
+  "steamAppId": "9050"
+ },
+ "status": {
+  "playability": "reported",
+  "download": "special",
+  "notes": [
+   {
+    "en": "Special app: not a Meta Store title. The APK is a free download; the game data comes from your own Steam purchase.",
+    "de": "Sonderapp: kein Titel aus dem Meta-Store. APK frei ladbar, Spieldaten aus dem eigenen Steam-Kauf."
+   },
+   {
+    "en": "The checksums of the pak files come from a Steam installation; other language or retail editions may differ.",
+    "de": "Die Prüfsummen der pak-Dateien stammen aus einer Steam-Installation; andere Sprach- oder Händlerfassungen können abweichen."
+   },
+   {
+    "en": "Needs the fork from 108b339 on: one render thread (otherwise it crashes when a level loads), foveation, HUD/PDA.",
+    "de": "Braucht den Fork ab 108b339: ein Render-Thread (sonst Absturz beim Levelstart), Foveation, HUD/PDA."
+   }
+  ]
+ }
+}

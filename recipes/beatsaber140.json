@@ -1,0 +1,1568 @@
+{
+ "schema": 1,
+ "id": "beatsaber140",
+ "title": "Beat Saber",
+ "package": "com.beatgames.beatsaber",
+ "versionName": "1.40.8_7379",
+ "versionCode": 1716,
+ "store": {
+  "appId": "2448060205267927"
+ },
+ "toolchain": {
+  "target": "beatsaber140",
+  "minCommit": "6d185aa"
+ },
+ "files": [
+  {
+   "name": "beat-saber.apk",
+   "role": "apk",
+   "id": "30506607092319862",
+   "required": true,
+   "size": 43406683,
+   "sha256": "059bf468a1e6927cfe8fe8ce880589b9081c98c5bf5e40f726a188cc8932324e",
+   "dest": "",
+   "localName": "beatsaber-1.40.apk"
+  },
+  {
+   "name": "main.1716.com.beatgames.beatsaber.obb",
+   "role": "main-obb",
+   "id": "30506602615653643",
+   "required": true,
+   "size": 1345687838,
+   "sha256": "13fc1e957231820bed4c4189be36ccbd9083404594d3fce175b00443da09f0f5",
+   "dest": "android-files/obb"
+  }
+ ],
+ "status": {
+  "playability": "reported",
+  "download": "proven",
+  "notes": [
+   {
+    "en": "Add-on songs: Meta only delivers what has been purchased.",
+    "de": "Zusatzsongs: Meta liefert nur Gekauftes aus."
+   }
+  ]
+ },
+ "addons": {
+  "kind": "delivered-assets",
+  "dest": "android-files/klepton-assets",
+  "items": [
+   {
+    "sku": "P1S1",
+    "name": "boundless",
+    "id": "30506605242320047",
+    "group": "monstercat"
+   },
+   {
+    "sku": "P1S2",
+    "name": "emojivip",
+    "id": "30506605145653390",
+    "group": "monstercat"
+   },
+   {
+    "sku": "P1S3",
+    "name": "epic",
+    "id": "30506605108986727",
+    "group": "monstercat"
+   },
+   {
+    "sku": "P1S4",
+    "name": "feelingstronger",
+    "id": "30506604498986788",
+    "group": "monstercat"
+   },
+   {
+    "sku": "P1S5",
+    "name": "overkill",
+    "id": "30506604645653440",
+    "group": "monstercat"
+   },
+   {
+    "sku": "P1S6",
+    "name": "rattlesnake",
+    "id": "30506605165653388",
+    "group": "monstercat"
+   },
+   {
+    "sku": "P1S7",
+    "name": "stronger",
+    "id": "30506605212320050",
+    "group": "monstercat"
+   },
+   {
+    "sku": "P1S8",
+    "name": "thistime",
+    "id": "30506605332320038",
+    "group": "monstercat"
+   },
+   {
+    "sku": "P1S9",
+    "name": "tillitsover",
+    "id": "30506605318986706",
+    "group": "monstercat"
+   },
+   {
+    "sku": "P1S10",
+    "name": "wewontbealone",
+    "id": "30506605342320037",
+    "group": "monstercat"
+   },
+   {
+    "sku": "P2S1",
+    "name": "badliar",
+    "id": "30506605258986712",
+    "group": "imaginedragons"
+   },
+   {
+    "sku": "P2S2",
+    "name": "believer",
+    "id": "30506604778986760",
+    "group": "imaginedragons"
+   },
+   {
+    "sku": "P2S3",
+    "name": "digital",
+    "id": "30506605065653398",
+    "group": "imaginedragons"
+   },
+   {
+    "sku": "P2S4",
+    "name": "itstime",
+    "id": "30506605088986729",
+    "group": "imaginedragons"
+   },
+   {
+    "sku": "P2S5",
+    "name": "machine",
+    "id": "30506605298986708",
+    "group": "imaginedragons"
+   },
+   {
+    "sku": "P2S6",
+    "name": "natural",
+    "id": "30506604762320095",
+    "group": "imaginedragons"
+   },
+   {
+    "sku": "P2S7",
+    "name": "radioactive",
+    "id": "30506605275653377",
+    "group": "imaginedragons"
+   },
+   {
+    "sku": "P2S8",
+    "name": "thunder",
+    "id": "30506605305653374",
+    "group": "imaginedragons"
+   },
+   {
+    "sku": "P2S9",
+    "name": "warriors",
+    "id": "30506605292320042",
+    "group": "imaginedragons"
+   },
+   {
+    "sku": "P2S10",
+    "name": "whateverittakes",
+    "id": "30506604828986755",
+    "group": "imaginedragons"
+   },
+   {
+    "sku": "P2S11",
+    "name": "bones",
+    "id": "30506606038986634",
+    "group": "imaginedragons"
+   },
+   {
+    "sku": "P2S12",
+    "name": "enemy",
+    "id": "30506605228986715",
+    "group": "imaginedragons"
+   },
+   {
+    "sku": "P3S1",
+    "name": "thegreatestshow",
+    "id": "30506605272320044",
+    "group": "panicatthedisco"
+   },
+   {
+    "sku": "P3S2",
+    "name": "victorious",
+    "id": "30506604558986782",
+    "group": "panicatthedisco"
+   },
+   {
+    "sku": "P3S3",
+    "name": "emperorsnewclothes",
+    "id": "30506605058986732",
+    "group": "panicatthedisco"
+   },
+   {
+    "sku": "P3S4",
+    "name": "highhopes",
+    "id": "30506605252320046",
+    "group": "panicatthedisco"
+   },
+   {
+    "sku": "P3S5",
+    "name": "crazygenius",
+    "id": "30506604535653451",
+    "group": "panicatthedisco"
+   },
+   {
+    "sku": "P3S6",
+    "name": "dancingsnotacrime",
+    "id": "30506604652320106",
+    "group": "panicatthedisco"
+   },
+   {
+    "sku": "P3S7",
+    "name": "heylookmaimadeit",
+    "id": "30506604592320112",
+    "group": "panicatthedisco"
+   },
+   {
+    "sku": "P3S8",
+    "name": "sayamen",
+    "id": "30506604615653443",
+    "group": "panicatthedisco"
+   },
+   {
+    "sku": "P3S9",
+    "name": "sugarsoaker",
+    "id": "30506604532320118",
+    "group": "panicatthedisco"
+   },
+   {
+    "sku": "P3S10",
+    "name": "vivalasvengeance",
+    "id": "30506604642320107",
+    "group": "panicatthedisco"
+   },
+   {
+    "sku": "P4S1",
+    "name": "play",
+    "id": "30506605082320063",
+    "group": "rocketleague"
+   },
+   {
+    "sku": "P4S2",
+    "name": "glide",
+    "id": "30506605075653397",
+    "group": "rocketleague"
+   },
+   {
+    "sku": "P4S3",
+    "name": "luvuneedu",
+    "id": "30506605062320065",
+    "group": "rocketleague"
+   },
+   {
+    "sku": "P4S4",
+    "name": "rockit",
+    "id": "30506604825653422",
+    "group": "rocketleague"
+   },
+   {
+    "sku": "P4S5",
+    "name": "shiawase",
+    "id": "30506605245653380",
+    "group": "rocketleague"
+   },
+   {
+    "sku": "P4S6",
+    "name": "testme",
+    "id": "30506605248986713",
+    "group": "rocketleague"
+   },
+   {
+    "sku": "P5S1",
+    "name": "americanidiot",
+    "id": "30506605072320064",
+    "group": "greenday",
+    "size": 8964688,
+    "sha256": "344cb9d738005a407461e7f7c6cc5bb248ea79de863463e968ef68caa7b1b474"
+   },
+   {
+    "sku": "P5S2",
+    "name": "fatherofall",
+    "id": "30506605288986709",
+    "group": "greenday",
+    "size": 8486339,
+    "sha256": "b9fc7694c2c0c1af76b91d207ef7075e900c75c6c8d082ec87c5320781f7c77b"
+   },
+   {
+    "sku": "P5S3",
+    "name": "boulevardofbrokendreams",
+    "id": "30506604555653449",
+    "group": "greenday",
+    "size": 12940000,
+    "sha256": "590b6c6a777babfec4219f317b2116a9cacf70b5f017113f166cbab92eda163f"
+   },
+   {
+    "sku": "P5S4",
+    "name": "holiday",
+    "id": "30506604818986756",
+    "group": "greenday",
+    "size": 13041670,
+    "sha256": "d8665e157551a6a45ff9673271babb57485531b8acc1d8bd0736dd029d77572a"
+   },
+   {
+    "sku": "P5S5",
+    "name": "firereadyaim",
+    "id": "30506605285653376",
+    "group": "greenday",
+    "size": 6384906,
+    "sha256": "1c6794850e9aff7abe9d157a4dbb1bd5bd5d1f696b3e7883cab3b486ed041b4c"
+   },
+   {
+    "sku": "P5S6",
+    "name": "minority",
+    "id": "30506604572320114",
+    "group": "greenday",
+    "size": 9574032,
+    "sha256": "2a7babad6095c5d347684e476a0ed2823510511a89c03f6e1fca9d345c708b0e"
+   },
+   {
+    "sku": "P6S1",
+    "name": "hasameaning",
+    "id": "30506604658986772",
+    "group": "timbaland"
+   },
+   {
+    "sku": "P6S2",
+    "name": "dumbthingz",
+    "id": "30506605308986707",
+    "group": "timbaland"
+   },
+   {
+    "sku": "P6S3",
+    "name": "whilewereyoung",
+    "id": "30506606025653302",
+    "group": "timbaland"
+   },
+   {
+    "sku": "P6S4",
+    "name": "whatilike",
+    "id": "30506605055653399",
+    "group": "timbaland"
+   },
+   {
+    "sku": "P6S5",
+    "name": "famous",
+    "id": "30506604748986763",
+    "group": "timbaland"
+   },
+   {
+    "sku": "P7S1",
+    "name": "bleeditout",
+    "id": "30506605928986645",
+    "group": "linkinpark"
+   },
+   {
+    "sku": "P7S2",
+    "name": "breakingthehabit",
+    "id": "30506605888986649",
+    "group": "linkinpark"
+   },
+   {
+    "sku": "P7S3",
+    "name": "faint",
+    "id": "30506606048986633",
+    "group": "linkinpark"
+   },
+   {
+    "sku": "P7S4",
+    "name": "givenup",
+    "id": "30506605902319981",
+    "group": "linkinpark"
+   },
+   {
+    "sku": "P7S5",
+    "name": "intheend",
+    "id": "30506605935653311",
+    "group": "linkinpark"
+   },
+   {
+    "sku": "P7S6",
+    "name": "newdivide",
+    "id": "30506605895653315",
+    "group": "linkinpark"
+   },
+   {
+    "sku": "P7S7",
+    "name": "numb",
+    "id": "30506605912319980",
+    "group": "linkinpark"
+   },
+   {
+    "sku": "P7S8",
+    "name": "onestepcloser",
+    "id": "30506605892319982",
+    "group": "linkinpark"
+   },
+   {
+    "sku": "P7S9",
+    "name": "papercut",
+    "id": "30506605955653309",
+    "group": "linkinpark"
+   },
+   {
+    "sku": "P7S10",
+    "name": "somewhereibelong",
+    "id": "30506605942319977",
+    "group": "linkinpark"
+   },
+   {
+    "sku": "P7S11",
+    "name": "whativedone",
+    "id": "30506606058986632",
+    "group": "linkinpark"
+   },
+   {
+    "sku": "P8S1",
+    "name": "bloodsweatandtears",
+    "id": "30506605882319983",
+    "group": "bts"
+   },
+   {
+    "sku": "P8S2",
+    "name": "boywithluv",
+    "id": "30506605925653312",
+    "group": "bts"
+   },
+   {
+    "sku": "P8S3",
+    "name": "burningup",
+    "id": "30506605918986646",
+    "group": "bts"
+   },
+   {
+    "sku": "P8S4",
+    "name": "dionysus",
+    "id": "30506605968986641",
+    "group": "bts"
+   },
+   {
+    "sku": "P8S5",
+    "name": "dna",
+    "id": "30506605915653313",
+    "group": "bts"
+   },
+   {
+    "sku": "P8S6",
+    "name": "dope",
+    "id": "30506605922319979",
+    "group": "bts"
+   },
+   {
+    "sku": "P8S7",
+    "name": "dynamite",
+    "id": "30506605952319976",
+    "group": "bts"
+   },
+   {
+    "sku": "P8S8",
+    "name": "fakelove",
+    "id": "30506605932319978",
+    "group": "bts"
+   },
+   {
+    "sku": "P8S9",
+    "name": "idol",
+    "id": "30506605908986647",
+    "group": "bts"
+   },
+   {
+    "sku": "P8S10",
+    "name": "micdrop",
+    "id": "30506605855653319",
+    "group": "bts"
+   },
+   {
+    "sku": "P8S11",
+    "name": "nottoday",
+    "id": "30506605938986644",
+    "group": "bts"
+   },
+   {
+    "sku": "P8S12",
+    "name": "ugh",
+    "id": "30506605945653310",
+    "group": "bts"
+   },
+   {
+    "sku": "P9S1",
+    "name": "countingstars",
+    "id": "30506604738986764",
+    "group": "interscope"
+   },
+   {
+    "sku": "P9S2",
+    "name": "dnalamar",
+    "id": "30506604632320108",
+    "group": "interscope"
+   },
+   {
+    "sku": "P9S3",
+    "name": "dontcha",
+    "id": "30506604702320101",
+    "group": "interscope"
+   },
+   {
+    "sku": "P9S4",
+    "name": "partyrockanthem",
+    "id": "30506604595653445",
+    "group": "interscope"
+   },
+   {
+    "sku": "P9S5",
+    "name": "rollin",
+    "id": "30506605295653375",
+    "group": "interscope"
+   },
+   {
+    "sku": "P9S6",
+    "name": "sugar",
+    "id": "30506604795653425",
+    "group": "interscope"
+   },
+   {
+    "sku": "P9S7",
+    "name": "thesweetescape",
+    "id": "30506605312320040",
+    "group": "interscope"
+   },
+   {
+    "sku": "P10S1",
+    "name": "bangarang",
+    "id": "30506604752320096",
+    "group": "skrillex"
+   },
+   {
+    "sku": "P10S2",
+    "name": "butterflies",
+    "id": "30506605302320041",
+    "group": "skrillex"
+   },
+   {
+    "sku": "P10S3",
+    "name": "dontgo",
+    "id": "30506604735653431",
+    "group": "skrillex"
+   },
+   {
+    "sku": "P10S4",
+    "name": "firstoftheyear",
+    "id": "30506605278986710",
+    "group": "skrillex"
+   },
+   {
+    "sku": "P10S5",
+    "name": "raggabomb",
+    "id": "30506604775653427",
+    "group": "skrillex"
+   },
+   {
+    "sku": "P10S6",
+    "name": "rocknroll",
+    "id": "30506605098986728",
+    "group": "skrillex"
+   },
+   {
+    "sku": "P10S7",
+    "name": "scarymonstersandnicesprites",
+    "id": "30506605382320033",
+    "group": "skrillex"
+   },
+   {
+    "sku": "P10S8",
+    "name": "thedevilsden",
+    "id": "30506604695653435",
+    "group": "skrillex"
+   },
+   {
+    "sku": "P11S1",
+    "name": "allthegoodgirlsgotohell",
+    "id": "30506604768986761",
+    "group": "billieeilish"
+   },
+   {
+    "sku": "P11S2",
+    "name": "badguy",
+    "id": "30506604585653446",
+    "group": "billieeilish"
+   },
+   {
+    "sku": "P11S3",
+    "name": "bellyache",
+    "id": "30506604628986775",
+    "group": "billieeilish"
+   },
+   {
+    "sku": "P11S4",
+    "name": "buryafriend",
+    "id": "30506604625653442",
+    "group": "billieeilish"
+   },
+   {
+    "sku": "P11S5",
+    "name": "happierthanever",
+    "id": "30506604755653429",
+    "group": "billieeilish"
+   },
+   {
+    "sku": "P11S6",
+    "name": "ididntchangemynumber",
+    "id": "30506605102320061",
+    "group": "billieeilish"
+   },
+   {
+    "sku": "P11S7",
+    "name": "nda",
+    "id": "30506605352320036",
+    "group": "billieeilish"
+   },
+   {
+    "sku": "P11S8",
+    "name": "oxytocin",
+    "id": "30506604722320099",
+    "group": "billieeilish"
+   },
+   {
+    "sku": "P11S9",
+    "name": "thereforeiam",
+    "id": "30506605095653395",
+    "group": "billieeilish"
+   },
+   {
+    "sku": "P11S10",
+    "name": "youshouldseemeinacrown",
+    "id": "30506605078986730",
+    "group": "billieeilish"
+   },
+   {
+    "sku": "P12S1",
+    "name": "alejandro",
+    "id": "30506604725653432",
+    "group": "ladygaga"
+   },
+   {
+    "sku": "P12S2",
+    "name": "badromance",
+    "id": "30506605085653396",
+    "group": "ladygaga"
+   },
+   {
+    "sku": "P12S3",
+    "name": "bornthisway",
+    "id": "30506604732320098",
+    "group": "ladygaga"
+   },
+   {
+    "sku": "P12S4",
+    "name": "justdance",
+    "id": "30506604728986765",
+    "group": "ladygaga"
+   },
+   {
+    "sku": "P12S5",
+    "name": "paparazzi",
+    "id": "30506604552320116",
+    "group": "ladygaga"
+   },
+   {
+    "sku": "P12S6",
+    "name": "pokerface",
+    "id": "30506604708986767",
+    "group": "ladygaga"
+   },
+   {
+    "sku": "P12S7",
+    "name": "rainonme",
+    "id": "30506604718986766",
+    "group": "ladygaga"
+   },
+   {
+    "sku": "P12S8",
+    "name": "stupidlove",
+    "id": "30506605265653378",
+    "group": "ladygaga"
+   },
+   {
+    "sku": "P12S9",
+    "name": "telephone",
+    "id": "30506604588986779",
+    "group": "ladygaga"
+   },
+   {
+    "sku": "P12S10",
+    "name": "theedgeofglory",
+    "id": "30506605068986731",
+    "group": "ladygaga"
+   },
+   {
+    "sku": "P13S1",
+    "name": "centuries",
+    "id": "30506605092320062",
+    "group": "falloutboy"
+   },
+   {
+    "sku": "P13S2",
+    "name": "dancedance",
+    "id": "30506604792320092",
+    "group": "falloutboy"
+   },
+   {
+    "sku": "P13S3",
+    "name": "idontcare",
+    "id": "30506604805653424",
+    "group": "falloutboy"
+   },
+   {
+    "sku": "P13S4",
+    "name": "immortals",
+    "id": "30506604698986768",
+    "group": "falloutboy"
+   },
+   {
+    "sku": "P13S5",
+    "name": "irresistible",
+    "id": "30506604582320113",
+    "group": "falloutboy"
+   },
+   {
+    "sku": "P13S6",
+    "name": "mysongsknow",
+    "id": "30506604745653430",
+    "group": "falloutboy"
+   },
+   {
+    "sku": "P13S7",
+    "name": "thisaintascene",
+    "id": "30506604692320102",
+    "group": "falloutboy"
+   },
+   {
+    "sku": "P13S8",
+    "name": "thnksfrthmmrs",
+    "id": "30506604578986780",
+    "group": "falloutboy"
+   },
+   {
+    "sku": "P14S1",
+    "name": "alone",
+    "id": "30506604715653433",
+    "group": "edm"
+   },
+   {
+    "sku": "P14S2",
+    "name": "animals",
+    "id": "30506604548986783",
+    "group": "edm"
+   },
+   {
+    "sku": "P14S3",
+    "name": "freestyler",
+    "id": "30506604772320094",
+    "group": "edm"
+   },
+   {
+    "sku": "P14S4",
+    "name": "ghostsnstuff",
+    "id": "30506604542320117",
+    "group": "edm"
+   },
+   {
+    "sku": "P14S5",
+    "name": "icarus",
+    "id": "30506604832320088",
+    "group": "edm"
+   },
+   {
+    "sku": "P14S6",
+    "name": "sandstorm",
+    "id": "30506604802320091",
+    "group": "edm"
+   },
+   {
+    "sku": "P14S7",
+    "name": "staythenight",
+    "id": "30506604712320100",
+    "group": "edm"
+   },
+   {
+    "sku": "P14S8",
+    "name": "therockafellerskank",
+    "id": "30506604565653448",
+    "group": "edm"
+   },
+   {
+    "sku": "P14S9",
+    "name": "waitingallnight",
+    "id": "30506604575653447",
+    "group": "edm"
+   },
+   {
+    "sku": "P14S10",
+    "name": "witchcraft",
+    "id": "30506604742320097",
+    "group": "edm"
+   },
+   {
+    "sku": "P15S1",
+    "name": "2beloved",
+    "id": "30506605898986648",
+    "group": "lizzo"
+   },
+   {
+    "sku": "P15S2",
+    "name": "aboutdamntime",
+    "id": "30506604808986757",
+    "group": "lizzo"
+   },
+   {
+    "sku": "P15S3",
+    "name": "cuziloveyou",
+    "id": "30506604538986784",
+    "group": "lizzo"
+   },
+   {
+    "sku": "P15S4",
+    "name": "everybodysgay",
+    "id": "30506605348986703",
+    "group": "lizzo"
+   },
+   {
+    "sku": "P15S5",
+    "name": "goodashell",
+    "id": "30506604525653452",
+    "group": "lizzo"
+   },
+   {
+    "sku": "P15S6",
+    "name": "juice",
+    "id": "30506605355653369",
+    "group": "lizzo"
+   },
+   {
+    "sku": "P15S7",
+    "name": "tempo",
+    "id": "30506605868986651",
+    "group": "lizzo"
+   },
+   {
+    "sku": "P15S8",
+    "name": "truthhurts",
+    "id": "30506605345653370",
+    "group": "lizzo"
+   },
+   {
+    "sku": "P15S9",
+    "name": "worship",
+    "id": "30506604758986762",
+    "group": "lizzo"
+   },
+   {
+    "sku": "P16S1",
+    "name": "blindinglights",
+    "id": "30506604788986759",
+    "group": "theweeknd"
+   },
+   {
+    "sku": "P16S2",
+    "name": "cantfeelmyface",
+    "id": "30506605215653383",
+    "group": "theweeknd"
+   },
+   {
+    "sku": "P16S3",
+    "name": "howdoimakeyouloveme",
+    "id": "30506605378986700",
+    "group": "theweeknd"
+   },
+   {
+    "sku": "P16S4",
+    "name": "ifeelitcoming",
+    "id": "30506605315653373",
+    "group": "theweeknd"
+   },
+   {
+    "sku": "P16S5",
+    "name": "prayforme",
+    "id": "30506605112320060",
+    "group": "theweeknd"
+   },
+   {
+    "sku": "P16S6",
+    "name": "sacrifice",
+    "id": "30506605135653391",
+    "group": "theweeknd"
+   },
+   {
+    "sku": "P16S7",
+    "name": "saveyourtears",
+    "id": "30506605132320058",
+    "group": "theweeknd"
+   },
+   {
+    "sku": "P16S8",
+    "name": "starboy",
+    "id": "30506605198986718",
+    "group": "theweeknd"
+   },
+   {
+    "sku": "P16S9",
+    "name": "takemybreath",
+    "id": "30506604765653428",
+    "group": "theweeknd"
+   },
+   {
+    "sku": "P16S10",
+    "name": "thehills",
+    "id": "30506605175653387",
+    "group": "theweeknd"
+   },
+   {
+    "sku": "P16S11",
+    "name": "dieforyou",
+    "id": "30506604638986774",
+    "group": "theweeknd"
+   },
+   {
+    "sku": "P16S12",
+    "name": "lessthanzero",
+    "id": "30506604798986758",
+    "group": "theweeknd"
+   },
+   {
+    "sku": "P17S1",
+    "name": "borntobewild",
+    "id": "30506605225653382",
+    "group": "rockmixtape",
+    "size": 12756447,
+    "sha256": "340e685a90d1a82d9d93aeb92a2b28a77d56e7d368b8dd0ef9752e1da0a5badf"
+   },
+   {
+    "sku": "P17S2",
+    "name": "eyeofthetiger",
+    "id": "30506604678986770",
+    "group": "rockmixtape",
+    "size": 15098200,
+    "sha256": "53f169fe32e40d6b3be4da61b6f5e4c53c0f66c490d12e5132060be71d45928e"
+   },
+   {
+    "sku": "P17S3",
+    "name": "freebird",
+    "id": "30506604618986776",
+    "group": "rockmixtape",
+    "size": 27187213,
+    "sha256": "d63da23c0df25f084e55f83c7735fce7846c7ccb0f2f9557e528036aa58318f2"
+   },
+   {
+    "sku": "P17S4",
+    "name": "iwasmadelovingyou",
+    "id": "30506605125653392",
+    "group": "rockmixtape",
+    "size": 15397327,
+    "sha256": "78c834998352896521c99ea7340043aac34699cb284c6c9fc6ebcd50ab7d6823"
+   },
+   {
+    "sku": "P17S5",
+    "name": "sevennationarmy",
+    "id": "30506604512320120",
+    "group": "rockmixtape",
+    "size": 11282513,
+    "sha256": "e5cd7c11dacb801a2a0485481dbf9641d77a87494a6ed33b9670448f16aa5e84"
+   },
+   {
+    "sku": "P17S6",
+    "name": "smellsliketeenspirit",
+    "id": "30506605975653307",
+    "group": "rockmixtape",
+    "size": 17513217,
+    "sha256": "1d359c5b156924095d0c72419ed8fc93a91165c18d5d167eee28f82a944bf688"
+   },
+   {
+    "sku": "P17S7",
+    "name": "sweetchildomine",
+    "id": "30506605872319984",
+    "group": "rockmixtape",
+    "size": 20768264,
+    "sha256": "6f0a6881b3c741505fdd3cfe01101d3b916fb0abb8ed7473cd0816352515a967"
+   },
+   {
+    "sku": "P17S8",
+    "name": "thepretender",
+    "id": "30506604518986786",
+    "group": "rockmixtape",
+    "size": 14837029,
+    "sha256": "b56e99ddd3ecb3a69dd6418e67a19aff38074851801ec139cdbf2262589e83ca"
+   },
+   {
+    "sku": "P18S1",
+    "name": "anotheronebitesthedust",
+    "id": "30506605168986721",
+    "group": "queen"
+   },
+   {
+    "sku": "P18S2",
+    "name": "bohemianrhapsody",
+    "id": "30506604782320093",
+    "group": "queen"
+   },
+   {
+    "sku": "P18S3",
+    "name": "crazylittlethingcalledlove",
+    "id": "30506606032319968",
+    "group": "queen"
+   },
+   {
+    "sku": "P18S4",
+    "name": "dontstopmenow",
+    "id": "30506605988986639",
+    "group": "queen"
+   },
+   {
+    "sku": "P18S5",
+    "name": "iwantitall",
+    "id": "30506604612320110",
+    "group": "queen"
+   },
+   {
+    "sku": "P18S6",
+    "name": "killerqueen",
+    "id": "30506605375653367",
+    "group": "queen"
+   },
+   {
+    "sku": "P18S7",
+    "name": "onevision",
+    "id": "30506605188986719",
+    "group": "queen"
+   },
+   {
+    "sku": "P18S8",
+    "name": "somebodytolove",
+    "id": "30506605995653305",
+    "group": "queen"
+   },
+   {
+    "sku": "P18S9",
+    "name": "stonecoldcrazy",
+    "id": "30506606012319970",
+    "group": "queen"
+   },
+   {
+    "sku": "P18S10",
+    "name": "wearethechampions",
+    "id": "30506604502320121",
+    "group": "queen"
+   },
+   {
+    "sku": "P18S11",
+    "name": "wewillrockyou",
+    "id": "30506605238986714",
+    "group": "queen"
+   },
+   {
+    "sku": "P19S1",
+    "name": "alreadyover",
+    "id": "30506604812320090",
+    "group": "linkinpark2"
+   },
+   {
+    "sku": "P19S2",
+    "name": "crawling",
+    "id": "30506605875653317",
+    "group": "linkinpark2"
+   },
+   {
+    "sku": "P19S3",
+    "name": "fightingmyself",
+    "id": "30506604662320105",
+    "group": "linkinpark2"
+   },
+   {
+    "sku": "P19S4",
+    "name": "inmyhead",
+    "id": "30506605862319985",
+    "group": "linkinpark2"
+   },
+   {
+    "sku": "P19S5",
+    "name": "lost",
+    "id": "30506605142320057",
+    "group": "linkinpark2"
+   },
+   {
+    "sku": "P19S6",
+    "name": "morethevictim",
+    "id": "30506604568986781",
+    "group": "linkinpark2"
+   },
+   {
+    "sku": "P19S7",
+    "name": "numbencore",
+    "id": "30506606005653304",
+    "group": "linkinpark2"
+   },
+   {
+    "sku": "P19S8",
+    "name": "rememberthename",
+    "id": "30506605885653316",
+    "group": "linkinpark2"
+   },
+   {
+    "sku": "P20S1",
+    "name": "angry",
+    "id": "30506605992319972",
+    "group": "therollingstones"
+   },
+   {
+    "sku": "P20S2",
+    "name": "bitemyheadoff",
+    "id": "30506606035653301",
+    "group": "therollingstones"
+   },
+   {
+    "sku": "P20S3",
+    "name": "cantyouhearmeknocking",
+    "id": "30506605162320055",
+    "group": "therollingstones"
+   },
+   {
+    "sku": "P20S4",
+    "name": "gimmeshelter",
+    "id": "30506605118986726",
+    "group": "therollingstones"
+   },
+   {
+    "sku": "P20S5",
+    "name": "icantgetnosatisfaction",
+    "id": "30506606002319971",
+    "group": "therollingstones"
+   },
+   {
+    "sku": "P20S6",
+    "name": "livebythesword",
+    "id": "30506605328986705",
+    "group": "therollingstones"
+   },
+   {
+    "sku": "P20S7",
+    "name": "messitup",
+    "id": "30506605368986701",
+    "group": "therollingstones"
+   },
+   {
+    "sku": "P20S8",
+    "name": "paintitblack",
+    "id": "30506605138986724",
+    "group": "therollingstones"
+   },
+   {
+    "sku": "P20S9",
+    "name": "startmeup",
+    "id": "30506605365653368",
+    "group": "therollingstones"
+   },
+   {
+    "sku": "P20S10",
+    "name": "sympathyforthedevil",
+    "id": "30506604705653434",
+    "group": "therollingstones"
+   },
+   {
+    "sku": "P20S11",
+    "name": "wholewideworld",
+    "id": "30506605155653389",
+    "group": "therollingstones"
+   },
+   {
+    "sku": "P21S1",
+    "name": "aroundtheworld",
+    "id": "30506604672320104",
+    "group": "daftpunk"
+   },
+   {
+    "sku": "P21S2",
+    "name": "aroundtheworldharderbetterfasterstronger",
+    "id": "30506604528986785",
+    "group": "daftpunk"
+   },
+   {
+    "sku": "P21S3",
+    "name": "dafunkdaftendirekt",
+    "id": "30506605232320048",
+    "group": "daftpunk"
+   },
+   {
+    "sku": "P21S4",
+    "name": "getlucky",
+    "id": "30506605962319975",
+    "group": "daftpunk"
+   },
+   {
+    "sku": "P21S5",
+    "name": "harderbetterfasterstronger",
+    "id": "30506606015653303",
+    "group": "daftpunk"
+   },
+   {
+    "sku": "P21S6",
+    "name": "loseyourselftodance",
+    "id": "30506605325653372",
+    "group": "daftpunk"
+   },
+   {
+    "sku": "P21S7",
+    "name": "onemoretime",
+    "id": "30506605958986642",
+    "group": "daftpunk"
+   },
+   {
+    "sku": "P21S8",
+    "name": "technologic",
+    "id": "30506604508986787",
+    "group": "daftpunk"
+   },
+   {
+    "sku": "P21S9",
+    "name": "primetimeofyourlifebrainwasherrollinalivelive2007",
+    "id": "30506605192320052",
+    "group": "daftpunk"
+   },
+   {
+    "sku": "P21S10",
+    "name": "veridisquo",
+    "id": "30506605115653393",
+    "group": "daftpunk"
+   },
+   {
+    "sku": "P22S1",
+    "name": "alleyezonme",
+    "id": "30506604562320115",
+    "group": "hiphop"
+   },
+   {
+    "sku": "P22S2",
+    "name": "anaconda",
+    "id": "30506605158986722",
+    "group": "hiphop"
+   },
+   {
+    "sku": "P22S3",
+    "name": "ginandjuice",
+    "id": "30506605182320053",
+    "group": "hiphop"
+   },
+   {
+    "sku": "P22S4",
+    "name": "godzilla",
+    "id": "30506604675653437",
+    "group": "hiphop"
+   },
+   {
+    "sku": "P22S5",
+    "name": "heyya",
+    "id": "30506605268986711",
+    "group": "hiphop"
+   },
+   {
+    "sku": "P22S6",
+    "name": "hypnotize",
+    "id": "30506604822320089",
+    "group": "hiphop"
+   },
+   {
+    "sku": "P22S7",
+    "name": "nuthinbutagthang",
+    "id": "30506604602320111",
+    "group": "hiphop"
+   },
+   {
+    "sku": "P22S8",
+    "name": "themessage",
+    "id": "30506605218986716",
+    "group": "hiphop"
+   },
+   {
+    "sku": "P22S9",
+    "name": "thewoo",
+    "id": "30506604505653454",
+    "group": "hiphop"
+   },
+   {
+    "sku": "P23S1",
+    "name": "houdini",
+    "id": "30506605338986704",
+    "group": "shockdrop"
+   },
+   {
+    "sku": "P23S2",
+    "name": "notlikeus",
+    "id": "30506606008986637",
+    "group": "shockdrop"
+   },
+   {
+    "sku": "P23S3",
+    "name": "abracadabra",
+    "id": "30506604492320122",
+    "group": "shockdrop"
+   },
+   {
+    "sku": "P23S4",
+    "name": "birdsofafeather",
+    "id": "30506605905653314",
+    "group": "shockdrop"
+   },
+   {
+    "sku": "P23S5",
+    "name": "espresso",
+    "id": "30506605878986650",
+    "group": "shockdrop"
+   },
+   {
+    "sku": "P24S1",
+    "name": "babyonemoretime",
+    "id": "30506604635653441",
+    "group": "britneyspears"
+   },
+   {
+    "sku": "P24S2",
+    "name": "circus",
+    "id": "30506604665653438",
+    "group": "britneyspears"
+   },
+   {
+    "sku": "P24S3",
+    "name": "gimmemore",
+    "id": "30506605978986640",
+    "group": "britneyspears"
+   },
+   {
+    "sku": "P24S4",
+    "name": "imaslave4u",
+    "id": "30506604608986777",
+    "group": "britneyspears"
+   },
+   {
+    "sku": "P24S5",
+    "name": "meagainstthemusic",
+    "id": "30506605982319973",
+    "group": "britneyspears"
+   },
+   {
+    "sku": "P24S6",
+    "name": "oopsididitagain",
+    "id": "30506605205653384",
+    "group": "britneyspears"
+   },
+   {
+    "sku": "P24S7",
+    "name": "overprotected",
+    "id": "30506605972319974",
+    "group": "britneyspears"
+   },
+   {
+    "sku": "P24S8",
+    "name": "scream&shout",
+    "id": "30506606018986636",
+    "group": "britneyspears"
+   },
+   {
+    "sku": "P24S9",
+    "name": "tilltheworldends",
+    "id": "30506606045653300",
+    "group": "britneyspears"
+   },
+   {
+    "sku": "P24S10",
+    "name": "toxic",
+    "id": "30506605358986702",
+    "group": "britneyspears"
+   },
+   {
+    "sku": "P24S11",
+    "name": "womanizer",
+    "id": "30506605985653306",
+    "group": "britneyspears"
+   },
+   {
+    "sku": "P25S1",
+    "name": "accelerate",
+    "id": "30506605185653386",
+    "group": "monstercatvol2"
+   },
+   {
+    "sku": "P25S2",
+    "name": "dabadabadabadaba",
+    "id": "30506606052319966",
+    "group": "monstercatvol2"
+   },
+   {
+    "sku": "P25S3",
+    "name": "deadmanwalking",
+    "id": "30506605335653371",
+    "group": "monstercatvol2"
+   },
+   {
+    "sku": "P25S4",
+    "name": "endgame",
+    "id": "30506605122320059",
+    "group": "monstercatvol2"
+   },
+   {
+    "sku": "P25S5",
+    "name": "finalboss",
+    "id": "30506605948986643",
+    "group": "monstercatvol2"
+   },
+   {
+    "sku": "P25S6",
+    "name": "memorybank",
+    "id": "30506605865653318",
+    "group": "monstercatvol2"
+   },
+   {
+    "sku": "P25S7",
+    "name": "mercenary",
+    "id": "30506606028986635",
+    "group": "monstercatvol2"
+   },
+   {
+    "sku": "P25S8",
+    "name": "pump",
+    "id": "30506605148986723",
+    "group": "monstercatvol2"
+   },
+   {
+    "sku": "P25S9",
+    "name": "rad",
+    "id": "30506604682320103",
+    "group": "monstercatvol2"
+   },
+   {
+    "sku": "P25S10",
+    "name": "riot",
+    "id": "30506605052320066",
+    "group": "monstercatvol2"
+   },
+   {
+    "sku": "P25S11",
+    "name": "thronesofblood",
+    "id": "30506604605653444",
+    "group": "monstercatvol2"
+   },
+   {
+    "sku": "P25S12",
+    "name": "wakeup",
+    "id": "30506606022319969",
+    "group": "monstercatvol2"
+   },
+   {
+    "sku": "P26S1",
+    "name": "atlasrise",
+    "id": "30506606042319967",
+    "group": "metallica"
+   },
+   {
+    "sku": "P26S2",
+    "name": "battery",
+    "id": "30506605128986725",
+    "group": "metallica"
+   },
+   {
+    "sku": "P26S3",
+    "name": "blackened",
+    "id": "30506604545653450",
+    "group": "metallica"
+   },
+   {
+    "sku": "P26S4",
+    "name": "creepingdeath",
+    "id": "30506605858986652",
+    "group": "metallica"
+   },
+   {
+    "sku": "P26S5",
+    "name": "entersandman",
+    "id": "30506605255653379",
+    "group": "metallica"
+   },
+   {
+    "sku": "P26S6",
+    "name": "fadetoblack",
+    "id": "30506604785653426",
+    "group": "metallica"
+   },
+   {
+    "sku": "P26S7",
+    "name": "forwhomthebelltolls",
+    "id": "30506604598986778",
+    "group": "metallica"
+   },
+   {
+    "sku": "P26S8",
+    "name": "fuel",
+    "id": "30506605195653385",
+    "group": "metallica"
+   },
+   {
+    "sku": "P26S9",
+    "name": "hitthelights",
+    "id": "30506604815653423",
+    "group": "metallica"
+   },
+   {
+    "sku": "P26S10",
+    "name": "kingnothing",
+    "id": "30506604668986771",
+    "group": "metallica"
+   },
+   {
+    "sku": "P26S11",
+    "name": "luxaeterna",
+    "id": "30506605152320056",
+    "group": "metallica"
+   },
+   {
+    "sku": "P26S12",
+    "name": "masterofpuppets",
+    "id": "30506604622320109",
+    "group": "metallica"
+   },
+   {
+    "sku": "P26S13",
+    "name": "nothingelsematters",
+    "id": "30506605322320039",
+    "group": "metallica"
+   },
+   {
+    "sku": "P26S14",
+    "name": "one",
+    "id": "30506605372320034",
+    "group": "metallica"
+   },
+   {
+    "sku": "P26S15",
+    "name": "sadbuttrue",
+    "id": "30506605105653394",
+    "group": "metallica"
+   },
+   {
+    "sku": "P26S16",
+    "name": "seekanddestroy",
+    "id": "30506605965653308",
+    "group": "metallica"
+   },
+   {
+    "sku": "P26S17",
+    "name": "theunforgiven",
+    "id": "30506605235653381",
+    "group": "metallica"
+   }
+  ]
+ }
+}

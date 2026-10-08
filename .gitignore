@@ -1,0 +1,15 @@
+# build products
+.build*/
+/dist/
+*.xcodeproj
+.DS_Store
+
+# never part of this repository: game content, toolchain archives, credentials
+*.apk
+*.obb
+*.pk4
+*.pak
+*.bundle
+*.so
+*.tar.gz
+*.dmg

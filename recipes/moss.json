@@ -1,0 +1,46 @@
+{
+ "schema": 1,
+ "id": "moss",
+ "title": "Moss",
+ "package": "com.polyarc.MossGame",
+ "versionName": "1.0.3.151047",
+ "versionCode": 151047,
+ "store": {
+  "appId": "1654565391314903"
+ },
+ "toolchain": {
+  "target": "moss",
+  "minCommit": "6d185aa"
+ },
+ "files": [
+  {
+   "name": "Moss-Android-Shipping-arm64.apk",
+   "role": "apk",
+   "id": "8254815691289807",
+   "required": true,
+   "size": 65754588,
+   "sha256": "74e7b93461fdc3b044224d7437e14e73c9ef623dbe2a363240c6671fd55e9665",
+   "dest": "",
+   "localName": "moss.apk"
+  },
+  {
+   "name": "main.151047.com.polyarc.MossGame.obb",
+   "role": "main-obb",
+   "id": "8254813211290055",
+   "required": true,
+   "size": 2601974441,
+   "sha256": "c174ad703777b0ee82df6eb864ccc437d4c257ac9854e3f9b901788293e7393f",
+   "dest": "android-files/Android/obb/com.polyarc.MossGame"
+  }
+ ],
+ "status": {
+  "playability": "reported",
+  "download": "listed",
+  "notes": [
+   {
+    "en": "The file list matches; the download into an empty folder has not been repeated.",
+    "de": "Dateiliste passt; Download im leeren Verzeichnis nicht wiederholt."
+   }
+  ]
+ }
+}

@@ -1,0 +1,100 @@
+{
+ "schema": 1,
+ "id": "alyx",
+ "title": "Half-Life: Alyx",
+ "package": "steam-app-546560",
+ "versionName": "Steam-Build 25487405",
+ "versionCode": 25487405,
+ "store": {},
+ "toolchain": {
+  "target": "alyx",
+  "minCommit": "6185722"
+ },
+ "files": [],
+ "trees": [
+  {
+   "name": "game",
+   "role": "game",
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "Half-Life: Alyx from your own Steam account (Linux build): in the Steam client's console run 'download_depot 546560 546564' and 'download_depot 546560 546561', then merge the two 'game' folders into one (546564 first, then 546561, without overwriting).",
+     "de": "Half-Life: Alyx aus dem eigenen Steam-Konto (Linux-Fassung): in der Konsole des Steam-Clients 'download_depot 546560 546564' und 'download_depot 546560 546561' ausführen und beide Ordner 'game' zu einem zusammenführen (erst 546564, dann 546561, ohne zu überschreiben)."
+    }
+   },
+   "markers": [
+    {
+     "path": "bin/linuxsteamrtarm64/hlvr",
+     "size": 26408,
+     "sha256": "5acf2654c1e73cbdb70de9844e701690b9e914145f8fb20b93eb251d1cd57c35"
+    },
+    {
+     "path": "hlvr/pak01_dir.vpk",
+     "size": 2100641,
+     "sha256": "89b8cf9436033e72109583eee5ea10ec5f58e58ee32cd37ea399d11cdb445d65"
+    }
+   ]
+  },
+  {
+   "name": "sysroot",
+   "role": "sysroot",
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "Steam Linux Runtime 4 for arm64, version 4.0.20260928.262390, freely available from Valve (repo.steampowered.com/steamrt4/images/4.0.20260928.262390/, file com.valvesoftware.SteamRuntime.Platform-arm64-steamrt4-runtime.tar.gz). Unpack it and choose the folder 'files'.",
+     "de": "Steam Linux Runtime 4 für arm64, Version 4.0.20260928.262390, frei bei Valve erhältlich (repo.steampowered.com/steamrt4/images/4.0.20260928.262390/, Datei com.valvesoftware.SteamRuntime.Platform-arm64-steamrt4-runtime.tar.gz). Entpacken und den Ordner 'files' angeben."
+    }
+   },
+   "markers": [
+    {
+     "path": "lib/aarch64-linux-gnu/libc.so.6",
+     "size": 1716616,
+     "sha256": "70fa4c4cf57eabeb96097cce47582d02379c4cd1de3db3e98ade4dd7089a1b13"
+    }
+   ]
+  },
+  {
+   "name": "xrizer",
+   "role": "xrizer",
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "xrizer (OpenVR on top of OpenXR, GPL-3.0) in the port's version: the folder that contains 'bin/linuxarm64/vrclient.so'.",
+     "de": "xrizer (OpenVR über OpenXR, GPL-3.0) in der Fassung des Ports: Ordner, der 'bin/linuxarm64/vrclient.so' enthält."
+    }
+   },
+   "markers": [
+    {
+     "path": "bin/linuxarm64/vrclient.so",
+     "size": 16073672,
+     "sha256": "fa088c45bede27fa3ac8c8c2c578cfe4fa6becec5cc2365cb551c37da180aafc"
+    }
+   ]
+  }
+ ],
+ "status": {
+  "playability": "reported",
+  "download": "special",
+  "notes": [
+   {
+    "en": "Special app: not a Meta Store title. Runs as a Linux program (Valve's own ARM64 build), not from an APK.",
+    "de": "Sonderapp: kein Titel aus dem Meta-Store. Läuft als Linux-Programm (Valves eigene ARM64-Fassung), nicht aus einem APK."
+   },
+   {
+    "en": "The game files (about 68 GB) come from your own Steam purchase and are never downloaded.",
+    "de": "Die Spieldateien (rund 68 GB) stammen aus dem Steam-Kauf des Nutzers und werden nie geladen."
+   },
+   {
+    "en": "Reported by a user as working on the device with the merged fork (6185722) on 2026-10-08.",
+    "de": "Mit dem zusammengeführten Fork (6185722) laut Nutzer am Gerät lauffähig (2026-10-08)."
+   },
+   {
+    "en": "For now, Steam Linux Runtime and xrizer have to be provided as folders.",
+    "de": "Steam Linux Runtime und xrizer müssen vorerst als Ordner bereitgestellt werden."
+   }
+  ]
+ },
+ "icon": {
+  "steamAppId": "546560"
+ }
+}
