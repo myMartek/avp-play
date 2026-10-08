@@ -14,6 +14,8 @@ final class LoginSession: ObservableObject {
     @Published var transcript = ""
     @Published var outcome: Outcome?
     @Published var running = false
+    /// Das Werkzeug kam gar nicht erst zum Laufen oder wurde vom System beendet, ohne etwas zu sagen.
+    @Published var blockedBySystem = false
     private var toTool: FileHandle?
 
     /// Fragt das Werkzeug gerade nach etwas Geheimem? Dann wird verdeckt getippt.
@@ -30,6 +32,7 @@ final class LoginSession: ObservableObject {
         }
         transcript = ""
         outcome = nil
+        blockedBySystem = false
         running = true
         let input = Pipe(), output = Pipe()
         toTool = input.fileHandleForWriting
@@ -43,11 +46,16 @@ final class LoginSession: ObservableObject {
         let outFD = output.fileHandleForWriting.fileDescriptor
         Thread.detachNewThread {
             let result: Outcome
+            var blocked = false
             do {
                 let token = try MetaLogin.run(tool: tool, input: inFD, output: outFD)
                 try TokenStore().write(token: token)
                 result = .success
             } catch {
+                // Nicht gestartet, oder durch ein Signal beendet (negativer Status): so sieht es aus, wenn
+                // Gatekeeper eine Datei aus dem Internet nicht laufen lässt.
+                if case LoginError.couldNotStart = error { blocked = true }
+                if case LoginError.toolFailed(let status) = error, status < 0 { blocked = true }
                 result = .failure(Redaction.redact("\(error)"))
             }
             // Erst hier schließen: die Deskriptoren müssen leben, solange das Werkzeug läuft.
@@ -57,6 +65,7 @@ final class LoginSession: ObservableObject {
                 output.fileHandleForReading.readabilityHandler = nil
                 self.toTool = nil
                 self.running = false
+                self.blockedBySystem = blocked && self.transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                 self.outcome = result
             }
         }
@@ -117,6 +126,12 @@ struct LoginSheet: View {
             case .failure(let why):
                 Label(why, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange)
                     .fixedSize(horizontal: false, vertical: true)
+                if session.blockedBySystem {
+                    Text(L("macOS may have stopped Meta’s tool because it came from the internet. Open System Settings › Privacy & Security, scroll down and click “Open Anyway” next to ovr-platform-util, then choose “Try Again”.",
+                           "Möglicherweise hat macOS Metas Werkzeug angehalten, weil es aus dem Internet stammt. Öffne Systemeinstellungen › Datenschutz & Sicherheit, scrolle nach unten und klicke bei ovr-platform-util auf „Dennoch öffnen“. Danach „Noch einmal“ wählen."))
+                        .font(.callout).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             case nil:
                 HStack {
                     Group {

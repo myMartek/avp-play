@@ -67,7 +67,13 @@ struct RootView: View {
                 }
             }
             .navigationSplitViewColumnWidth(min: 180, ideal: 200, max: 240)
-            .safeAreaInset(edge: .bottom) { DeviceChip().padding(12) }
+            .safeAreaInset(edge: .bottom) {
+                VStack(spacing: 10) {
+                    if let release = model.update { UpdateCard(release: release) }
+                    DeviceChip()
+                }
+                .padding(12)
+            }
         } detail: {
             Group {
                 switch model.section {
@@ -95,6 +101,7 @@ struct RootView: View {
             model.installBundledToolchainIfNewer()
             model.refresh()
             model.checkAccount()
+            await model.checkForUpdate(manual: false)
             await Snapshot.runIfRequested(model: model) { openSettings() }
         }
     }
@@ -134,9 +141,16 @@ struct NoticeBar: View {
     let text: String
 
     var body: some View {
-        HStack {
-            Text(text).fixedSize(horizontal: false, vertical: true)
-            Spacer()
+        // Keine feste Höhe nach dem Text: Die Leiste hängt am Fensterrand, und dort fragt SwiftUI auch nach der
+        // Größe bei kleinster Breite. Ein langer Text meldet dann eine Höhe von vielen Bildschirmen und schiebt
+        // den ganzen Fensterinhalt aus dem Bild. Stattdessen höchstens vier Zeilen; der volle Text ist markierbar.
+        HStack(alignment: .top) {
+            Text(text)
+                .lineLimit(4)
+                .truncationMode(.tail)
+                .textSelection(.enabled)
+                .help(text)
+                .frame(maxWidth: .infinity, alignment: .leading)
             Button("OK") { model.notice = nil }
         }
         .padding(12)
@@ -188,6 +202,33 @@ enum Snapshot {
         model.section = .setup
         await pause(1.2)
         capture("4-einrichtung", dir)
+        // `--update-now`: nachsehen und einspielen wie per Knopf, aber ohne Neustart; das Ergebnis als Datei.
+        if CommandLine.arguments.contains("--update-now") {
+            await model.checkForUpdate(manual: true)
+            let found = model.update?.version ?? "keine"
+            capture("4-einrichtung-update-gefunden", dir)
+            await model.installUpdate(relaunch: false)
+            try? "gefunden: \(found)\nkann sich ersetzen: \(model.canSelfUpdate)\nZustand danach: \(model.updateState)\n"
+                .write(to: dir.appendingPathComponent("update.txt"), atomically: true, encoding: .utf8)
+        }
+        // `--choose-tool <Datei>`: dieselbe Stelle, die „Choose File …“ aufruft.
+        if let i = CommandLine.arguments.firstIndex(of: "--choose-tool"), i + 1 < CommandLine.arguments.count {
+            model.adoptTool(from: URL(fileURLWithPath: CommandLine.arguments[i + 1]))
+            await pause(2)
+            capture("4-einrichtung-nach-dateiwahl", dir)
+        }
+        // `--notice <Text>`: einen Hinweis zeigen, wie ihn ein Fehler auslöst, und festhalten, was das Fenster tut.
+        if let i = CommandLine.arguments.firstIndex(of: "--notice"), i + 1 < CommandLine.arguments.count {
+            model.notice = CommandLine.arguments[i + 1]
+            await pause(1.5)
+            capture("4-einrichtung-mit-hinweis", dir)
+            if let w = NSApp.windows.first(where: { $0.identifier?.rawValue.contains("main") == true }) {
+                try? "\(Int(w.frame.width))x\(Int(w.frame.height)) min \(Int(w.contentMinSize.width))x\(Int(w.contentMinSize.height))\n"
+                    .write(to: dir.appendingPathComponent("fenster.txt"), atomically: true, encoding: .utf8)
+            }
+            model.notice = nil
+            await pause(0.5)
+        }
         openSettings()
         await pause(0.2)
         hideWindows()

@@ -7,6 +7,7 @@ public enum LoginError: Error, CustomStringConvertible, Equatable {
     case couldNotStart(String)
     case toolFailed(Int32)
     case noToken
+    case notExecutable(String)
 
     public var description: String {
         switch self {
@@ -21,6 +22,9 @@ public enum LoginError: Error, CustomStringConvertible, Equatable {
             return L("Sign-in wasn't completed (ovr-platform-util exited with status \(status)).",
                      "Die Anmeldung wurde nicht abgeschlossen (ovr-platform-util endete mit Status \(status)).")
         case .noToken: return L("ovr-platform-util didn't output a token.", "ovr-platform-util hat keinen Token ausgegeben.")
+        case .notExecutable(let p):
+            return L("\(p) is Meta's tool, but it is not marked as a program yet – files from a browser never are. Make it executable, or let the app set it up.",
+                     "\(p) ist Metas Werkzeug, aber noch nicht als Programm gekennzeichnet – das ist bei Dateien aus dem Browser immer so. Ausführbar machen oder von der App einrichten lassen.")
         }
     }
 }
@@ -36,15 +40,63 @@ public struct MetaTool: Sendable {
         FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Downloads/ovr-platform-util")
     }
 
-    /// Gestartet wird nur eine Datei mit gültiger Signatur von Meta.
+    /// Wo eine Oberfläche ihre eigene Kopie des Werkzeugs hält.
+    public static var installedURL: URL {
+        DataLocation.base.appendingPathComponent("tools/ovr-platform-util")
+    }
+
+    /// Gestartet wird nur eine ausführbare Datei mit gültiger Signatur von Meta.
     public func verify() throws {
-        guard FileManager.default.isExecutableFile(atPath: url.path) else { throw LoginError.toolMissing(url.path) }
+        guard FileManager.default.fileExists(atPath: url.path) else { throw LoginError.toolMissing(url.path) }
+        try verifySignature()
+        guard FileManager.default.isExecutableFile(atPath: url.path) else { throw LoginError.notExecutable(url.path) }
+    }
+
+    /// Ist die Datei von Meta signiert? Dafür muss sie nicht ausführbar sein – eine Datei aus dem Browser ist
+    /// es nie, und geprüft wird sie trotzdem.
+    public func verifySignature() throws {
+        guard FileManager.default.isReadableFile(atPath: url.path) else { throw LoginError.toolMissing(url.path) }
         guard Toolchain.status(["/usr/bin/codesign", "--verify", "--strict", url.path]) == 0 else {
             throw LoginError.wrongSigner(L("signature invalid or missing", "Signatur ungültig oder nicht vorhanden"))
         }
         let info = MetaTool.captureBoth(["/usr/bin/codesign", "-dv", "--verbose=2", url.path])
         let team = info.split(separator: "\n").first { $0.hasPrefix("TeamIdentifier=") }.map { String($0.dropFirst("TeamIdentifier=".count)) }
         guard team == MetaTool.expectedTeam else { throw LoginError.wrongSigner(L("team \(team ?? "unknown")", "Team \(team ?? "unbekannt")")) }
+    }
+
+    /// Richtet eine geladene Datei als Werkzeug ein: Signatur prüfen, eine eigene Kopie ablegen und nur diese
+    /// als Programm kennzeichnen. Die geladene Datei bleibt, wie sie ist. Was macOS der Datei beim Laden
+    /// angeheftet hat (die Herkunftsmarke für Gatekeeper), wandert mit der Kopie mit und wird nicht entfernt.
+    @discardableResult
+    public static func adopt(from source: URL, to destination: URL = MetaTool.installedURL) throws -> MetaTool {
+        try MetaTool(url: source).verifySignature()
+        let fm = FileManager.default
+        try fm.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let fresh = destination.appendingPathExtension("new")
+        try? fm.removeItem(at: fresh)
+        try fm.copyItem(at: source, to: fresh)
+        try fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: fresh.path)
+        try? fm.removeItem(at: destination)
+        try fm.moveItem(at: fresh, to: destination)
+        let tool = MetaTool(url: destination)
+        try tool.verify()
+        return tool
+    }
+
+    /// Geladene Fassungen des Werkzeugs in einem Ordner, neueste zuerst. Browser hängen bei gleichem Namen
+    /// eine Zahl an („ovr-platform-util (1)“); unfertige Downloads werden übergangen.
+    public static func downloads(in folder: URL) -> [URL] {
+        let keys: [URLResourceKey] = [.isRegularFileKey, .contentModificationDateKey]
+        let found = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: keys)) ?? []
+        let unfinished: Set<String> = ["crdownload", "download", "part", "partial", "tmp"]
+        return found.filter { url in
+            url.lastPathComponent.hasPrefix("ovr-platform-util") && !unfinished.contains(url.pathExtension.lowercased())
+                && (try? url.resourceValues(forKeys: [.isRegularFileKey]))?.isRegularFile == true
+        }.sorted { a, b in
+            let da = (try? a.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate ?? .distantPast
+            let db = (try? b.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate ?? .distantPast
+            return da > db
+        }
     }
 
     static func captureBoth(_ argv: [String]) -> String {

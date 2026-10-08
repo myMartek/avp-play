@@ -30,6 +30,30 @@ struct SettingsView: View {
                     .font(.callout).foregroundStyle(.secondary)
             }
 
+            Section(L("Updates", "Aktualisierung")) {
+                Toggle(L("Check for new versions once a day", "Einmal am Tag nach neuen Fassungen sehen"),
+                       isOn: Binding(get: { model.autoUpdateCheck }, set: { model.autoUpdateCheck = $0 }))
+                HStack {
+                    Text(L("This is version \(model.appVersion).", "Dies ist Version \(model.appVersion)."))
+                    Spacer()
+                    switch model.updateState {
+                    case .checking: ProgressView().controlSize(.small)
+                    case .upToDate: Text(L("Up to date", "Aktuell")).foregroundStyle(.secondary)
+                    case .failed(let why): Text(why).foregroundStyle(.orange).lineLimit(2).help(why)
+                    default:
+                        if let release = model.update {
+                            Text(L("Version \(release.version) is available", "Version \(release.version) ist da")).foregroundStyle(.secondary)
+                        }
+                    }
+                    Button(L("Check Now", "Jetzt nachsehen")) { Task { await model.checkForUpdate(manual: true) } }
+                        .disabled(model.updateState == .checking)
+                }
+                Text(L("The check asks GitHub for the latest release of AVP Play and sends nothing else. A new version is only installed if it is signed by the same developer and notarised by Apple.",
+                       "Dabei wird GitHub nach der neuesten Veröffentlichung von AVP Play gefragt, sonst wird nichts gesendet. Eine neue Fassung wird nur eingespielt, wenn sie vom selben Entwickler signiert und von Apple beglaubigt ist."))
+                    .font(.callout).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
             Section(L("Advanced", "Erweitert")) {
                 LabeledContent(L("App identifier prefix", "Präfix der App-Kennung")) {
                     TextField("", text: $prefixDraft, prompt: Text(Toolchain.defaultBundlePrefix()))

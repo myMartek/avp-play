@@ -80,7 +80,18 @@ final class AppModel: ObservableObject {
     /// Metas letzte Antworten auf die Besitzfrage, je Store-App.
     @Published var ownership: [String: OwnershipRecord] = [:]
     @Published var checkingOwnership = false
+    /// Was zuletzt beim Einrichten von Metas Werkzeug herauskam – steht in der Karte „Meta-Konto“.
+    @Published var toolNote: String?
+    @Published var lookingForTool = false
+    private var toolWatch: Task<Void, Never>?
     @Published var freeBytes: Int64?
+    /// Eine neuere veröffentlichte Fassung, falls es eine gibt.
+    @Published var update: AppRelease?
+    @Published var updateState: UpdateState = .idle
+    @AppStorage("autoUpdateCheck") var autoUpdateCheck = true
+    @AppStorage("lastUpdateCheck") var lastUpdateCheck: Double = 0
+    /// Das Entwicklerteam, das dieses Programm signiert hat; `nil` bei einem Bau ohne Identität.
+    let ownTeam: String? = Bundle.main.bundleIdentifier == nil ? nil : Updater.team(of: Bundle.main.bundleURL)
     private var awake: NSObjectProtocol?
     @Published private var options: [String: GameOptions] = [:]
     @AppStorage("onlyMine") var onlyMine = false
@@ -349,6 +360,83 @@ final class AppModel: ObservableObject {
         account = .signedOut
         OwnershipCache(store: paths.store).clear()
         ownership = [:]
+    }
+
+    // MARK: Metas Werkzeug
+
+    static let toolPage = URL(string: "https://developers.meta.com/horizon/resources/publish-reference-platform-command-line-utility/")!
+
+    /// Öffnet Metas Seite im Browser und hält danach eine Weile im Ordner „Downloads“ Ausschau: Sobald die
+    /// Datei dort liegt, richtet die App sie ein. Geladen wird beim Nutzer, im Browser, zu Metas Bedingungen –
+    /// die App lädt das Werkzeug nie selbst und bringt es nicht mit.
+    func openToolPage() {
+        NSWorkspace.shared.open(AppModel.toolPage)
+        toolNote = L("Download the macOS version on Meta’s page. AVP Play picks it up from your Downloads folder as soon as it is there.",
+                     "Lade auf Metas Seite die Fassung für macOS. AVP Play übernimmt sie aus deinem Ordner „Downloads“, sobald sie dort liegt.")
+        toolWatch?.cancel()
+        lookingForTool = true
+        toolWatch = Task { [weak self] in
+            for _ in 0..<450 {                      // 15 Minuten
+                try? await Task.sleep(for: .seconds(2))
+                guard let self, !Task.isCancelled, !self.toolPresent else { break }
+                if await self.adoptToolFromDownloads(quiet: true) { break }
+            }
+            self?.lookingForTool = false
+        }
+    }
+
+    /// Sucht jetzt im Ordner „Downloads“ und sagt, was dabei herauskam.
+    func findTool() {
+        Task { await adoptToolFromDownloads(quiet: false) }
+    }
+
+    @discardableResult
+    private func adoptToolFromDownloads(quiet: Bool) async -> Bool {
+        let folder = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask)[0]
+        let outcome: (ok: Bool, note: String?) = await Task.detached {
+            // macOS fragt beim ersten Zugriff auf „Downloads“ um Erlaubnis. Wurde sie verweigert, lässt sich
+            // der Ordner nicht lesen – dann bleibt die Dateiauswahl, die diese Erlaubnis nicht braucht.
+            guard (try? FileManager.default.contentsOfDirectory(atPath: folder.path)) != nil else {
+                return (false, quiet ? nil : L("AVP Play is not allowed to look into your Downloads folder. Use “Choose File …” instead, or allow it under System Settings › Privacy & Security › Files and Folders.",
+                                               "AVP Play darf nicht in deinen Ordner „Downloads“ sehen. Nimm stattdessen „Datei auswählen …“, oder erlaube es unter Systemeinstellungen › Datenschutz & Sicherheit › Dateien und Ordner."))
+            }
+            let candidates = MetaTool.downloads(in: folder)
+            guard !candidates.isEmpty else {
+                return (false, quiet ? nil : L("There is no file named “ovr-platform-util” in your Downloads folder yet.",
+                                               "In deinem Ordner „Downloads“ liegt noch keine Datei namens „ovr-platform-util“."))
+            }
+            var problem = ""
+            for file in candidates {
+                do {
+                    try MetaTool.adopt(from: file)
+                    return (true, nil)
+                } catch { problem = "\(error)" }
+            }
+            return (false, problem)
+        }.value
+        finishToolSetup(ok: outcome.ok, note: outcome.note)
+        return outcome.ok
+    }
+
+    /// Richtet eine vom Nutzer gewählte Datei ein.
+    func adoptTool(from file: URL) {
+        Task {
+            let problem: String? = await Task.detached {
+                do { try MetaTool.adopt(from: file); return nil } catch { return "\(error)" }
+            }.value
+            finishToolSetup(ok: problem == nil, note: problem)
+        }
+    }
+
+    private func finishToolSetup(ok: Bool, note: String?) {
+        if ok {
+            toolWatch?.cancel()
+            lookingForTool = false
+            toolPresent = true
+            toolNote = L("Meta’s tool is set up. You can sign in now.", "Metas Werkzeug ist eingerichtet. Du kannst dich jetzt anmelden.")
+        } else if let note {
+            toolNote = note
+        }
     }
 
     // MARK: Dateien des Nutzers übernehmen

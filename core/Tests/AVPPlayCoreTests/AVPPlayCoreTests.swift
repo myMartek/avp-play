@@ -688,6 +688,100 @@ final class JobTests: XCTestCase {
     }
 }
 
+final class UpdaterTests: XCTestCase {
+    func testVersionsCompareNumberByNumber() {
+        XCTAssertTrue(Updater.isNewer("1.0.1", than: "1.0.0"))
+        XCTAssertTrue(Updater.isNewer("1.10", than: "1.9.9"))
+        XCTAssertTrue(Updater.isNewer("2", than: "1.99.99"))
+        XCTAssertFalse(Updater.isNewer("1.0", than: "1.0.0"))
+        XCTAssertFalse(Updater.isNewer("1.0.0", than: "1.0.1"))
+        XCTAssertFalse(Updater.isNewer("", than: "0"))
+    }
+
+    func testLatestReleaseIsReadFromGitHubsAnswer() throws {
+        let json = """
+        {"tag_name":"v1.2.3","html_url":"https://github.com/x/y/releases/tag/v1.2.3","body":"Notes",
+         "assets":[{"name":"klepton-toolchain-204-abc.tar.gz","browser_download_url":"https://example.org/t.tar.gz","size":5},
+                   {"name":"AVP-Play-1.2.3.dmg","browser_download_url":"https://example.org/a.dmg","size":42,
+                    "digest":"sha256:ABCDEF"}]}
+        """
+        let r = try Updater.parseLatest(Data(json.utf8))
+        XCTAssertEqual(r.version, "1.2.3")
+        XCTAssertEqual(r.image.absoluteString, "https://example.org/a.dmg")
+        XCTAssertEqual(r.imageSize, 42)
+        XCTAssertEqual(r.imageSHA256, "abcdef")
+        XCTAssertThrowsError(try Updater.parseLatest(Data(#"{"tag_name":"v1","html_url":"https://x","assets":[]}"#.utf8)), "kein Abbild")
+        XCTAssertThrowsError(try Updater.parseLatest(Data(#"{"tag_name":"neueste","html_url":"https://x","assets":[{"name":"a.dmg","browser_download_url":"https://x/a.dmg"}]}"#.utf8)))
+        XCTAssertThrowsError(try Updater.parseLatest(Data("kein json".utf8)))
+    }
+
+    func testAnAppFromAnotherDeveloperIsNeverAccepted() {
+        // gültig signiert, aber weder von unserem Team noch beglaubigt im Sinne der Prüfung
+        let calculator = URL(fileURLWithPath: "/System/Applications/Calculator.app")
+        XCTAssertThrowsError(try Updater.verify(app: calculator, team: "ABCDE12345", bundleId: "com.apple.calculator", newerThan: "0")) {
+            guard case UpdateError.notTrusted = $0 else { return XCTFail("\($0)") }
+        }
+        XCTAssertNil(Updater.team(of: URL(fileURLWithPath: "/nicht/vorhanden.app")))
+    }
+
+    func testADamagedDownloadIsRefusedAndRemoved() async throws {
+        let fm = FileManager.default
+        let dir = fm.temporaryDirectory.appendingPathComponent("qi-upd-\(UUID().uuidString)", isDirectory: true)
+        addTeardownBlock { try? fm.removeItem(at: dir) }
+        try fm.createDirectory(at: dir, withIntermediateDirectories: true)
+        let source = dir.appendingPathComponent("quelle.dmg")
+        try Data("abbild".utf8).write(to: source)
+        var release = AppRelease(version: "9.9.9", page: URL(string: "https://example.org")!, notes: "", image: source,
+                                 imageSize: 6, imageSHA256: try Hashing.sha256(of: source))
+        let good = try await Updater.download(release, to: dir.appendingPathComponent("updates"))
+        XCTAssertEqual(try Data(contentsOf: good), Data("abbild".utf8))
+        release.imageSHA256 = String(repeating: "0", count: 64)
+        do { _ = try await Updater.download(release, to: dir.appendingPathComponent("updates")); XCTFail("angenommen") }
+        catch { XCTAssertEqual(error as? UpdateError, .damaged) }
+        XCTAssertFalse(fm.fileExists(atPath: good.path), "die beschädigte Datei bleibt nicht liegen")
+        // Ein Ort, an den nicht geschrieben werden kann, wird erkannt
+        XCTAssertFalse(Updater.canReplace(app: URL(fileURLWithPath: "/Volumes/AVP Play/AVP Play.app")))
+        XCTAssertFalse(Updater.canReplace(app: URL(fileURLWithPath: "/private/var/folders/x/AppTranslocation/1/d/AVP Play.app")))
+    }
+}
+
+final class MetaToolSetupTests: XCTestCase {
+    func testDownloadsAreFoundNewestFirstAndUnfinishedOnesSkipped() throws {
+        let fm = FileManager.default
+        let dir = fm.temporaryDirectory.appendingPathComponent("qi-dl-\(UUID().uuidString)", isDirectory: true)
+        addTeardownBlock { try? fm.removeItem(at: dir) }
+        try fm.createDirectory(at: dir.appendingPathComponent("ovr-platform-util-ordner"), withIntermediateDirectories: true)
+        for (name, age) in [("ovr-platform-util", 300.0), ("ovr-platform-util (1)", 10.0), ("ovr-platform-util.crdownload", 1.0),
+                            ("etwas-anderes", 1.0)] {
+            let url = dir.appendingPathComponent(name)
+            try Data("x".utf8).write(to: url)
+            try fm.setAttributes([.modificationDate: Date().addingTimeInterval(-age)], ofItemAtPath: url.path)
+        }
+        XCTAssertEqual(MetaTool.downloads(in: dir).map(\.lastPathComponent), ["ovr-platform-util (1)", "ovr-platform-util"])
+        XCTAssertEqual(MetaTool.downloads(in: dir.appendingPathComponent("gibt-es-nicht")), [])
+    }
+
+    func testAFileThatIsNotMetasIsNeverSetUp() throws {
+        let fm = FileManager.default
+        let dir = fm.temporaryDirectory.appendingPathComponent("qi-tool-\(UUID().uuidString)", isDirectory: true)
+        addTeardownBlock { try? fm.removeItem(at: dir) }
+        try fm.createDirectory(at: dir, withIntermediateDirectories: true)
+        let target = dir.appendingPathComponent("tools/ovr-platform-util")
+        // ein echtes, gültig signiertes Programm – aber nicht von Meta
+        XCTAssertThrowsError(try MetaTool.adopt(from: URL(fileURLWithPath: "/bin/ls"), to: target)) {
+            guard case LoginError.wrongSigner = $0 else { return XCTFail("\($0)") }
+        }
+        // eine Datei ohne Signatur, wie sie aus dem Browser käme (nicht ausführbar)
+        let plain = dir.appendingPathComponent("ovr-platform-util")
+        try Data("#!/bin/sh\necho hallo\n".utf8).write(to: plain)
+        XCTAssertThrowsError(try MetaTool.adopt(from: plain, to: target)) {
+            guard case LoginError.wrongSigner = $0 else { return XCTFail("\($0)") }
+        }
+        XCTAssertFalse(fm.fileExists(atPath: target.path), "nichts davon wurde abgelegt")
+        XCTAssertFalse(fm.fileExists(atPath: target.appendingPathExtension("new").path))
+    }
+}
+
 final class LegacyDataTests: XCTestCase {
     func testOldFolderIsRenamedOnceAndNeverMerged() throws {
         let fm = FileManager.default

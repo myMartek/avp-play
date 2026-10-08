@@ -102,9 +102,12 @@ enum Probe {
         return total
     }
 
-    /// Wo Metas Werkzeug liegt: vom Nutzer gewählt, sonst im Ordner „Downloads“.
+    /// Wo Metas Werkzeug liegt: die eigene Kopie der App, sonst eine früher gewählte Datei. Der Ordner
+    /// „Downloads“ wird hier nicht angefasst – macOS fragt beim ersten Zugriff um Erlaubnis, und diese Frage
+    /// soll erst kommen, wenn der Nutzer das Werkzeug dort suchen lässt.
     static var metaToolURL: URL {
-        UserDefaults.standard.string(forKey: "metaToolPath").map { URL(fileURLWithPath: $0) } ?? MetaTool.defaultURL
+        if FileManager.default.fileExists(atPath: MetaTool.installedURL.path) { return MetaTool.installedURL }
+        return UserDefaults.standard.string(forKey: "metaToolPath").map { URL(fileURLWithPath: $0) } ?? MetaTool.installedURL
     }
 
     /// Die Teams, mit denen Xcode auf diesem Mac angemeldet ist: Kennung, Name und ob es ein kostenloses Team

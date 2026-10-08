@@ -17,7 +17,7 @@ downloaded that Meta does not confirm you have purchased.
 | Mac | Apple silicon, macOS 14 or later, with [Xcode](https://apps.apple.com/app/xcode/id497799835) and its visionOS platform installed |
 | Headset | Apple Vision Pro, paired with Xcode, Developer Mode on, on the same Wi-Fi as the Mac |
 | Apple account | A paid [Apple Developer Program](https://developer.apple.com/programs/) membership. Free teams do not work: the entitlements the games need are missing. |
-| Meta account | The account that owns the games, and Meta's own command-line tool [`ovr-platform-util`](https://developers.meta.com/horizon/resources/publish-reference-platform-command-line-utility/) (used only to sign in) |
+| Meta account | The account that owns the games, and Meta's own command-line tool [`ovr-platform-util`](https://developers.meta.com/horizon/resources/publish-reference-platform-command-line-utility/) (used only to sign in). You download it from Meta's page; the app finds the download and sets it up. |
 | Controllers | Whatever the game needs – most of these games expect tracked controllers. |
 | Disk space | Games are large. Asgard's Wrath 2 alone is about 34 GB on the Mac and again on the headset. |
 
@@ -28,12 +28,18 @@ downloaded that Meta does not confirm you have purchased.
 2. Open AVP Play. The **Setup** page checks the five things it needs (Xcode, Vision Pro, Apple developer team,
    Meta account, toolchain) and tells you what to do for each one that is missing. The toolchain comes with the
    app and installs itself.
+   For the Meta account, the app opens Meta's download page for its sign-in tool; once the file is in your
+   Downloads folder the app picks it up by itself – you do not have to move it or make it executable.
 3. Pick a game under **Games** and click **Install**. The **Jobs** page shows the steps. A job can be
    interrupted at any point and resumed later; nothing that was downloaded or copied is lost.
 
 Every installed game opens with the same start window: its picture, its name, **Start** and **Settings**.
 
 The app speaks English and German. It follows macOS; you can choose a language in its settings (⌘,).
+
+**Updates.** Once a day the app asks GitHub whether a newer release exists and offers to install it. It replaces
+itself only with a version that is signed by the same developer and notarised by Apple. You can turn the check
+off in the settings.
 
 ## Games
 
@@ -65,7 +71,8 @@ their own recipe.
   whether Meta will serve it.
 - **Apple signing** uses the team you are signed in with in Xcode. The app reads the list of teams from Xcode's
   settings and nothing else.
-- There is no server, no telemetry and no account with this project.
+- There is no server, no telemetry and no account with this project. The only other connection the app makes is
+  the daily question to GitHub about a newer release, which you can turn off.
 
 ## Build it yourself
 

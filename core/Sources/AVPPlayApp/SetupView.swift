@@ -63,14 +63,25 @@ struct SetupView: View {
                         }
                     }
                     if !model.toolPresent, model.account != .signedIn {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(L("Signing in needs Meta’s tool “ovr-platform-util”. Download it from Meta and put it in your “Downloads” folder – or choose the file.", "Für die Anmeldung wird Metas Werkzeug „ovr-platform-util“ gebraucht. Lade es bei Meta und lege es in den Ordner „Downloads“ – oder wähle die Datei aus."))
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(L("Signing in uses Meta’s own sign-in tool, “ovr-platform-util”. It is free, but Meta only hands it out on its own page, so this takes two clicks:",
+                                   "Die Anmeldung läuft über Metas eigenes Werkzeug „ovr-platform-util“. Es ist kostenlos, aber Meta gibt es nur auf der eigenen Seite heraus – deshalb zwei Klicks:"))
                                 .font(.callout).foregroundStyle(.secondary)
                             HStack {
-                                Link(L("Download Page at Meta", "Download-Seite bei Meta"), destination: URL(string: "https://developers.meta.com/horizon/resources/publish-reference-platform-command-line-utility/")!)
-                                Button(L("Choose File …", "Datei auswählen …")) { chooseTool() }
+                                Button(L("1  Open Meta’s Download Page", "1  Metas Download-Seite öffnen")) { model.openToolPage() }
+                                Button(L("2  Find the Download", "2  Download suchen")) { model.findTool() }
+                                if model.lookingForTool { ProgressView().controlSize(.small) }
                             }
+                            Text(L("You do not have to move or change the file. If it is somewhere other than Downloads:",
+                                   "Du musst die Datei weder verschieben noch verändern. Liegt sie woanders als in „Downloads“:"))
+                                .font(.callout).foregroundStyle(.secondary)
+                            Button(L("Choose File …", "Datei auswählen …")) { chooseTool() }.controlSize(.small)
                         }
+                    }
+                    if let note = model.toolNote, model.account != .signedIn {
+                        Label(note, systemImage: model.toolPresent ? "checkmark.circle" : "info.circle")
+                            .font(.callout)
+                            .foregroundStyle(model.toolPresent ? Color.green : Color.primary)
                     }
                     Text(L("Special apps such as Doom 3 and Half-Life: Alyx do not need a Meta account.", "Sonderapps wie Doom 3 und Half-Life: Alyx brauchen kein Meta-Konto."))
                         .font(.callout).foregroundStyle(.secondary)
@@ -133,13 +144,7 @@ struct SetupView: View {
         panel.message = L("Choose the file “ovr-platform-util”.", "Die Datei „ovr-platform-util“ auswählen.")
         panel.directoryURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Downloads")
         guard panel.runModal() == .OK, let url = panel.url else { return }
-        do {
-            try MetaTool(url: url).verify()
-            UserDefaults.standard.set(url.path, forKey: "metaToolPath")
-            model.refresh()
-        } catch {
-            model.notice = "\(error)"
-        }
+        model.adoptTool(from: url)
     }
 
     private func chooseToolchain() {
