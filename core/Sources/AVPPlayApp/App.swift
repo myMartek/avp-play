@@ -150,8 +150,8 @@ struct RootView: View {
         case .games: return 0
         case .jobs: return model.jobs.filter { model.phase(of: $0) == .stopped || model.phase(of: $0) == .running }.count
         case .setup:
-            return [model.xcodeProblem != nil, model.device == nil, !model.teamValid,
-                    model.account == .signedOut, model.toolchainText == nil].filter { $0 }.count
+            // Die Konten zählen nicht: Meta braucht es nur für Spiele aus dem Meta-Store, Steam nur für zwei Spiele.
+            return [model.xcodeProblem != nil, model.device == nil, !model.teamValid, model.toolchainText == nil].filter { $0 }.count
         }
     }
 }

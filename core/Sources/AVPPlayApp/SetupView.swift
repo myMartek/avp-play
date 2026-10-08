@@ -3,7 +3,8 @@ import AVPPlayCore
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Die Einrichtung: fünf Dinge, jedes mit einer echten Prüfung und – wenn etwas fehlt – dem nächsten Handgriff.
+/// Die Einrichtung: vier Dinge, die jedes Spiel braucht, und zwei Konten, die nur für ihre Spiele nötig sind –
+/// jedes mit einer echten Prüfung und, wenn etwas fehlt, dem nächsten Handgriff.
 struct SetupView: View {
     @EnvironmentObject var model: AppModel
     @State private var showLogin = false
@@ -11,7 +12,8 @@ struct SetupView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                Text(L("To put a game on the Vision Pro, this Mac needs five things. Green means: checked and fine.", "Damit ein Spiel auf die Vision Pro kommt, braucht dieser Mac fünf Dinge. Grün heißt: geprüft und in Ordnung."))
+                Text(L("To put a game on the Vision Pro, this Mac needs four things: Xcode, the Vision Pro, an Apple developer team and the toolchain. The two accounts are only needed for their own games – Meta for games from the Meta Store, Steam for Doom 3 and Half-Life: Alyx. Green means: checked and fine.", "Damit ein Spiel auf die Vision Pro kommt, braucht dieser Mac vier Dinge: Xcode, die Vision Pro, ein Apple-Entwicklerteam und die Toolchain. Die beiden Konten braucht es nur für ihre eigenen Spiele – Meta für Spiele aus dem Meta-Store, Steam für Doom 3 und Half-Life: Alyx. Grün heißt: geprüft und in Ordnung."))
+                    .fixedSize(horizontal: false, vertical: true)
                     .foregroundStyle(.secondary)
 
                 CheckCard(title: "Xcode", state: model.xcodeProblem == nil ? (model.xcodeText == nil ? .checking : .ok) : .missing,
@@ -73,7 +75,7 @@ struct SetupView: View {
                     }
                 }
 
-                CheckCard(title: L("Meta Account", "Meta-Konto"), state: accountState, detail: accountDetail) {
+                CheckCard(title: L("Meta Account (for Meta Store games)", "Meta-Konto (für Spiele aus dem Meta-Store)"), state: accountState, detail: accountDetail) {
                     HStack {
                         switch model.account {
                         case .signedIn:
@@ -159,7 +161,7 @@ struct SetupView: View {
         switch model.account {
         case .signedIn: return L("Signed in. The access key is in this Mac’s keychain and nowhere else.", "Angemeldet. Der Zugangsschlüssel liegt im Schlüsselbund dieses Macs und nirgends sonst.")
         case .checking, .unknown: return L("Checking …", "Wird geprüft …")
-        case .signedOut: return L("Not signed in. Once you sign in, the app checks which games you own and downloads only those.", "Nicht angemeldet. Mit der Anmeldung prüft das Programm, welche Spiele du gekauft hast, und lädt nur diese.")
+        case .signedOut: return L("Not signed in. Only needed for games from the Meta Store: once you sign in, the app checks which of them you own and downloads only those.", "Nicht angemeldet. Nur für Spiele aus dem Meta-Store nötig: Mit der Anmeldung prüft das Programm, welche davon du gekauft hast, und lädt nur diese.")
         case .problem(let why): return L("The stored access was not confirmed: \(why)", "Der hinterlegte Zugang wurde nicht bestätigt: \(why)")
         }
     }

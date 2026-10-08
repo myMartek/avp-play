@@ -11,7 +11,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 ROOT="$(cd .. && pwd)"
-VERSION="${AVPPLAY_APP_VERSION:-1.0.5}"
+VERSION="${AVPPLAY_APP_VERSION:-1.0.6}"
 export AVPPLAY_APP_VERSION="$VERSION"
 
 tools/make-app.sh
