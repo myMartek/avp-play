@@ -18,6 +18,16 @@ tools/make-app.sh
 APP="$ROOT/dist/AVP Play.app"
 [ -d "$APP/Contents/Resources/toolchain" ] || { echo "!! ohne Toolchain im Programmpaket kein Release" >&2; exit 1; }
 
+# Erst das Programm selbst beglaubigen lassen und den Nachweis anheften: dann öffnet es sich nach dem Kopieren
+# aus dem Abbild auch ohne Netz. Das Abbild bekommt danach seinen eigenen Nachweis.
+if [ -n "${AVPPLAY_SIGN_IDENTITY:-}" ] && [ -n "${AVPPLAY_NOTARY_PROFILE:-}" ]; then
+  ZIP="$(mktemp -d)/AVP-Play.zip"
+  ditto -c -k --keepParent "$APP" "$ZIP"
+  xcrun notarytool submit "$ZIP" --keychain-profile "$AVPPLAY_NOTARY_PROFILE" --wait
+  xcrun stapler staple "$APP"
+  rm -rf "$(dirname "$ZIP")"
+fi
+
 OUT="$ROOT/dist/release"
 DMG="$OUT/AVP-Play-$VERSION.dmg"
 STAGE="$(mktemp -d)"
