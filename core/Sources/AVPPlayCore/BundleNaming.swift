@@ -45,8 +45,12 @@ extension Toolchain {
 
     /// Was die Toolchain über ein Target weiß: seine Art (`unity`, `ue4`, …), oder `nil`, wenn sie es nicht kennt.
     /// Gefragt wird die Tabelle der Toolchain selbst; sie braucht dafür die Spieldateien nicht.
-    public func targetKind(_ target: String) -> String? {
-        guard !target.isEmpty, target.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "-" || $0 == "_") }) else { return nil }
+    public func targetKind(_ target: String) -> String? { targetValue(target, key: "kind") }
+
+    /// Ein Eintrag aus der Zeile, die die Toolchain für ein Target führt (nur einfache Texte); `nil`, wenn sie das
+    /// Target nicht kennt oder der Eintrag leer ist.
+    public func targetValue(_ target: String, key: String) -> String? {
+        guard !target.isEmpty, key.allSatisfy({ $0.isASCII && $0.isLetter }), target.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "-" || $0 == "_") }) else { return nil }
         let p = Process()
         p.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
         p.arguments = ["-c", """
@@ -57,9 +61,9 @@ for node in tree.body:
         for key, value in zip(node.value.keys, node.value.values):
             if getattr(key, 'value', None) == sys.argv[2]:
                 for k, v in zip(value.keys, value.values):
-                    if getattr(k, 'value', None) == 'kind' and isinstance(v, ast.Constant):
+                    if getattr(k, 'value', None) == sys.argv[3] and isinstance(v, ast.Constant) and isinstance(v.value, str):
                         print(v.value)
-""", root.appendingPathComponent("visionos/targets.py").path, target]
+""", root.appendingPathComponent("visionos/targets.py").path, target, key]
         let out = Pipe()
         p.standardOutput = out
         p.standardError = FileHandle.nullDevice

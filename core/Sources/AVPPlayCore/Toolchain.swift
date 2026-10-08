@@ -177,6 +177,16 @@ public struct Toolchain: Sendable {
         root.appendingPathComponent(recipe.toolchain.target).appendingPathComponent("assets", isDirectory: true)
     }
 
+    /// Dateien, die ein Spiel zusätzlich als Dateien im Datenbereich braucht, obwohl sie auch als übersetzter Code im
+    /// Programm stecken: die Qt-Plugins von Steam Link. Qt listet den Ordner auf und liest jede Datei, bevor es sie
+    /// lädt; geladen wird dann trotzdem die signierte Fassung. Leer bei allen Spielen, die das nicht brauchen.
+    public func qtPlugins(recipe: Recipe) -> [URL] {
+        guard let relative = targetValue(recipe.toolchain.target, key: "qtplugins"), !relative.contains("..") else { return [] }
+        let files = (try? FileManager.default.contentsOfDirectory(at: root.appendingPathComponent(relative), includingPropertiesForKeys: [.fileSizeKey])) ?? []
+        return files.filter { $0.lastPathComponent.hasPrefix("libplugins_") && $0.pathExtension == "so" }
+            .sorted { $0.lastPathComponent < $1.lastPathComponent }
+    }
+
     /// Anzahl und Gesamtgröße der Asset-Dateien aus dem APK – für den Abgleich mit dem Gerät.
     public func assetsSummary(recipe: Recipe) -> (count: Int, bytes: Int64) {
         var count = 0

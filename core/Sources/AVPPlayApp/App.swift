@@ -229,7 +229,7 @@ enum Snapshot {
         if let i = CommandLine.arguments.firstIndex(of: "--open-game"), i + 1 < CommandLine.arguments.count {
             let id = CommandLine.arguments[i + 1]
             var waited = 0.0
-            while !model.allGames.contains(where: { $0.id == id }), waited < 15 { await pause(0.5); waited += 0.5 }
+            while model.allGames.first(where: { $0.id == id })?.catalog == nil, waited < 15 { await pause(0.5); waited += 0.5 }
             capture("1-spiele-mit-katalog", dir)
             model.gamePath = [id]
             await pause(2)
@@ -241,6 +241,18 @@ enum Snapshot {
                 .write(to: dir.appendingPathComponent("nachschlagen.txt"), atomically: true, encoding: .utf8)
         }
         model.gamePath = []
+        // `--load-more <Anzahl>`: so viele weitere Seiten des Katalogs nachladen, wie es das Ende der Liste täte.
+        if let i = CommandLine.arguments.firstIndex(of: "--load-more"), i + 1 < CommandLine.arguments.count, let pages = Int(CommandLine.arguments[i + 1]) {
+            var lines = ["Start: \(model.catalog.count) von \(model.catalogTotal.map(String.init) ?? "?") geladen, weitere: \(model.canLoadMore)"]
+            for page in 0..<pages where model.canLoadMore {
+                model.loadMoreCatalog()
+                await pause(0.2)
+                while model.loadingMore { await pause(0.2) }
+                lines.append("Seite \(page + 2): \(model.catalog.count) geladen, \(model.shownGames.count) gezeigt, weitere: \(model.canLoadMore)")
+            }
+            capture("1-spiele-nachgeladen", dir)
+            try? lines.joined(separator: "\n").write(to: dir.appendingPathComponent("nachladen.txt"), atomically: true, encoding: .utf8)
+        }
         // `--install <Kennung>`: den Auftrag wirklich über die Oberfläche auslösen und bis zum Ende zeigen.
         if let i = CommandLine.arguments.firstIndex(of: "--install"), i + 1 < CommandLine.arguments.count,
            let game = model.games.first(where: { $0.id == CommandLine.arguments[i + 1] }) {

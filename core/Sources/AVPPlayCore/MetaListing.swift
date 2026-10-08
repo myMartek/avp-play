@@ -117,6 +117,13 @@ public enum DraftRecipe {
     /// Die Kennung eines solchen Rezepts – eindeutig je Store-App und nie die eines mitgelieferten Rezepts.
     public static func identifier(appId: String) -> String { "store-\(appId)" }
 
+    /// Die App-Kennung hinter der Kennung eines Entwurfs; `nil`, wenn es keine solche ist.
+    public static func appId(of identifier: String) -> String? {
+        guard identifier.hasPrefix("store-") else { return nil }
+        let id = String(identifier.dropFirst(6))
+        return CatalogGame.isIdentifier(id) ? id : nil
+    }
+
     /// Platzhalter für ein Spiel, dessen Dateien noch nicht nachgeschlagen sind: nur Name und Kennungen.
     public static func placeholder(game: CatalogGame) -> Recipe {
         Recipe(schema: Recipe.supportedSchema, id: identifier(appId: game.appId), title: game.title, package: game.package,

@@ -8,13 +8,17 @@ public struct CatalogGame: Codable, Sendable, Identifiable, Equatable {
     public var title: String
     public var package: String
     public var publisher: String?
-    /// `verified` (vom Projekt geprüft), `untested` oder `broken` (bekannt, dass es nicht läuft).
+    /// Was die App zeigt: `verified` (vom Projekt geprüft, Rezept liegt vor), `community` (mehr Nutzer melden, dass
+    /// es läuft, als dass es nicht startet), `incompatible` (umgekehrt) oder `untested`. Der Dienst rechnet das aus
+    /// den Meldungen aus, sofern das Projekt nichts festgelegt hat.
     public var status: String
+    /// Das Projekt hat das Spiel als geprüft markiert, aber noch kein Rezept dafür veröffentlicht.
+    public var verifiedPending: Bool?
     public var noteEn: String?
     public var noteDe: String?
     /// Unter welchem Namen die Toolchain das Spiel kennt; fehlt, wenn sie es nicht kennt.
     public var target: String?
-    /// Freigegebene Meldungen von Nutzern.
+    /// Meldungen von Nutzern; jede zählt, sobald sie eingeht.
     public var works: Int
     public var problems: Int
     public var fails: Int
@@ -118,15 +122,36 @@ public struct CatalogClient: Sendable {
         }
     }
 
-    /// Die Liste; mit Suchbegriff sucht der Dienst auch dort, wo er neue Spiele kennenlernt.
-    public func catalog(query: String = "", page: Int = 0) async throws -> (games: [CatalogGame], more: Bool) {
-        struct Answer: Decodable { let games: [CatalogGame]; let more: Bool }
+    /// Eine Seite des Katalogs.
+    public struct Page: Sendable {
+        public var games: [CatalogGame]
+        /// Gibt es danach eine weitere Seite?
+        public var more: Bool
+        /// Wie viele Spiele insgesamt passen; `nil`, wenn der Dienst es nicht sagt.
+        public var total: Int?
+    }
+
+    /// Eine Seite der Liste: alle Quest-Titel, die der Dienst kennt, Geprüftes zuerst. Mit Suchbegriff sucht der
+    /// Dienst auch dort, wo er neue Spiele kennenlernt.
+    public func catalog(query: String = "", page: Int = 0) async throws -> Page {
         var items = [URLQueryItem(name: "page", value: String(max(0, page)))]
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
         if !q.isEmpty { items.append(URLQueryItem(name: "q", value: String(q.prefix(80)))) }
+        return try await fetchPage(items)
+    }
+
+    /// Genau diese Spiele (höchstens 100) – für das, was schon auf dem Mac liegt oder gemerkt ist.
+    public func games(appIds: [String]) async throws -> [CatalogGame] {
+        let ids = appIds.filter(CatalogGame.isIdentifier).prefix(100)
+        guard !ids.isEmpty else { return [] }
+        return try await fetchPage([URLQueryItem(name: "ids", value: ids.joined(separator: ","))]).games
+    }
+
+    private func fetchPage(_ items: [URLQueryItem]) async throws -> Page {
+        struct Answer: Decodable { let games: [CatalogGame]; let more: Bool; let total: Int? }
         let data = try await send(request("api/v1/catalog", query: items), expecting: 200)
         guard let answer = try? JSONDecoder().decode(Answer.self, from: data) else { throw CatalogError.unexpected }
-        return (answer.games.filter(\.isSane), answer.more)
+        return Page(games: answer.games.filter(\.isSane), more: answer.more, total: answer.total)
     }
 
     public func game(appId: String) async throws -> CatalogGame {

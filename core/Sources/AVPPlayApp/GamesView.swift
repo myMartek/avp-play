@@ -15,6 +15,7 @@ struct GamesView: View {
                     HStack {
                         Text(L("Show only:", "Nur zeigen:")).foregroundStyle(.secondary)
                         Toggle(L("Verified", "Geprüft"), isOn: $model.filterVerified)
+                        if model.onlineCatalog { Toggle(L("Community Verified", "Von Nutzern bestätigt"), isOn: $model.filterCommunity) }
                         Toggle(L("Purchased", "Gekauft"), isOn: $model.filterPurchased)
                         Toggle(L("Installed", "Installiert"), isOn: $model.filterInstalled)
                         Toggle(L("Favourites", "Favoriten"), isOn: $model.filterFavourites)
@@ -52,9 +53,13 @@ struct GamesView: View {
                         .padding(.top, 80)
                 } else {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 250, maximum: 340), spacing: 18)], spacing: 18) {
-                        ForEach(shown) { game in
-                            Button { model.gamePath = [game.id] } label: { GameCard(game: game) }
-                                .buttonStyle(.plain)
+                        Section {
+                            ForEach(shown) { game in
+                                Button { model.gamePath = [game.id] } label: { GameCard(game: game) }
+                                    .buttonStyle(.plain)
+                            }
+                        } footer: {
+                            if model.canLoadMore { MoreGames(shown: shown.count) }
                         }
                     }
                     .padding(22)
@@ -76,6 +81,32 @@ struct GamesView: View {
     }
 }
 
+/// Das Ende der Liste, solange der Katalog noch mehr kennt: lädt die nächste Seite, sobald es in Sicht kommt.
+/// Es steht im Raster, das seine Zeilen erst beim Heranscrollen anlegt – so wird nachgeladen, wenn jemand
+/// tatsächlich bis hierher blättert, und nicht der ganze Katalog auf einmal.
+struct MoreGames: View {
+    @EnvironmentObject var model: AppModel
+    let shown: Int
+
+    var body: some View {
+        HStack(spacing: 10) {
+            if model.loadingMore {
+                ProgressView().controlSize(.small)
+                Text(L("Loading more games …", "Weitere Spiele werden geladen …")).foregroundStyle(.secondary)
+            } else {
+                Button(L("Show More Games", "Weitere Spiele zeigen")) { model.loadMoreCatalog() }
+            }
+            if model.searchText.isEmpty, let total = model.catalogTotal, total > model.catalog.count {
+                Text(L("\(model.catalog.count) of \(total) games in the catalogue loaded", "\(model.catalog.count) von \(total) Spielen des Katalogs geladen"))
+                    .font(.callout).foregroundStyle(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity).padding(.vertical, 16)
+        // Bleibt das Ende nach dem Nachladen sichtbar (großes Fenster, enger Filter), geht es von selbst weiter.
+        .task(id: shown) { model.loadMoreCatalog() }
+    }
+}
+
 /// Die Frage nach einer Installation: Wie läuft es? Ein Klick, auf Wunsch ein Satz dazu.
 struct FeedbackBox: View {
     @EnvironmentObject var model: AppModel
@@ -93,8 +124,8 @@ struct FeedbackBox: View {
                     Label(L("You reported: \(label(sent)). Thank you.", "Du hast gemeldet: \(label(sent)). Danke."), systemImage: "checkmark.circle")
                         .foregroundStyle(.secondary)
                 } else {
-                    Text(L("Tell the project how this build runs on your Vision Pro. Sent are the game, its build, the versions of app and toolchain, and your answer – nothing about you or your device.",
-                           "Sag dem Projekt, wie dieser Build auf deiner Vision Pro läuft. Gesendet werden das Spiel, sein Build, die Versionen von App und Toolchain und deine Antwort – nichts über dich oder dein Gerät."))
+                    Text(L("Tell everyone how this build runs on your Vision Pro – the label of a game follows these reports. Sent are the game, its build, the versions of app and toolchain, and your answer – nothing about you or your device.",
+                           "Sag allen, wie dieser Build auf deiner Vision Pro läuft – das Kennzeichen eines Spiels richtet sich nach diesen Meldungen. Gesendet werden das Spiel, sein Build, die Versionen von App und Toolchain und deine Antwort – nichts über dich oder dein Gerät."))
                         .font(.callout).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                     TextField(L("A sentence about it, if you like", "Ein Satz dazu, wenn du magst"), text: $comment, axis: .vertical)
@@ -155,26 +186,27 @@ struct StatusBadge: View {
     }
 }
 
-/// Wie weit einem Spiel zu trauen ist: vom Projekt geprüft, oder noch von niemandem bestätigt.
+/// Wie weit einem Spiel zu trauen ist: vom Projekt geprüft, von Nutzern bestätigt, noch offen, oder nicht lauffähig.
 struct TrustBadge: View {
     let game: Game
 
     var body: some View {
         let (text, symbol, color, help): (String, String, Color, String) = {
-            if game.verified {
+            switch game.trust {
+            case .verified:
                 return (L("Verified", "Geprüft"), "checkmark.seal.fill", .blue,
                         L("Tested by the project on an Apple Vision Pro.", "Vom Projekt auf einer Apple Vision Pro geprüft."))
+            case .community:
+                return (L("Community Verified", "Von Nutzern bestätigt"), "person.2.fill", .green,
+                        L("More users report that it runs than that it does not. The project has not tested it.",
+                          "Mehr Nutzer melden, dass es läuft, als dass es nicht läuft. Das Projekt hat es nicht getestet."))
+            case .incompatible:
+                return (L("Incompatible", "Inkompatibel"), "xmark.octagon.fill", .red,
+                        L("More users report that it does not run than that it does.", "Mehr Nutzer melden, dass es nicht läuft, als dass es läuft."))
+            case .untested:
+                return (L("Untested", "Ungetestet"), "questionmark.circle.fill", .gray,
+                        L("Nobody has confirmed yet that this game runs.", "Noch hat niemand bestätigt, dass dieses Spiel läuft."))
             }
-            if game.broken {
-                return (L("Does not work", "Läuft nicht"), "xmark.octagon.fill", .red,
-                        L("Known not to work at the moment.", "Bekannt, dass es derzeit nicht läuft."))
-            }
-            if let c = game.catalog, c.works > 0, c.works >= c.fails {
-                return (L("Reported working", "Als lauffähig gemeldet"), "person.2.fill", .green,
-                        L("Users report that it runs. The project has not tested it.", "Nutzer melden, dass es läuft. Das Projekt hat es nicht getestet."))
-            }
-            return (L("Untested", "Ungetestet"), "questionmark.circle.fill", .gray,
-                    L("Nobody has confirmed yet that this game runs.", "Noch hat niemand bestätigt, dass dieses Spiel läuft."))
         }()
         Label(text, systemImage: symbol)
             .font(.caption.weight(.semibold))
@@ -383,7 +415,8 @@ struct GameDetail: View {
         }
         .navigationTitle(game.recipe.title)
         // Erst wenn jemand die Seite eines ungetesteten Spiels öffnet, wird nachgeschlagen, woraus es besteht.
-        .task(id: game.id) { model.prepare(game) }
+        // Sagt der Katalog erst danach, unter welchem Namen die Toolchain das Spiel kennt, wird noch einmal geprüft.
+        .task(id: "\(game.id) \(game.catalog?.target ?? "")") { model.prepare(game) }
         .confirmationDialog(L("Remove the files of \(game.recipe.title) from this Mac?", "Die Dateien von \(game.recipe.title) von diesem Mac entfernen?"),
                             isPresented: $confirmRemove) {
             Button(L("Remove \(Installer.gigabytes(game.storeBytes))", "\(Installer.gigabytes(game.storeBytes)) entfernen"), role: .destructive) { model.removeFiles(game) }
@@ -397,12 +430,13 @@ struct GameDetail: View {
     private var untestedBox: some View {
         GroupBox {
             VStack(alignment: .leading, spacing: 8) {
-                Label(game.broken ? L("This game is known not to work at the moment", "Von diesem Spiel ist bekannt, dass es derzeit nicht läuft")
-                                  : L("Nobody has tested this game yet", "Dieses Spiel hat noch niemand getestet"),
-                      systemImage: game.broken ? "xmark.octagon" : "flask")
+                Label(game.incompatible ? L("This game is reported not to work at the moment", "Dieses Spiel läuft nach den Meldungen derzeit nicht")
+                      : game.trust == .community ? L("Users report that this game works", "Nutzer melden, dass dieses Spiel läuft")
+                      : L("Nobody has tested this game yet", "Dieses Spiel hat noch niemand getestet"),
+                      systemImage: game.incompatible ? "xmark.octagon" : game.trust == .community ? "person.2" : "flask")
                     .font(.headline)
-                Text(L("You can try it. Each of the verified games needed its own adjustments before it ran, so an untested game may well not start. Afterwards, tell the project how it went – that is how games get from here to “Verified”.",
-                       "Du kannst es versuchen. Jedes der geprüften Spiele brauchte eigene Anpassungen, bevor es lief – ein ungetestetes startet also womöglich nicht. Sag dem Projekt danach, wie es lief: So kommen Spiele von hier zu „Geprüft“."))
+                Text(L("You can try it. Each of the verified games needed its own adjustments before it ran, so a game the project has not tested may well not start. Afterwards, say how it went: when more people report that a game works than that it does not, it becomes “Community Verified”, the other way round “Incompatible”.",
+                       "Du kannst es versuchen. Jedes der geprüften Spiele brauchte eigene Anpassungen, bevor es lief – ein vom Projekt nicht getestetes startet also womöglich nicht. Sag danach, wie es lief: Melden mehr Leute, dass ein Spiel läuft, als dass es nicht läuft, wird es „Von Nutzern bestätigt“, umgekehrt „Inkompatibel“."))
                     .font(.callout).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 if let c = game.catalog, c.works + c.problems + c.fails > 0 {
@@ -463,10 +497,11 @@ struct GameDetail: View {
     }
 
     private var playability: String {
-        switch game.recipe.status.playability {
-        case "reported": return L("Reported as working by users, not yet checked by the project.", "Von Nutzern als lauffähig gemeldet, vom Projekt noch nicht geprüft.")
-        case "verified": return L("Verified: the project has tested this game on an Apple Vision Pro.", "Geprüft: Das Projekt hat dieses Spiel auf einer Apple Vision Pro getestet.")
-        default: return L("Untested: nobody has confirmed yet that this game runs. You can try it.", "Ungetestet: Noch hat niemand bestätigt, dass dieses Spiel läuft. Du kannst es versuchen.")
+        switch game.trust {
+        case .verified: return L("Verified: the project has tested this game on an Apple Vision Pro.", "Geprüft: Das Projekt hat dieses Spiel auf einer Apple Vision Pro getestet.")
+        case .community: return L("Community Verified: more users report that it runs than that it does not. The project has not tested it.", "Von Nutzern bestätigt: Mehr Nutzer melden, dass es läuft, als dass es nicht läuft. Das Projekt hat es nicht getestet.")
+        case .incompatible: return L("Incompatible: more users report that it does not run than that it does.", "Inkompatibel: Mehr Nutzer melden, dass es nicht läuft, als dass es läuft.")
+        case .untested: return L("Untested: nobody has confirmed yet that this game runs. You can try it.", "Ungetestet: Noch hat niemand bestätigt, dass dieses Spiel läuft. Du kannst es versuchen.")
         }
     }
 

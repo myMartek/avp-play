@@ -364,6 +364,23 @@ public struct Installer: Sendable {
         // Assets aus dem APK: als Ordner, wenn Anzahl oder Gesamtgröße abweichen. Der entpackte Baum entsteht
         // beim Build; fehlt er (Kopieren ohne vorherigen Build mit dieser Toolchain), wird er hier angelegt.
         try toolchain.prepare(recipe: recipe, store: store)
+
+        // Was ein Spiel außerdem als Dateien lesen will (die Qt-Plugins von Steam Link): als eigener kleiner Ordner.
+        let plugins = toolchain.qtPlugins(recipe: recipe)
+        if !plugins.isEmpty {
+            let pluginDest = "Documents/\(recipe.toolchain.target)/qtplugins"
+            let size: (URL) -> Int64 = { Int64((try? $0.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0) }
+            let remote = try control.files(device: device, bundle: bundle, subdirectory: pluginDest, recursive: false).filter { !$0.isDirectory }
+            if Dictionary(remote.map { (($0.relativePath as NSString).lastPathComponent, $0.size) }, uniquingKeysWith: { a, _ in a }) != Dictionary(uniqueKeysWithValues: plugins.map { ($0.lastPathComponent, size($0)) }) {
+                let stage = FileManager.default.temporaryDirectory.appendingPathComponent("avpplay-\(UUID().uuidString)/qtplugins", isDirectory: true)
+                defer { try? FileManager.default.removeItem(at: stage.deletingLastPathComponent()) }
+                try FileManager.default.createDirectory(at: stage, withIntermediateDirectories: true)
+                for file in plugins { try FileManager.default.copyItem(at: file, to: stage.appendingPathComponent(file.lastPathComponent)) }
+                try control.copy(stage, to: device, bundle: bundle, destination: pluginDest)
+                report(L("Plugins: \(plugins.count) files copied.", "Plugins: \(plugins.count) Dateien kopiert."))
+            }
+        }
+
         let (localCount, localBytes) = toolchain.assetsSummary(recipe: recipe)
         guard localCount > 0 || !hasTrees else { return }
         let assetDest = "Documents/\(recipe.toolchain.target)/assets"

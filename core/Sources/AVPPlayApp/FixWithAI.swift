@@ -80,7 +80,7 @@ extension AppModel {
         - Build: \(recipe.versionName) (version code \(recipe.versionCode))\(recipe.store.appId.map { "\n- Meta Store app ID: \($0)" } ?? "")
         - Name in the toolchain (the "target"): \(target)
         - App on the headset: \(bundleId)
-        - Status in AVP Play: \(game.verified ? "verified by the project" : "untested – nobody has confirmed that it runs")
+        - Status in AVP Play: \(["verified by the project", "community verified – more users report that it runs than not", "untested – nobody has confirmed that it runs", "incompatible – more users report that it does not run"][game.trust.rawValue])
 
         ## What goes wrong
         \(symptomList)\(extra.isEmpty ? "" : "\n\nIn my own words: \(extra)")

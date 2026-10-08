@@ -14,31 +14,57 @@ extension AppModel {
 
     // MARK: Liste und Suche
 
-    /// Holt die erste Seite des Katalogs. Ohne Netz oder mit abgeschaltetem Katalog bleibt es bei den Spielen,
-    /// die mit dem Programm kommen.
+    /// Holt die erste Seite des Katalogs und dazu, was der Katalog über die Spiele sagt, die schon auf dem Mac
+    /// liegen oder gemerkt sind. Ohne Netz oder mit abgeschaltetem Katalog bleibt es bei den Spielen, die mit dem
+    /// Programm kommen.
     func loadCatalog() {
         guard onlineCatalog else {
             catalog = []
+            catalogTotal = nil
+            catalogMore = false
             return
         }
         Task {
             do {
-                merge(try await catalogClient.catalog().games)
+                let first = try await catalogClient.catalog()
+                merge(first.games)
+                catalogTotal = first.total
+                catalogMore = first.more
+                catalogNextPage = 1
                 catalogProblem = nil
+                askedOwn = []
+                loadOwnCatalogEntries()
             } catch {
                 catalogProblem = "\(error)"
             }
         }
     }
 
+    /// Eigene und gemerkte Spiele stehen im Katalog irgendwo zwischen tausenden; nach ihnen wird gezielt gefragt,
+    /// damit ihr Kennzeichen stimmt, auch wenn ihre Seite des Katalogs nie geladen wird. Jede Kennung nur einmal.
+    func loadOwnCatalogEntries() {
+        guard onlineCatalog, catalogNextPage > 0 else { return }
+        let mine = Set(games.compactMap { $0.recipe.store.appId } + favourites.compactMap(DraftRecipe.appId(of:)))
+        let missing = mine.subtracting(catalog.map(\.appId)).subtracting(askedOwn).sorted()
+        guard !missing.isEmpty else { return }
+        askedOwn.formUnion(missing)
+        Task {
+            if let found = try? await catalogClient.games(appIds: missing) { merge(found) }
+        }
+    }
+
     /// Sucht im Katalog. Der Dienst lernt dabei neue Spiele kennen; hier kommen sie als „ungetestet“ an.
     func searchCatalog() {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard onlineCatalog, query.count >= 3, !searching else { return }
+        guard onlineCatalog, query.count >= 3, !searching, query != searchedQuery else { return }
         searching = true
         Task {
             do {
-                merge(try await catalogClient.catalog(query: query).games)
+                let first = try await catalogClient.catalog(query: query)
+                merge(first.games)
+                searchedQuery = query
+                searchMore = first.more
+                searchNextPage = 1
                 catalogProblem = nil
             } catch {
                 catalogProblem = "\(error)"
@@ -47,15 +73,57 @@ extension AppModel {
         }
     }
 
+    /// Gibt es zu dem, was gerade gezeigt wird, noch eine Seite? Bei einer Suche die nächsten Treffer, sonst die
+    /// nächste Seite des ganzen Katalogs. Mit einem Filter, der nur auf diesem Mac entschieden wird, nicht: was
+    /// gekauft, installiert oder gemerkt ist, steht schon vollständig da.
+    var canLoadMore: Bool {
+        guard onlineCatalog, !filterPurchased, !filterInstalled, !filterFavourites else { return false }
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if query.isEmpty { return catalogMore }
+        return query == searchedQuery && searchMore
+    }
+
+    /// Lädt die nächste Seite nach – ausgelöst, wenn das Ende der Liste in Sicht kommt.
+    func loadMoreCatalog() {
+        guard canLoadMore, !loadingMore else { return }
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        loadingMore = true
+        Task {
+            do {
+                if query.isEmpty {
+                    let next = try await catalogClient.catalog(page: catalogNextPage)
+                    merge(next.games)
+                    catalogMore = next.more && !next.games.isEmpty
+                    catalogTotal = next.total ?? catalogTotal
+                    catalogNextPage += 1
+                } else {
+                    let next = try await catalogClient.catalog(query: query, page: searchNextPage)
+                    merge(next.games)
+                    if query == searchedQuery {
+                        searchMore = next.more && !next.games.isEmpty
+                        searchNextPage += 1
+                    }
+                }
+                catalogProblem = nil
+            } catch {
+                // Kein Dauerversuch: Nachladen gibt es erst wieder nach einem neuen Laden der ersten Seite.
+                catalogProblem = "\(error)"
+                if query.isEmpty { catalogMore = false } else { searchMore = false }
+            }
+            loadingMore = false
+        }
+    }
+
     private func merge(_ found: [CatalogGame]) {
+        guard !found.isEmpty else { return }
         var byId = Dictionary(catalog.map { ($0.appId, $0) }, uniquingKeysWith: { a, _ in a })
         for game in found { byId[game.appId] = game }
         catalog = byId.values.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
     }
 
-    /// Alle Spiele der Übersicht: die mit dem Programm gelieferten und schon nachgeschlagenen, ergänzt um das,
-    /// was der Katalog sonst kennt.
-    var allGames: [Game] {
+    /// Baut die Liste aller Spiele neu: die eigenen, ergänzt um das, was der Katalog sagt, und dahinter ein
+    /// Platzhalter für jeden Titel aus dem Katalog, den es auf diesem Mac noch nicht gibt.
+    func rebuildAllGames() {
         let info = Dictionary(catalog.map { ($0.appId, $0) }, uniquingKeysWith: { a, _ in a })
         var out = games.map { game -> Game in
             var g = game
@@ -63,14 +131,14 @@ extension AppModel {
             return g
         }
         let known = Set(games.compactMap { $0.recipe.store.appId })
+        let prefix = customBundlePrefix.isEmpty ? nil : customBundlePrefix
         for entry in catalog where !known.contains(entry.appId) {
             let recipe = DraftRecipe.placeholder(game: entry)
             out.append(Game(recipe: recipe,
-                            status: GameStatus.of(recipe: recipe, store: paths.store, apps: installedApps, toolchainVersion: toolchainRevision,
-                                                  bundlePrefix: customBundlePrefix.isEmpty ? nil : customBundlePrefix),
+                            status: GameStatus.of(recipe: recipe, store: paths.store, apps: installedApps, toolchainVersion: toolchainRevision, bundlePrefix: prefix),
                             cover: nil, catalog: entry, draft: true))
         }
-        return out
+        allGames = out
     }
 
     // MARK: Favoriten
@@ -89,7 +157,12 @@ extension AppModel {
     /// Ergebnis liegt danach als Rezeptentwurf auf dem Mac. Beim ersten unerwarteten Ergebnis ist Schluss.
     func prepare(_ game: Game) {
         guard game.draft, let entry = game.catalog, !preparing.contains(game.id) else { return }
-        if game.prepared, game.recipe.versionCode == (entry.build?.versionCode ?? game.recipe.versionCode) { return }
+        if game.prepared, game.recipe.versionCode == (entry.build?.versionCode ?? game.recipe.versionCode) {
+            // Fertig nachgeschlagen – es sei denn, der Entwurf baut noch mit dem allgemeinen Versuchs-Target und die
+            // Toolchain kennt das Spiel inzwischen unter eigenem Namen: dann wird der Entwurf neu geschrieben.
+            let named = entry.target.flatMap { $0.isEmpty || toolchain?.targetKind($0) == nil ? nil : $0 }
+            if named == nil || named == game.recipe.toolchain.target { return }
+        }
         guard account == .signedIn else {
             prepareNote[game.id] = L("Sign in to Meta under “Setup” first – then the app can check whether you own this game and look up its files.",
                                      "Melde dich zuerst unter „Einrichtung“ bei Meta an – dann kann die App prüfen, ob dir das Spiel gehört, und seine Dateien nachschlagen.")

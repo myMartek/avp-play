@@ -17,11 +17,22 @@ struct Game: Identifiable {
     var id: String { recipe.id }
     /// Sind die Dateien des Spiels bekannt? Bei einem Platzhalter noch nicht.
     var prepared: Bool { !draft || !recipe.files.isEmpty }
-    var broken: Bool { draft && catalog?.status == "broken" }
+    /// Wie weit dem Spiel zu trauen ist. Was der Katalog sagt, gilt – dort legt das Projekt fest oder zählen die
+    /// Meldungen. Ohne Katalog (kein Netz, abgeschaltet, Sonderapp) gilt das mitgelieferte Rezept.
+    var trust: Trust {
+        switch catalog?.status {
+        case "verified": return .verified
+        case "community": return .community
+        case "incompatible": return .incompatible
+        case "untested": return .untested
+        default: return !draft && recipe.status.playability == "verified" ? .verified : .untested
+        }
+    }
+    var incompatible: Bool { trust == .incompatible }
     /// Sonderapps kommen nicht aus dem Meta-Store; für sie wird kein Meta-Konto gebraucht.
     var needsMetaAccount: Bool { recipe.store.appId != nil }
     /// Vom Projekt selbst auf einer Vision Pro geprüft.
-    var verified: Bool { !draft && recipe.status.playability == "verified" }
+    var verified: Bool { trust == .verified }
     var installed: Bool {
         switch status.onDevice {
         case .current, .olderToolchain, .unstamped: return true
@@ -29,6 +40,9 @@ struct Game: Identifiable {
         }
     }
 }
+
+/// Vom Projekt geprüft, von Nutzern bestätigt, noch offen, oder von Nutzern als nicht lauffähig gemeldet.
+enum Trust: Int { case verified, community, untested, incompatible }
 
 /// Gehört das Spiel dem angemeldeten Konto? Sonderapps haben keinen Store-Titel; bei ihnen stellt sich die Frage nicht.
 enum Owned { case notApplicable, unknown, yes, no }
@@ -75,7 +89,7 @@ final class AppModel: ObservableObject {
     @Published var section: AppSection = .games
     /// Das geöffnete Spiel in der Übersicht (leer: das Raster).
     @Published var gamePath: [String] = []
-    @Published var games: [Game] = []
+    @Published var games: [Game] = [] { didSet { rebuildAllGames() } }
     @Published var loadProblem: String?
     @Published var device: Device?
     @Published var devices: [Device] = []
@@ -107,8 +121,23 @@ final class AppModel: ObservableObject {
     private var toolWatch: Task<Void, Never>?
     @Published var freeBytes: Int64?
     /// Der Online-Katalog: was der Dienst des Projekts über weitere Spiele sagt.
-    @Published var catalog: [CatalogGame] = []
+    @Published var catalog: [CatalogGame] = [] { didSet { rebuildAllGames() } }
+    /// Alle Spiele der Übersicht: die mit dem Programm gelieferten und schon nachgeschlagenen, ergänzt um das,
+    /// was vom Katalog bisher geladen ist. Wird neu gebaut, wenn sich eine der beiden Seiten ändert.
+    @Published var allGames: [Game] = []
     @Published var catalogProblem: String?
+    /// Wie viele Spiele der Katalog insgesamt kennt, und ob nach den geladenen Seiten noch welche kommen.
+    @Published var catalogTotal: Int?
+    @Published var catalogMore = false
+    @Published var loadingMore = false
+    var catalogNextPage = 0
+    /// Nach welchen eigenen Spielen der Katalog schon gezielt gefragt wurde.
+    var askedOwn: Set<String> = []
+    /// Dasselbe für die laufende Suche.
+    @Published var searchedQuery = ""
+    @Published var searchMore = false
+    var searchNextPage = 0
+    @AppStorage("filterCommunity") var filterCommunity = false
     @Published var searchText = ""
     @Published var searching = false
     @Published var preparing: Set<String> = []
@@ -178,13 +207,20 @@ final class AppModel: ObservableObject {
     var shownGames: [Game] {
         let words = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         return allGames.filter { game in
-            (!filterVerified || game.verified) && (!filterPurchased || isPurchased(game)) && (!filterInstalled || game.installed)
+            // „Geprüft“ und „Von Nutzern bestätigt“ ergänzen einander; alle anderen Filter engen weiter ein.
+            ((!filterVerified && !filterCommunity) || (filterVerified && game.trust == .verified) || (filterCommunity && game.trust == .community))
+                && (!filterPurchased || isPurchased(game)) && (!filterInstalled || game.installed)
                 && (!filterFavourites || isFavourite(game))
                 && (words.isEmpty || game.recipe.title.lowercased().contains(words) || game.recipe.package.lowercased().contains(words))
         }.sorted { a, b in
-            // Geprüftes zuerst, dann schon Nachgeschlagenes, dann der Rest – jeweils nach Namen.
-            let rank: (Game) -> Int = { $0.verified ? 0 : ($0.prepared ? 1 : 2) }
-            return rank(a) != rank(b) ? rank(a) < rank(b) : a.recipe.title.localizedCaseInsensitiveCompare(b.recipe.title) == .orderedAscending
+            // Geprüftes zuerst, dann schon Nachgeschlagenes, dann was Nutzer bestätigen, das Ungetestete, zuletzt
+            // was nicht läuft – jeweils nach der Zahl derer, die sagen, es läuft, dann nach Namen. So reiht auch
+            // der Katalog, damit eine nachgeladene Seite unten anschließt.
+            let rank: (Game) -> Int = { $0.trust == .verified ? 0 : ($0.prepared && $0.trust != .incompatible ? 1 : $0.trust.rawValue + 1) }
+            if rank(a) != rank(b) { return rank(a) < rank(b) }
+            let works: (Game) -> Int = { $0.catalog?.works ?? 0 }
+            if works(a) != works(b) { return works(a) > works(b) }
+            return a.recipe.title.localizedCaseInsensitiveCompare(b.recipe.title) == .orderedAscending
         }
     }
 
@@ -357,7 +393,11 @@ final class AppModel: ObservableObject {
     }
 
     private func apply(_ s: Probe.Snapshot) {
+        // Vor den Spielen: daraus wird die Liste aller Spiele gebaut, und die braucht den neuen Stand des Geräts.
+        installedApps = s.apps
+        toolchainRevision = s.toolchainRevision
         games = s.games
+        loadOwnCatalogEntries()
         loadProblem = s.loadProblem
         device = s.device
         devices = s.devices
@@ -368,8 +408,6 @@ final class AppModel: ObservableObject {
         xcodeProblem = s.xcodeProblem
         teamCandidates = s.teamCandidates
         freeBytes = s.freeBytes
-        installedApps = s.apps
-        toolchainRevision = s.toolchainRevision
         // Genau ein bezahltes Team: das ist es. Sonst entscheidet der Nutzer.
         let paid = s.teamCandidates.filter { !$0.free }
         if teamId.isEmpty, paid.count == 1 { teamId = paid[0].id }
