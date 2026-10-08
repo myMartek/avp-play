@@ -40,7 +40,15 @@ final class RecipeTests: XCTestCase {
         let dir = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
             .deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("recipes")
         let all = try RecipeStore(directory: dir).loadAll()
-        XCTAssertEqual(Set(all.map(\.id)), ["alyx", "batman", "beatsaber140", "doom3quest", "moss", "walkabout", "wrath2"])
+        // Die sieben Referenzspiele sind da; dazu kommen Rezepte, die aus einem geprüften Entwurf entstanden sind.
+        // Die tragen die Kennung des Entwurfs (`store-<App-Kennung>`), damit schon Geladenes weiter gilt.
+        let ids = Set(all.map(\.id))
+        XCTAssertTrue(ids.isSuperset(of: ["alyx", "batman", "beatsaber140", "doom3quest", "moss", "walkabout", "wrath2"]))
+        for recipe in all where !["alyx", "batman", "beatsaber140", "doom3quest", "moss", "walkabout", "wrath2"].contains(recipe.id) {
+            XCTAssertEqual(recipe.id, recipe.store.appId.map(DraftRecipe.identifier(appId:)), "\(recipe.id)")
+            XCTAssertEqual(recipe.status.playability, "verified", "\(recipe.id)")
+            XCTAssertFalse(recipe.files.isEmpty, "\(recipe.id)")
+        }
         let wrath = try XCTUnwrap(all.first { $0.id == "wrath2" })
         XCTAssertEqual(wrath.files.filter(\.required).count, 84)
         XCTAssertTrue(wrath.files.filter(\.required).allSatisfy { $0.sha256 != nil && $0.size != nil })

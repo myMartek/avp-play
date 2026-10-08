@@ -1,0 +1,37 @@
+{
+ "files": [
+  {
+   "dest": "",
+   "id": "24922928844056506",
+   "localName": "superhot.apk",
+   "name": "shvr_quest_161RC_signed.apk",
+   "required": true,
+   "role": "apk",
+   "size": 557770041,
+   "sha256": "f6892a8b6a2ab0db8b579a66b79f998124f88985424d20723f6b098afdc8c1b6"
+  }
+ ],
+ "id": "store-1921533091289407",
+ "package": "unity.SUPERHOT_Team.SUPERHOT_VR_QA",
+ "schema": 1,
+ "status": {
+  "playability": "verified",
+  "download": "proven",
+  "notes": [
+   {
+    "en": "Marked as verified by the project on 2026-10-09. File list as Meta's tool reports it for this build; 1 of 1 checksums recorded from a download.",
+    "de": "Vom Projekt am 2026-10-09 als geprüft markiert. Dateiliste, wie Metas Werkzeug sie für diesen Build nennt; 1 von 1 Prüfsummen aus einem Download erfasst."
+   }
+  ]
+ },
+ "store": {
+  "appId": "1921533091289407"
+ },
+ "title": "SUPERHOT VR",
+ "toolchain": {
+  "minCommit": "6632e1c",
+  "target": "superhot"
+ },
+ "versionCode": 161,
+ "versionName": "1.161"
+}
