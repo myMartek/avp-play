@@ -110,6 +110,7 @@ avpplay – command line for the AVP Play core library
              --no-store-art          don't fetch the cover image from the store page (the icon from the APK is used instead)
              --replace-running       install even if the game is running (it will be quit)
              --addons-only           job start: only sync purchased add-on content of an installed game (no build, no --team)
+             --build-only            job start: check, download, build and install the app, but do not copy the game data yet
 
 Selection: --locale de-DE      also include a language variant (can be repeated)
            --with <file name>  also include an optional file (can be repeated)
@@ -151,6 +152,7 @@ avpplay – Kommandozeile zur Kern-Bibliothek von AVP Play
              --no-store-art          kein Titelbild von der Store-Seite holen (dann Icon aus dem APK)
              --replace-running       auch installieren, wenn das Spiel gerade läuft (es wird dabei beendet)
              --addons-only           job start: nur gekaufte Zusatzinhalte eines installierten Spiels abgleichen (kein Bau, kein --team)
+             --build-only            job start: prüfen, laden, bauen und die App installieren, aber die Spieldaten noch nicht kopieren
 
 Auswahl:   --locale de-DE      Sprachvariante dazunehmen (mehrfach möglich)
            --with <Dateiname>  wählbare Datei dazunehmen (mehrfach möglich)
@@ -679,6 +681,9 @@ case "job":
             print(done.isAddonSync
                 ? L("Job \(done.id) finished: the add-on content of \(done.recipe.title) is up to date.",
                     "Auftrag \(done.id) abgeschlossen: Die Zusatzinhalte von \(done.recipe.title) sind auf dem Stand.")
+                : !done.steps.contains(.stage)
+                ? L("Job \(done.id) finished: \(done.recipe.title) is built and installed. Its game data has not been copied to the device yet.",
+                    "Auftrag \(done.id) abgeschlossen: \(done.recipe.title) ist gebaut und installiert. Die Spieldaten sind noch nicht aufs Gerät kopiert.")
                 : L("Job \(done.id) finished: \(done.recipe.title) is ready on the device.",
                     "Auftrag \(done.id) abgeschlossen: \(done.recipe.title) ist auf dem Gerät bereit."))
         } catch let error as JobError {
@@ -691,6 +696,9 @@ case "job":
     switch o.positional[1] {
     case "start":
         let addonsOnly = o.flags.contains("addons-only")
+        // Nur prüfen, laden, bauen und installieren – ohne die Spieldaten aufs Gerät zu kopieren. Zum Ausprobieren,
+        // ob ein Spiel überhaupt durch die Toolchain kommt, bevor Dutzende Gigabyte übertragen werden.
+        let buildOnly = o.flags.contains("build-only")
         if o.value("team") == nil, !addonsOnly {
             fail(L("For a job, give the Apple Team ID with --team.", "Für einen Auftrag die Apple-Team-ID mit --team angeben."))
         }
@@ -701,7 +709,7 @@ case "job":
         do {
             // Eingefroren wird der Stand, mit dem der Auftrag beginnt.
             let commit = try Toolchain(root: URL(fileURLWithPath: request.toolchain)).commit()
-            let job = Job(recipe: r, request: request, steps: addonsOnly ? InstallStep.addonSync : InstallStep.allCases, toolchainCommit: commit)
+            let job = Job(recipe: r, request: request, steps: addonsOnly ? InstallStep.addonSync : buildOnly ? [.account, .fetch, .build] : InstallStep.allCases, toolchainCommit: commit)
             try jobs.save(job)
             print(L("Job \(job.id) created (\(r.title), toolchain \(commit)).", "Auftrag \(job.id) angelegt (\(r.title), Toolchain \(commit))."))
             await run(job)
