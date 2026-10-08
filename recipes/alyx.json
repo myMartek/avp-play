@@ -18,8 +18,24 @@
    "source": {
     "kind": "user",
     "hint": {
-     "en": "Half-Life: Alyx from your own Steam account (Linux build): in the Steam client's console run 'download_depot 546560 546564' and 'download_depot 546560 546561', then merge the two 'game' folders into one (546564 first, then 546561, without overwriting).",
-     "de": "Half-Life: Alyx aus dem eigenen Steam-Konto (Linux-Fassung): in der Konsole des Steam-Clients 'download_depot 546560 546564' und 'download_depot 546560 546561' ausführen und beide Ordner 'game' zu einem zusammenführen (erst 546564, dann 546561, ohne zu überschreiben)."
+     "en": "Half-Life: Alyx from your own Steam account (Linux build). With a Steam sign-in under Setup the app fetches it for you (about 73 GB). By hand: in the Steam client's console run 'download_depot 546560 546564' and 'download_depot 546560 546561', then merge the two 'game' folders into one (546564 first, then 546561, without overwriting).",
+     "de": "Half-Life: Alyx aus dem eigenen Steam-Konto (Linux-Fassung). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App es für dich (rund 73 GB). Von Hand: in der Konsole des Steam-Clients 'download_depot 546560 546564' und 'download_depot 546560 546561' ausführen und beide Ordner 'game' zu einem zusammenführen (erst 546564, dann 546561, ohne zu überschreiben)."
+    },
+    "steam": {
+     "app": "546560",
+     "folder": "game",
+     "depots": [
+      {
+       "id": "546564",
+       "manifest": "9198205754520568813",
+       "bytes": 637913859
+      },
+      {
+       "id": "546561",
+       "manifest": "1436897171613240821",
+       "bytes": 72480814167
+      }
+     ]
     }
    },
    "markers": [

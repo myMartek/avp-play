@@ -86,6 +86,8 @@ avpplay – command line for the AVP Play core library
   avpplay logout                               delete the stored Meta token
   avpplay account                              check the stored Meta token
   avpplay owns <id>                            does the account own the game?
+  avpplay steam setup|login <name>|logout      Valve's SteamCMD: fetch it, sign in to Steam (you type the password into Valve's tool), sign out
+  avpplay steam fetch <id> --steam-account <name>   get the files a recipe needs from your own Steam purchase
   avpplay purchases <id>                       confirmed in-game purchases and the add-on content that goes with them
   avpplay plan <id>   [selection]              show what would be downloaded (no request to the download site)
   avpplay fetch <id>  [selection]              download missing files and check them
@@ -125,6 +127,8 @@ avpplay – Kommandozeile zur Kern-Bibliothek von AVP Play
   avpplay logout                               hinterlegten Meta-Token löschen
   avpplay account                              hinterlegten Meta-Token prüfen
   avpplay owns <id>                            Besitzt das Konto das Spiel?
+  avpplay steam setup|login <Name>|logout      Valves SteamCMD: holen, bei Steam anmelden (das Passwort tippst du in Valves Werkzeug), abmelden
+  avpplay steam fetch <id> --steam-account <Name>   die Dateien eines Rezepts aus dem eigenen Steam-Kauf holen
   avpplay purchases <id>                       bestätigte Käufe im Spiel und zugehörige Zusatzinhalte
   avpplay plan <id>   [Auswahl]                zeigen, was geladen würde (keine Abfrage an die Download-Seite)
   avpplay fetch <id>  [Auswahl]                fehlende Dateien laden und prüfen
@@ -158,7 +162,7 @@ Allgemein: --account <Name>    Eintrag im Schlüsselbund (Standard: default)
 """)
 }
 
-let valued: Set<String> = ["account", "store", "recipes", "locale", "with", "only", "interval", "from", "to",
+let valued: Set<String> = ["account", "steam-account", "store", "recipes", "locale", "with", "only", "interval", "from", "to",
                            "team", "device", "bundle-id", "toolchain", "icon", "tool", "jobs", "toolchains"]
 let o = Options(Array(CommandLine.arguments.dropFirst()), valued: valued)
 guard let command = o.positional.first else { print(usage()); exit(0) }
@@ -272,6 +276,54 @@ case "login":
         print(L("\nSigned in. The token has been checked and is stored in the keychain (account '\(account)').",
                 "\nAngemeldet. Der Token ist geprüft und liegt im Schlüsselbund (Konto '\(account)')."))
     } catch { fail("\n\(error)") }
+
+case "steam":
+    // Dateien aus dem eigenen Steam-Kauf, geholt von Valves Werkzeug SteamCMD.
+    let tool = SteamTool()
+    func accountName() -> String {
+        guard let name = o.value("steam-account") ?? (o.positional.count > 2 ? o.positional[2] : nil), SteamTool.isAccountName(name) else {
+            fail("\(SteamError.badAccountName)")
+        }
+        return name
+    }
+    switch o.positional.count > 1 ? o.positional[1] : "" {
+    case "setup":
+        do {
+            print(L("Downloading SteamCMD from Valve (\(SteamTool.archiveURL.host ?? "")) …", "SteamCMD wird von Valve geladen (\(SteamTool.archiveURL.host ?? "")) …"))
+            let archive = try await SteamTool.downloadArchive()
+            defer { try? FileManager.default.removeItem(at: archive) }
+            try SteamTool.install(archive: archive, as: tool)
+            print(L("SteamCMD is set up and signed by Valve: \(tool.directory.path)", "SteamCMD ist eingerichtet und von Valve signiert: \(tool.directory.path)"))
+        } catch { fail("\(error)") }
+    case "login":
+        let account = accountName()
+        do {
+            try tool.verify()
+            print(L("Signing in to Steam with Valve's tool SteamCMD. Your password and the Steam Guard code go straight to that tool; "
+                    + "this program stores neither. SteamCMD remembers the sign-in in its own folder (\(tool.home.path)).\n",
+                    "Anmeldung bei Steam über Valves Werkzeug SteamCMD. Passwort und Steam-Guard-Code gehen direkt an dieses Werkzeug; "
+                    + "dieses Programm speichert beides nicht. SteamCMD merkt sich die Anmeldung in seinem eigenen Ordner (\(tool.home.path)).\n"))
+            try SteamLogin.run(tool: tool, account: account)
+            print(L("\nSigned in to Steam.", "\nBei Steam angemeldet."))
+        } catch { fail("\n\(error)") }
+    case "logout":
+        do {
+            try tool.signOut()
+            print(L("Signed out: SteamCMD's folder with the remembered sign-in has been deleted.", "Abgemeldet: Der Ordner von SteamCMD mit der gemerkten Anmeldung ist gelöscht."))
+        } catch { fail("\(error)") }
+    case "fetch":
+        guard o.positional.count > 2 else { fail(L("The recipe ID is missing.", "Rezept-Kennung fehlt.")) }
+        guard let account = o.value("steam-account"), SteamTool.isAccountName(account) else { fail("\(SteamError.badAccountName)") }
+        do {
+            let r = try RecipeStore(directory: recipesDirectory(o)).load(id: o.positional[2])
+            try SteamFetcher(tool: tool, store: contentStore(o), account: account).fetch(recipe: r, progress: { p in
+                FileHandle.standardError.write(Data(String(format: "\r  %.1f %%  ", 100 * Double(p.done) / Double(max(p.total, 1))).utf8))
+            }, report: { print($0) })
+        } catch { fail("\(error)") }
+    default:
+        fail(L("Usage: avpplay steam setup | steam login <account name> | steam logout | steam fetch <recipe> --steam-account <account name>",
+               "Aufruf: avpplay steam setup | steam login <Kontoname> | steam logout | steam fetch <Rezept> --steam-account <Kontoname>"))
+    }
 
 case "logout":
     let account = o.value("account") ?? "default"

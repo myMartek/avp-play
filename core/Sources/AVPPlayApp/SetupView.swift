@@ -106,9 +106,11 @@ struct SetupView: View {
                             .font(.callout)
                             .foregroundStyle(model.toolPresent ? Color.green : Color.primary)
                     }
-                    Text(L("Special apps such as Doom 3 and Half-Life: Alyx do not need a Meta account.", "Sonderapps wie Doom 3 und Half-Life: Alyx brauchen kein Meta-Konto."))
+                    Text(L("Special apps such as Doom 3 and Half-Life: Alyx do not need a Meta account – their game files come from your own Steam purchase (see below).", "Sonderapps wie Doom 3 und Half-Life: Alyx brauchen kein Meta-Konto – ihre Spieldateien kommen aus deinem eigenen Steam-Kauf (siehe unten)."))
                         .font(.callout).foregroundStyle(.secondary)
                 }
+
+                SteamCard()
 
                 CheckCard(title: "Toolchain", state: model.toolchainText == nil ? .missing : .ok,
                           detail: model.toolchainText ?? L("Not installed yet. The toolchain translates the games for the Vision Pro.", "Noch nicht installiert. Die Toolchain übersetzt die Spiele für die Vision Pro.")) {

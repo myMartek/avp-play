@@ -55,8 +55,8 @@ recipes in [`recipes/`](recipes) are:
 | Walkabout Mini Golf | Meta Store | purchased courses are unlocked |
 | SUPERHOT VR | Meta Store | |
 | Steam Link | Meta Store | streams SteamVR from a PC on your network |
-| Doom 3 (Doom3Quest) | free port + your own Doom 3 files | you provide `pak000`–`pak008.pk4` from your copy of Doom 3 |
-| Half-Life: Alyx | your own Steam copy (Linux build) | you also provide Steam Linux Runtime and xrizer as folders; see the recipe |
+| Doom 3 (Doom3Quest) | free port + your own Doom 3 files | `pak000`–`pak008.pk4` from your copy of Doom 3 – fetched from your Steam account, or from a folder you choose |
+| Half-Life: Alyx | your own Steam copy (Linux build) | the game (about 73 GB) is fetched from your Steam account; Steam Linux Runtime and xrizer you still provide as folders, see the recipe |
 
 These nine are marked **Verified**: the project has tested them on a Vision Pro. The app also lists every other
 Quest title from the Meta Store – some 17,000, loaded page by page as you scroll. What you see on each is a label:
@@ -83,6 +83,12 @@ their own recipe.
 - **Meta sign-in** runs through Meta's own tool. AVP Play is only the window in front of it: what you type goes
   to that tool and is not stored. The access token Meta returns is kept in the macOS keychain and nowhere else.
   It is sent only to Meta, only as a request header, and never appears in logs.
+- **Steam sign-in** (optional, for Doom 3 and Half-Life: Alyx) runs through Valve's own tool, SteamCMD. The app
+  downloads it straight from Valve, checks before every start that the program is signed by Valve, and gives it a
+  folder of its own, apart from a Steam you may have installed. Your password and Steam Guard code go to that tool
+  only. SteamCMD remembers the sign-in in that folder – this is the one credential that is not in the keychain,
+  because Valve's tool keeps it itself; "Sign Out" deletes the folder. Before anything is requested the app asks
+  Steam whether your account owns the game, and Steam itself only hands out what it does.
 - **Ownership** is asked of Meta before anything is downloaded, and once a day so the app can show which games
   are yours. Add-on content is downloaded only for purchases Meta confirms. Bought
   something later? **Sync DLCs** on the game's page asks again, downloads what is new and adds it to the installed

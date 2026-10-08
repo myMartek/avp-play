@@ -213,6 +213,19 @@ enum Snapshot {
         func pause(_ seconds: Double) async { try? await Task.sleep(for: .seconds(seconds)) }
         hideWindows()
         await pause(1)
+        // `--snapshot-size <Breite>x<Höhe>`: das Fenster für die Bilder auf eine feste Größe bringen (in Punkten).
+        if let i = CommandLine.arguments.firstIndex(of: "--snapshot-size"), i + 1 < CommandLine.arguments.count {
+            let parts = CommandLine.arguments[i + 1].split(separator: "x").compactMap { Double($0) }
+            var seen: [String] = []
+            for window in NSApp.windows where window.contentView != nil && parts.count == 2 {
+                seen.append("\(window.identifier?.rawValue ?? "-") \(Int(window.frame.width))x\(Int(window.frame.height)) sichtbar=\(window.isVisible) vollbild=\(window.styleMask.contains(.fullScreen))")
+                guard window.isVisible, !window.styleMask.contains(.fullScreen) else { continue }
+                if window.isZoomed { window.zoom(nil) }
+                window.setFrame(NSRect(x: 60, y: 60, width: parts[0], height: parts[1]), display: true, animate: false)
+            }
+            try? seen.joined(separator: "\n").write(to: dir.appendingPathComponent("fenster.txt"), atomically: true, encoding: .utf8)
+            await pause(0.8)
+        }
         while model.refreshing || model.account == .checking { await pause(0.3) }
         await pause(1)
         // die Besitzabfragen laufen mit Abstand; höchstens eine Minute darauf warten

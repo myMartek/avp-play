@@ -582,6 +582,10 @@ struct GameDetail: View {
                     panel.message = L("Choose the folder that contains the files. They are copied into this app’s library.", "Ordner wählen, in dem die Dateien liegen. Sie werden in den Bestand dieses Programms kopiert.")
                     if panel.runModal() == .OK, let url = panel.url { model.adopt(game, from: url) }
                 }
+                if SteamFetcher.usesSteam(game.recipe) {
+                    Divider()
+                    SteamFetchRow(game: game)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading).padding(6)
         }

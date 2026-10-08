@@ -25,11 +25,20 @@ final class LoginSession: ObservableObject {
     }
 
     func start(tool: URL) {
-        guard !running else { return }
         do { try MetaTool(url: tool).verify() } catch {
             outcome = .failure("\(error)")
             return
         }
+        start { input, output in
+            let token = try MetaLogin.run(tool: tool, input: input, output: output)
+            try TokenStore().write(token: token)
+        }
+    }
+
+    /// Lässt ein Werkzeug an diesem Fenster als Terminal laufen. `work` bekommt die beiden Enden: woher die
+    /// Eingaben des Nutzers kommen und wohin die Ausgabe des Werkzeugs geht.
+    func start(_ work: @escaping @Sendable (_ input: Int32, _ output: Int32) throws -> Void) {
+        guard !running else { return }
         transcript = ""
         outcome = nil
         blockedBySystem = false
@@ -48,8 +57,7 @@ final class LoginSession: ObservableObject {
             let result: Outcome
             var blocked = false
             do {
-                let token = try MetaLogin.run(tool: tool, input: inFD, output: outFD)
-                try TokenStore().write(token: token)
+                try work(inFD, outFD)
                 result = .success
             } catch {
                 // Nicht gestartet, oder durch ein Signal beendet (negativer Status): so sieht es aus, wenn

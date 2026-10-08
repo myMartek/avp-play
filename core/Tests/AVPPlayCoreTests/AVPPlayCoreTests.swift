@@ -1171,3 +1171,172 @@ final class LocalizationTests: XCTestCase {
         XCTAssertEqual(texts.map(\.text), ["x", "y"])
     }
 }
+
+final class SteamTests: XCTestCase {
+    let helper = RecipeTests()
+
+    func scratch() throws -> URL {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("qi-steam-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: dir) }
+        return dir
+    }
+
+    func source(_ app: String = "1007", depots: [(String, String)] = [("1006", "4559160656493359681")], folder: String? = nil) -> FileSource {
+        FileSource(kind: .user, url: nil, hint: nil,
+                   steam: SteamSource(app: app, depots: depots.map { .init(id: $0.0, manifest: $0.1, bytes: nil) }, folder: folder))
+    }
+
+    func testOnlyPlainIdentifiersBecomeArguments() throws {
+        XCTAssertTrue(source().steam!.isSane)
+        XCTAssertTrue(source(folder: "game").steam!.isSane)
+        for bad in [source("9050 +quit"), source("-1"), source(""), source(depots: []), source(depots: [("9051", "")]),
+                    source(depots: [("9051; rm", "1")]), source(depots: [("9051", "+login")]), source(folder: "../x"), source(folder: "a/b"), source(folder: "")] {
+            XCTAssertFalse(bad.steam!.isSane, "\(bad)")
+        }
+        for name in ["gordon_freeman", "a.b-c", "user@example.org"] { XCTAssertTrue(SteamTool.isAccountName(name), name) }
+        for name in ["", "x", "+quit", "-flag", "@NoPrompt", "two words", "name;rm", "ümlaut", String(repeating: "a", count: 65)] {
+            XCTAssertFalse(SteamTool.isAccountName(name), name)
+        }
+        // Im Rezept: ein Steam-Eintrag braucht eine Prüfsumme, und einer mit unbrauchbaren Kennungen fällt durch.
+        var file = helper.file("pak000.pk4", sha: String(repeating: "a", count: 64))
+        file.source = source("9050", depots: [("9051", "8286038173018646412")])
+        try helper.recipe(files: [file]).validate()
+        file.sha256 = nil
+        XCTAssertThrowsError(try helper.recipe(files: [file]).validate())
+        file.sha256 = String(repeating: "a", count: 64)
+        file.source = source("9050 +app_update 1", depots: [("9051", "1")])
+        XCTAssertThrowsError(try helper.recipe(files: [file]).validate())
+    }
+
+    func testOlderProgramsStillReadARecipeWithASteamEntry() throws {
+        // Der Eintrag ist ein Zusatz: „vom Nutzer bereitzustellen“ bleibt die Art, also bleibt auch der Weg über einen Ordner.
+        let json = #"{"kind":"user","hint":{"en":"x","de":"y"},"steam":{"app":"9050","depots":[{"id":"9051","manifest":"8286038173018646412","bytes":1579920089}]}}"#
+        let decoded = try JSONDecoder().decode(FileSource.self, from: Data(json.utf8))
+        XCTAssertEqual(decoded.kind, .user)
+        XCTAssertEqual(decoded.steam?.depots.first?.bytes, 1_579_920_089)
+        XCTAssertNil(try JSONDecoder().decode(FileSource.self, from: Data(#"{"kind":"user"}"#.utf8)).steam)
+    }
+
+    /// Die Sätze stammen aus Läufen von SteamCMD (anonym, 2026-10-09).
+    func testReadsWhatSteamCmdSays() {
+        let owned = """
+        Waiting for user info...OK
+        License packageID 17906:
+         - State   : Active (flags 0x0) - Purchased : Fri Oct  9 00:54:42 2026 in "", None
+         - Apps\t: 5, 7, 90, 1007
+        Unloading Steam API...OK
+        """
+        XCTAssertEqual(SteamRun.licence(owned, app: "1007"), .owned)
+        XCTAssertEqual(SteamRun.licence("Waiting for user info...OK\nNo active license found for appID 546560.\n", app: "546560"), .notOwned)
+        // Weder das eine noch das andere: unklar, und dann wird nichts angefordert.
+        XCTAssertEqual(SteamRun.licence("Waiting for user info...OK\nUnloading Steam API...OK\n", app: "9050"), .unclear)
+        XCTAssertEqual(SteamRun.licence("License packageID 1:\n - State   : Expired\n", app: "9050"), .unclear)
+
+        let refused = "Cached credentials not found.\nFAILED (No cached credentials and @NoPromptForPassword is set)\n"
+        XCTAssertTrue(SteamRun.loginFailed(refused))
+        XCTAssertEqual(SteamRun.failureLine(refused), "FAILED (No cached credentials and @NoPromptForPassword is set)")
+        XCTAssertFalse(SteamRun.loginFailed(owned))
+
+        let done = #"Depot download complete : "/x/tools/steamcmd\steamapps\content\app_1007\depot_1006" (manifest 4559160656493359681)"#
+        XCTAssertTrue(SteamRun.depotComplete("Downloading depot 1006 (4 files, 35 MB) ... \n" + done, depot: "1006"))
+        XCTAssertFalse(SteamRun.depotComplete(done, depot: "100"))
+        XCTAssertFalse(SteamRun.depotComplete("Downloading depot 1006 (4 files, 35 MB) ... \n", depot: "1006"))
+    }
+
+    func testWhatPointsAtTheAccountIsNotShown() {
+        let said = SteamTool.clean("Logging in user 'gordon' [U:1:123456789] to Steam Public...\u{1B}[0mOK 76561198000000001")
+        XCTAssertFalse(said.contains("123456789"))
+        XCTAssertFalse(said.contains("76561198000000001"))
+        XCTAssertTrue(said.contains("to Steam Public...OK"))
+    }
+
+    func testATreeIsAssembledFromLayersWithoutOverwriting() throws {
+        let dir = try scratch()
+        let fm = FileManager.default
+        let first = dir.appendingPathComponent("depot_a/game"), second = dir.appendingPathComponent("depot_b/game")
+        try fm.createDirectory(at: first.appendingPathComponent("bin"), withIntermediateDirectories: true)
+        try fm.createDirectory(at: second.appendingPathComponent("bin"), withIntermediateDirectories: true)
+        try fm.createDirectory(at: second.appendingPathComponent("maps/deep"), withIntermediateDirectories: true)
+        try Data("linux".utf8).write(to: first.appendingPathComponent("bin/app"))
+        try Data("ANDERS".utf8).write(to: second.appendingPathComponent("bin/app"))       // darf die erste Schicht nicht ersetzen
+        try Data("zusatz".utf8).write(to: second.appendingPathComponent("bin/extra"))
+        try Data("karte".utf8).write(to: second.appendingPathComponent("maps/deep/a.vpk"))
+        let sha = try Hashing.sha256(of: first.appendingPathComponent("bin/app"))
+        var tree = RecipeTree(name: "game", role: .game, source: source(folder: "game"), markers: [.init(path: "bin/app", size: 5, sha256: sha)])
+        var recipe = helper.recipe(files: [])
+        recipe.trees = [tree]
+        let store = TreeStore(store: ContentStore(root: dir.appendingPathComponent("bestand")))
+
+        XCTAssertTrue(try store.assemble(tree, in: recipe, from: [first, second]))
+        let made = store.url(for: tree, in: recipe)
+        XCTAssertEqual(try String(contentsOf: made.appendingPathComponent("bin/app"), encoding: .utf8), "linux")
+        XCTAssertEqual(try String(contentsOf: made.appendingPathComponent("bin/extra"), encoding: .utf8), "zusatz")
+        XCTAssertEqual(try String(contentsOf: made.appendingPathComponent("maps/deep/a.vpk"), encoding: .utf8), "karte")
+        XCTAssertTrue(store.missing(recipe: recipe).isEmpty)
+        // Die Schichten bleiben, wie sie waren.
+        XCTAssertEqual(try String(contentsOf: second.appendingPathComponent("bin/app"), encoding: .utf8), "ANDERS")
+
+        // Passt die Kenndatei nicht, entsteht nichts – und was schon im Bestand liegt, bleibt.
+        tree.markers = [.init(path: "bin/app", size: 5, sha256: String(repeating: "0", count: 64))]
+        XCTAssertFalse(try store.assemble(tree, in: recipe, from: [first, second]))
+        XCTAssertTrue(fm.fileExists(atPath: made.appendingPathComponent("bin/app").path))
+        XCTAssertFalse(try store.assemble(tree, in: recipe, from: [dir.appendingPathComponent("gibt-es-nicht")]))
+    }
+
+    func testOnlyWhatIsMissingIsAskedOfSteam() throws {
+        let dir = try scratch()
+        let store = ContentStore(root: dir)
+        var have = helper.file("pak000.pk4", sha: String(repeating: "a", count: 64)), lack = helper.file("pak001.pk4", sha: String(repeating: "b", count: 64))
+        have.source = source("9050", depots: [("9051", "1")])
+        lack.source = source("9050", depots: [("9051", "1")])
+        let fromMeta = helper.file("main.obb")
+        let recipe = helper.recipe(files: [have, lack, fromMeta])
+        try FileManager.default.createDirectory(at: store.directory(for: recipe), withIntermediateDirectories: true)
+        try Data("x".utf8).write(to: store.url(for: have, in: recipe))
+        XCTAssertTrue(SteamFetcher.usesSteam(recipe))
+        XCTAssertFalse(SteamFetcher.usesSteam(helper.recipe(files: [fromMeta])))
+        XCTAssertEqual(SteamFetcher.needed(recipe: recipe, store: store).files.map(\.name), ["pak001.pk4"])
+    }
+
+    /// Ein echter Durchlauf mit Valves Werkzeug, ohne Konto: SteamCMD kennt die Anmeldung „anonymous“, und die
+    /// besitzt Valves frei verteilbare Steamworks-Bibliotheken (App 1007). Läuft nur, wenn `AVPPLAY_STEAM_TOOL`
+    /// auf einen Ordner mit SteamCMD zeigt; geladen werden rund 100 MB.
+    func testFetchesADepotAndAdoptsOnlyWhatMatches() throws {
+        guard let path = ProcessInfo.processInfo.environment["AVPPLAY_STEAM_TOOL"] else { throw XCTSkip("AVPPLAY_STEAM_TOOL ist nicht gesetzt") }
+        let dir = try scratch()
+        let tool = SteamTool(directory: URL(fileURLWithPath: path), home: dir.appendingPathComponent("home"))
+        try tool.verify()
+        let store = ContentStore(root: dir.appendingPathComponent("bestand"))
+        var file = helper.file("steamclient.so", size: 49_104_528, sha: "7cceb10c5c24beed4684803c808bb88ec9c3c29df39347bad3ca6edf666ecf8e", dest: "x")
+        file.source = source()
+        var recipe = helper.recipe(files: [file])
+        recipe.trees = [RecipeTree(name: "runtime", role: .sysroot, source: source(folder: "linux64"),
+                                   markers: [.init(path: "libsteamwebrtc.so", size: 7_817_336, sha256: "f5a85fa63b9838709fa4abd0b1287e811da810bec3e4bb4ac898beda9aed984e")])]
+        try recipe.validate()
+
+        var said: [String] = []
+        let adopted = try SteamFetcher(tool: tool, store: store, account: "anonymous").fetch(recipe: recipe) { said.append($0) }
+        XCTAssertEqual(Set(adopted), ["steamclient.so", "runtime"], said.joined(separator: "\n"))
+        XCTAssertEqual(try Hashing.sha256(of: store.url(for: file, in: recipe)), file.sha256)
+        XCTAssertTrue(TreeStore(store: store).missing(recipe: recipe).isEmpty)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: TreeStore(store: store).url(for: recipe.trees![0], in: recipe).appendingPathComponent("steamclient.so").path))
+        // Übernommen heißt auch: bei SteamCMD liegt es nicht noch einmal.
+        XCTAssertFalse(FileManager.default.fileExists(atPath: tool.contentDirectory(app: "1007").path))
+        XCTAssertTrue(SteamFetcher.needed(recipe: recipe, store: store).files.isEmpty)
+        // Ein zweiter Lauf fragt Steam nichts mehr.
+        XCTAssertEqual(try SteamFetcher(tool: tool, store: store, account: "anonymous").fetch(recipe: recipe), [])
+
+        // Ein Spiel, das dem Konto nicht gehört: Schluss nach der Besitzfrage, es wird nichts angefordert.
+        var alyx = helper.file("hlvr", sha: String(repeating: "c", count: 64))
+        alyx.source = source("546560", depots: [("546564", "9198205754520568813")])
+        XCTAssertThrowsError(try SteamFetcher(tool: tool, store: store, account: "anonymous").fetch(recipe: helper.recipe(files: [alyx]))) {
+            XCTAssertEqual($0 as? SteamError, .notOwned("Demo"))
+        }
+        XCTAssertFalse(FileManager.default.fileExists(atPath: tool.contentDirectory(app: "546560").path))
+        // Ohne gemerkte Anmeldung: klare Absage, keine Rückfrage nach einem Passwort.
+        XCTAssertThrowsError(try SteamFetcher(tool: tool, store: store, account: "nobody_signed_in_here").fetch(recipe: helper.recipe(files: [alyx]))) {
+            guard case SteamError.notSignedIn = $0 else { return XCTFail("\($0)") }
+        }
+    }
+}

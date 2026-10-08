@@ -168,79 +168,9 @@ public enum MetaLogin {
     /// Startet die Anmeldung und liefert den Token. `input` und `output` sind das Terminal des Nutzers.
     public static func run(tool: URL, arguments: [String] = ["get-access-token"],
                            input: Int32 = STDIN_FILENO, output: Int32 = STDOUT_FILENO) throws -> String {
-        var master: Int32 = -1, slave: Int32 = -1
-        var size = winsize()
-        let haveSize = ioctl(input, TIOCGWINSZ, &size) == 0
-        guard (haveSize ? openpty(&master, &slave, nil, nil, &size) : openpty(&master, &slave, nil, nil, nil)) == 0 else {
-            throw LoginError.couldNotStart(String(cString: strerror(errno)))
-        }
-        defer { close(master) }
-        guard let slaveName = ttyname(slave).map({ String(cString: $0) }) else {
-            close(slave); throw LoginError.couldNotStart(L("no name for the pseudo-terminal", "kein Name für das Pseudo-Terminal"))
-        }
-
-        // Das Kind bekommt eine eigene Sitzung und öffnet das Terminal selbst: so wird es dessen steuerndes
-        // Terminal, und Strg-C des Nutzers erreicht das Werkzeug. Alle übrigen Deskriptoren bleiben zu.
-        var actions: posix_spawn_file_actions_t?
-        posix_spawn_file_actions_init(&actions)
-        defer { posix_spawn_file_actions_destroy(&actions) }
-        posix_spawn_file_actions_addopen(&actions, 0, slaveName, O_RDWR, 0)
-        posix_spawn_file_actions_adddup2(&actions, 0, 1)
-        posix_spawn_file_actions_adddup2(&actions, 0, 2)
-        var attr: posix_spawnattr_t?
-        posix_spawnattr_init(&attr)
-        defer { posix_spawnattr_destroy(&attr) }
-        posix_spawnattr_setflags(&attr, Int16(POSIX_SPAWN_SETSID | POSIX_SPAWN_CLOEXEC_DEFAULT))
-
-        let argv: [UnsafeMutablePointer<CChar>?] = ([tool.path] + arguments).map { strdup($0) } + [nil]
-        let envp: [UnsafeMutablePointer<CChar>?] = ProcessInfo.processInfo.environment.map { strdup("\($0.key)=\($0.value)") } + [nil]
-        defer { for p in argv + envp { free(p) } }
-        var pid: pid_t = 0
-        let rc = posix_spawn(&pid, tool.path, &actions, &attr, argv, envp)
-        close(slave)
-        guard rc == 0 else { throw LoginError.couldNotStart(String(cString: strerror(rc))) }
-
-        // Das Terminal des Nutzers roh schalten: Echo und Zeilenbearbeitung macht das Pseudo-Terminal.
-        var saved = termios()
-        let isTerminal = isatty(input) == 1 && tcgetattr(input, &saved) == 0
-        if isTerminal {
-            var raw = saved
-            cfmakeraw(&raw)
-            tcsetattr(input, TCSANOW, &raw)
-        }
-        defer { if isTerminal { tcsetattr(input, TCSANOW, &saved) } }
-
         var sieve = TokenSieve()
-        var inputOpen = true
-        var buffer = [UInt8](repeating: 0, count: 4096)
-        func emit(_ bytes: [UInt8]) {
-            var rest = bytes[...]
-            while !rest.isEmpty {
-                let n = rest.withUnsafeBytes { write(output, $0.baseAddress, $0.count) }
-                if n <= 0 { break }
-                rest = rest.dropFirst(n)
-            }
-        }
-        relay: while true {
-            var fds = [pollfd(fd: master, events: Int16(POLLIN), revents: 0),
-                       pollfd(fd: inputOpen ? input : -1, events: Int16(POLLIN), revents: 0)]
-            if poll(&fds, 2, -1) < 0 { if errno == EINTR { continue }; break }
-            if fds[1].revents & Int16(POLLIN | POLLHUP) != 0 {
-                let n = read(input, &buffer, buffer.count)
-                if n > 0 { _ = buffer.withUnsafeBytes { write(master, $0.baseAddress, n) } } else { inputOpen = false }
-            }
-            if fds[0].revents & Int16(POLLIN | POLLHUP | POLLERR) != 0 {
-                let n = read(master, &buffer, buffer.count)
-                if n <= 0 { break relay }       // das Werkzeug hat sein Terminal geschlossen
-                emit(sieve.feed(buffer[..<n]))
-            }
-        }
-        emit(sieve.finish())
-
-        var status: Int32 = 0
-        while waitpid(pid, &status, 0) < 0 && errno == EINTR {}
-        let exited = (status & 0x7f) == 0
-        let code = exited ? (status >> 8) & 0xff : -(status & 0x7f)
+        let code = try Pty.run(tool: tool, arguments: arguments, environment: ProcessInfo.processInfo.environment,
+                               input: input, output: output, transform: { sieve.feed($0) }, finish: { sieve.finish() })
         guard code == 0 else { throw LoginError.toolFailed(code) }
         guard let token = sieve.token, TokenStore.isPlausible(token) else { throw LoginError.noToken }
         return token

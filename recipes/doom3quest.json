@@ -40,8 +40,23 @@
    "source": {
     "kind": "user",
     "hint": {
-     "en": "pak000–pak008.pk4 from the 'base' folder of your own Doom 3 (Steam, app 9050).",
-     "de": "pak000–pak008.pk4 aus dem Ordner 'base' deines eigenen Doom 3 (Steam, App 9050)."
+     "en": "pak000–pak008.pk4 from the 'base' folder of your own Doom 3 (Steam, app 9050). With a Steam sign-in under Setup the app fetches them for you.",
+     "de": "pak000–pak008.pk4 aus dem Ordner 'base' deines eigenen Doom 3 (Steam, App 9050). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich."
+    },
+    "steam": {
+     "app": "9050",
+     "depots": [
+      {
+       "id": "9051",
+       "manifest": "8286038173018646412",
+       "bytes": 1579920089
+      },
+      {
+       "id": "9052",
+       "manifest": "234565912299936290",
+       "bytes": 4580929
+      }
+     ]
     }
    }
   },
@@ -56,8 +71,23 @@
    "source": {
     "kind": "user",
     "hint": {
-     "en": "pak000–pak008.pk4 from the 'base' folder of your own Doom 3 (Steam, app 9050).",
-     "de": "pak000–pak008.pk4 aus dem Ordner 'base' deines eigenen Doom 3 (Steam, App 9050)."
+     "en": "pak000–pak008.pk4 from the 'base' folder of your own Doom 3 (Steam, app 9050). With a Steam sign-in under Setup the app fetches them for you.",
+     "de": "pak000–pak008.pk4 aus dem Ordner 'base' deines eigenen Doom 3 (Steam, App 9050). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich."
+    },
+    "steam": {
+     "app": "9050",
+     "depots": [
+      {
+       "id": "9051",
+       "manifest": "8286038173018646412",
+       "bytes": 1579920089
+      },
+      {
+       "id": "9052",
+       "manifest": "234565912299936290",
+       "bytes": 4580929
+      }
+     ]
     }
    }
   },
@@ -72,8 +102,23 @@
    "source": {
     "kind": "user",
     "hint": {
-     "en": "pak000–pak008.pk4 from the 'base' folder of your own Doom 3 (Steam, app 9050).",
-     "de": "pak000–pak008.pk4 aus dem Ordner 'base' deines eigenen Doom 3 (Steam, App 9050)."
+     "en": "pak000–pak008.pk4 from the 'base' folder of your own Doom 3 (Steam, app 9050). With a Steam sign-in under Setup the app fetches them for you.",
+     "de": "pak000–pak008.pk4 aus dem Ordner 'base' deines eigenen Doom 3 (Steam, App 9050). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich."
+    },
+    "steam": {
+     "app": "9050",
+     "depots": [
+      {
+       "id": "9051",
+       "manifest": "8286038173018646412",
+       "bytes": 1579920089
+      },
+      {
+       "id": "9052",
+       "manifest": "234565912299936290",
+       "bytes": 4580929
+      }
+     ]
     }
    }
   },
@@ -88,8 +133,23 @@
    "source": {
     "kind": "user",
     "hint": {
-     "en": "pak000–pak008.pk4 from the 'base' folder of your own Doom 3 (Steam, app 9050).",
-     "de": "pak000–pak008.pk4 aus dem Ordner 'base' deines eigenen Doom 3 (Steam, App 9050)."
+     "en": "pak000–pak008.pk4 from the 'base' folder of your own Doom 3 (Steam, app 9050). With a Steam sign-in under Setup the app fetches them for you.",
+     "de": "pak000–pak008.pk4 aus dem Ordner 'base' deines eigenen Doom 3 (Steam, App 9050). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich."
+    },
+    "steam": {
+     "app": "9050",
+     "depots": [
+      {
+       "id": "9051",
+       "manifest": "8286038173018646412",
+       "bytes": 1579920089
+      },
+      {
+       "id": "9052",
+       "manifest": "234565912299936290",
+       "bytes": 4580929
+      }
+     ]
     }
    }
   },
@@ -104,8 +164,23 @@
    "source": {
     "kind": "user",
     "hint": {
-     "en": "pak000–pak008.pk4 from the 'base' folder of your own Doom 3 (Steam, app 9050).",
-     "de": "pak000–pak008.pk4 aus dem Ordner 'base' deines eigenen Doom 3 (Steam, App 9050)."
+     "en": "pak000–pak008.pk4 from the 'base' folder of your own Doom 3 (Steam, app 9050). With a Steam sign-in under Setup the app fetches them for you.",
+     "de": "pak000–pak008.pk4 aus dem Ordner 'base' deines eigenen Doom 3 (Steam, App 9050). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich."
+    },
+    "steam": {
+     "app": "9050",
+     "depots": [
+      {
+       "id": "9051",
+       "manifest": "8286038173018646412",
+       "bytes": 1579920089
+      },
+      {
+       "id": "9052",
+       "manifest": "234565912299936290",
+       "bytes": 4580929
+      }
+     ]
     }
    }
   },
@@ -120,8 +195,23 @@
    "source": {
     "kind": "user",
     "hint": {
-     "en": "pak000–pak008.pk4 from the 'base' folder of your own Doom 3 (Steam, app 9050).",
-     "de": "pak000–pak008.pk4 aus dem Ordner 'base' deines eigenen Doom 3 (Steam, App 9050)."
+     "en": "pak000–pak008.pk4 from the 'base' folder of your own Doom 3 (Steam, app 9050). With a Steam sign-in under Setup the app fetches them for you.",
+     "de": "pak000–pak008.pk4 aus dem Ordner 'base' deines eigenen Doom 3 (Steam, App 9050). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich."
+    },
+    "steam": {
+     "app": "9050",
+     "depots": [
+      {
+       "id": "9051",
+       "manifest": "8286038173018646412",
+       "bytes": 1579920089
+      },
+      {
+       "id": "9052",
+       "manifest": "234565912299936290",
+       "bytes": 4580929
+      }
+     ]
     }
    }
   },
@@ -136,8 +226,23 @@
    "source": {
     "kind": "user",
     "hint": {
-     "en": "pak000–pak008.pk4 from the 'base' folder of your own Doom 3 (Steam, app 9050).",
-     "de": "pak000–pak008.pk4 aus dem Ordner 'base' deines eigenen Doom 3 (Steam, App 9050)."
+     "en": "pak000–pak008.pk4 from the 'base' folder of your own Doom 3 (Steam, app 9050). With a Steam sign-in under Setup the app fetches them for you.",
+     "de": "pak000–pak008.pk4 aus dem Ordner 'base' deines eigenen Doom 3 (Steam, App 9050). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich."
+    },
+    "steam": {
+     "app": "9050",
+     "depots": [
+      {
+       "id": "9051",
+       "manifest": "8286038173018646412",
+       "bytes": 1579920089
+      },
+      {
+       "id": "9052",
+       "manifest": "234565912299936290",
+       "bytes": 4580929
+      }
+     ]
     }
    }
   },
@@ -152,8 +257,23 @@
    "source": {
     "kind": "user",
     "hint": {
-     "en": "pak000–pak008.pk4 from the 'base' folder of your own Doom 3 (Steam, app 9050).",
-     "de": "pak000–pak008.pk4 aus dem Ordner 'base' deines eigenen Doom 3 (Steam, App 9050)."
+     "en": "pak000–pak008.pk4 from the 'base' folder of your own Doom 3 (Steam, app 9050). With a Steam sign-in under Setup the app fetches them for you.",
+     "de": "pak000–pak008.pk4 aus dem Ordner 'base' deines eigenen Doom 3 (Steam, App 9050). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich."
+    },
+    "steam": {
+     "app": "9050",
+     "depots": [
+      {
+       "id": "9051",
+       "manifest": "8286038173018646412",
+       "bytes": 1579920089
+      },
+      {
+       "id": "9052",
+       "manifest": "234565912299936290",
+       "bytes": 4580929
+      }
+     ]
     }
    }
   },
@@ -168,8 +288,23 @@
    "source": {
     "kind": "user",
     "hint": {
-     "en": "pak000–pak008.pk4 from the 'base' folder of your own Doom 3 (Steam, app 9050).",
-     "de": "pak000–pak008.pk4 aus dem Ordner 'base' deines eigenen Doom 3 (Steam, App 9050)."
+     "en": "pak000–pak008.pk4 from the 'base' folder of your own Doom 3 (Steam, app 9050). With a Steam sign-in under Setup the app fetches them for you.",
+     "de": "pak000–pak008.pk4 aus dem Ordner 'base' deines eigenen Doom 3 (Steam, App 9050). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich."
+    },
+    "steam": {
+     "app": "9050",
+     "depots": [
+      {
+       "id": "9051",
+       "manifest": "8286038173018646412",
+       "bytes": 1579920089
+      },
+      {
+       "id": "9052",
+       "manifest": "234565912299936290",
+       "bytes": 4580929
+      }
+     ]
     }
    }
   }

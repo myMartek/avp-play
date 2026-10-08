@@ -138,6 +138,18 @@ final class AppModel: ObservableObject {
     @Published var searchMore = false
     var searchNextPage = 0
     @AppStorage("filterCommunity") var filterCommunity = false
+    /// Steam: der Kontoname (kein Geheimnis; Passwort und Code sieht dieses Programm nie), ob Valves Werkzeug da
+    /// ist und für welches Konto die Anmeldung zuletzt gelang.
+    @AppStorage("steamAccount") var steamAccount = ""
+    @AppStorage("steamSignedInAs") var steamSignedInAs = ""
+    @Published var steamToolPresent = SteamTool().isInstalled
+    @Published var steamSettingUp = false
+    @Published var steamNote: String?
+    /// Je Spiel: läuft gerade ein Abruf bei Steam, wie weit ist er, und was hat er zuletzt gesagt.
+    @Published var steamBusy: Set<String> = []
+    @Published var steamProgress: [String: SteamProgress] = [:]
+    @Published var steamSaid: [String: String] = [:]
+    let steamStops = StopFlags()
     @Published var searchText = ""
     @Published var searching = false
     @Published var preparing: Set<String> = []

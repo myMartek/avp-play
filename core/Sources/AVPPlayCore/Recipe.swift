@@ -69,6 +69,33 @@ public struct FileSource: Codable, Sendable, Hashable {
     public var url: String?
     /// Hinweis für den Nutzer, woher er die Datei bekommt.
     public var hint: LocalizedText?
+    /// Wo die Datei bei Steam liegt, falls sie aus einem Steam-Kauf stammt. Dann kann Valves eigenes Werkzeug
+    /// sie mit dem Konto des Nutzers holen – und tut das nur für ein Spiel, das diesem Konto gehört.
+    public var steam: SteamSource?
+}
+
+/// Ein Stand eines Steam-Spiels: die App, und die Depots in genau der Fassung, für die das Rezept gilt.
+public struct SteamSource: Codable, Sendable, Hashable {
+    public struct Depot: Codable, Sendable, Hashable {
+        public var id: String
+        /// Die Fassung des Depots (Manifest). Ohne sie käme, was Valve gerade ausliefert.
+        public var manifest: String
+        /// Größe laut Valve, für die Fortschrittsanzeige.
+        public var bytes: Int64?
+    }
+    public var app: String
+    /// In dieser Reihenfolge; bei einem Ordnerbestand überschreibt ein späteres Depot nichts aus einem früheren.
+    public var depots: [Depot]
+    /// Nur für Ordnerbestände: der Ordner im Depot, der den Bestand bildet.
+    public var folder: String?
+
+    /// Kennungen sind Ziffern, Ordner ein schlichter relativer Name – was im Rezept steht, wird zu Argumenten
+    /// eines fremden Werkzeugs und zu Pfaden auf der Platte.
+    public var isSane: Bool {
+        func digits(_ s: String) -> Bool { (1...24).contains(s.count) && s.allSatisfy { $0.isASCII && $0.isNumber } }
+        return digits(app) && !depots.isEmpty && depots.allSatisfy { digits($0.id) && digits($0.manifest) }
+            && (folder ?? "x").allSatisfy { $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "_" || $0 == "-") } && folder != ""
+    }
 }
 
 public struct Addons: Codable, Sendable {
@@ -137,6 +164,14 @@ extension Recipe {
             case .user:
                 break
             }
+            // Ein Steam-Eintrag wird zu Argumenten für Valves Werkzeug; und was daher kommt, muss sich an einer
+            // Prüfsumme messen lassen.
+            if let steam = f.source?.steam {
+                guard steam.isSane, steam.folder == nil else { throw RecipeError.invalid(L("Steam entry of '\(f.name)'", "Steam-Eintrag von '\(f.name)'")) }
+                guard f.sha256 != nil else {
+                    throw RecipeError.invalid(L("'\(f.name)': from Steam without a checksum", "'\(f.name)': aus Steam ohne Prüfsumme"))
+                }
+            }
             guard names.insert(f.name).inserted else {
                 throw RecipeError.invalid(L("file name '\(f.name)' appears twice", "Dateiname '\(f.name)' kommt doppelt vor"))
             }
@@ -169,6 +204,9 @@ extension Recipe {
                 guard let raw = t.source.url, let url = URL(string: raw), url.scheme == "https", url.host != nil else {
                     throw RecipeError.invalid(L("address of '\(t.name)'", "Adresse von '\(t.name)'"))
                 }
+            }
+            if let steam = t.source.steam, !steam.isSane {
+                throw RecipeError.invalid(L("Steam entry of '\(t.name)'", "Steam-Eintrag von '\(t.name)'"))
             }
         }
         if let app = store.appId, !(app.allSatisfy(\.isNumber) && !app.isEmpty) {
