@@ -6,20 +6,17 @@ import SwiftUI
 struct GamesView: View {
     @EnvironmentObject var model: AppModel
 
-    private var shown: [Game] { model.onlyMine ? model.games.filter(model.isMine) : model.games }
+    private var shown: [Game] { model.shownGames }
 
     var body: some View {
         NavigationStack(path: $model.gamePath) {
             ScrollView {
                 if model.loadProblem == nil, !model.games.isEmpty {
                     HStack {
-                        Picker("", selection: $model.onlyMine) {
-                            Text(L("All", "Alle")).tag(false)
-                            Text(L("My Games", "Meine Spiele")).tag(true)
-                        }
-                        .pickerStyle(.segmented)
-                        .labelsHidden()
-                        .fixedSize()
+                        Text(L("Show only:", "Nur zeigen:")).foregroundStyle(.secondary)
+                        Toggle(L("Verified", "Geprüft"), isOn: $model.filterVerified)
+                        Toggle(L("Purchased", "Gekauft"), isOn: $model.filterPurchased)
+                        Toggle(L("Installed", "Installiert"), isOn: $model.filterInstalled)
                         Spacer()
                         if model.updatable.count > 1 {
                             Button(L("Update All (\(model.updatable.count))", "Alle aktualisieren (\(model.updatable.count))")) { model.updateAll() }
@@ -37,12 +34,11 @@ struct GamesView: View {
                 } else if model.games.isEmpty {
                     ProgressView(L("Reading games …", "Spiele werden gelesen …")).padding(.top, 120)
                 } else if shown.isEmpty {
-                    ContentUnavailableView(L("None of These Are Yours Yet", "Noch keines davon gehört dir"), systemImage: "person.crop.square",
-                                           description: Text(model.account == .signedIn
-                                               ? L("Games you own in the Meta Store and games already on your Vision Pro appear here.",
-                                                   "Hier erscheinen Spiele, die du im Meta-Store besitzt, und Spiele, die schon auf deiner Vision Pro sind.")
-                                               : L("Sign in to Meta under “Setup” to see which of these games you own.",
-                                                   "Melde dich unter „Einrichtung“ bei Meta an, um zu sehen, welche dieser Spiele dir gehören.")))
+                    ContentUnavailableView(L("No Game Matches These Filters", "Kein Spiel passt zu diesen Filtern"), systemImage: "line.3.horizontal.decrease.circle",
+                                           description: Text(model.filterPurchased && model.account != .signedIn
+                                               ? L("Sign in to Meta under “Setup” to see which games you have purchased.",
+                                                   "Melde dich unter „Einrichtung“ bei Meta an, um zu sehen, welche Spiele du gekauft hast.")
+                                               : L("Turn off a filter above to see more.", "Schalte oben einen Filter aus, um mehr zu sehen.")))
                         .padding(.top, 80)
                 } else {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 250, maximum: 340), spacing: 18)], spacing: 18) {
@@ -83,6 +79,22 @@ struct StatusBadge: View {
         case .notInstalled: return (L("Not installed", "Nicht installiert"), .secondary, "circle.dashed")
         case .unknown: return (L("Device not reachable", "Gerät nicht erreichbar"), .secondary, "wifi.slash")
         }
+    }
+}
+
+/// Wie weit einem Spiel zu trauen ist: vom Projekt geprüft, oder noch von niemandem bestätigt.
+struct TrustBadge: View {
+    let verified: Bool
+
+    var body: some View {
+        Label(verified ? L("Verified", "Geprüft") : L("Untested", "Ungetestet"),
+              systemImage: verified ? "checkmark.seal.fill" : "questionmark.circle.fill")
+            .font(.caption.weight(.semibold))
+            .padding(.horizontal, 8).padding(.vertical, 4)
+            .foregroundStyle(.white)
+            .background((verified ? Color.blue : Color.gray).opacity(0.92), in: Capsule())
+            .help(verified ? L("Tested by the project on an Apple Vision Pro.", "Vom Projekt auf einer Apple Vision Pro geprüft.")
+                           : L("Nobody has confirmed yet that this game runs.", "Noch hat niemand bestätigt, dass dieses Spiel läuft."))
     }
 }
 
@@ -134,6 +146,7 @@ struct GameCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             CoverImage(game: game)
+                .overlay(alignment: .topTrailing) { TrustBadge(verified: game.verified).padding(8) }
             VStack(alignment: .leading, spacing: 5) {
                 Text(game.recipe.title).font(.headline).lineLimit(1)
                 StatusBadge(status: game.status, busy: model.isBusy(game.id))
@@ -167,7 +180,10 @@ struct GameDetail: View {
                     VStack(alignment: .leading, spacing: 6) {
                         Text(game.recipe.title).font(.largeTitle.bold())
                         Text(L("Version \(game.recipe.versionName)", "Version \(game.recipe.versionName)")).foregroundStyle(.secondary)
-                        StatusBadge(status: game.status, busy: model.isBusy(game.id))
+                        HStack(spacing: 10) {
+                            StatusBadge(status: game.status, busy: model.isBusy(game.id))
+                            TrustBadge(verified: game.verified)
+                        }
                     }
                     Spacer()
                     VStack(alignment: .trailing, spacing: 6) {
@@ -286,9 +302,9 @@ struct GameDetail: View {
 
     private var playability: String {
         switch game.recipe.status.playability {
-        case "reported": return L("Playability: reported as working by users.", "Spielbarkeit: von Nutzern als lauffähig gemeldet.")
-        case "verified": return L("Playability: verified.", "Spielbarkeit: geprüft.")
-        default: return L("Playability: not verified yet.", "Spielbarkeit: noch nicht geprüft.")
+        case "reported": return L("Reported as working by users, not yet checked by the project.", "Von Nutzern als lauffähig gemeldet, vom Projekt noch nicht geprüft.")
+        case "verified": return L("Verified: the project has tested this game on an Apple Vision Pro.", "Geprüft: Das Projekt hat dieses Spiel auf einer Apple Vision Pro getestet.")
+        default: return L("Untested: nobody has confirmed yet that this game runs. You can try it.", "Ungetestet: Noch hat niemand bestätigt, dass dieses Spiel läuft. Du kannst es versuchen.")
         }
     }
 

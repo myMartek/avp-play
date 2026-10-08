@@ -13,6 +13,14 @@ struct Game: Identifiable {
     var id: String { recipe.id }
     /// Sonderapps kommen nicht aus dem Meta-Store; für sie wird kein Meta-Konto gebraucht.
     var needsMetaAccount: Bool { recipe.store.appId != nil }
+    /// Vom Projekt selbst auf einer Vision Pro geprüft.
+    var verified: Bool { recipe.status.playability == "verified" }
+    var installed: Bool {
+        switch status.onDevice {
+        case .current, .olderToolchain, .unstamped: return true
+        case .notInstalled, .unknown: return false
+        }
+    }
 }
 
 /// Gehört das Spiel dem angemeldeten Konto? Sonderapps haben keinen Store-Titel; bei ihnen stellt sich die Frage nicht.
@@ -102,7 +110,10 @@ final class AppModel: ObservableObject {
     let ownTeam: String? = Bundle.main.bundleIdentifier == nil ? nil : Updater.team(of: Bundle.main.bundleURL)
     private var awake: NSObjectProtocol?
     @Published private var options: [String: GameOptions] = [:]
-    @AppStorage("onlyMine") var onlyMine = false
+    /// Die Filter der Übersicht; mehrere zugleich engen weiter ein.
+    @AppStorage("filterVerified") var filterVerified = false
+    @AppStorage("filterPurchased") var filterPurchased = false
+    @AppStorage("filterInstalled") var filterInstalled = false
     private var routed = false
     @AppStorage("teamId") var teamId = ""
     /// Die Sprache, in der das Programm gerade spricht. Ansichten hängen daran und bauen sich beim Wechsel neu.
@@ -133,16 +144,19 @@ final class AppModel: ObservableObject {
         return record.owned ? .yes : .no
     }
 
-    /// „Meine Spiele“: gekauft, schon auf dem Gerät, oder eine Sonderapp, deren Dateien bereitliegen.
-    func isMine(_ game: Game) -> Bool {
-        switch game.status.onDevice {
-        case .current, .olderToolchain, .unstamped: return true
-        case .notInstalled, .unknown: break
-        }
+    /// Gekauft – oder, bei einer Sonderapp, mit den eigenen Spieldateien vollständig vorhanden.
+    func isPurchased(_ game: Game) -> Bool {
         switch owned(game) {
         case .yes: return true
         case .notApplicable: return game.status.stockComplete
         case .no, .unknown: return false
+        }
+    }
+
+    /// Die Spiele, die zu den gesetzten Filtern passen.
+    var shownGames: [Game] {
+        games.filter { game in
+            (!filterVerified || game.verified) && (!filterPurchased || isPurchased(game)) && (!filterInstalled || game.installed)
         }
     }
 

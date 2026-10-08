@@ -18,7 +18,7 @@ downloaded that Meta does not confirm you have purchased.
 | Headset | Apple Vision Pro, paired with Xcode, Developer Mode on, on the same Wi-Fi as the Mac |
 | Apple account | A paid [Apple Developer Program](https://developer.apple.com/programs/) membership. Free teams do not work: the entitlements the games need are missing. |
 | Meta account | The account that owns the games, and Meta's own command-line tool [`ovr-platform-util`](https://developers.meta.com/horizon/resources/publish-reference-platform-command-line-utility/) (used only to sign in). You download it from Meta's page; the app finds the download and sets it up. |
-| Controllers | Whatever the game needs – most of these games expect tracked controllers. |
+| Controllers | Whatever the game needs – most of these games expect tracked controllers. An ordinary game controller (DualSense, Xbox, …) also works together with your hands: the hands show where they are and pinch to grab, the controller adds both sticks and the buttons. Moss is set up for this. |
 | Disk space | Games are large. Asgard's Wrath 2 alone is about 34 GB on the Mac and again on the headset. |
 
 ## Install
