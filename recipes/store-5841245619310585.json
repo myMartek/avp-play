@@ -1,0 +1,41 @@
+{
+ "files": [
+  {
+   "dest": "",
+   "id": "27324564847218685",
+   "localName": "steamlink-vr.apk",
+   "name": "android-steamlinkvr-release.apk",
+   "required": true,
+   "role": "apk",
+   "size": 41350487,
+   "sha256": "36b21974db9f5cd9f54cdf850565b80d31c76a2dd7608406fe160e3005d976d6"
+  }
+ ],
+ "id": "store-5841245619310585",
+ "package": "com.valvesoftware.steamlinkvr",
+ "schema": 1,
+ "status": {
+  "playability": "verified",
+  "download": "proven",
+  "notes": [
+   {
+    "en": "Marked as verified by the project on 2026-10-09. File list as Meta's tool reports it for this build; 1 of 1 checksums recorded from a download.",
+    "de": "Vom Projekt am 2026-10-09 als geprüft markiert. Dateiliste, wie Metas Werkzeug sie für diesen Build nennt; 1 von 1 Prüfsummen aus einem Download erfasst."
+   },
+   {
+    "en": "Valve's Steam Link: it streams SteamVR from a PC on your network; pair it in the window that opens. Known issue: the app ends when its window asks to open a web page.",
+    "de": "Valves Steam Link: streamt SteamVR von einem PC in deinem Netz; gekoppelt wird im Fenster, das sich öffnet. Bekanntes Problem: Die App beendet sich, wenn ihr Fenster eine Webseite öffnen will."
+   }
+  ]
+ },
+ "store": {
+  "appId": "5841245619310585"
+ },
+ "title": "Steam Link",
+ "toolchain": {
+  "minCommit": "90f3aa9",
+  "target": "steamlink-vr"
+ },
+ "versionCode": 5002363,
+ "versionName": "2.0.23"
+}

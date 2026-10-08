@@ -54,10 +54,11 @@ recipes in [`recipes/`](recipes) are:
 | Moss | Meta Store | |
 | Walkabout Mini Golf | Meta Store | purchased courses are unlocked |
 | SUPERHOT VR | Meta Store | |
+| Steam Link | Meta Store | streams SteamVR from a PC on your network |
 | Doom 3 (Doom3Quest) | free port + your own Doom 3 files | you provide `pak000`–`pak008.pk4` from your copy of Doom 3 |
 | Half-Life: Alyx | your own Steam copy (Linux build) | you also provide Steam Linux Runtime and xrizer as folders; see the recipe |
 
-These eight are marked **Verified**: the project has tested them on a Vision Pro. The app also lists every other
+These nine are marked **Verified**: the project has tested them on a Vision Pro. The app also lists every other
 Quest title from the Meta Store – some 17,000, loaded page by page as you scroll. What you see on each is a label:
 
 | Label | Meaning |
@@ -73,7 +74,7 @@ engine. Each verified game needed its own adjustments before it ran, so expect a
 Afterwards say how it went with one click (that is what the labels are made of), or let an AI coding assistant
 try to fix it ("Fix with AI") and send the fix in for review.
 
-All eight were installed with this app on the author's headset. "Community Verified" means exactly what it
+All nine were installed with this app on the author's headset. "Community Verified" means exactly what it
 says: reports from users, not a guarantee. A recipe is tied to one build of a game; other builds need
 their own recipe.
 
