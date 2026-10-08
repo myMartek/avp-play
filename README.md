@@ -56,7 +56,12 @@ recipes in [`recipes/`](recipes) are:
 | Doom 3 (Doom3Quest) | free port + your own Doom 3 files | you provide `pak000`–`pak008.pk4` from your copy of Doom 3 |
 | Half-Life: Alyx | your own Steam copy (Linux build) | you also provide Steam Linux Runtime and xrizer as folders; see the recipe |
 
-All of them were installed with this app on the author's headset. "Reported as working" in the app means
+These seven are marked **Verified**: the project has tested them on a Vision Pro. The app also lists other
+games from the Meta Store as **Untested**. If you own one and the toolchain knows it, you can try it – it may
+well not start – and tell the project how it went, or let an AI coding assistant try to fix it ("Fix with AI")
+and send the fix in for review.
+
+All seven were installed with this app on the author's headset. "Reported as working" in the app means
 exactly that: one user's report, not a guarantee. A recipe is tied to one build of a game; other builds need
 their own recipe.
 
@@ -71,8 +76,12 @@ their own recipe.
   whether Meta will serve it.
 - **Apple signing** uses the team you are signed in with in Xcode. The app reads the list of teams from Xcode's
   settings and nothing else.
-- There is no server, no telemetry and no account with this project. The only other connection the app makes is
-  the daily question to GitHub about a newer release, which you can turn off.
+- **The project's own service** (`avpplay.martek.de`) holds the list of further games and what users report about
+  them. The app sends it what you search for and the identifiers of games whose page you open; a report you
+  choose to send says which game and build, and whether it works. It never receives your Meta sign-in or
+  anything about your account or device, and you can turn it off in the settings.
+- There is no telemetry and no account with this project. The only other connection the app makes is the daily
+  question to GitHub about a newer release, which you can turn off as well.
 
 ## Build it yourself
 

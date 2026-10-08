@@ -30,6 +30,15 @@ struct SettingsView: View {
                     .font(.callout).foregroundStyle(.secondary)
             }
 
+            Section(L("Online catalogue", "Online-Katalog")) {
+                Toggle(L("Show more games from the online catalogue and allow feedback", "Weitere Spiele aus dem Online-Katalog zeigen und Rückmeldungen erlauben"),
+                       isOn: Binding(get: { model.onlineCatalog }, set: { model.onlineCatalog = $0; model.loadCatalog() }))
+                Text(L("The catalogue is a small service of this project (avpplay.martek.de). The app sends it what you search for and the identifiers of games you open; a report you choose to send contains the game, its build and your answer. It never receives your Meta sign-in or anything about your account or device.",
+                       "Der Katalog ist ein kleiner Dienst dieses Projekts (avpplay.martek.de). Die App schickt ihm, wonach du suchst, und die Kennungen der Spiele, die du öffnest; eine Rückmeldung, die du abschickst, enthält das Spiel, seinen Build und deine Antwort. Deine Meta-Anmeldung oder etwas über dein Konto oder Gerät bekommt er nie."))
+                    .font(.callout).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
             Section(L("Updates", "Aktualisierung")) {
                 Toggle(L("Check for new versions once a day", "Einmal am Tag nach neuen Fassungen sehen"),
                        isOn: Binding(get: { model.autoUpdateCheck }, set: { model.autoUpdateCheck = $0 }))

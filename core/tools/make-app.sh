@@ -12,12 +12,18 @@ BUILD="$(git -C "$ROOT" rev-list --count HEAD 2>/dev/null || echo 1)"
 OUT="$ROOT/dist/AVP Play.app"
 
 swift build -c release --build-path .build-app --product AVPPlayApp
+swift build -c release --build-path .build-app --product avpplay
 BIN=".build-app/release/AVPPlayApp"
 
 NEW="$ROOT/dist/.AVP Play.app.new"
 rm -rf "$NEW"
 mkdir -p "$NEW/Contents/MacOS" "$NEW/Contents/Resources/recipes"
 cp "$BIN" "$NEW/Contents/MacOS/AVPPlay"
+# Die Kommandozeile kommt mit: Der Auftrag aus „Fix with AI“ baut und installiert damit aus einer Arbeitskopie.
+# In einen eigenen Ordner: Auf dem üblichen Dateisystem eines Macs sind „AVPPlay“ und „avpplay“ derselbe Name,
+# und im selben Ordner würde die eine Datei die andere ersetzen.
+mkdir -p "$NEW/Contents/Helpers"
+cp ".build-app/release/avpplay" "$NEW/Contents/Helpers/avpplay"
 cp "$ROOT"/recipes/*.json "$NEW/Contents/Resources/recipes/"
 # Die Toolchain kommt mit: das neueste Paket aus dist/ samt Beschreibung (oder AVPPLAY_TOOLCHAIN_ARCHIVE).
 # Die App installiert es beim ersten Start – geprüft gegen die Beschreibung wie jedes andere Paket.
@@ -67,6 +73,7 @@ cp "$ICON" "$NEW/Contents/Resources/AppIcon.icns"
 # Für die Weitergabe: AVPPLAY_SIGN_IDENTITY="Developer ID Application: Name (TEAMID)", mit gehärteter Laufzeit
 # und Zeitstempel, wie Apples Beglaubigung es verlangt.
 if [ -n "${AVPPLAY_SIGN_IDENTITY:-}" ]; then
+  codesign --force --options runtime --timestamp --sign "$AVPPLAY_SIGN_IDENTITY" "$NEW/Contents/Helpers/avpplay"
   codesign --force --options runtime --timestamp --sign "$AVPPLAY_SIGN_IDENTITY" "$NEW"
   codesign --verify --strict "$NEW"
 else
@@ -74,4 +81,9 @@ else
 fi
 rm -rf "$OUT"
 mv "$NEW" "$OUT"
+# Prüfung: Das Programm im Paket ist die App und nicht die Kommandozeile.
+if ! otool -L "$OUT/Contents/MacOS/AVPPlay" | grep -q "SwiftUI"; then
+  echo "!! Contents/MacOS/AVPPlay ist nicht die App" >&2
+  exit 1
+fi
 echo "$OUT ($VERSION, Build $BUILD, $(du -sh "$OUT" | cut -f1))"

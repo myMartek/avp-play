@@ -18,6 +18,8 @@ enum Probe {
         var teamCandidates: [Team] = []
         /// Freier Platz auf dem Laufwerk des Bestands.
         var freeBytes: Int64?
+        var apps: [InstalledApp]?
+        var toolchainRevision: Int?
     }
 
     /// Ein Entwicklerteam, wie Xcode es kennt.
@@ -62,15 +64,25 @@ enum Probe {
                 : L("Development checkout \(toolchain.commit()) (not an installed package).", "Entwicklungsstand \(toolchain.commit()) (kein installiertes Paket).")
         }
 
+        s.apps = apps
+        s.toolchainRevision = toolchain?.appRevision()
         if let recipes = paths.recipes {
             do {
-                s.games = try RecipeStore(directory: recipes).loadAll().map { r in
+                func game(_ r: Recipe, draft: Bool) -> Game {
                     Game(recipe: r,
                          status: GameStatus.of(recipe: r, store: paths.store, apps: apps, toolchainVersion: toolchain?.appRevision(),
                                                 bundlePrefix: bundlePrefix),
                          cover: StartHero.choose(recipe: r, store: paths.store).flatMap { NSImage(data: $0.image) },
-                         storeBytes: directorySize(paths.store.directory(for: r)))
-                }.sorted { $0.recipe.title.localizedCaseInsensitiveCompare($1.recipe.title) == .orderedAscending }
+                         storeBytes: directorySize(paths.store.directory(for: r)), draft: draft)
+                }
+                let bundled = try RecipeStore(directory: recipes).loadAll()
+                // Entwürfe für ungetestete Spiele, die schon nachgeschlagen wurden. Ein mitgeliefertes Rezept für
+                // dieselbe Store-App geht vor.
+                let shipped = Set(bundled.compactMap { $0.store.appId })
+                let drafts = ((try? RecipeStore(directory: DataLocation.base.appendingPathComponent("drafts", isDirectory: true)).loadAll()) ?? [])
+                    .filter { r in r.id.hasPrefix("store-") && !(r.store.appId.map(shipped.contains) ?? true) }
+                s.games = (bundled.map { game($0, draft: false) } + drafts.map { game($0, draft: true) })
+                    .sorted { $0.recipe.title.localizedCaseInsensitiveCompare($1.recipe.title) == .orderedAscending }
             } catch {
                 s.loadProblem = L("The list of games could not be read: \(error)", "Die Spieleliste konnte nicht gelesen werden: \(error)")
             }

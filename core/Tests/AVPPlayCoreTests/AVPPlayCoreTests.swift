@@ -688,6 +688,62 @@ final class JobTests: XCTestCase {
     }
 }
 
+final class UntestedGameTests: XCTestCase {
+    // Erfundene Kennungen im Format, das Metas Werkzeug schreibt.
+    let listing = """
+    {"type":"log","level":"info","message":"Logs are written to: /tmp/oc_cli.log"}
+    {"type":"log","level":"info","message":"\\nThe following file(s) would be downloaded:"}
+    {"type":"log","level":"info","message":"  Some Game-Android-Shipping-arm64.apk  62.7MB  [APK] 8254815691289807"}
+    {"type":"log","level":"info","message":"\\nApp contains corresponding OBB file: 8254813211290055."}
+    {"type":"log","level":"info","message":"  main.151047.com.example.game.obb  2.4GB  [OBB] 8254813211290055"}
+      plain text line.bundle  140KB  [ASSET] 24544644515232330
+      ../escape.bundle  1KB  [ASSET] 24544644515232331
+      no-id.bundle  1KB  [ASSET] abc
+    {"type":"log","level":"info","message":"\\nTotal time: 0m 0s.\\n"}
+    """
+
+    func testListingIsReadFromJsonAndPlainLines() {
+        let files = MetaListing.parse(listing)
+        XCTAssertEqual(files.map(\.name), ["Some Game-Android-Shipping-arm64.apk", "main.151047.com.example.game.obb", "plain text line.bundle"])
+        XCTAssertEqual(files.map(\.kind), ["APK", "OBB", "ASSET"])
+        XCTAssertEqual(files[1].id, "8254813211290055")
+        XCTAssertEqual(files[1].sizeText, "2.4GB")
+        XCTAssertEqual(MetaListing.reason(in: #"{"type":"log","level":"error","message":"Cannot find apk with ID 1"}"# + "\n"), "Cannot find apk with ID 1")
+        XCTAssertEqual(MetaListing.parse("nothing here"), [])
+    }
+
+    func testDraftRecipePlacesFilesByEngineAndIsMarkedUntested() throws {
+        let game = CatalogGame(appId: "1921533091289407", title: "Some Game", package: "com.example.game", publisher: nil, status: "untested",
+                               noteEn: nil, noteDe: nil, target: "somegame", works: 0, problems: 0, fails: 0, build: nil)
+        let build = CatalogBuild(buildId: "8254815691289807", version: "1.2", versionCode: 151047, fileName: nil)
+        let files = MetaListing.parse(listing)
+        let unity = try DraftRecipe.make(game: game, build: build, files: files, target: "somegame", unreal: false, minCommit: "abc1234")
+        XCTAssertEqual(unity.id, "store-1921533091289407")
+        XCTAssertEqual(unity.status.playability, "untested")
+        XCTAssertEqual(unity.files.map(\.role), ["apk", "main-obb", "content-bundle"])
+        XCTAssertEqual(unity.files[0].localName, "somegame.apk")
+        XCTAssertEqual(unity.files[0].id, "8254815691289807")
+        XCTAssertEqual(unity.files[1].dest, "android-files/obb")
+        XCTAssertEqual(unity.files[2].dest, "android-files/Android/obb/com.example.game")
+        XCTAssertTrue(unity.files.allSatisfy { $0.sha256 == nil && $0.size == nil && $0.source == nil }, "nichts als Metas Kennungen")
+        let unreal = try DraftRecipe.make(game: game, build: build, files: files, target: "somegame", unreal: true, minCommit: "abc1234")
+        XCTAssertEqual(unreal.files[1].dest, "android-files/Android/obb/com.example.game")
+        XCTAssertThrowsError(try DraftRecipe.make(game: game, build: build, files: Array(files.dropFirst()), target: "somegame", unreal: false, minCommit: "abc1234"))
+    }
+
+    func testCatalogueEntriesFromTheServerAreChecked() throws {
+        func game(_ json: String) -> CatalogGame? { try? JSONDecoder().decode(CatalogGame.self, from: Data(json.utf8)) }
+        let good = #"{"appId":"1921533091289407","title":"SUPERHOT VR","package":"unity.x","status":"untested","works":1,"problems":0,"fails":0,"target":"superhot","build":{"buildId":"24922928844056506","version":"1.161","versionCode":161}}"#
+        XCTAssertEqual(game(good)?.isSane, true)
+        XCTAssertEqual(game(good.replacingOccurrences(of: "1921533091289407", with: "19215 OR 1"))?.isSane, false)
+        XCTAssertEqual(game(good.replacingOccurrences(of: "24922928844056506", with: "../../x"))?.isSane, false)
+        XCTAssertEqual(game(good.replacingOccurrences(of: "superhot", with: "a b;rm"))?.isSane, false)
+        XCTAssertEqual(game(good.replacingOccurrences(of: "SUPERHOT VR", with: "a\\u0007b"))?.isSane, false)
+        let feedback = CatalogFeedback(appId: "1", versionCode: 1, result: .works, comment: "  " + String(repeating: "x", count: 2000), appVersion: "1", toolchain: "206", lang: "en")
+        XCTAssertEqual(feedback.comment.count, 1000)
+    }
+}
+
 final class AnonymizeTests: XCTestCase {
     func testPersonalDetailsAreRemovedBeforeAReportIsShared() {
         // Alle Angaben sind erfunden. Der Benutzerordner wird zusammengesetzt, damit in diesem Quelltext kein

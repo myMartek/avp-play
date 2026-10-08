@@ -10,11 +10,18 @@ struct Game: Identifiable {
     var cover: NSImage?
     /// Was das Spiel auf diesem Mac belegt.
     var storeBytes: Int64 = 0
+    /// Was der Online-Katalog über das Spiel sagt, soweit er es kennt.
+    var catalog: CatalogGame?
+    /// Kein mitgeliefertes Rezept, sondern ein Entwurf aus Katalog und Metas Werkzeug – oder erst ein Platzhalter.
+    var draft = false
     var id: String { recipe.id }
+    /// Sind die Dateien des Spiels bekannt? Bei einem Platzhalter noch nicht.
+    var prepared: Bool { !draft || !recipe.files.isEmpty }
+    var broken: Bool { draft && catalog?.status == "broken" }
     /// Sonderapps kommen nicht aus dem Meta-Store; für sie wird kein Meta-Konto gebraucht.
     var needsMetaAccount: Bool { recipe.store.appId != nil }
     /// Vom Projekt selbst auf einer Vision Pro geprüft.
-    var verified: Bool { recipe.status.playability == "verified" }
+    var verified: Bool { !draft && recipe.status.playability == "verified" }
     var installed: Bool {
         switch status.onDevice {
         case .current, .olderToolchain, .unstamped: return true
@@ -99,6 +106,20 @@ final class AppModel: ObservableObject {
     @Published var lookingForTool = false
     private var toolWatch: Task<Void, Never>?
     @Published var freeBytes: Int64?
+    /// Der Online-Katalog: was der Dienst des Projekts über weitere Spiele sagt.
+    @Published var catalog: [CatalogGame] = []
+    @Published var catalogProblem: String?
+    @Published var searchText = ""
+    @Published var searching = false
+    @Published var preparing: Set<String> = []
+    @Published var prepareNote: [String: String] = [:]
+    @Published var favourites: Set<String> = Set(UserDefaults.standard.stringArray(forKey: "favourites") ?? [])
+    @Published var sentFeedback: [String: String] = UserDefaults.standard.dictionary(forKey: "sentFeedback") as? [String: String] ?? [:]
+    @AppStorage("onlineCatalog") var onlineCatalog = true
+    @AppStorage("filterFavourites") var filterFavourites = false
+    /// Was das Gerät zuletzt als installiert gemeldet hat, und ab welcher Toolchain-Nummer ein Bau aktuell ist.
+    var installedApps: [InstalledApp]?
+    var toolchainRevision: Int?
     /// Wie weit das Kopieren aufs Gerät im laufenden Auftrag ist.
     @Published var copyProgress: [String: InstallProgress] = [:]
     /// Eine neuere veröffentlichte Fassung, falls es eine gibt.
@@ -155,8 +176,15 @@ final class AppModel: ObservableObject {
 
     /// Die Spiele, die zu den gesetzten Filtern passen.
     var shownGames: [Game] {
-        games.filter { game in
+        let words = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return allGames.filter { game in
             (!filterVerified || game.verified) && (!filterPurchased || isPurchased(game)) && (!filterInstalled || game.installed)
+                && (!filterFavourites || isFavourite(game))
+                && (words.isEmpty || game.recipe.title.lowercased().contains(words) || game.recipe.package.lowercased().contains(words))
+        }.sorted { a, b in
+            // Geprüftes zuerst, dann schon Nachgeschlagenes, dann der Rest – jeweils nach Namen.
+            let rank: (Game) -> Int = { $0.verified ? 0 : ($0.prepared ? 1 : 2) }
+            return rank(a) != rank(b) ? rank(a) < rank(b) : a.recipe.title.localizedCaseInsensitiveCompare(b.recipe.title) == .orderedAscending
         }
     }
 
@@ -286,6 +314,9 @@ final class AppModel: ObservableObject {
         if toolchain == nil { return L("The toolchain is not installed yet (see “Setup”).", "Die Toolchain ist noch nicht installiert (siehe „Einrichtung“).") }
         if !teamValid { return L("The Apple team ID is still missing (see “Setup”).", "Die Apple-Team-ID fehlt noch (siehe „Einrichtung“).") }
         if device == nil { return deviceProblem ?? L("The Vision Pro is not reachable.", "Die Vision Pro ist nicht erreichbar.") }
+        if game.draft, !game.prepared {
+            return prepareNote[game.id] ?? L("The files of this game have not been looked up yet.", "Die Dateien dieses Spiels sind noch nicht nachgeschlagen.")
+        }
         if game.needsMetaAccount, account != .signedIn { return L("Sign in to Meta first (see “Setup”).", "Erst bei Meta anmelden (siehe „Einrichtung“).") }
         if owned(game) == .no {
             return L("This game is not in your Meta account, so nothing is downloaded.",
@@ -337,6 +368,8 @@ final class AppModel: ObservableObject {
         xcodeProblem = s.xcodeProblem
         teamCandidates = s.teamCandidates
         freeBytes = s.freeBytes
+        installedApps = s.apps
+        toolchainRevision = s.toolchainRevision
         // Genau ein bezahltes Team: das ist es. Sonst entscheidet der Nutzer.
         let paid = s.teamCandidates.filter { !$0.free }
         if teamId.isEmpty, paid.count == 1 { teamId = paid[0].id }

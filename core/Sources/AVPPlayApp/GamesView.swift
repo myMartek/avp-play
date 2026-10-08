@@ -17,7 +17,12 @@ struct GamesView: View {
                         Toggle(L("Verified", "Geprüft"), isOn: $model.filterVerified)
                         Toggle(L("Purchased", "Gekauft"), isOn: $model.filterPurchased)
                         Toggle(L("Installed", "Installiert"), isOn: $model.filterInstalled)
+                        Toggle(L("Favourites", "Favoriten"), isOn: $model.filterFavourites)
                         Spacer()
+                        if model.searching {
+                            ProgressView().controlSize(.small)
+                            Text(L("Searching the catalogue …", "Katalog wird durchsucht …")).font(.callout).foregroundStyle(.secondary)
+                        }
                         if model.updatable.count > 1 {
                             Button(L("Update All (\(model.updatable.count))", "Alle aktualisieren (\(model.updatable.count))")) { model.updateAll() }
                         }
@@ -34,8 +39,13 @@ struct GamesView: View {
                 } else if model.games.isEmpty {
                     ProgressView(L("Reading games …", "Spiele werden gelesen …")).padding(.top, 120)
                 } else if shown.isEmpty {
-                    ContentUnavailableView(L("No Game Matches These Filters", "Kein Spiel passt zu diesen Filtern"), systemImage: "line.3.horizontal.decrease.circle",
-                                           description: Text(model.filterPurchased && model.account != .signedIn
+                    ContentUnavailableView(model.searchText.isEmpty ? L("No Game Matches These Filters", "Kein Spiel passt zu diesen Filtern")
+                                                                    : L("Nothing Found for “\(model.searchText)”", "Nichts gefunden zu „\(model.searchText)“"),
+                                           systemImage: "line.3.horizontal.decrease.circle",
+                                           description: Text(!model.searchText.isEmpty
+                                               ? (model.catalogProblem ?? L("The catalogue knows no game by that name, or a filter above hides it.",
+                                                                            "Der Katalog kennt kein Spiel mit diesem Namen, oder ein Filter oben blendet es aus."))
+                                               : model.filterPurchased && model.account != .signedIn
                                                ? L("Sign in to Meta under “Setup” to see which games you have purchased.",
                                                    "Melde dich unter „Einrichtung“ bei Meta an, um zu sehen, welche Spiele du gekauft hast.")
                                                : L("Turn off a filter above to see more.", "Schalte oben einen Filter aus, um mehr zu sehen.")))
@@ -51,9 +61,72 @@ struct GamesView: View {
                 }
             }
             .navigationTitle(L("Games", "Spiele"))
-            .navigationDestination(for: String.self) { id in
-                if let game = model.games.first(where: { $0.id == id }) { GameDetail(game: game) }
+            .searchable(text: $model.searchText, prompt: L("Search games", "Spiele suchen"))
+            .onSubmit(of: .search) { model.searchCatalog() }
+            // Beim Tippen sucht die Liste sofort in dem, was schon da ist; der Katalog wird erst gefragt, wenn
+            // die Eingabe kurz stillsteht.
+            .task(id: model.searchText) {
+                try? await Task.sleep(for: .milliseconds(800))
+                if !Task.isCancelled { model.searchCatalog() }
             }
+            .navigationDestination(for: String.self) { id in
+                if let game = model.allGames.first(where: { $0.id == id }) { GameDetail(game: game) }
+            }
+        }
+    }
+}
+
+/// Die Frage nach einer Installation: Wie läuft es? Ein Klick, auf Wunsch ein Satz dazu.
+struct FeedbackBox: View {
+    @EnvironmentObject var model: AppModel
+    let game: Game
+    @State private var comment = ""
+    @State private var showFix = false
+
+    var body: some View {
+        GroupBox(L("How does it run?", "Wie läuft es?")) {
+            VStack(alignment: .leading, spacing: 8) {
+                if !(game.needsMetaAccount && model.onlineCatalog) {
+                    // Sonderapps kennt der Katalog nicht, und ohne Katalog gibt es keinen Empfänger.
+                    EmptyView()
+                } else if let sent = model.feedbackSent(game) {
+                    Label(L("You reported: \(label(sent)). Thank you.", "Du hast gemeldet: \(label(sent)). Danke."), systemImage: "checkmark.circle")
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text(L("Tell the project how this build runs on your Vision Pro. Sent are the game, its build, the versions of app and toolchain, and your answer – nothing about you or your device.",
+                           "Sag dem Projekt, wie dieser Build auf deiner Vision Pro läuft. Gesendet werden das Spiel, sein Build, die Versionen von App und Toolchain und deine Antwort – nichts über dich oder dein Gerät."))
+                        .font(.callout).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    TextField(L("A sentence about it, if you like", "Ein Satz dazu, wenn du magst"), text: $comment, axis: .vertical)
+                        .textFieldStyle(.roundedBorder).lineLimit(1...3)
+                    HStack {
+                        Button(L("It works", "Es läuft")) { model.sendFeedback(game, result: .works, comment: comment) }
+                        Button(L("It starts, with problems", "Es startet, mit Problemen")) { model.sendFeedback(game, result: .problems, comment: comment) }
+                        Button(L("It does not start", "Es startet nicht")) { model.sendFeedback(game, result: .fails, comment: comment) }
+                    }
+                }
+                Divider()
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(L("Not working? Let an AI assistant try to fix it.", "Läuft nicht? Lass einen KI-Assistenten versuchen, es zu reparieren."))
+                        Text(L("The app writes the task for it; a working fix can go to the project for review.",
+                               "Die App schreibt den Auftrag dafür; ein funktionierender Fix kann zur Prüfung an das Projekt gehen."))
+                            .font(.callout).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Button(L("Fix with AI …", "Mit KI reparieren …")) { showFix = true }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading).padding(6)
+        }
+        .sheet(isPresented: $showFix) { FixSheet(game: game).environmentObject(model) }
+    }
+
+    private func label(_ result: String) -> String {
+        switch result {
+        case "works": return L("it works", "es läuft")
+        case "problems": return L("it starts, with problems", "es startet, mit Problemen")
+        default: return L("it does not start", "es startet nicht")
         }
     }
 }
@@ -84,17 +157,50 @@ struct StatusBadge: View {
 
 /// Wie weit einem Spiel zu trauen ist: vom Projekt geprüft, oder noch von niemandem bestätigt.
 struct TrustBadge: View {
-    let verified: Bool
+    let game: Game
 
     var body: some View {
-        Label(verified ? L("Verified", "Geprüft") : L("Untested", "Ungetestet"),
-              systemImage: verified ? "checkmark.seal.fill" : "questionmark.circle.fill")
+        let (text, symbol, color, help): (String, String, Color, String) = {
+            if game.verified {
+                return (L("Verified", "Geprüft"), "checkmark.seal.fill", .blue,
+                        L("Tested by the project on an Apple Vision Pro.", "Vom Projekt auf einer Apple Vision Pro geprüft."))
+            }
+            if game.broken {
+                return (L("Does not work", "Läuft nicht"), "xmark.octagon.fill", .red,
+                        L("Known not to work at the moment.", "Bekannt, dass es derzeit nicht läuft."))
+            }
+            if let c = game.catalog, c.works > 0, c.works >= c.fails {
+                return (L("Reported working", "Als lauffähig gemeldet"), "person.2.fill", .green,
+                        L("Users report that it runs. The project has not tested it.", "Nutzer melden, dass es läuft. Das Projekt hat es nicht getestet."))
+            }
+            return (L("Untested", "Ungetestet"), "questionmark.circle.fill", .gray,
+                    L("Nobody has confirmed yet that this game runs.", "Noch hat niemand bestätigt, dass dieses Spiel läuft."))
+        }()
+        Label(text, systemImage: symbol)
             .font(.caption.weight(.semibold))
             .padding(.horizontal, 8).padding(.vertical, 4)
             .foregroundStyle(.white)
-            .background((verified ? Color.blue : Color.gray).opacity(0.92), in: Capsule())
-            .help(verified ? L("Tested by the project on an Apple Vision Pro.", "Vom Projekt auf einer Apple Vision Pro geprüft.")
-                           : L("Nobody has confirmed yet that this game runs.", "Noch hat niemand bestätigt, dass dieses Spiel läuft."))
+            .background(color.opacity(0.92), in: Capsule())
+            .help(help)
+    }
+}
+
+/// Der Stern: ein Spiel merken, um es über den Filter „Favoriten“ wiederzufinden.
+struct FavouriteButton: View {
+    @EnvironmentObject var model: AppModel
+    let game: Game
+
+    var body: some View {
+        let on = model.isFavourite(game)
+        Button { model.toggleFavourite(game) } label: {
+            Image(systemName: on ? "star.fill" : "star")
+                .font(.body.weight(.semibold))
+                .foregroundStyle(on ? Color.yellow : Color.white)
+                .padding(6)
+                .background(.black.opacity(0.45), in: Circle())
+        }
+        .buttonStyle(.plain)
+        .help(on ? L("Remove from favourites", "Aus den Favoriten entfernen") : L("Mark as favourite", "Als Favorit merken"))
     }
 }
 
@@ -146,7 +252,8 @@ struct GameCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             CoverImage(game: game)
-                .overlay(alignment: .topTrailing) { TrustBadge(verified: game.verified).padding(8) }
+                .overlay(alignment: .topTrailing) { TrustBadge(game: game).padding(8) }
+                .overlay(alignment: .topLeading) { FavouriteButton(game: game).padding(8) }
             VStack(alignment: .leading, spacing: 5) {
                 Text(game.recipe.title).font(.headline).lineLimit(1)
                 StatusBadge(status: game.status, busy: model.isBusy(game.id))
@@ -182,7 +289,8 @@ struct GameDetail: View {
                         Text(L("Version \(game.recipe.versionName)", "Version \(game.recipe.versionName)")).foregroundStyle(.secondary)
                         HStack(spacing: 10) {
                             StatusBadge(status: game.status, busy: model.isBusy(game.id))
-                            TrustBadge(verified: game.verified)
+                            TrustBadge(game: game)
+                            FavouriteButton(game: game)
                         }
                     }
                     Spacer()
@@ -200,6 +308,7 @@ struct GameDetail: View {
                     }
                 }
 
+                if game.draft { untestedBox }
                 if !game.status.userProvidedMissing.isEmpty { ownFiles }
 
                 GroupBox(L("On This Mac", "Auf diesem Mac")) {
@@ -212,6 +321,14 @@ struct GameDetail: View {
                         }
                         if game.status.bytesToDownload > 0 {
                             row(L("Still to download", "Noch zu laden"), Installer.gigabytes(game.status.bytesToDownload))
+                        } else if !game.prepared {
+                            row(L("Files", "Dateien"), L("not looked up yet", "noch nicht nachgeschlagen"))
+                        } else if game.status.filesPresent < game.status.filesRequired {
+                            row(L("Still to download", "Noch zu laden"),
+                                game.status.filesRequired - game.status.filesPresent == 1
+                                    ? L("one file, size not known in advance", "eine Datei, Größe vorab nicht bekannt")
+                                    : L("\(game.status.filesRequired - game.status.filesPresent) files, size not known in advance",
+                                        "\(game.status.filesRequired - game.status.filesPresent) Dateien, Größe vorab nicht bekannt"))
                         } else if game.status.stockComplete {
                             row("Download", L("nothing left to download", "nichts mehr zu laden"))
                         }
@@ -234,6 +351,8 @@ struct GameDetail: View {
                 }
 
                 if !languageFiles.isEmpty || game.recipe.addons != nil { optionalContent }
+
+                if game.installed { FeedbackBox(game: game) }
 
                 GroupBox(L("Good to Know", "Gut zu wissen")) {
                     VStack(alignment: .leading, spacing: 8) {
@@ -263,11 +382,49 @@ struct GameDetail: View {
             .frame(maxWidth: .infinity)
         }
         .navigationTitle(game.recipe.title)
+        // Erst wenn jemand die Seite eines ungetesteten Spiels öffnet, wird nachgeschlagen, woraus es besteht.
+        .task(id: game.id) { model.prepare(game) }
         .confirmationDialog(L("Remove the files of \(game.recipe.title) from this Mac?", "Die Dateien von \(game.recipe.title) von diesem Mac entfernen?"),
                             isPresented: $confirmRemove) {
             Button(L("Remove \(Installer.gigabytes(game.storeBytes))", "\(Installer.gigabytes(game.storeBytes)) entfernen"), role: .destructive) { model.removeFiles(game) }
         } message: {
             Text(removeWarning)
+        }
+    }
+
+    /// Was über ein ungetestetes Spiel zu sagen ist: dass es ein Versuch ist, was gerade nachgeschlagen wird, was
+    /// andere melden und was das Projekt dazu notiert hat.
+    private var untestedBox: some View {
+        GroupBox {
+            VStack(alignment: .leading, spacing: 8) {
+                Label(game.broken ? L("This game is known not to work at the moment", "Von diesem Spiel ist bekannt, dass es derzeit nicht läuft")
+                                  : L("Nobody has tested this game yet", "Dieses Spiel hat noch niemand getestet"),
+                      systemImage: game.broken ? "xmark.octagon" : "flask")
+                    .font(.headline)
+                Text(L("You can try it. Each of the verified games needed its own adjustments before it ran, so an untested game may well not start. Afterwards, tell the project how it went – that is how games get from here to “Verified”.",
+                       "Du kannst es versuchen. Jedes der geprüften Spiele brauchte eigene Anpassungen, bevor es lief – ein ungetestetes startet also womöglich nicht. Sag dem Projekt danach, wie es lief: So kommen Spiele von hier zu „Geprüft“."))
+                    .font(.callout).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let c = game.catalog, c.works + c.problems + c.fails > 0 {
+                    Text(L("Reports from users: \(c.works) say it works, \(c.problems) report problems, \(c.fails) say it does not start.",
+                           "Meldungen von Nutzern: \(c.works) sagen, es läuft, \(c.problems) melden Probleme, \(c.fails) sagen, es startet nicht."))
+                        .font(.callout)
+                }
+                if let note = game.catalog?.note { Label(note, systemImage: "text.bubble").font(.callout) }
+                if model.preparing.contains(game.id) {
+                    HStack { ProgressView().controlSize(.small); Text(model.prepareNote[game.id] ?? "").font(.callout) }
+                } else if let note = model.prepareNote[game.id] {
+                    Label(note, systemImage: "info.circle").font(.callout).fixedSize(horizontal: false, vertical: true)
+                } else if game.prepared {
+                    Label(game.recipe.files.count == 1
+                            ? L("Build \(game.recipe.versionName): one file (the APK), as Meta's tool lists it.",
+                                "Build \(game.recipe.versionName): eine Datei (das APK), wie Metas Werkzeug sie nennt.")
+                            : L("Build \(game.recipe.versionName): \(game.recipe.files.count) files, as Meta's tool lists them.",
+                                "Build \(game.recipe.versionName): \(game.recipe.files.count) Dateien, wie Metas Werkzeug sie nennt."),
+                          systemImage: "checkmark.circle").font(.callout)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading).padding(6)
         }
     }
 

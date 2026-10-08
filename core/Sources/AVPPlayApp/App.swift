@@ -138,6 +138,7 @@ struct RootView: View {
             model.installBundledToolchainIfNewer()
             model.refresh()
             model.checkAccount()
+            model.loadCatalog()
             await model.checkForUpdate(manual: false)
             await Snapshot.runIfRequested(model: model) { openSettings() }
         }
@@ -223,6 +224,22 @@ enum Snapshot {
             await pause(1.2)
             capture("2-spiel-\(id)", dir)
         }
+        // `--open-game <Kennung>`: die Seite eines Spiels öffnen wie per Klick – bei einem ungetesteten Spiel löst
+        // das das Nachschlagen aus – und zeigen, was danach dasteht.
+        if let i = CommandLine.arguments.firstIndex(of: "--open-game"), i + 1 < CommandLine.arguments.count {
+            let id = CommandLine.arguments[i + 1]
+            var waited = 0.0
+            while !model.allGames.contains(where: { $0.id == id }), waited < 15 { await pause(0.5); waited += 0.5 }
+            capture("1-spiele-mit-katalog", dir)
+            model.gamePath = [id]
+            await pause(2)
+            waited = 0
+            while model.preparing.contains(id) || model.refreshing, waited < 90 { await pause(0.5); waited += 0.5 }
+            await pause(1.5)
+            capture("2-spiel-\(id)", dir)
+            try? "Hinweis: \(model.prepareNote[id] ?? "-")\nDateien: \(model.allGames.first { $0.id == id }?.recipe.files.map { "\($0.role) \($0.name)" } ?? [])\n"
+                .write(to: dir.appendingPathComponent("nachschlagen.txt"), atomically: true, encoding: .utf8)
+        }
         model.gamePath = []
         // `--install <Kennung>`: den Auftrag wirklich über die Oberfläche auslösen und bis zum Ende zeigen.
         if let i = CommandLine.arguments.firstIndex(of: "--install"), i + 1 < CommandLine.arguments.count,
@@ -259,6 +276,12 @@ enum Snapshot {
             await model.installUpdate(relaunch: false)
             try? "gefunden: \(found)\nkann sich ersetzen: \(model.canSelfUpdate)\nZustand danach: \(model.updateState)\n"
                 .write(to: dir.appendingPathComponent("update.txt"), atomically: true, encoding: .utf8)
+        }
+        // `--fix-prompt <Kennung>`: den Auftrag für die KI zu einem Spiel als Datei ablegen.
+        if let i = CommandLine.arguments.firstIndex(of: "--fix-prompt"), i + 1 < CommandLine.arguments.count,
+           let game = model.allGames.first(where: { $0.id == CommandLine.arguments[i + 1] }) {
+            try? model.fixPrompt(for: game, symptoms: [.crash, .controls], details: "It closes right after the logo.")
+                .write(to: dir.appendingPathComponent("fix-auftrag.txt"), atomically: true, encoding: .utf8)
         }
         if CommandLine.arguments.contains("--report") {
             try? model.problemReport().write(to: dir.appendingPathComponent("bericht.txt"), atomically: true, encoding: .utf8)
