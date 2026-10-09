@@ -62,7 +62,8 @@ public struct GameStatus: Sendable, Equatable {
         }
         return GameStatus(filesPresent: required.count - missing.count, filesRequired: required.count,
                           treesPresent: trees.count - treesMissing.count, treesRequired: trees.count,
-                          bytesToDownload: missing.filter { $0.source?.kind != .user }.reduce(0) { $0 + ($1.size ?? 0) },
+                          bytesToDownload: missing.filter { $0.source?.kind != .user }.reduce(0) { $0 + ($1.size ?? 0) }
+                              + treesMissing.filter { $0.source.kind == .url }.reduce(0) { $0 + ($1.source.archive?.size ?? 0) },
                           userProvidedMissing: byUser, onDevice: onDevice)
     }
 }

@@ -99,6 +99,57 @@ public struct TreeStore: Sendable {
         return result
     }
 
+    /// Bäume, die fehlen und die das Programm selbst holen kann: aus einem Archiv unter einer freien Adresse.
+    public func fetchable(recipe: Recipe) -> [RecipeTree] {
+        missing(recipe: recipe).filter { $0.source.kind == .url && $0.source.url != nil && $0.source.archive != nil }
+    }
+
+    /// Holt einen Baum aus seinem Archiv: laden (ein abgebrochener Download wird fortgesetzt), Prüfsumme des
+    /// Archivs prüfen, entpacken, an den Kenndateien prüfen, und erst dann in den Bestand legen. Kein Token, kein
+    /// Konto – die Adresse ist öffentlich, und was ankommt, entscheidet die Prüfsumme aus dem Rezept.
+    public func fetch(_ tree: RecipeTree, in recipe: Recipe, log: @Sendable (String) -> Void = { _ in }) async throws {
+        guard tree.source.kind == .url, let raw = tree.source.url, let url = URL(string: raw), url.scheme == "https",
+              let archive = tree.source.archive else { throw TreeError.notFetchable(tree.name) }
+        let fm = FileManager.default
+        let directory = store.directory(for: recipe)
+        try fm.createDirectory(at: directory, withIntermediateDirectories: true)
+        let partial = directory.appendingPathComponent(".\(tree.name).archive.part")
+        let unpacked = directory.appendingPathComponent(".\(tree.name).unpack", isDirectory: true)
+        defer { try? fm.removeItem(at: unpacked) }
+
+        var have = ContentStore.fileSize(partial) ?? 0
+        if let size = archive.size, have > size { try? fm.removeItem(at: partial); have = 0 }
+        if archive.size == nil || have < archive.size! {
+            log(L("downloading \(url.lastPathComponent) from \(url.host ?? "")\(have > 0 ? " (resuming)" : "") …",
+                  "\(url.lastPathComponent) wird von \(url.host ?? "") geladen\(have > 0 ? " (wird fortgesetzt)" : "") …"))
+            do {
+                _ = try await PublicDownload.fetch(url, to: partial, resumeFrom: have)
+            } catch MetaError.denied(let status), MetaError.unexpected(let status) {
+                // Die Fehlertypen des Downloads sprechen von Meta; hier antwortet ein anderer Server.
+                throw TreeError.downloadFailed(tree.name, host: url.host ?? "", status: status)
+            }
+        }
+        guard archive.size.map({ ContentStore.fileSize(partial) == $0 }) ?? true,
+              try Hashing.sha256(of: partial) == archive.sha256.lowercased() else {
+            try? fm.removeItem(at: partial)
+            throw TreeError.archiveMismatch(tree.name)
+        }
+
+        try? fm.removeItem(at: unpacked)
+        try fm.createDirectory(at: unpacked, withIntermediateDirectories: true)
+        // tar erkennt die Packung selbst und legt nichts außerhalb des Zielordners an.
+        guard Toolchain.status(["/usr/bin/tar", "-xf", partial.path, "-C", unpacked.path, "--no-same-owner"]) == 0 else {
+            throw TreeError.unpackFailed(tree.name)
+        }
+        let source = archive.folder.map { unpacked.appendingPathComponent($0, isDirectory: true) } ?? unpacked
+        guard TreeStore.failingMarkers(of: tree, at: source).isEmpty else { throw TreeError.archiveMismatch(tree.name) }
+        let target = self.url(for: tree, in: recipe)
+        try? fm.removeItem(at: target)
+        try fm.moveItem(at: source, to: target)
+        try? fm.removeItem(at: partial)
+        log(L("folder “\(tree.name)” unpacked and checked", "Ordner „\(tree.name)“ entpackt und geprüft"))
+    }
+
     /// Reguläre Dateien unterhalb eines Ordners: relativer Pfad -> Größe. Symbolischen Links wird nicht gefolgt.
     public static func listing(of directory: URL) -> [String: Int64] {
         var out: [String: Int64] = [:]
@@ -109,5 +160,27 @@ public struct TreeStore: Sendable {
             out[relative] = (attrs[.size] as? NSNumber)?.int64Value ?? 0
         }
         return out
+    }
+}
+
+public enum TreeError: Error, CustomStringConvertible, Equatable {
+    case notFetchable(String)
+    case archiveMismatch(String)
+    case unpackFailed(String)
+    case downloadFailed(String, host: String, status: Int)
+
+    public var description: String {
+        switch self {
+        case .notFetchable(let name):
+            return L("The folder “\(name)” has no address it could be downloaded from.", "Für den Ordner „\(name)“ gibt es keine Adresse, von der er sich laden ließe.")
+        case .archiveMismatch(let name):
+            return L("What was downloaded for the folder “\(name)” is not what this recipe expects. Nothing was added to the library.",
+                     "Was für den Ordner „\(name)“ geladen wurde, ist nicht das, was dieses Rezept erwartet. In den Bestand wurde nichts übernommen.")
+        case .unpackFailed(let name):
+            return L("The archive for the folder “\(name)” could not be unpacked.", "Das Archiv für den Ordner „\(name)“ ließ sich nicht entpacken.")
+        case .downloadFailed(let name, let host, let status):
+            return L("The folder “\(name)” could not be downloaded: \(host) answered with HTTP \(status). Please try again later.",
+                     "Der Ordner „\(name)“ ließ sich nicht laden: \(host) antwortet mit HTTP \(status). Bitte später noch einmal versuchen.")
+        }
     }
 }

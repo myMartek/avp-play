@@ -448,6 +448,21 @@ final class TreeTests: XCTestCase {
         }
         XCTAssertThrowsError(try recipe(trees: [tree(markers: [.init(path: "a", size: nil, sha256: "kurz")])]).validate())
         XCTAssertThrowsError(try recipe(trees: [tree("../x", markers: [.init(path: "a", size: nil, sha256: sha)])]).validate())
+        // Ein Ordner aus dem Netz ist ein Archiv mit Prüfsumme – ohne sie, mit http oder mit einem Ordner, der aus dem
+        // Archiv hinausführt, fällt das Rezept durch.
+        func fromNet(_ url: String?, _ archive: ArchiveSource?) -> RecipeTree {
+            var t = tree(markers: [.init(path: "bin/app", size: 3, sha256: sha)])
+            t.source = FileSource(kind: .url, url: url, hint: nil, steam: nil, archive: archive)
+            return t
+        }
+        try recipe(trees: [fromNet("https://example.org/a.tar.gz", .init(sha256: sha, size: 10, folder: "files"))]).validate()
+        try recipe(trees: [fromNet("https://example.org/a.tar.gz", .init(sha256: sha, size: nil, folder: nil))]).validate()
+        for bad in [fromNet("https://example.org/a.tar.gz", nil), fromNet("http://example.org/a.tar.gz", .init(sha256: sha, size: 1, folder: nil)),
+                    fromNet(nil, .init(sha256: sha, size: 1, folder: nil)), fromNet("https://example.org/a.tar.gz", .init(sha256: "kurz", size: 1, folder: nil)),
+                    fromNet("https://example.org/a.tar.gz", .init(sha256: sha, size: 1, folder: "../x")),
+                    fromNet("https://example.org/a.tar.gz", .init(sha256: sha, size: 1, folder: ""))] {
+            XCTAssertThrowsError(try recipe(trees: [bad]).validate(), "\(bad.source)")
+        }
         // jede Rolle höchstens einmal
         XCTAssertThrowsError(try recipe(trees: [tree("a", markers: [.init(path: "a", size: nil, sha256: sha)]),
                                                 tree("b", markers: [.init(path: "a", size: nil, sha256: sha)])]).validate())

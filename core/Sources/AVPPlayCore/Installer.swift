@@ -222,7 +222,14 @@ public struct Installer: Sendable {
         guard fromUser.isEmpty else {
             throw InstallError.userFilesNeeded(names: fromUser.map(\.file.name), hint: fromUser.first?.file.source?.hint?.text)
         }
-        let trees = TreeStore(store: store).missing(recipe: recipe)
+        // Ordnerbestände mit freier Adresse (etwa Valves Laufzeitumgebung für ein Linux-Spiel) holt das Programm
+        // selbst; was danach noch fehlt, kann nur der Nutzer bereitstellen.
+        let treeStore = TreeStore(store: store)
+        let report = self.report
+        for tree in treeStore.fetchable(recipe: recipe) {
+            try await treeStore.fetch(tree, in: recipe) { report($0) }
+        }
+        let trees = treeStore.missing(recipe: recipe)
         guard trees.isEmpty else { throw InstallError.missingTrees(trees.map(\.name), recipe: recipe.id) }
         let todo = plan.filter { $0.action != .keep }
         guard !todo.isEmpty else {
@@ -240,7 +247,6 @@ public struct Installer: Sendable {
                 guard try await client.ownsApp(appId: app, userId: user) else { throw InstallError.notOwned(recipe.title) }
             }
         }
-        let report = self.report
         let fetcher = Fetcher(client: client, store: store, gate: RequestGate(minInterval: .seconds(request.interval)))
         let summary = try await fetcher.run(plan, recipe: recipe) { report("  " + $0) }
         report(L("Downloaded: \(summary.downloaded) files, \(summary.kept) were already there.",

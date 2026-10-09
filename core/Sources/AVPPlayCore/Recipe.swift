@@ -72,6 +72,17 @@ public struct FileSource: Codable, Sendable, Hashable {
     /// Wo die Datei bei Steam liegt, falls sie aus einem Steam-Kauf stammt. Dann kann Valves eigenes Werkzeug
     /// sie mit dem Konto des Nutzers holen – und tut das nur für ein Spiel, das diesem Konto gehört.
     public var steam: SteamSource?
+    /// Für einen Ordnerbestand mit freier Adresse: Die Adresse führt zu einem Archiv, aus dem der Ordner entsteht.
+    public var archive: ArchiveSource?
+}
+
+/// Ein Archiv (tar, auch gepackt), aus dem ein Ordnerbestand entsteht. Angenommen wird es nur mit genau dieser
+/// Prüfsumme – was darin steht, ist danach so festgelegt wie eine einzelne Datei mit Prüfsumme.
+public struct ArchiveSource: Codable, Sendable, Hashable {
+    public var sha256: String
+    public var size: Int64?
+    /// Der Ordner im Archiv, der den Bestand bildet; fehlt er, ist es die oberste Ebene des Archivs.
+    public var folder: String?
 }
 
 /// Ein Stand eines Steam-Spiels: die App, und die Depots in genau der Fassung, für die das Rezept gilt.
@@ -203,6 +214,11 @@ extension Recipe {
             if t.source.kind == .url {
                 guard let raw = t.source.url, let url = URL(string: raw), url.scheme == "https", url.host != nil else {
                     throw RecipeError.invalid(L("address of '\(t.name)'", "Adresse von '\(t.name)'"))
+                }
+                // Ein Ordner aus dem Netz ist ein Archiv, und ein Archiv ohne Prüfsumme könnte alles enthalten.
+                guard let archive = t.source.archive, archive.sha256.count == 64, archive.sha256.allSatisfy({ $0.isHexDigit }),
+                      (archive.size ?? 0) >= 0, archive.folder.map({ !$0.isEmpty && Recipe.isSafeRelativePath($0) }) ?? true else {
+                    throw RecipeError.invalid(L("archive of '\(t.name)'", "Archiv von '\(t.name)'"))
                 }
             }
             if let steam = t.source.steam, !steam.isSane {

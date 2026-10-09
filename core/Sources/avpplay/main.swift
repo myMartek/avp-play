@@ -398,15 +398,23 @@ case "plan", "fetch":
         print(L("  Then add them to the library with 'avpplay adopt \(r.id) --from <folder>'.",
                 "  Danach mit 'avpplay adopt \(r.id) --from <Ordner>' übernehmen."))
     }
-    let treesMissing = TreeStore(store: store).missing(recipe: r)
+    let treeStore = TreeStore(store: store)
+    // Ordner mit freier Adresse (Valves Laufzeitumgebung, xrizer) holt `fetch` selbst; `plan` nennt sie nur.
+    if command == "fetch" {
+        for t in treeStore.fetchable(recipe: r) {
+            do { try await treeStore.fetch(t, in: r) { print("  " + $0) } } catch { fail("\(error)") }
+        }
+    }
+    let treesMissing = treeStore.missing(recipe: r)
     if let trees = r.trees {
         print(L("Folders: \(trees.count - treesMissing.count) of \(trees.count) in the library.",
                 "Ordner: \(trees.count - treesMissing.count) von \(trees.count) im Bestand."))
         for t in treesMissing {
-            print(L("  missing: \(t.name)\(t.source.hint.map { " – \($0)" } ?? "")",
-                    "  fehlt: \(t.name)\(t.source.hint.map { " – \($0)" } ?? "")"))
+            let fetched = t.source.kind == .url && t.source.archive != nil
+            print(L("  missing: \(t.name)\(fetched ? " (downloaded by 'avpplay fetch')" : "")\(t.source.hint.map { " – \($0)" } ?? "")",
+                    "  fehlt: \(t.name)\(fetched ? " (lädt 'avpplay fetch')" : "")\(t.source.hint.map { " – \($0)" } ?? "")"))
         }
-        if !treesMissing.isEmpty {
+        if treesMissing.contains(where: { $0.source.kind == .user }) {
             print(L("  Then add them to the library with 'avpplay adopt \(r.id) --from <folder>' (one --from per folder).",
                     "  Danach mit 'avpplay adopt \(r.id) --from <Ordner>' übernehmen (je Ordner ein --from)."))
         }

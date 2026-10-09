@@ -55,10 +55,16 @@
    "name": "sysroot",
    "role": "sysroot",
    "source": {
-    "kind": "user",
+    "kind": "url",
+    "url": "https://repo.steampowered.com/steamrt4/images/4.0.20260928.262390/com.valvesoftware.SteamRuntime.Platform-arm64-steamrt4-runtime.tar.gz",
+    "archive": {
+     "sha256": "86e47ae098a9e3b11ca90d0ce1ff212b1a2e9b3917b123ffac9345014200f555",
+     "size": 155465873,
+     "folder": "files"
+    },
     "hint": {
-     "en": "Steam Linux Runtime 4 for arm64, version 4.0.20260928.262390, freely available from Valve (repo.steampowered.com/steamrt4/images/4.0.20260928.262390/, file com.valvesoftware.SteamRuntime.Platform-arm64-steamrt4-runtime.tar.gz). Unpack it and choose the folder 'files'.",
-     "de": "Steam Linux Runtime 4 für arm64, Version 4.0.20260928.262390, frei bei Valve erhältlich (repo.steampowered.com/steamrt4/images/4.0.20260928.262390/, Datei com.valvesoftware.SteamRuntime.Platform-arm64-steamrt4-runtime.tar.gz). Entpacken und den Ordner 'files' angeben."
+     "en": "Steam Linux Runtime 4 for arm64, version 4.0.20260928.262390, from Valve's own server. The app downloads and unpacks it.",
+     "de": "Steam Linux Runtime 4 für arm64, Version 4.0.20260928.262390, von Valves eigenem Server. Die App lädt und entpackt sie."
     }
    },
    "markers": [
@@ -73,10 +79,16 @@
    "name": "xrizer",
    "role": "xrizer",
    "source": {
-    "kind": "user",
+    "kind": "url",
+    "url": "https://github.com/myMartek/avp-play/releases/download/xrizer-0989a7f-avpplay1/xrizer-0989a7f-avpplay1-linuxarm64.tar.gz",
+    "archive": {
+     "sha256": "d3812f16e86d4c802d510fedc4974293a89678124e7802066679ec29c248ad12",
+     "size": 4735875,
+     "folder": "xrizer"
+    },
     "hint": {
-     "en": "xrizer (OpenVR on top of OpenXR, GPL-3.0) in the port's version: the folder that contains 'bin/linuxarm64/vrclient.so'.",
-     "de": "xrizer (OpenVR über OpenXR, GPL-3.0) in der Fassung des Ports: Ordner, der 'bin/linuxarm64/vrclient.so' enthält."
+     "en": "xrizer (OpenVR on top of OpenXR, GPL-3.0) as built for this project; source and patches are in the repository under third-party/xrizer. The app downloads it.",
+     "de": "xrizer (OpenVR über OpenXR, GPL-3.0) in der für dieses Projekt gebauten Fassung; Quelltext und Patches liegen im Repository unter third-party/xrizer. Die App lädt es."
     }
    },
    "markers": [
@@ -105,8 +117,8 @@
     "de": "Mit dem zusammengeführten Fork (6185722) laut Nutzer am Gerät lauffähig (2026-10-08)."
    },
    {
-    "en": "For now, Steam Linux Runtime and xrizer have to be provided as folders.",
-    "de": "Steam Linux Runtime und xrizer müssen vorerst als Ordner bereitgestellt werden."
+    "en": "Steam Linux Runtime (from Valve) and xrizer (from this project) are downloaded by the app. Only the game itself comes from your Steam account.",
+    "de": "Steam Linux Runtime (von Valve) und xrizer (von diesem Projekt) lädt die App selbst. Nur das Spiel kommt aus deinem Steam-Konto."
    }
   ]
  },
