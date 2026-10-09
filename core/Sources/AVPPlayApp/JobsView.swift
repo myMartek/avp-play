@@ -147,7 +147,7 @@ struct JobDetail: View {
                                 Button(L("Show Copy Log", "Kopierprotokoll zeigen")) { reveal(".last-sync.log") }
                             case .device:
                                 Button(L("Check Again", "Neu prüfen")) { model.refresh() }
-                            case .gameRunning, .download, .other:
+                            case .gameRunning, .download, .unsupported, .other:
                                 EmptyView()
                             }
                             Button(L("Report This Problem …", "Dieses Problem melden …")) {
@@ -232,6 +232,9 @@ struct JobDetail: View {
                      "Es fehlen Dateien, die du selbst bereitstellst. Die Seite des Spiels nennt sie und lässt dich den Ordner wählen.")
         case .setup:
             return L("Something in “Setup” is missing or has changed.", "In der „Einrichtung“ fehlt etwas oder hat sich geändert.")
+        case .unsupported:
+            return L("There is nothing to resume: this app cannot run here. Games built on Unity or Unreal are the ones worth trying.",
+                     "Hier gibt es nichts fortzusetzen: Diese App kann hier nicht laufen. Einen Versuch wert sind Spiele, die auf Unity oder Unreal gebaut sind.")
         case .other:
             return L("Try “Resume”. If it stops at the same place again, the log below shows what happened.",
                      "Versuche „Fortsetzen“. Hält es an derselben Stelle wieder an, zeigt der Verlauf unten, was passiert ist.")

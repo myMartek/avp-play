@@ -9,6 +9,8 @@ public enum InstallError: Error, CustomStringConvertible, Equatable {
     case appNotInstalled(String)
     case badIcon(String)
     case appRunning(String)
+    /// Die App ist kein Programm, das die Toolchain starten könnte (für Androids Java-Laufzeit geschrieben).
+    case notANativeApp(String)
 
     public var description: String {
         switch self {
@@ -32,6 +34,9 @@ public enum InstallError: Error, CustomStringConvertible, Equatable {
             return L("The app \(bundle) isn't installed on the device. Run 'avpplay install' first.",
                      "Die App \(bundle) ist auf dem Gerät nicht installiert. Erst 'avpplay install'.")
         case .badIcon(let path): return L("\(path) isn't a readable image.", "\(path) ist kein lesbares Bild.")
+        case .notANativeApp(let title):
+            return L("\(title) cannot run on the Vision Pro with this tool. It is an ordinary Android app, written for Android's Java runtime, not a game built on a native engine such as Unity or Unreal – and that runtime does not exist here. Nothing was installed. This is not something a fix can change.",
+                     "\(title) kann mit diesem Werkzeug nicht auf der Vision Pro laufen. Es ist eine gewöhnliche Android-App, geschrieben für Androids Java-Laufzeit, kein Spiel auf einer nativen Engine wie Unity oder Unreal – und diese Laufzeit gibt es hier nicht. Installiert wurde nichts. Ein Fix kann daran nichts ändern.")
         case .appRunning(let title):
             return L("\(title) is currently running on the Vision Pro. Installing would quit the game. Quit the game, then resume.",
                      "\(title) läuft gerade auf der Vision Pro. Eine Installation würde das Spiel beenden. Spiel beenden und dann fortsetzen.")
@@ -282,6 +287,9 @@ public struct Installer: Sendable {
         report(L("Device: \(device.name) (visionOS \(device.osVersion)); app: \(bundle); toolchain: \(commit)",
                  "Gerät: \(device.name) (visionOS \(device.osVersion)); App: \(bundle); Toolchain: \(commit)"))
         try await prepare(toolchain)
+        // Ein Versuch mit einer App, die gar kein natives Programm ist, würde gebaut, installiert und als fertig
+        // gemeldet – und könnte nie starten. Das sagt man besser hier.
+        if toolchain.missingEntryLibrary(recipe: recipe) != nil { throw InstallError.notANativeApp(recipe.title) }
         // Eine Installation beendet die laufende App. Das soll niemandem mitten im Spiel passieren.
         if request.replaceRunning != true,
            let app = try? control.apps(device: device).first(where: { $0.bundleIdentifier == bundle }),

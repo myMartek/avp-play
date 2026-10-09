@@ -21,6 +21,8 @@ public enum FailureKind: String, Codable, Sendable {
     case ownFiles
     /// Etwas an der Einrichtung fehlt (Team, Toolchain).
     case setup
+    /// Die App kann grundsätzlich nicht laufen; es gibt nichts fortzusetzen und nichts zu beheben.
+    case unsupported
     case other
 
     public static func of(_ error: Error) -> FailureKind {
@@ -34,6 +36,7 @@ public enum FailureKind: String, Codable, Sendable {
             case .teamMissing: return .setup
             case .appNotInstalled: return .build
             case .badIcon: return .other
+            case .notANativeApp: return .unsupported
             }
         case let e as MetaError:
             if case .tokenRejected = e { return .signIn }

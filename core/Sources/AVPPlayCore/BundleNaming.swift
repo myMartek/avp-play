@@ -25,10 +25,35 @@ extension Toolchain {
     /// Wo das Spiel seine Haupt-Datendatei sucht, relativ zum Datenordner der App – gefragt bei der Toolchain,
     /// die es am entpackten APK erkennt (Versuch) oder aus ihrer Tabelle weiß. `nil`, wenn sie das Target nicht kennt.
     public func obbDestination(recipe: Recipe) -> String? {
+        guard let obb = rowValue(recipe: recipe, key: "obb"), Recipe.isSafeRelativePath(obb) else { return nil }
+        return "android-files/\(obb)"
+    }
+
+    /// Der Name der Bibliothek, bei der die Toolchain die App startet (`libmain`, `libUE4`, …) – auch für ein
+    /// Spiel, das als Versuch gebaut wird: dann liest sie ihn am entpackten APK ab.
+    public func entryLibrary(recipe: Recipe) -> String? {
+        guard let entry = rowValue(recipe: recipe, key: "entry"), Recipe.isSafeName(entry) else { return nil }
+        return entry
+    }
+
+    /// Bei einem Versuch: der Name der Einstiegsbibliothek, wenn das entpackte APK sie nicht enthält. Dann ist die
+    /// App kein Programm einer Spiel-Engine und keine NativeActivity, sondern für Androids Java-Laufzeit
+    /// geschrieben – die gibt es auf der Vision Pro nicht, und die Toolchain kann nichts starten. `nil`, wenn
+    /// alles da ist, das Spiel einen eigenen Eintrag hat oder sich die Frage nicht beantworten lässt.
+    public func missingEntryLibrary(recipe: Recipe) -> String? {
+        let target = recipe.toolchain.target
+        guard DraftRecipe.isGeneric(target), Recipe.isSafeName(target), let entry = entryLibrary(recipe: recipe) else { return nil }
+        let libs = root.appendingPathComponent(target).appendingPathComponent("lib/arm64-v8a", isDirectory: true)
+        guard FileManager.default.fileExists(atPath: libs.deletingLastPathComponent().deletingLastPathComponent().path) else { return nil }
+        return FileManager.default.fileExists(atPath: libs.appendingPathComponent("\(entry).so").path) ? nil : entry
+    }
+
+    /// Ein Wert aus der Zeile der Toolchain für das Target des Rezepts, gefragt bei ihr selbst.
+    private func rowValue(recipe: Recipe, key: String) -> String? {
         guard DeveloperTools.present else { return nil }
         let p = Process()
         p.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
-        p.arguments = [root.appendingPathComponent("visionos/targets.py").path, recipe.toolchain.target, "obb"]
+        p.arguments = [root.appendingPathComponent("visionos/targets.py").path, recipe.toolchain.target, key]
         p.currentDirectoryURL = root.appendingPathComponent("visionos")
         var env = ["PATH": "/usr/bin:/bin:/usr/sbin:/sbin", "HOME": NSHomeDirectory(), "USER": NSUserName()]
         env.merge(Toolchain.genericEnvironment(recipe: recipe)) { _, new in new }
@@ -39,9 +64,9 @@ extension Toolchain {
         guard (try? p.run()) != nil else { return nil }
         let data = out.fileHandleForReading.readDataToEndOfFile()
         p.waitUntilExit()
-        let obb = String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
-        guard p.terminationStatus == 0, !obb.isEmpty, Recipe.isSafeRelativePath(obb) else { return nil }
-        return "android-files/\(obb)"
+        let value = String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard p.terminationStatus == 0, !value.isEmpty else { return nil }
+        return value
     }
 
     /// Was die Toolchain über ein Target weiß: seine Art (`unity`, `ue4`, …), oder `nil`, wenn sie es nicht kennt.
