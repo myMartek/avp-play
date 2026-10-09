@@ -150,6 +150,13 @@ final class SupportTests: XCTestCase {
         XCTAssertEqual(Redaction.redact("nichts Geheimes"), "nichts Geheimes")
     }
 
+    func testToolStartErrorsNameTheToolAndTheRemedy() {
+        // Derselbe Fehlertyp dient Metas und Valves Werkzeug; die Meldung muss sagen, welches gemeint ist.
+        XCTAssertTrue("\(LoginError.couldNotStart(tool: "steamcmd", why: "x"))".hasPrefix("steamcmd "))
+        let rosetta = "\(LoginError.needsRosetta(tool: "steamcmd"))"
+        XCTAssertTrue(rosetta.contains("steamcmd") && rosetta.contains(LoginError.rosettaCommand), rosetta)
+    }
+
     func testGateDelay() {
         let t0 = ContinuousClock.now
         XCTAssertEqual(RequestGate.delay(lastFinished: nil, now: t0, minInterval: .seconds(5)), .zero)

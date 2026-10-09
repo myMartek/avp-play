@@ -15,15 +15,16 @@ enum Pty {
     static func run(tool: URL, arguments: [String], environment: [String: String], directory: URL? = nil,
                     input: Int32, output: Int32,
                     transform: (ArraySlice<UInt8>) -> [UInt8], finish: () -> [UInt8] = { [] }) throws -> Int32 {
+        let name = tool.lastPathComponent
         var master: Int32 = -1, slave: Int32 = -1
         var size = winsize()
         let haveSize = ioctl(input, TIOCGWINSZ, &size) == 0
         guard (haveSize ? openpty(&master, &slave, nil, nil, &size) : openpty(&master, &slave, nil, nil, nil)) == 0 else {
-            throw LoginError.couldNotStart(String(cString: strerror(errno)))
+            throw LoginError.couldNotStart(tool: name, why: String(cString: strerror(errno)))
         }
         defer { close(master) }
         guard let slaveName = ttyname(slave).map({ String(cString: $0) }) else {
-            close(slave); throw LoginError.couldNotStart(L("no name for the pseudo-terminal", "kein Name für das Pseudo-Terminal"))
+            close(slave); throw LoginError.couldNotStart(tool: name, why: L("no name for the pseudo-terminal", "kein Name für das Pseudo-Terminal"))
         }
 
         // Das Kind bekommt eine eigene Sitzung und öffnet das Terminal selbst: so wird es dessen steuerndes
@@ -46,7 +47,10 @@ enum Pty {
         var pid: pid_t = 0
         let rc = posix_spawn(&pid, tool.path, &actions, &attr, argv, envp)
         close(slave)
-        guard rc == 0 else { throw LoginError.couldNotStart(String(cString: strerror(rc))) }
+        // EBADARCH („Bad CPU type in executable“): ein Intel-Programm auf Apple Silicon ohne Rosetta – Valves SteamCMD
+        // ist so eines. Das ist kein Defekt des Werkzeugs, sondern ein Handgriff des Nutzers; er soll ihn genannt bekommen.
+        guard rc != EBADARCH else { throw LoginError.needsRosetta(tool: name) }
+        guard rc == 0 else { throw LoginError.couldNotStart(tool: name, why: String(cString: strerror(rc))) }
 
         // Das Terminal des Nutzers roh schalten: Echo und Zeilenbearbeitung macht das Pseudo-Terminal.
         var saved = termios()
