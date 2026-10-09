@@ -154,8 +154,8 @@
     "de": "Steam Linux Runtime (von Valve) und xrizer (von diesem Projekt) lädt die App selbst. Nur das Spiel kommt aus deinem Steam-Konto."
    },
    {
-    "en": "Optional German voice-over: a fan project from the Steam Workshop, loaded through the game's own language search path instead of Steam's add-on menu, so saved games hear it too. That the game reads sound files from an archive placed this way was checked on a Mac on 2026-10-09; on the device it has not been heard yet.",
-    "de": "Wählbare deutsche Sprachausgabe: ein Fanprojekt aus dem Steam Workshop, eingebunden über den Sprach-Suchpfad des Spiels statt über Steams Addon-Menü – deshalb gilt sie auch für bestehende Spielstände. Dass das Spiel Sounddateien aus einem so abgelegten Archiv liest, ist auf einem Mac geprüft (2026-10-09); am Gerät ist sie noch nicht gehört worden."
+    "en": "Optional German voice-over: a fan project from the Steam Workshop, loaded through the game's own language search path instead of Steam's add-on menu, so saved games hear it too. That the game reads sound files from an archive placed this way was checked on a Mac on 2026-10-09; the same day a user reported German as working on the device.",
+    "de": "Wählbare deutsche Sprachausgabe: ein Fanprojekt aus dem Steam Workshop, eingebunden über den Sprach-Suchpfad des Spiels statt über Steams Addon-Menü – deshalb gilt sie auch für bestehende Spielstände. Dass das Spiel Sounddateien aus einem so abgelegten Archiv liest, ist auf einem Mac geprüft (2026-10-09); am selben Tag meldete ein Nutzer, dass Deutsch am Gerät klappt."
    }
   ]
  },
