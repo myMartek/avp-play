@@ -45,8 +45,10 @@ with. The app refuses to build with an older toolchain.
   "sha256": "…",
   "required": true,          // false: optional, e.g. one language
   "dest": "android-files/Android/obb/com.polyarc.MossGame",   // where it goes in the app's data on the headset
-  "localName": "moss.apk",   // optional: the name the toolchain expects (APK only)
+  "localName": "moss.apk",   // optional: the file's name at its destination, where that differs
   "locale": "de-DE",         // optional: the language an optional file belongs to
+  "title": { "en": "…", "de": "…" },   // optional: offer an optional file as a tick of its own
+  "clearable": true,         // optional: take the file off the headset again when it is unticked
   "source": { … }            // optional, see below
 }
 ```
@@ -66,6 +68,15 @@ after Meta has confirmed that the account owns the game. A file is never request
 
 Optional files with a `locale` appear in the app as languages the user can tick. A known `size` lets the app
 say how large each one is.
+
+An optional file without a `locale` appears as a tick of its own when it has a `title`; its `hint` is the
+explanation shown under it. Half-Life: Alyx offers a fan-made German voice-over this way. Such a file is only
+fetched when it is ticked.
+
+`clearable` is for an optional file the game can do without at any time. Nothing in an app's data on the headset
+can be deleted from the Mac, only overwritten: when the file is no longer ticked, the app replaces it there
+with an empty one, which frees its space. Use it only where the game's own app treats an empty file as a
+missing one and removes it – that is code in the toolchain, not something a recipe can ask for by itself.
 
 ## Add-on content
 
