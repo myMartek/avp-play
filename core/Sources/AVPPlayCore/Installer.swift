@@ -421,7 +421,24 @@ public struct Installer: Sendable {
                      "Spieldaten: \(want.count) Dateien (\(total)) gehören aufs Gerät; "
                      + "übertragen wird nur, was dort fehlt oder sich geändert hat …"))
             let started = Date()
-            try toolchain.syncTrees(recipe: recipe, environment: env, device: device, bundleId: request.bundleId, copy: true, log: log)
+            // Bei stundenlangen Übertragungen reißt die Verbindung gelegentlich ab (das Gerät schläft ein, ein Socket
+            // schließt). Der Abgleich ist wiederholbar – was schon drüben ist, lässt devicectl aus –, also geht es
+            // nach einer Pause weiter, statt den Auftrag anzuhalten. Nur Abbrüche der Übertragung werden wiederholt;
+            // ein anderer Fehler der Toolchain hält wie bisher an.
+            let attempts = 6
+            for attempt in 1...attempts {
+                let mark = ContentStore.fileSize(log) ?? 0
+                do {
+                    try toolchain.syncTrees(recipe: recipe, environment: env, device: device, bundleId: request.bundleId, copy: true, log: log)
+                    break
+                } catch {
+                    guard attempt < attempts, Installer.isTransferDrop(Installer.text(of: log, from: mark)) else { throw error }
+                    let pause = Double(attempt) * 15
+                    report(L("  Connection to the Vision Pro lost – continuing in \(Int(pause)) s (attempt \(attempt + 1) of \(attempts)); what is already there is kept.",
+                             "  Verbindung zur Vision Pro unterbrochen – weiter in \(Int(pause)) s (Versuch \(attempt + 1) von \(attempts)); was schon drüben ist, bleibt."))
+                    Thread.sleep(forTimeInterval: pause)
+                }
+            }
             report(String(format: L("Game data synced (%.0f s).", "Spieldaten abgeglichen (%.0f s)."), Date().timeIntervalSince(started)))
         }
 
@@ -456,6 +473,22 @@ public struct Installer: Sendable {
         } else {
             report(L("Assets: \(localCount) files are already on the device.", "Assets: \(localCount) Dateien liegen schon auf dem Gerät."))
         }
+    }
+
+    /// Sagt der Ausschnitt eines Abgleich-Protokolls, dass die Übertragung abriss (und nicht, dass etwas anderes
+    /// schiefging)? Die Toolchain markiert das selbst („run this again to resume“); daneben die Meldungen von
+    /// devicectl, wie sie am Gerät beobachtet wurden.
+    static func isTransferDrop(_ logText: String) -> Bool {
+        ["run this again to resume", "socket was closed", "could not be transferred", "CoreDeviceError", "Connection reset"]
+            .contains { logText.contains($0) }
+    }
+
+    /// Der Teil eines Protokolls ab einer Stelle – für die Beurteilung eines einzelnen Versuchs.
+    static func text(of log: URL, from offset: Int64) -> String {
+        guard let handle = try? FileHandle(forReadingFrom: log) else { return "" }
+        defer { try? handle.close() }
+        try? handle.seek(toOffset: UInt64(max(offset, 0)))
+        return String(decoding: (try? handle.readToEnd()) ?? Data(), as: UTF8.self)
     }
 
     /// Die Verbindung zum Gerät reißt bei langen Kopierläufen gelegentlich ab (am Gerät beobachtet: nach einigen
