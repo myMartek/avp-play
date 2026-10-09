@@ -100,7 +100,14 @@ extension AppModel {
         2. Build and install from the working copy (this replaces the game on the headset; saved games and data stay):
            AVPPLAY_LANG=en "\(cli)" install \(recipe.id) --recipes "\(recipesDir)" --toolchain \(work) --team \(teamValid ? teamId : "<Apple team ID>")
            The command checks ownership with Meta, uses the files already downloaded, builds, signs and installs. It stops if the game is running on the headset – ask me to quit it first.
-        3. You cannot see the headset. After each install, ask me to put it on, start the game and tell you exactly what I see. Never claim something works before I have confirmed it.
+        3. You cannot see the headset, so work in rounds and end every round the same way. After each install:
+           a. Tell me in two or three sentences what you changed in this round and why.
+           b. Ask me to put the headset on, start the game and tell you exactly what I see and hear – and ask me plainly: "Does the game work now?"
+           c. Then stop and wait for my answer. Do not start the next change, and never claim that something works, before I have answered.
+        4. What my answer means:
+           - It does not work yet: fetch the game's log (see below), find the next cause, and do another round.
+           - It works, but something is still wrong: ask me whether I want to keep going or send what we have so far.
+           - It works: go straight to "When I confirm that it works" below and make the offer described there. Do this on your own – do not wait for me to bring it up.
 
         ## The game's log
         The game writes Documents/klepton-boot.log inside its app on the headset. It can be read once the game is no longer running:
@@ -119,7 +126,7 @@ extension AppModel {
         - If you cannot fix it, say so plainly and tell me what you found.
 
         ## When I confirm that it works
-        Offer to send the change to the AVP Play project so that other people get it too. A maintainer reads every submission before anything is done with it. Show me what would be sent and ask for my go-ahead first. Then:
+        As soon as I say the game works, offer – without being asked – to send the change to the AVP Play project so that other people get it too. A maintainer reads every submission before anything is done with it. Show me what would be sent (a short summary and the diff) and ask for my go-ahead first. If I say no, leave it at that. If I say yes:
         1. Create the diff of source changes only:
            cd \(work) && git add -N . && git diff --no-color baseline -- . ':(exclude)vendor' ':(exclude)vendor-moltenvk' > /tmp/avpplay-fix.patch
            Check that it contains no game content and no binary files, and that it is under 256 KB.
