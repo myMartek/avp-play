@@ -8,7 +8,7 @@
  "store": {},
  "toolchain": {
   "target": "alyx",
-  "minCommit": "a3c1d47"
+  "minCommit": "9fe3a5d"
  },
  "files": [
   {
@@ -156,6 +156,10 @@
    {
     "en": "Optional German voice-over: a fan project from the Steam Workshop, loaded through the game's own language search path instead of Steam's add-on menu, so saved games hear it too. That the game reads sound files from an archive placed this way was checked on a Mac on 2026-10-09; the same day a user reported German as working on the device.",
     "de": "Wählbare deutsche Sprachausgabe: ein Fanprojekt aus dem Steam Workshop, eingebunden über den Sprach-Suchpfad des Spiels statt über Steams Addon-Menü – deshalb gilt sie auch für bestehende Spielstände. Dass das Spiel Sounddateien aus einem so abgelegten Archiv liest, ist auf einem Mac geprüft (2026-10-09); am selben Tag meldete ein Nutzer, dass Deutsch am Gerät klappt."
+   },
+   {
+    "en": "Game files fetched straight from Steam did not start before toolchain 222: Steam delivers empty placeholders where the game's launch script makes links, and three of Valve's default settings files were not copied. Found and fixed by a user (fix 2), who confirmed it on the device; here it was checked against a fresh download from Steam.",
+    "de": "Direkt von Steam geholte Spieldateien starteten vor Toolchain 222 nicht: Steam liefert leere Platzhalter, wo das Startskript des Spiels Verweise anlegt, und drei von Valves Standard-Einstellungsdateien wurden nicht kopiert. Gefunden und behoben von einem Nutzer (Fix 2), der es am Gerät bestätigt hat; hier gegen einen frischen Download von Steam geprüft."
    }
   ]
  },
