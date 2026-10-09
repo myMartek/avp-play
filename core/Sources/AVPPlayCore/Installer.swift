@@ -88,6 +88,10 @@ public enum InstallStep: String, Codable, Sendable, CaseIterable {
     /// Gerät bleibt, wie es ist.
     public static let addonSync: [InstallStep] = [.account, .fetch, .stage, .unlock]
 
+    /// Gewählte Inhalte zu einem schon installierten Spiel nachreichen – etwa eine Sprachausgabe, die erst später
+    /// angehakt wurde: prüfen, dass alles im Bestand liegt, und aufs Gerät kopieren, was dort fehlt. Gebaut wird nichts.
+    public static let contentSync: [InstallStep] = [.fetch, .stage]
+
     /// Nur die Dateien laden, die das Programm selbst besorgen kann. Dafür braucht es das Konto, bei dem das Spiel
     /// gekauft ist, und sonst nichts – kein Xcode, kein Apple-Team, keine Vision Pro. Gebaut wird später.
     public static let download: [InstallStep] = [.account, .fetch]
@@ -384,11 +388,21 @@ public struct Installer: Sendable {
         // devicectl lässt dabei aus, was unverändert schon dort liegt. Ein eigener Vorab-Vergleich über die
         // Dateiliste des Geräts wäre hier falsch: die rekursive Liste ist bei großen Bäumen unvollständig.
         if hasTrees {
-            let env = TreeStore(store: store).toolchainEnvironment(recipe: recipe)
+            var env = TreeStore(store: store).toolchainEnvironment(recipe: recipe)
+            let mirror = toolchain.mirrorDirectory(recipe: recipe, store: store)
+            env["KL_LX_MIRROR"] = mirror.path
+            // Nach dem Abgleich braucht das Abbild niemand mehr; bliebe es liegen, hielten seine Links den Platz von
+            // Spieldateien fest, die im Bestand längst entfernt sind.
+            defer {
+                try? FileManager.default.removeItem(at: mirror)
+                // Im Bestand hat das Abbild einen eigenen Ordner je Spiel; leer bleibt auch der nicht liegen.
+                for parent in [mirror.deletingLastPathComponent(), mirror.deletingLastPathComponent().deletingLastPathComponent()]
+                where parent.path.hasPrefix(store.root.path + "/") { rmdir(parent.path) }
+            }
             let log = store.directory(for: recipe).appendingPathComponent(".last-sync.log")
             try? FileManager.default.removeItem(at: log)
             try toolchain.syncTrees(recipe: recipe, environment: env, device: device, bundleId: request.bundleId, copy: false, log: log)
-            let want = TreeStore.listing(of: toolchain.mirrorDirectory(recipe: recipe))
+            let want = TreeStore.listing(of: mirror)
             let total = Installer.gigabytes(want.values.reduce(0, +))
             report(L("Game data: \(want.count) files (\(total)) belong on the device; "
                      + "only what is missing or has changed there will be transferred …",

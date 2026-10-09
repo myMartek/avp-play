@@ -131,7 +131,7 @@ public struct ToolchainPackager: Sendable {
 
     /// Was am Fork die gebauten Spiele nicht verändert: Bau- und Installationsskripte, Texte, Tests und die
     /// Grafiken, die ohnehin beim Bauen aus dem Bestand des Nutzers entstehen.
-    static let pathsWithoutEffectOnApps = ["visionos/run.sh", "visionos/stage_assets.sh", "visionos/Assets.xcassets", "build_run_*.sh",
+    static let pathsWithoutEffectOnApps = ["visionos/run.sh", "visionos/stage_assets.sh", "visionos/stage_sync.py", "visionos/Assets.xcassets", "build_run_*.sh",
                                            "*.md", "tests", "spikes", ".gitignore", "third-party-licenses", "LICENSE"]
 
     /// Die Nummer des letzten Commits, der etwas außerhalb dieser Pfade geändert hat; `nil`, wenn Git nichts sagt.

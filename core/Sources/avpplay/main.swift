@@ -91,7 +91,7 @@ avpplay – command line for the AVP Play core library
   avpplay account                              check the stored Meta token
   avpplay owns <id>                            does the account own the game?
   avpplay steam setup|login <name>|logout      Valve's SteamCMD: fetch it, sign in to Steam (you type the password into Valve's tool), sign out
-  avpplay steam fetch <id> --steam-account <name>   get the files a recipe needs from your own Steam purchase
+  avpplay steam fetch <id> --steam-account <name> [--with <file name>]   get the files a recipe needs from your own Steam purchase
   avpplay purchases <id>                       confirmed in-game purchases and the add-on content that goes with them
   avpplay plan <id>   [selection]              show what would be downloaded (no request to the download site)
   avpplay fetch <id>  [selection]              download missing files and check them
@@ -134,7 +134,7 @@ avpplay – Kommandozeile zur Kern-Bibliothek von AVP Play
   avpplay account                              hinterlegten Meta-Token prüfen
   avpplay owns <id>                            Besitzt das Konto das Spiel?
   avpplay steam setup|login <Name>|logout      Valves SteamCMD: holen, bei Steam anmelden (das Passwort tippst du in Valves Werkzeug), abmelden
-  avpplay steam fetch <id> --steam-account <Name>   die Dateien eines Rezepts aus dem eigenen Steam-Kauf holen
+  avpplay steam fetch <id> --steam-account <Name> [--with <Dateiname>]   die Dateien eines Rezepts aus dem eigenen Steam-Kauf holen
   avpplay purchases <id>                       bestätigte Käufe im Spiel und zugehörige Zusatzinhalte
   avpplay plan <id>   [Auswahl]                zeigen, was geladen würde (keine Abfrage an die Download-Seite)
   avpplay fetch <id>  [Auswahl]                fehlende Dateien laden und prüfen
@@ -324,7 +324,7 @@ case "steam":
         guard let account = o.value("steam-account"), SteamTool.isAccountName(account) else { fail("\(SteamError.badAccountName)") }
         do {
             let r = try RecipeStore(directory: recipesDirectory(o)).load(id: o.positional[2])
-            try SteamFetcher(tool: tool, store: contentStore(o), account: account).fetch(recipe: r, progress: { p in
+            try SteamFetcher(tool: tool, store: contentStore(o), account: account).fetch(recipe: r, optionalNames: Set(o.values["with"] ?? []), progress: { p in
                 FileHandle.standardError.write(Data(String(format: "\r  %.1f %%  ", 100 * Double(p.done) / Double(max(p.total, 1))).utf8))
             }, report: { print($0) })
         } catch { fail("\(error)") }

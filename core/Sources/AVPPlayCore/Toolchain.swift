@@ -251,9 +251,15 @@ public struct Toolchain: Sendable {
     }
 
     /// Der Ordner, in dem die Toolchain für ein Spiel aus Ordnerbeständen das Abbild dessen aufbaut, was aufs
-    /// Gerät gehört (`Documents/lx`). Es besteht aus harten Links und kostet keinen Platz.
-    public func mirrorDirectory(recipe: Recipe) -> URL {
-        root.appendingPathComponent("visionos/build/lxstage/\(recipe.toolchain.target)/lx", isDirectory: true)
+    /// Gerät gehört (`Documents/lx`). Es besteht aus harten Links und kostet keinen Platz – solange es auf demselben
+    /// Laufwerk liegt wie der Bestand, denn ein harter Link verlässt sein Laufwerk nicht. Liegt der Bestand woanders
+    /// als die Toolchain, entsteht das Abbild deshalb im Bestand; neben der Toolchain würde aus jedem Link eine Kopie
+    /// (bei Half-Life: Alyx rund 70 GB auf dem Systemlaufwerk). Die Toolchain erfährt den Ort über `KL_LX_MIRROR`.
+    public func mirrorDirectory(recipe: Recipe, store: ContentStore) -> URL {
+        if StoreLocation.sameVolume(root, store.root) {
+            return root.appendingPathComponent("visionos/build/lxstage/\(recipe.toolchain.target)/lx", isDirectory: true)
+        }
+        return store.root.appendingPathComponent(".lxstage/\(recipe.id)-\(recipe.versionCode)/lx", isDirectory: true)
     }
 
     /// Lässt die Toolchain das Abbild aufbauen (`copy: false`) oder es aufs Gerät übertragen. Welche Dateien

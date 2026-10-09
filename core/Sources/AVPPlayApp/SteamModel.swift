@@ -60,6 +60,8 @@ extension AppModel {
     func fetchFromSteam(_ game: Game) {
         guard steamBlocker(for: game) == nil, !steamBusy.contains(game.id) else { return }
         let id = game.id, recipe = game.recipe, account = steamAccount, paths = paths, stops = steamStops
+        // Wählbares kommt nur mit, wenn es angehakt ist.
+        let optional = Set(options(for: game).optionalNames)
         stops.clear(id)
         steamBusy.insert(id)
         steamProgress[id] = nil
@@ -71,7 +73,7 @@ extension AppModel {
             var signedOut = false
             do {
                 let adopted = try SteamFetcher(store: paths.store, account: account).fetch(
-                    recipe: recipe, shouldStop: { stops.isRequested(id) },
+                    recipe: recipe, optionalNames: optional, shouldStop: { stops.isRequested(id) },
                     progress: { p in Task { @MainActor in self.steamProgress[id] = p } },
                     report: { line in Task { @MainActor in self.steamSaid[id] = line } })
                 outcome = adopted.isEmpty ? L("Nothing was missing that Steam could provide.", "Es fehlte nichts, was Steam liefern könnte.")
@@ -260,13 +262,15 @@ struct SteamLoginSheet: View {
 struct SteamFetchRow: View {
     @EnvironmentObject var model: AppModel
     let game: Game
+    /// Die Zeile über der Erklärung; ohne Angabe die für die Dateien des Spiels selbst.
+    var headline: String?
 
     var body: some View {
         let busy = model.steamBusy.contains(game.id)
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(L("Or let the app fetch them from your Steam account.", "Oder lass die App sie aus deinem Steam-Konto holen."))
+                    Text(headline ?? L("Or let the app fetch them from your Steam account.", "Oder lass die App sie aus deinem Steam-Konto holen."))
                     Text(model.steamBlocker(for: game)
                          ?? L("Asks Steam whether your account owns the game, downloads exactly the version this recipe was made for, and checks it against the recipe.",
                               "Fragt Steam, ob das Spiel zu deinem Konto gehört, lädt genau die Fassung, für die dieses Rezept gemacht ist, und prüft sie gegen das Rezept."))

@@ -55,6 +55,9 @@ public struct RecipeFile: Codable, Sendable, Hashable {
     public var locale: String?
     /// Woher die Datei kommt. Fehlt die Angabe, ist es der Meta-Store (Download per `id`).
     public var source: FileSource?
+    /// Wie eine wählbare Datei dem Nutzer angeboten wird (etwa eine Sprachausgabe von Fans). Eine wählbare Datei
+    /// ohne Sprache und ohne diesen Namen wird nicht angeboten; sie lässt sich dann nur mit Namen wählen.
+    public var title: LocalizedText?
 }
 
 /// Quellen für „Sonderapps“, deren Dateien nicht aus dem Meta-Store stammen.

@@ -391,7 +391,7 @@ struct GameDetail: View {
                     Text(deviceText).frame(maxWidth: .infinity, alignment: .leading).padding(6)
                 }
 
-                if !languageFiles.isEmpty || game.recipe.addons != nil { optionalContent }
+                if !languageFiles.isEmpty || game.recipe.addons != nil || !extras.isEmpty { optionalContent }
 
                 if game.installed { FeedbackBox(game: game) }
 
@@ -523,6 +523,8 @@ struct GameDetail: View {
         }
     }
 
+    private var extras: [RecipeFile] { AppModel.extras(of: game.recipe) }
+
     private func languageName(_ locale: String) -> String {
         L10n.locale.localizedString(forIdentifier: locale) ?? locale
     }
@@ -548,7 +550,12 @@ struct GameDetail: View {
                         }
                     }
                 }
+                ForEach(extras, id: \.name) { file in
+                    if file.name != extras.first?.name || !languageFiles.isEmpty { Divider() }
+                    ExtraContentRow(game: game, file: file)
+                }
                 if game.recipe.addons != nil {
+                    if !extras.isEmpty { Divider() }
                     Toggle(isOn: Binding(get: { chosen.addons }, set: { on in
                         var next = chosen
                         next.addons = on
@@ -608,6 +615,76 @@ struct GameDetail: View {
         HStack {
             Text(name).foregroundStyle(.secondary).frame(width: 130, alignment: .leading)
             Text(value)
+        }
+    }
+}
+
+/// Eine wählbare Datei mit eigenem Namen – etwa eine Sprachausgabe von Fans: der Haken, und darunter, was noch zu
+/// tun bleibt, bis sie auf der Vision Pro liegt.
+struct ExtraContentRow: View {
+    @EnvironmentObject var model: AppModel
+    let game: Game
+    let file: RecipeFile
+
+    var body: some View {
+        let chosen = model.options(for: game)
+        let on = chosen.optionalNames.contains(file.name)
+        VStack(alignment: .leading, spacing: 8) {
+            Toggle(isOn: Binding(get: { on }, set: { want in
+                var next = chosen
+                next.optionalNames = want ? Set(chosen.optionalNames + [file.name]).sorted() : chosen.optionalNames.filter { $0 != file.name }
+                model.setOptions(next, for: game)
+            })) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text((file.title?.text ?? file.name) + (file.size.map { " · \(Installer.gigabytes($0))" } ?? ""))
+                    if let hint = file.source?.hint?.text {
+                        Text(hint).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+            if on { next.padding(.leading, 20) }
+        }
+    }
+
+    /// Was nach dem Haken kommt: holen, dann aufs Gerät.
+    @ViewBuilder private var next: some View {
+        if model.inLibrary(file, of: game) {
+            if case .current = game.status.onDevice {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(model.extrasBlocker(for: game)
+                         ?? L("On this Mac. “Copy to Vision Pro” adds it to the installed game without building it again.",
+                              "Liegt auf diesem Mac. „Auf die Vision Pro kopieren“ legt sie zum installierten Spiel, ohne es neu zu bauen."))
+                        .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    Spacer()
+                    Button(L("Copy to Vision Pro", "Auf die Vision Pro kopieren")) { model.syncExtras(game) }
+                        .disabled(model.extrasBlocker(for: game) != nil)
+                }
+            } else {
+                Text(game.installed
+                     ? L("On this Mac. “Update” above builds the game again and brings it along.",
+                         "Liegt auf diesem Mac. „Aktualisieren“ oben baut das Spiel neu und bringt sie mit.")
+                     : L("On this Mac. It is copied to the Vision Pro when the game is installed.",
+                         "Liegt auf diesem Mac. Beim Installieren des Spiels kommt sie mit auf die Vision Pro."))
+                    .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
+        } else if file.source?.kind == .user {
+            if file.source?.steam != nil, !game.status.userProvidedMissing.isEmpty {
+                // Die Dateien des Spiels fehlen auch noch: ein Abruf holt beides, und der Knopf dafür steht oben.
+                Text(L("Not on this Mac yet. “Download from Steam” above fetches it together with the game.",
+                       "Liegt noch nicht auf diesem Mac. „Von Steam laden“ oben holt sie zusammen mit dem Spiel."))
+                    .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            } else if file.source?.steam != nil {
+                SteamFetchRow(game: game, headline: L("Not on this Mac yet.", "Liegt noch nicht auf diesem Mac."))
+            }
+            Button(L("Choose Folder …", "Ordner auswählen …")) {
+                let panel = NSOpenPanel()
+                panel.canChooseDirectories = true
+                panel.canChooseFiles = false
+                panel.message = L("Choose the folder that contains “\(file.name)”. It is copied into this app’s library.",
+                                  "Ordner wählen, in dem „\(file.name)“ liegt. Die Datei wird in den Bestand dieses Programms kopiert.")
+                if panel.runModal() == .OK, let url = panel.url { model.adopt(game, from: url) }
+            }
+            .controlSize(.small)
         }
     }
 }

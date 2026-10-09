@@ -327,20 +327,24 @@ public struct SteamFetcher: Sendable {
         recipe.files.contains { $0.source?.steam != nil } || (recipe.trees ?? []).contains { $0.source.steam != nil }
     }
 
-    /// Was im Bestand fehlt und über Steam zu holen wäre.
-    public static func needed(recipe: Recipe, store: ContentStore) -> (files: [RecipeFile], trees: [RecipeTree]) {
-        let files = recipe.files.filter { $0.source?.steam != nil && !FileManager.default.fileExists(atPath: store.url(for: $0, in: recipe).path) }
+    /// Was im Bestand fehlt und über Steam zu holen wäre. Wählbare Dateien gehören nur dazu, wenn sie gewählt sind –
+    /// sonst käme etwa eine Sprachausgabe von über einem Gigabyte mit, nach der niemand gefragt hat.
+    public static func needed(recipe: Recipe, store: ContentStore, optionalNames: Set<String> = []) -> (files: [RecipeFile], trees: [RecipeTree]) {
+        let files = recipe.files.filter {
+            $0.source?.steam != nil && ($0.required || optionalNames.contains($0.name))
+                && !FileManager.default.fileExists(atPath: store.url(for: $0, in: recipe).path)
+        }
         let trees = TreeStore(store: store).missing(recipe: recipe).filter { $0.source.steam != nil }
         return (files, trees)
     }
 
     /// - Returns: die Namen dessen, was in den Bestand übernommen wurde.
     @discardableResult
-    public func fetch(recipe: Recipe, shouldStop: @escaping @Sendable () -> Bool = { false },
+    public func fetch(recipe: Recipe, optionalNames: Set<String> = [], shouldStop: @escaping @Sendable () -> Bool = { false },
                       progress: @escaping @Sendable (SteamProgress) -> Void = { _ in },
                       report: (String) -> Void = { _ in }) throws -> [String] {
         guard SteamTool.isAccountName(account) else { throw SteamError.badAccountName }
-        let want = SteamFetcher.needed(recipe: recipe, store: store)
+        let want = SteamFetcher.needed(recipe: recipe, store: store, optionalNames: optionalNames)
         let sources = (want.files.compactMap { $0.source?.steam } + want.trees.compactMap { $0.source.steam })
             .reduce(into: [SteamSource]()) { if !$0.contains($1) { $0.append($1) } }
         guard !sources.isEmpty else {

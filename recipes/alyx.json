@@ -8,9 +8,41 @@
  "store": {},
  "toolchain": {
   "target": "alyx",
-  "minCommit": "6185722"
+  "minCommit": "d9264e6"
  },
- "files": [],
+ "files": [
+  {
+   "name": "3478102838.vpk",
+   "role": "voices",
+   "id": "",
+   "size": 1429961940,
+   "sha256": "b36b3c6bcd699eab8a4c0b96eb254799f8767b6f9d16c759ceb9a144513f2833",
+   "required": false,
+   "dest": "lx/game/hlvr_german",
+   "localName": "pak01_dir.vpk",
+   "title": {
+    "en": "German voice-over (fan mod, AI voices)",
+    "de": "Deutsche Sprachausgabe (Fan-Mod, KI-Stimmen)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "A fan project from the Steam Workshop (“Half-Life: Alyx – Deutsche Übersetzung (AI-Synchronisation)”, version of 2 January 2026): about 5,000 voice files with AI voices, not by Valve. The app fetches it from the game's Workshop with your Steam sign-in. Once it is on the Vision Pro the game starts in German; the game's start window there has a “Language” setting to go back to English or to switch off only the voices. German menus and subtitles come with the game itself. By hand: the file 3478102838.vpk from the Workshop folder of a Steam PC (steamapps/workshop/content/546560/3478102838).",
+     "de": "Ein Fanprojekt aus dem Steam Workshop („Half-Life: Alyx – Deutsche Übersetzung (AI-Synchronisation)“, Fassung vom 2. Januar 2026): rund 5000 Sprachdateien mit KI-Stimmen, nicht von Valve. Die App holt sie mit deiner Steam-Anmeldung aus dem Workshop des Spiels. Liegt sie auf der Vision Pro, startet das Spiel auf Deutsch; im Startfenster des Spiels lässt sich dort unter „Language“ zurück auf Englisch stellen oder nur die Stimmen abschalten. Menüs und Untertitel auf Deutsch bringt das Spiel selbst mit. Von Hand: die Datei 3478102838.vpk aus dem Workshop-Ordner eines Steam-PCs (steamapps/workshop/content/546560/3478102838)."
+    },
+    "steam": {
+     "app": "546560",
+     "depots": [
+      {
+       "id": "546560",
+       "manifest": "5853293684001038844",
+       "bytes": 1429962138
+      }
+     ]
+    }
+   }
+  }
+ ],
  "trees": [
   {
    "name": "game",
@@ -119,6 +151,10 @@
    {
     "en": "Steam Linux Runtime (from Valve) and xrizer (from this project) are downloaded by the app. Only the game itself comes from your Steam account.",
     "de": "Steam Linux Runtime (von Valve) und xrizer (von diesem Projekt) lädt die App selbst. Nur das Spiel kommt aus deinem Steam-Konto."
+   },
+   {
+    "en": "Optional German voice-over: a fan project from the Steam Workshop, loaded through the game's own language search path instead of Steam's add-on menu, so saved games hear it too. That the game reads sound files from an archive placed this way was checked on a Mac on 2026-10-09; on the device it has not been heard yet.",
+    "de": "Wählbare deutsche Sprachausgabe: ein Fanprojekt aus dem Steam Workshop, eingebunden über den Sprach-Suchpfad des Spiels statt über Steams Addon-Menü – deshalb gilt sie auch für bestehende Spielstände. Dass das Spiel Sounddateien aus einem so abgelegten Archiv liest, ist auf einem Mac geprüft (2026-10-09); am Gerät ist sie noch nicht gehört worden."
    }
   ]
  },

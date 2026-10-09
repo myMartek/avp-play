@@ -28,7 +28,8 @@ public struct Adopter: Sendable {
             let target = store.url(for: file, in: recipe)
             if FileManager.default.fileExists(atPath: target.path) { result.alreadyPresent += 1; continue }
             // Das APK liegt lokal oft unter dem Namen, den die Toolchain erwartet, nicht unter dem des Stores.
-            let candidates = (index[file.name] ?? []) + (file.localName.flatMap { index[$0] } ?? [])
+            let named = index[file.name] ?? []
+            let candidates = named + (file.localName.flatMap { index[$0] } ?? [])
             guard !candidates.isEmpty else { result.notFound.append(file.name); continue }
             guard let expected = file.sha256?.lowercased() else { result.unverifiable.append(file.name); continue }
 
@@ -43,7 +44,11 @@ public struct Adopter: Sendable {
                 taken = true
                 break
             }
-            if !taken { result.mismatched.append(file.name) }
+            // Unter dem Zielnamen einer wählbaren Datei kann etwas ganz anderes liegen – das Archiv einer Sprachausgabe
+            // heißt am Ziel wie eines des Spiels. Das ist dann keine „andere Fassung“, sondern schlicht nicht da.
+            if !taken {
+                if named.isEmpty, !file.required { result.notFound.append(file.name) } else { result.mismatched.append(file.name) }
+            }
         }
         return result
     }

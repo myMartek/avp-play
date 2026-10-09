@@ -49,6 +49,19 @@ final class RecipeTests: XCTestCase {
             XCTAssertEqual(recipe.status.playability, "verified", "\(recipe.id)")
             XCTAssertFalse(recipe.files.isEmpty, "\(recipe.id)")
         }
+        // Half-Life: Alyx bietet die deutsche Sprachausgabe als wählbare Datei an: nie Pflicht, aus dem Steam-Konto
+        // des Nutzers in einer festgelegten Fassung, und am Ziel das Archiv des Sprachordners, den das Spiel einbindet.
+        let alyx = try XCTUnwrap(all.first { $0.id == "alyx" })
+        XCTAssertTrue(alyx.files.allSatisfy { !$0.required })
+        let voices = try XCTUnwrap(alyx.files.first { $0.role == "voices" })
+        XCTAssertNotNil(voices.title)
+        XCTAssertNotNil(voices.size)
+        XCTAssertEqual(voices.source?.kind, .user)
+        XCTAssertEqual(voices.source?.steam?.app, "546560")
+        XCTAssertEqual(voices.source?.steam?.depots.count, 1)
+        XCTAssertEqual(StagePlan.destination(for: voices), "Documents/lx/game/hlvr_german/pak01_dir.vpk")
+        XCTAssertFalse(FetchPlan.wantedFiles(recipe: alyx, selection: FetchSelection()).contains(voices))
+        XCTAssertTrue(FetchPlan.wantedFiles(recipe: alyx, selection: FetchSelection(optionalNames: [voices.name])).contains(voices))
         let wrath = try XCTUnwrap(all.first { $0.id == "wrath2" })
         XCTAssertEqual(wrath.files.filter(\.required).count, 84)
         XCTAssertTrue(wrath.files.filter(\.required).allSatisfy { $0.sha256 != nil && $0.size != nil })
@@ -196,6 +209,37 @@ final class AdopterTests: XCTestCase {
         try Data("abc".utf8).write(to: tmp.appendingPathComponent("absent.obb"))
         let third = try Adopter(store: store).adopt(recipe: recipe, from: [tmp.appendingPathComponent("absent.obb")])
         XCTAssertEqual(third.adopted, ["absent.obb"])
+    }
+}
+
+extension AdopterTests {
+    /// Eine wählbare Sprachausgabe heißt am Ziel wie ein Archiv des Spiels. Wer den Spielordner übernimmt, bekommt
+    /// deshalb keine Meldung über eine „andere Fassung“ – die Datei ist dort schlicht nicht dabei.
+    func testAGameArchiveUnderTheDestinationNameIsNotAnotherVersion() throws {
+        let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("qi-adopt-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: tmp) }
+        let game = tmp.appendingPathComponent("game/hlvr"), workshop = tmp.appendingPathComponent("workshop/content/546560/3478102838")
+        for dir in [game, workshop] { try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true) }
+        try Data("das Archiv des Spiels".utf8).write(to: game.appendingPathComponent("pak01_dir.vpk"))
+        try Data("abc".utf8).write(to: workshop.appendingPathComponent("3478102838.vpk"))
+        let abc = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        let helper = RecipeTests()
+        var voices = helper.file("3478102838.vpk", required: false, size: 3, sha: abc, dest: "lx/game/hlvr_german")
+        voices.localName = "pak01_dir.vpk"
+        let recipe = helper.recipe(files: [voices])
+        let store = ContentStore(root: tmp.appendingPathComponent("bestand"))
+
+        let fromGame = try Adopter(store: store).adopt(recipe: recipe, from: [tmp.appendingPathComponent("game")])
+        XCTAssertEqual(fromGame.mismatched, [])
+        XCTAssertEqual(fromGame.notFound, ["3478102838.vpk"])
+        // Unter ihrem eigenen Namen in einer anderen Fassung ist sie dagegen genau das: eine andere Fassung.
+        let other = tmp.appendingPathComponent("anders")
+        try FileManager.default.createDirectory(at: other, withIntermediateDirectories: true)
+        try Data("abd".utf8).write(to: other.appendingPathComponent("3478102838.vpk"))
+        XCTAssertEqual(try Adopter(store: store).adopt(recipe: recipe, from: [other]).mismatched, ["3478102838.vpk"])
+
+        XCTAssertEqual(try Adopter(store: store).adopt(recipe: recipe, from: [tmp.appendingPathComponent("workshop")]).adopted, ["3478102838.vpk"])
+        XCTAssertEqual(StagePlan.destination(for: voices), "Documents/lx/game/hlvr_german/pak01_dir.vpk")
     }
 }
 
@@ -466,6 +510,23 @@ final class TreeTests: XCTestCase {
         // jede Rolle höchstens einmal
         XCTAssertThrowsError(try recipe(trees: [tree("a", markers: [.init(path: "a", size: nil, sha256: sha)]),
                                                 tree("b", markers: [.init(path: "a", size: nil, sha256: sha)])]).validate())
+    }
+
+    /// Das Abbild fürs Gerät besteht aus harten Links, und die verlassen ihr Laufwerk nicht: Liegt der Bestand auf
+    /// einem anderen Laufwerk als die Toolchain, gehört das Abbild in den Bestand – sonst würde es dort zur Kopie.
+    func testTheDeviceMirrorStaysOnTheVolumeOfTheLibrary() throws {
+        let dir = try scratch()
+        let root = dir.appendingPathComponent("toolchain")
+        try FileManager.default.createDirectory(at: root.appendingPathComponent("visionos"), withIntermediateDirectories: true)
+        try Data().write(to: root.appendingPathComponent("visionos/run.sh"))
+        let toolchain = try Toolchain(root: root)
+        let r = recipe(trees: [tree(markers: [.init(path: "bin/app", size: 3, sha256: String(repeating: "a", count: 64))])])
+
+        let near = toolchain.mirrorDirectory(recipe: r, store: ContentStore(root: dir.appendingPathComponent("bestand")))
+        XCTAssertEqual(near.path, root.appendingPathComponent("visionos/build/lxstage/demo/lx").path)
+        // /dev ist immer ein eigenes Laufwerk; angelegt wird hier nichts.
+        let far = toolchain.mirrorDirectory(recipe: r, store: ContentStore(root: URL(fileURLWithPath: "/dev/bestand")))
+        XCTAssertEqual(far.path, "/dev/bestand/.lxstage/demo-7/lx")
     }
 
     func testAdoptsOnlyTheTreeTheRecipeDescribes() throws {
@@ -1339,6 +1400,22 @@ final class SteamTests: XCTestCase {
         XCTAssertTrue(SteamFetcher.usesSteam(recipe))
         XCTAssertFalse(SteamFetcher.usesSteam(helper.recipe(files: [fromMeta])))
         XCTAssertEqual(SteamFetcher.needed(recipe: recipe, store: store).files.map(\.name), ["pak001.pk4"])
+    }
+
+    func testAnOptionalFileIsAskedOfSteamOnlyWhenChosen() throws {
+        let store = ContentStore(root: try scratch())
+        var game = helper.file("pak000.pk4", sha: String(repeating: "a", count: 64))
+        var voices = helper.file("voices.vpk", required: false, sha: String(repeating: "b", count: 64))
+        game.source = source("9050", depots: [("9051", "1")])
+        voices.source = source("9050", depots: [("9050", "2")])
+        let recipe = helper.recipe(files: [game, voices])
+        try recipe.validate()
+        XCTAssertEqual(SteamFetcher.needed(recipe: recipe, store: store).files.map(\.name), ["pak000.pk4"])
+        XCTAssertEqual(SteamFetcher.needed(recipe: recipe, store: store, optionalNames: ["voices.vpk"]).files.map(\.name), ["pak000.pk4", "voices.vpk"])
+        // Ist sie da, wird auch eine gewählte nicht noch einmal geholt.
+        try FileManager.default.createDirectory(at: store.directory(for: recipe), withIntermediateDirectories: true)
+        try Data("x".utf8).write(to: store.url(for: voices, in: recipe))
+        XCTAssertEqual(SteamFetcher.needed(recipe: recipe, store: store, optionalNames: ["voices.vpk"]).files.map(\.name), ["pak000.pk4"])
     }
 
     /// Ein echter Durchlauf mit Valves Werkzeug, ohne Konto: SteamCMD kennt die Anmeldung „anonymous“, und die

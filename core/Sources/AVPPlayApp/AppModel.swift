@@ -279,6 +279,24 @@ final class AppModel: ObservableObject {
         if let data = try? JSONEncoder().encode(options) { UserDefaults.standard.set(data, forKey: "gameOptions") }
     }
 
+    /// Wählbare Dateien, die das Rezept unter eigenem Namen anbietet – etwa eine Sprachausgabe von Fans.
+    nonisolated static func extras(of recipe: Recipe) -> [RecipeFile] {
+        recipe.files.filter { !$0.required && $0.locale == nil && $0.title != nil }
+    }
+
+    func inLibrary(_ file: RecipeFile, of game: Game) -> Bool {
+        if case .present(let size) = paths.store.state(of: file, in: game.recipe) { return file.size == nil || file.size == size }
+        return false
+    }
+
+    /// Angehakt, vom Nutzer bereitzustellen (oder aus seinem Steam-Konto zu holen), und noch nicht im Bestand.
+    func missingExtras(for game: Game) -> [RecipeFile] {
+        let extras = AppModel.extras(of: game.recipe)
+        guard !extras.isEmpty else { return [] }
+        let chosen = Set(options(for: game).optionalNames)
+        return extras.filter { chosen.contains($0.name) && $0.source?.kind == .user && !inLibrary($0, of: game) }
+    }
+
     /// Ohne eigene Wahl: was schon im Bestand liegt, bleibt gewählt; sonst die Sprache des Systems, wenn es
     /// dafür Dateien gibt. Englisch braucht bei Sprachpaketen nichts – es ist die Fassung des Spiels selbst.
     nonisolated static func defaultOptions(recipe: Recipe, store: ContentStore,
@@ -373,6 +391,11 @@ final class AppModel: ObservableObject {
                      "Dieses Spiel gehört nicht zu deinem Meta-Konto. Es wird nichts geladen.")
         }
         if !game.status.userProvidedMissing.isEmpty { return L("Files that you provide yourself are missing (see below).", "Es fehlen Dateien, die du selbst bereitstellst (siehe unten).") }
+        if let extra = missingExtras(for: game).first {
+            let name = extra.title?.text ?? extra.name
+            return L("“\(name)” is ticked but not on this Mac yet (see “Optional Content”).",
+                     "„\(name)“ ist angehakt, liegt aber noch nicht auf diesem Mac (siehe „Wählbare Inhalte“).")
+        }
         if let t = toolchain, !t.satisfies(minCommit: game.recipe.toolchain.minCommit) {
             return L("This game needs a newer toolchain than the one installed.", "Dieses Spiel braucht eine neuere Toolchain als die installierte.")
         }
@@ -678,6 +701,23 @@ final class AppModel: ObservableObject {
     func syncAddons(_ game: Game) {
         guard game.recipe.addons != nil, syncBlocker(for: game) == nil else { return }
         enqueue(game, steps: InstallStep.addonSync, addons: true)
+    }
+
+    /// Was dem Nachreichen gewählter Inhalte im Weg steht. Wie beim Abgleich der Zusatzinhalte braucht es weder Xcode
+    /// noch ein Apple-Team – aber das Spiel muss schon auf dem Gerät sein.
+    func extrasBlocker(for game: Game) -> String? {
+        if let why = storeBlocker { return why }
+        if toolchain == nil { return L("The toolchain is not installed yet (see “Setup”).", "Die Toolchain ist noch nicht installiert (siehe „Einrichtung“).") }
+        if device == nil { return deviceProblem ?? L("The Vision Pro is not reachable.", "Die Vision Pro ist nicht erreichbar.") }
+        if !game.installed { return L("Install the game first – this only adds to a game that is on the Vision Pro.", "Erst das Spiel installieren – das hier ergänzt nur ein Spiel, das schon auf der Vision Pro ist.") }
+        if isBusy(game.id) { return L("A job for this game is already running.", "Für dieses Spiel läuft schon ein Auftrag.") }
+        return nil
+    }
+
+    /// Kopiert gewählte Inhalte, die im Bestand liegen, zum installierten Spiel – ohne es neu zu bauen.
+    func syncExtras(_ game: Game) {
+        guard extrasBlocker(for: game) == nil, missingExtras(for: game).isEmpty else { return }
+        enqueue(game, steps: InstallStep.contentSync)
     }
 
     private func enqueue(_ game: Game, steps: [InstallStep], addons: Bool? = nil) {
