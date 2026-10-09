@@ -34,6 +34,21 @@ public enum StagePlan {
     }
 }
 
+extension StagePlan {
+    /// Was vom Gerät zu nehmen ist: Dateien, die sich leeren lassen (`clearable`), nicht gewählt sind und dort
+    /// noch mit Inhalt liegen.
+    /// - Parameters:
+    ///   - wanted: die Namen der gewählten Dateien
+    ///   - remote: was auf dem Gerät liegt, Zielpfad -> Größe
+    public static func withdrawals(recipe: Recipe, wanted: Set<String>, remote: [String: Int64]) -> [(file: RecipeFile, destination: String, size: Int64)] {
+        recipe.files.compactMap { file in
+            guard file.clearable == true, !file.required, !wanted.contains(file.name),
+                  let destination = destination(for: file), let size = remote[destination], size > 0 else { return nil }
+            return (file, destination, size)
+        }
+    }
+}
+
 /// Die kleinen Dateien, über die der Shim erfährt, was freigeschaltet ist. Sie entstehen auf dem Mac aus
 /// Metas Antworten; auf das Gerät gelangen nur sie, nie ein Token.
 public enum AddonFiles {

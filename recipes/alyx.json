@@ -8,7 +8,7 @@
  "store": {},
  "toolchain": {
   "target": "alyx",
-  "minCommit": "d9264e6"
+  "minCommit": "a3c1d47"
  },
  "files": [
   {
@@ -24,11 +24,12 @@
     "en": "German voice-over (fan mod, AI voices)",
     "de": "Deutsche Sprachausgabe (Fan-Mod, KI-Stimmen)"
    },
+   "clearable": true,
    "source": {
     "kind": "user",
     "hint": {
-     "en": "A fan project from the Steam Workshop (“Half-Life: Alyx – Deutsche Übersetzung (AI-Synchronisation)”, version of 2 January 2026): about 5,000 voice files with AI voices, not by Valve. The app fetches it from the game's Workshop with your Steam sign-in. Once it is on the Vision Pro the game starts in German; the game's start window there has a “Language” setting to go back to English or to switch off only the voices. German menus and subtitles come with the game itself. By hand: the file 3478102838.vpk from the Workshop folder of a Steam PC (steamapps/workshop/content/546560/3478102838).",
-     "de": "Ein Fanprojekt aus dem Steam Workshop („Half-Life: Alyx – Deutsche Übersetzung (AI-Synchronisation)“, Fassung vom 2. Januar 2026): rund 5000 Sprachdateien mit KI-Stimmen, nicht von Valve. Die App holt sie mit deiner Steam-Anmeldung aus dem Workshop des Spiels. Liegt sie auf der Vision Pro, startet das Spiel auf Deutsch; im Startfenster des Spiels lässt sich dort unter „Language“ zurück auf Englisch stellen oder nur die Stimmen abschalten. Menüs und Untertitel auf Deutsch bringt das Spiel selbst mit. Von Hand: die Datei 3478102838.vpk aus dem Workshop-Ordner eines Steam-PCs (steamapps/workshop/content/546560/3478102838)."
+     "en": "A fan project from the Steam Workshop (“Half-Life: Alyx – Deutsche Übersetzung (AI-Synchronisation)”, version of 2 January 2026): about 5,000 voice files with AI voices, not by Valve. The app fetches it from the game's Workshop with your Steam sign-in. Once it is on the Vision Pro the game starts in German; the game's start window there has a “Language” setting to go back to English or to switch off only the voices. German menus and subtitles come with the game itself. Without the tick the app takes it off the Vision Pro again at the next update. By hand: the file 3478102838.vpk from the Workshop folder of a Steam PC (steamapps/workshop/content/546560/3478102838).",
+     "de": "Ein Fanprojekt aus dem Steam Workshop („Half-Life: Alyx – Deutsche Übersetzung (AI-Synchronisation)“, Fassung vom 2. Januar 2026): rund 5000 Sprachdateien mit KI-Stimmen, nicht von Valve. Die App holt sie mit deiner Steam-Anmeldung aus dem Workshop des Spiels. Liegt sie auf der Vision Pro, startet das Spiel auf Deutsch; im Startfenster des Spiels lässt sich dort unter „Language“ zurück auf Englisch stellen oder nur die Stimmen abschalten. Menüs und Untertitel auf Deutsch bringt das Spiel selbst mit. Ohne Haken nimmt die App sie beim nächsten Abgleich wieder von der Vision Pro. Von Hand: die Datei 3478102838.vpk aus dem Workshop-Ordner eines Steam-PCs (steamapps/workshop/content/546560/3478102838)."
     },
     "steam": {
      "app": "546560",

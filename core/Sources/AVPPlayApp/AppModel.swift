@@ -714,7 +714,20 @@ final class AppModel: ObservableObject {
         return nil
     }
 
-    /// Kopiert gewählte Inhalte, die im Bestand liegen, zum installierten Spiel – ohne es neu zu bauen.
+    /// Löscht eine wählbare Datei aus dem Bestand auf diesem Mac. Auf dem Gerät ändert das nichts.
+    func removeFromLibrary(_ file: RecipeFile, of game: Game) {
+        guard !isBusy(game.id), !steamBusy.contains(game.id) else { return }
+        do {
+            try FileManager.default.removeItem(at: paths.store.url(for: file, in: game.recipe))
+            notice = L("“\(file.title?.text ?? file.name)” has been removed from this Mac.", "„\(file.title?.text ?? file.name)“ wurde von diesem Mac entfernt.")
+        } catch {
+            notice = "\(error.localizedDescription)"
+        }
+        refresh()
+    }
+
+    /// Gleicht die wählbaren Inhalte mit dem installierten Spiel ab, ohne es neu zu bauen: Gewähltes, das im Bestand
+    /// liegt, wird kopiert; Abgewähltes, das sich vom Gerät nehmen lässt, wird dort geleert.
     func syncExtras(_ game: Game) {
         guard extrasBlocker(for: game) == nil, missingExtras(for: game).isEmpty else { return }
         enqueue(game, steps: InstallStep.contentSync)

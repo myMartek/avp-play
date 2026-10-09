@@ -60,6 +60,7 @@ final class RecipeTests: XCTestCase {
         XCTAssertEqual(voices.source?.steam?.app, "546560")
         XCTAssertEqual(voices.source?.steam?.depots.count, 1)
         XCTAssertEqual(StagePlan.destination(for: voices), "Documents/lx/game/hlvr_german/pak01_dir.vpk")
+        XCTAssertEqual(voices.clearable, true)
         XCTAssertFalse(FetchPlan.wantedFiles(recipe: alyx, selection: FetchSelection()).contains(voices))
         XCTAssertTrue(FetchPlan.wantedFiles(recipe: alyx, selection: FetchSelection(optionalNames: [voices.name])).contains(voices))
         let wrath = try XCTUnwrap(all.first { $0.id == "wrath2" })
@@ -329,6 +330,36 @@ final class StageTests: XCTestCase {
 
     func testDefaultBundleId() {
         XCTAssertEqual(Toolchain.defaultBundleId(target: "moss", user: "Anna"), "anna.dev.klepton.target.moss")
+    }
+}
+
+extension StageTests {
+    /// Abgewähltes wird vom Gerät genommen – aber nur, was das Rezept dafür freigibt, was wirklich nicht gewählt ist
+    /// und was dort noch mit Inhalt liegt.
+    func testOnlyUnchosenClearableFilesWithContentAreWithdrawn() {
+        let helper = RecipeTests()
+        var voices = helper.file("voices.vpk", required: false, dest: "lx/game/hlvr_german")
+        voices.localName = "pak01_dir.vpk"
+        voices.clearable = true
+        let language = helper.file("de.obb", required: false, locale: "de-DE")       // wählbar, aber nicht zum Leeren freigegeben
+        var needed = helper.file("main.obb")
+        needed.clearable = true                                                        // Pflichtdateien werden nie geleert
+        let recipe = helper.recipe(files: [voices, language, needed])
+        let there: [String: Int64] = ["Documents/lx/game/hlvr_german/pak01_dir.vpk": 1_429_961_940,
+                                      "Documents/android-files/obb/de.obb": 10, "Documents/android-files/obb/main.obb": 10]
+
+        let gone = StagePlan.withdrawals(recipe: recipe, wanted: ["main.obb"], remote: there)
+        XCTAssertEqual(gone.map(\.destination), ["Documents/lx/game/hlvr_german/pak01_dir.vpk"])
+        XCTAssertEqual(gone.first?.size, 1_429_961_940)
+        // gewählt: bleibt
+        XCTAssertTrue(StagePlan.withdrawals(recipe: recipe, wanted: ["main.obb", "voices.vpk"], remote: there).isEmpty)
+        // schon geleert oder nie dort gewesen: nichts zu tun
+        XCTAssertTrue(StagePlan.withdrawals(recipe: recipe, wanted: [], remote: ["Documents/lx/game/hlvr_german/pak01_dir.vpk": 0]).isEmpty)
+        XCTAssertTrue(StagePlan.withdrawals(recipe: recipe, wanted: [], remote: [:]).isEmpty)
+        // und eine geleerte Datei gilt beim Kopieren als fehlend: wieder angehakt, kommt sie zurück
+        let plan = StagePlan.plan(local: [(voices, URL(fileURLWithPath: "/x/voices.vpk"), 1_429_961_940)],
+                                  remote: ["Documents/lx/game/hlvr_german/pak01_dir.vpk": 0])
+        XCTAssertEqual(plan.map(\.destination), ["Documents/lx/game/hlvr_german/pak01_dir.vpk"])
     }
 }
 

@@ -354,10 +354,22 @@ public struct Installer: Sendable {
             throw InstallError.appNotInstalled(bundle)
         }
         var remote: [String: Int64] = [:]
-        for dir in Set(local.compactMap { StagePlan.directory(for: $0.file) }) {
+        // Auch dort nachsehen, wo etwas Abgewähltes liegen könnte, das sich vom Gerät nehmen lässt.
+        let clearable = recipe.files.filter { $0.clearable == true && !$0.required }
+        for dir in Set((local.map(\.file) + clearable).compactMap { StagePlan.directory(for: $0) }) {
             for f in try control.files(device: device, bundle: bundle, subdirectory: dir) where !f.isDirectory {
                 remote["\(dir)/\(f.relativePath)"] = f.size
             }
+        }
+        // Abgewähltes: von außen lässt sich dort nichts löschen, aber überschreiben. Eine leere Datei an derselben
+        // Stelle gibt den Platz frei; das Programm des Spiels räumt sie beim nächsten Start weg.
+        for gone in StagePlan.withdrawals(recipe: recipe, wanted: Set(local.map(\.file.name)), remote: remote) {
+            let empty = FileManager.default.temporaryDirectory.appendingPathComponent("avpplay-empty-\(UUID().uuidString)")
+            try Data().write(to: empty)
+            defer { try? FileManager.default.removeItem(at: empty) }
+            try control.copy(empty, to: device, bundle: bundle, destination: gone.destination)
+            report(L("Taken off the device: \(gone.file.title?.text ?? gone.file.name) (\(Installer.gigabytes(gone.size)) freed).",
+                     "Vom Gerät genommen: \(gone.file.title?.text ?? gone.file.name) (\(Installer.gigabytes(gone.size)) frei)."))
         }
         let items = StagePlan.plan(local: local, remote: remote)
         let staged = local.filter { StagePlan.destination(for: $0.file) != nil }.count

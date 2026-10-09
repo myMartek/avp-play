@@ -642,7 +642,40 @@ struct ExtraContentRow: View {
                     }
                 }
             }
-            if on { next.padding(.leading, 20) }
+            Group { if on { next } else { leftovers } }.padding(.leading, 20)
+        }
+    }
+
+    /// Ohne Haken: was von der Datei noch herumliegt, und wie man es loswird.
+    @ViewBuilder private var leftovers: some View {
+        if model.inLibrary(file, of: game) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(L("Still on this Mac\(file.size.map { " (\(Installer.gigabytes($0)))" } ?? "").",
+                       "Liegt noch auf diesem Mac\(file.size.map { " (\(Installer.gigabytes($0)))" } ?? "")."))
+                    .font(.callout).foregroundStyle(.secondary)
+                Spacer()
+                Button(L("Remove from This Mac", "Von diesem Mac entfernen")) { model.removeFromLibrary(file, of: game) }
+                    .controlSize(.small)
+                    .disabled(model.isBusy(game.id) || model.steamBusy.contains(game.id))
+            }
+        }
+        if file.clearable == true, game.installed {
+            if case .current = game.status.onDevice {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(model.extrasBlocker(for: game)
+                         ?? L("If it is on the Vision Pro, “Remove from Vision Pro” frees its space there; the game clears away the rest the next time it starts.",
+                              "Liegt sie auf der Vision Pro, gibt „Von der Vision Pro entfernen“ ihren Platz dort frei; den Rest räumt das Spiel beim nächsten Start weg."))
+                        .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    Spacer()
+                    Button(L("Remove from Vision Pro", "Von der Vision Pro entfernen")) { model.syncExtras(game) }
+                        .controlSize(.small)
+                        .disabled(model.extrasBlocker(for: game) != nil)
+                }
+            } else {
+                Text(L("If it is on the Vision Pro, “Update” above takes it off there as well.",
+                       "Liegt sie auf der Vision Pro, nimmt „Aktualisieren“ oben sie auch dort wieder weg."))
+                    .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
         }
     }
 

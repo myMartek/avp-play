@@ -58,6 +58,10 @@ public struct RecipeFile: Codable, Sendable, Hashable {
     /// Wie eine wählbare Datei dem Nutzer angeboten wird (etwa eine Sprachausgabe von Fans). Eine wählbare Datei
     /// ohne Sprache und ohne diesen Namen wird nicht angeboten; sie lässt sich dann nur mit Namen wählen.
     public var title: LocalizedText?
+    /// Ist die Datei nicht (mehr) gewählt, wird sie auf dem Gerät durch eine leere ersetzt. Löschen lässt sich im
+    /// Datenbereich einer App von außen nichts, überschreiben schon – und das gibt den Platz frei. Nur für Dateien,
+    /// bei denen das Programm des Spiels eine leere Datei wie eine fehlende behandelt und selbst wegräumt.
+    public var clearable: Bool?
 }
 
 /// Quellen für „Sonderapps“, deren Dateien nicht aus dem Meta-Store stammen.
