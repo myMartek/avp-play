@@ -48,6 +48,7 @@ extension AppModel {
 
     /// Was einem Abruf bei Steam im Weg steht.
     func steamBlocker(for game: Game) -> String? {
+        if let why = storeBlocker { return why }
         if !steamToolPresent || !steamSignedIn {
             return L("Sign in to Steam under “Setup” – then the app can fetch these files for you.", "Melde dich unter „Einrichtung“ bei Steam an – dann kann die App diese Dateien für dich holen.")
         }

@@ -1305,7 +1305,12 @@ final class SteamTests: XCTestCase {
     func testFetchesADepotAndAdoptsOnlyWhatMatches() throws {
         guard let path = ProcessInfo.processInfo.environment["AVPPLAY_STEAM_TOOL"] else { throw XCTSkip("AVPPLAY_STEAM_TOOL ist nicht gesetzt") }
         let dir = try scratch()
-        let tool = SteamTool(directory: URL(fileURLWithPath: path), home: dir.appendingPathComponent("home"))
+        // Die Depots gehen dabei nicht neben das Werkzeug, sondern über den Verweis an einen eigenen Ort – so, wie
+        // wenn der Bestand auf einem anderen Laufwerk liegt.
+        let landing = dir.appendingPathComponent("depots")
+        try? FileManager.default.removeItem(at: URL(fileURLWithPath: path).appendingPathComponent("steamapps"))
+        addTeardownBlock { try? FileManager.default.removeItem(at: URL(fileURLWithPath: path).appendingPathComponent("steamapps")) }
+        let tool = SteamTool(directory: URL(fileURLWithPath: path), home: dir.appendingPathComponent("home"), contentRoot: landing)
         try tool.verify()
         let store = ContentStore(root: dir.appendingPathComponent("bestand"))
         var file = helper.file("steamclient.so", size: 49_104_528, sha: "7cceb10c5c24beed4684803c808bb88ec9c3c29df39347bad3ca6edf666ecf8e", dest: "x")
@@ -1321,8 +1326,11 @@ final class SteamTests: XCTestCase {
         XCTAssertEqual(try Hashing.sha256(of: store.url(for: file, in: recipe)), file.sha256)
         XCTAssertTrue(TreeStore(store: store).missing(recipe: recipe).isEmpty)
         XCTAssertTrue(FileManager.default.fileExists(atPath: TreeStore(store: store).url(for: recipe.trees![0], in: recipe).appendingPathComponent("steamclient.so").path))
-        // Übernommen heißt auch: bei SteamCMD liegt es nicht noch einmal.
+        // Übernommen heißt auch: bei SteamCMD liegt es nicht noch einmal. Und es lag am gewählten Ort.
         XCTAssertFalse(FileManager.default.fileExists(atPath: tool.contentDirectory(app: "1007").path))
+        XCTAssertEqual(try FileManager.default.destinationOfSymbolicLink(atPath: tool.directory.appendingPathComponent("steamapps").path),
+                       landing.path)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: landing.appendingPathComponent("content").path))
         XCTAssertTrue(SteamFetcher.needed(recipe: recipe, store: store).files.isEmpty)
         // Ein zweiter Lauf fragt Steam nichts mehr.
         XCTAssertEqual(try SteamFetcher(tool: tool, store: store, account: "anonymous").fetch(recipe: recipe), [])
@@ -1338,5 +1346,104 @@ final class SteamTests: XCTestCase {
         XCTAssertThrowsError(try SteamFetcher(tool: tool, store: store, account: "nobody_signed_in_here").fetch(recipe: helper.recipe(files: [alyx]))) {
             guard case SteamError.notSignedIn = $0 else { return XCTFail("\($0)") }
         }
+    }
+}
+
+final class StoreLocationTests: XCTestCase {
+    func scratch() throws -> URL {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("qi-store-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: dir) }
+        return dir
+    }
+
+    func testTheChosenFolderIsRememberedAndCanBeUndone() throws {
+        let base = try scratch()
+        XCTAssertNil(StoreLocation.custom(base: base))
+        XCTAssertEqual(StoreLocation.current(base: base).path, base.appendingPathComponent("store").path)
+
+        let chosen = URL(fileURLWithPath: "/Volumes/Extern/Spiele")
+        XCTAssertEqual(StoreLocation.folder(in: chosen).path, "/Volumes/Extern/Spiele/AVP Play Downloads")
+        XCTAssertEqual(StoreLocation.folder(in: StoreLocation.folder(in: chosen)).path, "/Volumes/Extern/Spiele/AVP Play Downloads")
+        try StoreLocation.set(StoreLocation.folder(in: chosen), base: base)
+        XCTAssertEqual(StoreLocation.current(base: base).path, "/Volumes/Extern/Spiele/AVP Play Downloads")
+        // Zurück zum üblichen Ort – ausdrücklich oder indem er selbst gewählt wird.
+        try StoreLocation.set(nil, base: base)
+        XCTAssertNil(StoreLocation.custom(base: base))
+        try StoreLocation.set(chosen, base: base)
+        try StoreLocation.set(StoreLocation.standard(base: base), base: base)
+        XCTAssertNil(StoreLocation.custom(base: base))
+        // Eine kaputte Datei ist keine Wahl.
+        try Data("kein json".utf8).write(to: base.appendingPathComponent("settings.json"))
+        XCTAssertNil(StoreLocation.custom(base: base))
+    }
+
+    func testAFolderOnADiskThatIsNotConnectedIsNotAvailable() throws {
+        let base = try scratch()
+        XCTAssertTrue(StoreLocation.isAvailable(base.appendingPathComponent("noch/nicht/da")))
+        XCTAssertFalse(StoreLocation.isAvailable(URL(fileURLWithPath: "/Volumes/gibt-es-nicht-\(UUID().uuidString)/AVP Play Downloads")))
+        XCTAssertTrue(StoreLocation.sameVolume(base, base.appendingPathComponent("x/y")))
+
+        // Gewählt und erreichbar – bis derselbe Pfad auf ein anderes Laufwerk führt: Dann ist die Platte fort, auch
+        // wenn es den Ordner (leer, auf dem Startlaufwerk) noch gibt.
+        let chosen = base.appendingPathComponent("extern/AVP Play Downloads")
+        try FileManager.default.createDirectory(at: chosen, withIntermediateDirectories: true)
+        try StoreLocation.set(chosen, base: base)
+        XCTAssertTrue(StoreLocation.isAvailable(chosen, base: base))
+        let file = base.appendingPathComponent("settings.json")
+        var saved = try XCTUnwrap(try JSONSerialization.jsonObject(with: Data(contentsOf: file)) as? [String: Any])
+        XCTAssertNotNil(saved["volume"])
+        saved["volume"] = "00000000-0000-0000-0000-000000000000"
+        try JSONSerialization.data(withJSONObject: saved).write(to: file)
+        XCTAssertFalse(StoreLocation.isAvailable(chosen, base: base))
+        // Für andere Ordner gilt der Vermerk nicht.
+        XCTAssertTrue(StoreLocation.isAvailable(base.appendingPathComponent("anderswo"), base: base))
+    }
+
+    func testMovingKeepsEverythingAndRemovesNothingBeforeItHasArrived() throws {
+        let dir = try scratch()
+        let fm = FileManager.default
+        let old = dir.appendingPathComponent("alt"), new = dir.appendingPathComponent("neu")
+        try fm.createDirectory(at: old.appendingPathComponent("moss-1/game/bin"), withIntermediateDirectories: true)
+        try Data("apk".utf8).write(to: old.appendingPathComponent("moss-1/moss.apk"))
+        try Data("programm".utf8).write(to: old.appendingPathComponent("moss-1/game/bin/app"))
+        try fm.createSymbolicLink(atPath: old.appendingPathComponent("moss-1/game/verweis").path, withDestinationPath: "bin/app")
+        try fm.createDirectory(at: old.appendingPathComponent("doom-2"), withIntermediateDirectories: true)
+        try Data("pak".utf8).write(to: old.appendingPathComponent("doom-2/pak000.pk4"))
+        try Data("{}".utf8).write(to: old.appendingPathComponent("ownership.json"))
+        // Am neuen Ort liegt schon etwas unter einem der Namen: das bleibt, und das alte auch.
+        try fm.createDirectory(at: new.appendingPathComponent("doom-2"), withIntermediateDirectories: true)
+        try Data("anderes".utf8).write(to: new.appendingPathComponent("doom-2/pak000.pk4"))
+
+        XCTAssertEqual(StoreMove.measure(old.appendingPathComponent("moss-1")).files, 2)
+        XCTAssertThrowsError(try StoreMove.run(from: old, to: old)) { XCTAssertEqual($0 as? StoreMoveError, .sameFolder) }
+
+        let seen = Collected()
+        let result = try StoreMove.run(from: old, to: new, copying: true, progress: { seen.add($0) })
+        XCTAssertEqual(result.moved, ["moss-1", "ownership.json"])
+        XCTAssertEqual(result.skipped, ["doom-2"])
+        XCTAssertEqual(try String(contentsOf: new.appendingPathComponent("moss-1/game/bin/app"), encoding: .utf8), "programm")
+        XCTAssertEqual(try fm.destinationOfSymbolicLink(atPath: new.appendingPathComponent("moss-1/game/verweis").path), "bin/app")
+        XCTAssertFalse(fm.fileExists(atPath: old.appendingPathComponent("moss-1").path))
+        XCTAssertEqual(try String(contentsOf: old.appendingPathComponent("doom-2/pak000.pk4"), encoding: .utf8), "pak")
+        XCTAssertEqual(try String(contentsOf: new.appendingPathComponent("doom-2/pak000.pk4"), encoding: .utf8), "anderes")
+        XCTAssertEqual(seen.values.last?.done, seen.values.last?.total)
+        XCTAssertFalse(try fm.contentsOfDirectory(atPath: new.path).contains { $0.hasPrefix(".moving-") })
+
+        // Angehalten: nichts ist verloren, nichts Halbes bleibt am neuen Ort.
+        try fm.createDirectory(at: old.appendingPathComponent("alyx-3"), withIntermediateDirectories: true)
+        try Data("spiel".utf8).write(to: old.appendingPathComponent("alyx-3/hlvr"))
+        XCTAssertThrowsError(try StoreMove.run(from: old, to: new, copying: true, shouldStop: { true })) { XCTAssertEqual($0 as? StoreMoveError, .stopped) }
+        XCTAssertTrue(fm.fileExists(atPath: old.appendingPathComponent("alyx-3/hlvr").path))
+        XCTAssertFalse(fm.fileExists(atPath: new.appendingPathComponent("alyx-3").path))
+        // Auf demselben Laufwerk wird nur umbenannt.
+        XCTAssertEqual(try StoreMove.run(from: old, to: new).moved, ["alyx-3"])
+        XCTAssertEqual(try String(contentsOf: new.appendingPathComponent("alyx-3/hlvr"), encoding: .utf8), "spiel")
+    }
+
+    private final class Collected: @unchecked Sendable {
+        private let lock = NSLock()
+        private(set) var values: [StoreMove.Progress] = []
+        func add(_ p: StoreMove.Progress) { lock.lock(); values.append(p); lock.unlock() }
     }
 }

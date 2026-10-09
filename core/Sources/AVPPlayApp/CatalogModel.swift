@@ -169,6 +169,10 @@ extension AppModel {
             let named = entry.target.flatMap { $0.isEmpty || toolchain?.targetKind($0) == nil ? nil : $0 }
             if named == nil || named == game.recipe.toolchain.target { return }
         }
+        if let why = storeBlocker {
+            prepareNote[game.id] = why
+            return
+        }
         guard account == .signedIn else {
             prepareNote[game.id] = L("Sign in to Meta under “Setup” first – then the app can check whether you own this game and look up its files.",
                                      "Melde dich zuerst unter „Einrichtung“ bei Meta an – dann kann die App prüfen, ob dir das Spiel gehört, und seine Dateien nachschlagen.")

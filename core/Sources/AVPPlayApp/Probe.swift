@@ -105,9 +105,11 @@ enum Probe {
         }
 
         s.teamCandidates = teams()
-        try? FileManager.default.createDirectory(at: paths.store.root, withIntermediateDirectories: true)
-        s.freeBytes = (try? paths.store.root.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey]))?
-            .volumeAvailableCapacityForImportantUsage
+        // Nicht anlegen, wenn die Platte des Ordners fehlt: sonst entstünde derselbe Pfad leer auf dem Startlaufwerk.
+        if StoreLocation.isAvailable(paths.store.root) {
+            try? FileManager.default.createDirectory(at: paths.store.root, withIntermediateDirectories: true)
+        }
+        s.freeBytes = StoreLocation.freeBytes(at: paths.store.root)
         return s
     }
 

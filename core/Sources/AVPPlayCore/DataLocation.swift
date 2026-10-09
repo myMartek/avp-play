@@ -11,7 +11,14 @@ public enum DataLocation {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
     }
 
-    public static var base: URL { applicationSupport.appendingPathComponent(folderName, isDirectory: true) }
+    /// `AVPPLAY_HOME` verlegt alles an einen anderen Ort – zum Ausprobieren mit einem leeren Datenordner, ohne den
+    /// eigentlichen anzufassen.
+    public static var base: URL {
+        if let home = ProcessInfo.processInfo.environment["AVPPLAY_HOME"], home.hasPrefix("/") {
+            return URL(fileURLWithPath: home, isDirectory: true)
+        }
+        return applicationSupport.appendingPathComponent(folderName, isDirectory: true)
+    }
 
     /// Übernimmt einmalig die Daten aus dem früheren Ordner, indem er umbenannt wird – nichts wird kopiert
     /// oder gelöscht. Gibt es den neuen Ordner schon, bleibt alles, wie es ist.

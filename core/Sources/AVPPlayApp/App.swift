@@ -115,6 +115,7 @@ struct RootView: View {
                 switch model.section {
                 case .games: GamesView()
                 case .jobs: JobsView()
+                case .data: DataView()
                 case .setup: SetupView()
                 }
             }
@@ -147,7 +148,7 @@ struct RootView: View {
     /// Wie viele Punkte der Einrichtung noch offen sind bzw. wie viele Aufträge Aufmerksamkeit brauchen.
     private func badge(for section: AppSection) -> Int {
         switch section {
-        case .games: return 0
+        case .games, .data: return 0
         case .jobs: return model.jobs.filter { model.phase(of: $0) == .stopped || model.phase(of: $0) == .running }.count
         case .setup:
             // Die Konten zählen nicht: Meta braucht es nur für Spiele aus dem Meta-Store, Steam nur für zwei Spiele.
@@ -303,6 +304,26 @@ enum Snapshot {
         }
         // `--update-check`: nur nachsehen (mit `AVPPLAY_UPDATE_FEED` auch gegen eine erfundene Liste), nichts einspielen.
         if CommandLine.arguments.contains("--update-check") { await model.checkForUpdate(manual: true) }
+        // Die Datenverwaltung, sobald gezählt ist. `--move-store <Ordner>`: den Bestand dorthin umziehen lassen,
+        // ohne Rückfrage – gedacht für einen Lauf mit `AVPPLAY_HOME`, nie für die eigenen Daten.
+        model.section = .data
+        await pause(1)
+        var counted = 0.0
+        while model.storage == nil || model.storageScanning, counted < 120 { await pause(0.5); counted += 0.5 }
+        await pause(0.8)
+        capture("4-daten", dir)
+        if let i = CommandLine.arguments.firstIndex(of: "--move-store"), i + 1 < CommandLine.arguments.count,
+           ProcessInfo.processInfo.environment["AVPPLAY_HOME"] != nil {
+            model.moveStore(to: URL(fileURLWithPath: CommandLine.arguments[i + 1]), confirm: false)
+            await pause(0.4)
+            capture("4-daten-umzug", dir)
+            var moving = 0.0
+            while model.storeMove != nil || model.storageScanning, moving < 300 { await pause(0.3); moving += 0.3 }
+            await pause(1.5)
+            capture("4-daten-danach", dir)
+            try? "Ort: \(model.paths.store.root.path)\nHinweis: \(model.storeMoveNote ?? "-")\nSpiele: \(model.storage?.games.map { "\($0.title) \($0.bytes)" } ?? [])\n"
+                .write(to: dir.appendingPathComponent("umzug.txt"), atomically: true, encoding: .utf8)
+        }
         model.section = .setup
         await pause(1.2)
         capture("4-einrichtung", dir)

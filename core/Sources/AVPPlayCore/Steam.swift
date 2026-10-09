@@ -64,11 +64,34 @@ public struct SteamTool: Sendable {
     public let directory: URL
     /// Der Benutzerordner, den das Werkzeug zu sehen bekommt. Darin liegt seine gemerkte Anmeldung.
     public let home: URL
+    /// Wohin die geladenen Depots gehen, wenn nicht neben das Werkzeug. SteamCMD legt sie immer in seinen eigenen
+    /// Ordner `steamapps`; liegt der Bestand auf einem anderen Laufwerk, müssten 73 GB für Half-Life: Alyx erst
+    /// dorthin, wo das Werkzeug liegt, und dann noch einmal hinüber. Deshalb zeigt `steamapps` dann als Verweis
+    /// auf diesen Ordner.
+    public var contentRoot: URL?
 
     public init(directory: URL = DataLocation.base.appendingPathComponent("tools/steamcmd", isDirectory: true),
-                home: URL = DataLocation.base.appendingPathComponent("steam", isDirectory: true)) {
+                home: URL = DataLocation.base.appendingPathComponent("steam", isDirectory: true), contentRoot: URL? = nil) {
         self.directory = directory
         self.home = home
+        self.contentRoot = contentRoot
+    }
+
+    /// Richtet den Verweis für die Depots ein (siehe `contentRoot`). Liegt unter `steamapps` schon etwas, bleibt
+    /// es, wie es ist – ein laufender oder abgebrochener Abruf wird nicht verlegt.
+    func prepareContent() throws {
+        guard let contentRoot else { return }
+        let fm = FileManager.default
+        let link = directory.appendingPathComponent("steamapps")
+        try fm.createDirectory(at: contentRoot, withIntermediateDirectories: true)
+        if let existing = try? fm.destinationOfSymbolicLink(atPath: link.path) {
+            if URL(fileURLWithPath: existing).standardizedFileURL.path == contentRoot.standardizedFileURL.path { return }
+            try fm.removeItem(at: link)
+        } else if fm.fileExists(atPath: link.path) {
+            guard StoreMove.measure(link).files == 0 else { return }
+            try fm.removeItem(at: link)
+        }
+        try fm.createSymbolicLink(at: link, withDestinationURL: contentRoot)
     }
 
     public var executable: URL { directory.appendingPathComponent("steamcmd") }
@@ -289,6 +312,11 @@ public struct SteamFetcher: Sendable {
     public let account: String
 
     public init(tool: SteamTool = SteamTool(), store: ContentStore, account: String) {
+        var tool = tool
+        // Bestand auf einem anderen Laufwerk als das Werkzeug: die Depots gleich dorthin laden.
+        if tool.contentRoot == nil, !StoreLocation.sameVolume(tool.directory, store.root) {
+            tool.contentRoot = store.root.appendingPathComponent(".steamcmd", isDirectory: true)
+        }
         self.tool = tool
         self.store = store
         self.account = account
@@ -321,6 +349,7 @@ public struct SteamFetcher: Sendable {
         }
         guard sources.allSatisfy(\.isSane) else { throw SteamError.badRecipe }
         try tool.verify()
+        try tool.prepareContent()
 
         // Platz: die Depots liegen zuerst bei SteamCMD und werden dann in den Bestand übernommen (auf APFS ohne
         // zweite Kopie). Gerechnet wird mit dem, was Valve als Größe nennt, und zwei Gigabyte Luft.
@@ -328,9 +357,9 @@ public struct SteamFetcher: Sendable {
         for source in sources { for depot in source.depots where !depots.contains(where: { $0.app == source.app && $0.depot.id == depot.id }) { depots.append((source.app, depot)) } }
         let total = depots.compactMap(\.depot.bytes).reduce(0, +)
         let onDisk = depots.map { SteamFetcher.size(of: tool.contentDirectory(app: $0.app, depot: $0.depot.id)) }.reduce(0, +)
-        try? FileManager.default.createDirectory(at: tool.directory, withIntermediateDirectories: true)
-        if let free = try? tool.directory.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey]).volumeAvailableCapacityForImportantUsage,
-           total - onDisk + 2_000_000_000 > free {
+        let landing = tool.contentRoot ?? tool.directory
+        try? FileManager.default.createDirectory(at: landing, withIntermediateDirectories: true)
+        if let free = StoreLocation.freeBytes(at: landing), total - onDisk + 2_000_000_000 > free {
             throw SteamError.notEnoughSpace(needed: total - onDisk + 2_000_000_000, free: free)
         }
 

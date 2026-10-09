@@ -6,9 +6,8 @@ public struct ContentStore: Sendable {
     public let root: URL
     public init(root: URL) { self.root = root }
 
-    public static var defaultRoot: URL {
-        DataLocation.base.appendingPathComponent("store", isDirectory: true)
-    }
+    /// Der Ort, der gilt: der vom Nutzer gewählte, sonst der übliche neben den Daten des Programms.
+    public static var defaultRoot: URL { StoreLocation.current() }
 
     public enum FileState: Equatable, Sendable {
         case missing

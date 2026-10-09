@@ -37,6 +37,11 @@ Every installed game opens with the same start window: its picture, its name, **
 
 The app speaks English and German. It follows macOS; you can choose a language in its settings (⌘,).
 
+**Your disk space.** The page *Data* lists what has been downloaded, game by game and down to the file, and
+removes it again. Under Settings › Downloads you can keep the downloads on another disk, for example an external
+one; what is already there moves over, with a progress bar. While that disk is not connected, nothing is
+downloaded or installed.
+
 **Updates.** Once a day the app asks GitHub whether a newer release exists and offers to install it. It replaces
 itself only with a version that is signed by the same developer and notarised by Apple. You can turn the check
 off in the settings.

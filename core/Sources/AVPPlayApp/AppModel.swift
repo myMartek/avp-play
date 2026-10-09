@@ -64,12 +64,13 @@ enum AccountState: Equatable {
 }
 
 enum AppSection: String, CaseIterable, Identifiable {
-    case games, jobs, setup
+    case games, jobs, data, setup
     var id: String { rawValue }
     var title: String {
         switch self {
         case .games: return L("Games", "Spiele")
         case .jobs: return L("Jobs", "Aufträge")
+        case .data: return L("Data", "Datenverwaltung")
         case .setup: return L("Setup", "Einrichtung")
         }
     }
@@ -77,6 +78,7 @@ enum AppSection: String, CaseIterable, Identifiable {
         switch self {
         case .games: return "square.grid.2x2"
         case .jobs: return "list.bullet.clipboard"
+        case .data: return "externaldrive"
         case .setup: return "checklist"
         }
     }
@@ -184,10 +186,17 @@ final class AppModel: ObservableObject {
     @AppStorage("bundlePrefix") var customBundlePrefix = ""
 
     /// Vor allem anderen: Daten aus der Zeit vor dem Namen „AVP Play“ übernehmen (der Ordner wird umbenannt).
-    let paths: Paths = {
+    /// Neu gesetzt wird das nur, wenn der Ordner für Downloads gewechselt hat (siehe `moveStore`).
+    @Published var paths: Paths = {
         DataLocation.adoptLegacyData()
         return Paths()
     }()
+    /// Die Datenverwaltung: was auf dem Mac liegt, und ein laufender Umzug des Ordners für Downloads.
+    @Published var storage: StorageOverview?
+    @Published var storageScanning = false
+    @Published var storeMove: StoreMove.Progress?
+    @Published var storeMoveNote: String?
+    let storeMoveStop = StopFlags()
     private var runningTask: Task<Void, Never>?
     private var stopRequested: Set<String> = []
 
@@ -230,7 +239,9 @@ final class AppModel: ObservableObject {
     /// Abstand dazwischen, höchstens einmal am Tag. Beim ersten unerwarteten Ergebnis ist Schluss; was bis
     /// dahin beantwortet ist, bleibt stehen.
     func checkOwnership(force: Bool = false) {
-        guard account == .signedIn, !checkingOwnership, !games.isEmpty else { return }
+        // Der Besitzstand liegt beim Bestand. Fehlt dessen Platte, wird Meta nicht für jedes Spiel neu gefragt, nur
+        // weil der gemerkte Stand gerade nicht lesbar ist – und nichts an den verwaisten Pfad geschrieben.
+        guard account == .signedIn, !checkingOwnership, !games.isEmpty, storeBlocker == nil else { return }
         let cache = OwnershipCache(store: paths.store)
         let known = cache.load()
         ownership = known
@@ -348,6 +359,7 @@ final class AppModel: ObservableObject {
 
     /// Was einer Installation im Weg steht, als Satz mit der nächsten Handlung – oder `nil`.
     func blocker(for game: Game) -> String? {
+        if let why = storeBlocker { return why }
         if xcodeProblem != nil { return L("Xcode is missing. “Setup” tells you what to do.", "Xcode fehlt. Unter „Einrichtung“ steht, was zu tun ist.") }
         if toolchain == nil { return L("The toolchain is not installed yet (see “Setup”).", "Die Toolchain ist noch nicht installiert (siehe „Einrichtung“).") }
         if !teamValid { return L("The Apple team ID is still missing (see “Setup”).", "Die Apple-Team-ID fehlt noch (siehe „Einrichtung“).") }
@@ -381,6 +393,8 @@ final class AppModel: ObservableObject {
 
     func refresh() {
         guard !refreshing else { return }
+        // Auf der Seite der Datenverwaltung heißt „neu laden“ auch: neu zählen.
+        if section == .data { scanStorage() }
         refreshing = true
         let paths = paths
         let prefix = bundlePrefix
@@ -619,6 +633,7 @@ final class AppModel: ObservableObject {
     /// Was dem Abgleich der Zusatzinhalte im Weg steht. Anders als eine Installation braucht er kein Xcode und
     /// kein Apple-Team – aber das Spiel muss schon auf dem Gerät sein.
     func syncBlocker(for game: Game) -> String? {
+        if let why = storeBlocker { return why }
         if toolchain == nil { return L("The toolchain is not installed yet (see “Setup”).", "Die Toolchain ist noch nicht installiert (siehe „Einrichtung“).") }
         if device == nil { return deviceProblem ?? L("The Vision Pro is not reachable.", "Die Vision Pro ist nicht erreichbar.") }
         if !game.installed { return L("Install the game first – this only adds to a game that is on the Vision Pro.", "Erst das Spiel installieren – das hier ergänzt nur ein Spiel, das schon auf der Vision Pro ist.") }

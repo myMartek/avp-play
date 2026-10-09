@@ -50,7 +50,11 @@ func contentStore(_ o: Options) -> ContentStore {
     if let p = o.value("store") ?? ProcessInfo.processInfo.environment["AVPPLAY_STORE"] {
         return ContentStore(root: URL(fileURLWithPath: p))
     }
-    return ContentStore(root: ContentStore.defaultRoot)
+    // Der in der Oberfläche gewählte Ordner gilt auch hier. Fehlt seine Platte, wird nicht so getan, als sei der
+    // Bestand leer.
+    let root = ContentStore.defaultRoot
+    guard StoreLocation.isAvailable(root) else { fail("\(StoreMoveError.notAvailable(root.path))") }
+    return ContentStore(root: root)
 }
 
 func gigabytes(_ bytes: Int64) -> String { String(format: "%.2f GB", Double(bytes) / 1e9) }
