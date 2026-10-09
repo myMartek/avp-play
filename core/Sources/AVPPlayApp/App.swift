@@ -240,6 +240,13 @@ enum Snapshot {
         }
         // `--open-game <Kennung>`: die Seite eines Spiels öffnen wie per Klick – bei einem ungetesteten Spiel löst
         // das das Nachschlagen aus – und zeigen, was danach dasteht.
+        // `--search <Text>`: im Katalog suchen wie über das Suchfeld – damit ein Spiel in der Liste steht, das
+        // nicht auf der ersten Seite ist.
+        if let i = CommandLine.arguments.firstIndex(of: "--search"), i + 1 < CommandLine.arguments.count {
+            model.searchText = CommandLine.arguments[i + 1]
+            model.searchCatalog()
+            await pause(3)
+        }
         if let i = CommandLine.arguments.firstIndex(of: "--open-game"), i + 1 < CommandLine.arguments.count {
             let id = CommandLine.arguments[i + 1]
             var waited = 0.0
