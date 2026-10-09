@@ -33,6 +33,10 @@ downloaded that Meta does not confirm you have purchased.
 3. Pick a game under **Games** and click **Install**. The **Jobs** page shows the steps. A job can be
    interrupted at any point and resumed later; nothing that was downloaded or copied is lost.
 
+Not everything set up yet? A game's files can be downloaded as soon as its account is signed in – **Download
+Files Now** on the game's page needs neither Xcode nor a developer team nor the headset. Building and installing
+follow once Setup is complete, without downloading again.
+
 Every installed game opens with the same start window: its picture, its name, **Start** and **Settings**.
 
 The app speaks English and German. It follows macOS; you can choose a language in its settings (⌘,).
@@ -61,10 +65,11 @@ recipes in [`recipes/`](recipes) are:
 | SUPERHOT VR | Meta Store | |
 | Steam Link | Meta Store | streams SteamVR from a PC on your network |
 | Marvel's Deadpool VR | Meta Store | about 51 GB; the first start compiles shaders for several minutes |
+| Alien: Rogue Incursion | Meta Store | about 14 GB; lowers its own resolution a little under load; loading screens flicker |
 | Doom 3 (Doom3Quest) | free port + your own Doom 3 files | `pak000`–`pak008.pk4` from your copy of Doom 3 – fetched from your Steam account, or from a folder you choose |
 | Half-Life: Alyx | your own Steam copy (Linux build) | the game (about 73 GB) is fetched from your Steam account; the app downloads Steam Linux Runtime (from Valve) and xrizer (from this repository) itself |
 
-These ten are marked **Verified**: the project has tested them on a Vision Pro. The app also lists every other
+These eleven are marked **Verified**: the project has tested them on a Vision Pro. The app also lists every other
 Quest title from the Meta Store – some 17,000, loaded page by page as you scroll. What you see on each is a label:
 
 | Label | Meaning |
@@ -80,7 +85,7 @@ engine. Each verified game needed its own adjustments before it ran, so expect a
 Afterwards say how it went with one click (that is what the labels are made of), or let an AI coding assistant
 try to fix it ("Fix with AI") and send the fix in for review.
 
-All ten were installed with this app on the author's headset. "Community Verified" means exactly what it
+All eleven were installed with this app on the author's headset. "Community Verified" means exactly what it
 says: reports from users, not a guarantee. A recipe is tied to one build of a game; other builds need
 their own recipe.
 

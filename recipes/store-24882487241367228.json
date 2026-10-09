@@ -1,0 +1,77 @@
+{
+ "files": [
+  {
+   "dest": "",
+   "id": "29476654758617097",
+   "localName": "x24882487241367228.apk",
+   "name": "Midnight-Android-Shipping-arm64.apk",
+   "required": true,
+   "role": "apk",
+   "size": 67604291,
+   "sha256": "dcce6f58ecf9d0b621fe65d665e7e6c20c721018e765ed75180b51073f5a1881"
+  },
+  {
+   "dest": "android-files/Android/obb/com.Survios.Midnight",
+   "id": "29476652728617300",
+   "name": "overflow1.com.Survios.Midnight.obb",
+   "required": true,
+   "role": "content-bundle",
+   "size": 3731644802,
+   "sha256": "40a4552e73c0a286f1839c331df1a9dc3eeaa86ba5595649530a81cbfa703ad5"
+  },
+  {
+   "dest": "android-files/Android/obb/com.Survios.Midnight",
+   "id": "29476652088617364",
+   "name": "patch.com.Survios.Midnight.obb",
+   "required": true,
+   "role": "content-bundle",
+   "size": 3793207585,
+   "sha256": "17595a615a2626f7cc14547693d4d2eafd861e34caf8484074a3019b602ab1c1"
+  },
+  {
+   "dest": "android-files/Android/obb/com.Survios.Midnight",
+   "id": "29476644315284808",
+   "name": "main.com.Survios.Midnight.obb",
+   "required": true,
+   "role": "content-bundle",
+   "size": 4275983948,
+   "sha256": "65b8de5b9279b8d3fbeb4b1c337be27980ac8a0b772e98bb4eb536e29f599bb9"
+  },
+  {
+   "dest": "android-files/Android/obb/com.Survios.Midnight",
+   "id": "29476641108618462",
+   "name": "overflow2.com.Survios.Midnight.obb",
+   "required": true,
+   "role": "content-bundle",
+   "size": 1974326956,
+   "sha256": "c5f78f8f5e3ab14c6cbf9fae508e825ed7e0bcdd2fdcf7230006699aad3ef6e0"
+  }
+ ],
+ "id": "store-24882487241367228",
+ "package": "com.Survios.Midnight",
+ "schema": 1,
+ "status": {
+  "playability": "verified",
+  "download": "proven",
+  "notes": [
+   {
+    "en": "Marked as verified by the project on 2026-10-09. File list as Meta's tool reports it for this build; 5 of 5 checksums recorded from a download.",
+    "de": "Vom Projekt am 2026-10-09 als geprüft markiert. Dateiliste, wie Metas Werkzeug sie für diesen Build nennt; 5 von 5 Prüfsummen aus einem Download erfasst."
+   },
+   {
+    "en": "Alien: Rogue Incursion. Tested by the author on a Vision Pro M5: the menu, a new game and the level after the intro load and play. The game lowers its own render resolution a little when the GPU is busy. Loading screens flicker and show different content per eye; the game itself is not affected.",
+    "de": "Alien: Rogue Incursion. Vom Autor auf einer Vision Pro M5 getestet: Menü, neues Spiel und das Level nach dem Intro laden und sind spielbar. Das Spiel senkt seine Auflösung von selbst etwas, wenn die Grafikeinheit ausgelastet ist. Ladebildschirme flackern und zeigen je Auge Verschiedenes; das Spiel selbst ist davon nicht betroffen."
+   }
+  ]
+ },
+ "store": {
+  "appId": "24882487241367228"
+ },
+ "title": "Alien: Rogue Incursion",
+ "toolchain": {
+  "minCommit": "e5874b0",
+  "target": "x24882487241367228"
+ },
+ "versionCode": 526346,
+ "versionName": "MN-526346"
+}
