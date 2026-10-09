@@ -245,7 +245,14 @@ public struct Toolchain: Sendable {
             throw ToolchainError.installFailed(log: log, hint: String(why.prefix(200)))
         }
         guard p.terminationStatus == 0, text.contains("BUILD SUCCEEDED") else {
-            let hint = text.split(separator: "\n").last { $0.contains("error:") || $0.contains("No profiles") || $0.contains("No Account") }
+            // Was die Toolchain selbst zur Signatur sagt, geht vor: es nennt die Ursache und den nächsten Handgriff.
+            let lines = text.split(separator: "\n")
+            if lines.contains(where: { $0.hasPrefix("!! signing:") }) {
+                throw ToolchainError.buildFailed(log: log, hint: L(
+                    "your Apple developer team has no registered device yet, and registering this Vision Pro did not work. Keep the headset on, unlocked and on the same Wi-Fi as this Mac, then choose “Resume”. If it stops here again, add the headset by hand: Xcode › Window › Devices and Simulators shows its identifier, and it goes under Certificates, Identifiers & Profiles › Devices at developer.apple.com (the team's Admin or Account Holder can do that)",
+                    "dein Apple-Entwicklerteam hat noch kein registriertes Gerät, und diese Vision Pro ließ sich nicht registrieren. Headset anlassen, entsperrt und im selben WLAN wie dieser Mac halten, dann „Fortsetzen“ wählen. Hält es hier wieder an, das Headset von Hand eintragen: Xcode › Window › Devices and Simulators zeigt seine Kennung (Identifier), und sie gehört bei developer.apple.com unter Certificates, Identifiers & Profiles › Devices (das kann der Admin oder Account Holder des Teams)"))
+            }
+            let hint = lines.last { $0.contains("error:") || $0.contains("No profiles") || $0.contains("No Account") }
             throw ToolchainError.buildFailed(log: log, hint: hint.map { String($0.prefix(160)) } ?? "")
         }
     }
