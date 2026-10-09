@@ -99,7 +99,9 @@ their own recipe.
   folder of its own, apart from a Steam you may have installed. Your password and Steam Guard code go to that tool
   only. SteamCMD remembers the sign-in in that folder – this is the one credential that is not in the keychain,
   because Valve's tool keeps it itself; "Sign Out" deletes the folder. Before anything is requested the app asks
-  Steam whether your account owns the game, and Steam itself only hands out what it does.
+  Steam whether your account owns the game, and Steam itself only hands out what it does. You do not need Steam
+  installed. Valve ships SteamCMD as an Intel program, so a Mac that has never run one needs Apple's Rosetta once;
+  the Setup page says so and installs it at the click of a button.
 - **Ownership** is asked of Meta before anything is downloaded, and once a day so the app can show which games
   are yours. Add-on content is downloaded only for purchases Meta confirms. Bought
   something later? **Sync DLCs** on the game's page asks again, downloads what is new and adds it to the installed

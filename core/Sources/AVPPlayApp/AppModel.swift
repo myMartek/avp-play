@@ -146,6 +146,9 @@ final class AppModel: ObservableObject {
     @AppStorage("steamSignedInAs") var steamSignedInAs = ""
     @Published var steamToolPresent = SteamTool().isInstalled
     @Published var steamSettingUp = false
+    /// Valves Werkzeug liegt als Intel-Programm da, und dem Mac fehlt Rosetta.
+    @Published var steamNeedsRosetta = SteamTool().needsRosetta()
+    @Published var rosettaInstalling = false
     @Published var steamNote: String?
     /// Je Spiel: läuft gerade ein Abruf bei Steam, wie weit ist er, und was hat er zuletzt gesagt.
     @Published var steamBusy: Set<String> = []

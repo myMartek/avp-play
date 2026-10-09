@@ -830,6 +830,39 @@ final class JobTests: XCTestCase {
     }
 }
 
+final class RosettaTests: XCTestCase {
+    /// So kommt SteamCMD von Valve: eine einzelne Intel-Fassung. Nach seiner Selbstaktualisierung hat es zwei.
+    func testSeesWhetherAProgramHasASliceForAppleSilicon() throws {
+        let intelOnly = Data([0xCF, 0xFA, 0xED, 0xFE, 0x07, 0x00, 0x00, 0x01, 0x03, 0, 0, 0])
+        let armOnly = Data([0xCF, 0xFA, 0xED, 0xFE, 0x0C, 0x00, 0x00, 0x01, 0x00, 0, 0, 0])
+        func fat(_ cpus: [UInt32]) -> Data {
+            var d = Data([0xCA, 0xFE, 0xBA, 0xBE, 0, 0, 0, UInt8(cpus.count)])
+            for cpu in cpus {
+                d.append(contentsOf: [UInt8(cpu >> 24), UInt8(cpu >> 16 & 0xFF), UInt8(cpu >> 8 & 0xFF), UInt8(cpu & 0xFF)])
+                d.append(contentsOf: [UInt8](repeating: 0, count: 16))
+            }
+            return d
+        }
+        XCTAssertEqual(Rosetta.hasArm64Slice(header: intelOnly), false)
+        XCTAssertEqual(Rosetta.hasArm64Slice(header: armOnly), true)
+        XCTAssertEqual(Rosetta.hasArm64Slice(header: fat([0x0100_0007, 0x0000_0007])), false)
+        XCTAssertEqual(Rosetta.hasArm64Slice(header: fat([0x0100_0007, 0x0100_000C])), true)
+        XCTAssertNil(Rosetta.hasArm64Slice(header: Data("#!/bin/sh\n".utf8)))
+        XCTAssertEqual(Rosetta.hasArm64Slice(URL(fileURLWithPath: "/bin/ls")), true, "ein Programm von macOS selbst")
+
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("qi-rosetta-\(UUID().uuidString)", isDirectory: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: dir) }
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let tool = SteamTool(directory: dir, home: dir.appendingPathComponent("home"))
+        XCTAssertFalse(tool.needsRosetta(rosettaInstalled: false), "ohne Werkzeug gibt es nichts zu verlangen")
+        try intelOnly.write(to: tool.executable)
+        XCTAssertTrue(tool.needsRosetta(rosettaInstalled: false))
+        XCTAssertFalse(tool.needsRosetta(rosettaInstalled: true))
+        try fat([0x0100_0007, 0x0100_000C]).write(to: tool.executable)
+        XCTAssertFalse(tool.needsRosetta(rosettaInstalled: false), "nach Valves Aktualisierung läuft es ohne Rosetta")
+    }
+}
+
 final class UntestedGameTests: XCTestCase {
     // Erfundene Kennungen im Format, das Metas Werkzeug schreibt.
     let listing = """

@@ -18,7 +18,26 @@ extension AppModel {
         steamToolPresent && !steamAccount.isEmpty && steamSignedInAs == steamAccount && SteamTool().hasSession
     }
 
-    func refreshSteam() { steamToolPresent = SteamTool().isInstalled }
+    func refreshSteam() {
+        steamToolPresent = SteamTool().isInstalled
+        steamNeedsRosetta = SteamTool().needsRosetta()
+    }
+
+    /// Lässt macOS Rosetta installieren, damit Valves Intel-Programm starten kann.
+    func installRosetta() {
+        guard !rosettaInstalling else { return }
+        rosettaInstalling = true
+        steamNote = L("macOS is installing Rosetta …", "macOS installiert Rosetta …")
+        Task {
+            let result = await Task.detached { Rosetta.install() }.value
+            rosettaInstalling = false
+            refreshSteam()
+            steamNote = result.ok
+                ? L("Rosetta is installed. You can sign in to Steam now.", "Rosetta ist installiert. Du kannst dich jetzt bei Steam anmelden.")
+                : L("Rosetta could not be installed (\(result.detail)). You can do it yourself in the Terminal app: softwareupdate --install-rosetta",
+                    "Rosetta ließ sich nicht installieren (\(result.detail)). Von Hand geht es im Programm „Terminal“: softwareupdate --install-rosetta")
+        }
+    }
 
     /// Lädt SteamCMD direkt von Valve und richtet es ein – nur, wenn das Programm darin von Valve signiert ist.
     func setUpSteam() {
@@ -36,7 +55,9 @@ extension AppModel {
             }.value
             steamSettingUp = false
             refreshSteam()
-            steamNote = problem ?? L("SteamCMD is set up and signed by Valve. You can sign in now.", "SteamCMD ist eingerichtet und von Valve signiert. Du kannst dich jetzt anmelden.")
+            steamNote = problem ?? (steamNeedsRosetta
+                ? L("SteamCMD is set up and signed by Valve. One thing is still missing: Rosetta (see below).", "SteamCMD ist eingerichtet und von Valve signiert. Eines fehlt noch: Rosetta (siehe unten).")
+                : L("SteamCMD is set up and signed by Valve. You can sign in now.", "SteamCMD ist eingerichtet und von Valve signiert. Du kannst dich jetzt anmelden."))
         }
     }
 
@@ -110,6 +131,9 @@ struct SteamCard: View {
                 if !model.steamToolPresent {
                     Button(L("Get SteamCMD from Valve", "SteamCMD von Valve holen")) { model.setUpSteam() }.disabled(model.steamSettingUp)
                     if model.steamSettingUp { ProgressView().controlSize(.small) }
+                } else if model.steamNeedsRosetta {
+                    Button(L("Install Rosetta", "Rosetta installieren")) { model.installRosetta() }.disabled(model.rosettaInstalling)
+                    if model.rosettaInstalling { ProgressView().controlSize(.small) }
                 } else if model.steamSignedIn {
                     Button(L("Sign Out", "Abmelden")) { model.steamSignOut() }
                 } else {
@@ -119,6 +143,11 @@ struct SteamCard: View {
             if !model.steamToolPresent {
                 Text(L("SteamCMD is Valve’s own command-line tool. The app downloads it straight from Valve, checks that the program is signed by Valve, and keeps it in its own folder, apart from a Steam you may have installed.",
                        "SteamCMD ist Valves eigenes Kommandozeilenwerkzeug. Die App lädt es direkt von Valve, prüft, dass das Programm von Valve signiert ist, und hält es in einem eigenen Ordner – getrennt von einem Steam, das du vielleicht installiert hast."))
+                    .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
+            if model.steamToolPresent, model.steamNeedsRosetta {
+                Text(L("Valve ships SteamCMD as an Intel program. To run it, this Mac needs Rosetta, Apple's own translator for Intel programs – a small download from Apple that macOS installs itself, without a password. By clicking the button you accept Apple's licence for Rosetta.",
+                       "Valve liefert SteamCMD als Intel-Programm aus. Damit es läuft, braucht dieser Mac Rosetta, Apples eigenen Übersetzer für Intel-Programme – ein kleiner Download von Apple, den macOS selbst installiert, ohne Kennwort. Mit dem Klick auf den Knopf stimmst du Apples Lizenz für Rosetta zu."))
                     .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
             if let note = model.steamNote {

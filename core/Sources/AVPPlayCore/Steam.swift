@@ -2,6 +2,8 @@ import Foundation
 
 public enum SteamError: Error, CustomStringConvertible, Equatable {
     case toolMissing
+    /// Valves Werkzeug ist (noch) ein reines Intel-Programm, und diesem Mac fehlt Rosetta.
+    case needsRosetta
     case wrongSigner(String)
     case toolDownloadFailed(String)
     case badAccountName
@@ -16,6 +18,9 @@ public enum SteamError: Error, CustomStringConvertible, Equatable {
 
     public var description: String {
         switch self {
+        case .needsRosetta:
+            return L("Valve ships SteamCMD as an Intel program, and this Mac does not have Apple's Rosetta yet, which runs such programs. Install Rosetta under “Setup” (Steam Account), then try again.",
+                     "Valve liefert SteamCMD als Intel-Programm aus, und diesem Mac fehlt noch Apples Rosetta, das solche Programme ausführt. Installiere Rosetta unter „Einrichtung“ (Steam-Konto) und versuche es dann noch einmal.")
         case .toolMissing:
             return L("Valve's tool SteamCMD is not set up yet (see “Setup”).", "Valves Werkzeug SteamCMD ist noch nicht eingerichtet (siehe „Einrichtung“).")
         case .wrongSigner(let who):
@@ -102,6 +107,13 @@ public struct SteamTool: Sendable {
         guard isInstalled else { throw SteamError.toolMissing }
         try SteamTool.verifySignature(of: executable)
         guard FileManager.default.isExecutableFile(atPath: executable.path) else { throw SteamError.toolMissing }
+        if needsRosetta() { throw SteamError.needsRosetta }
+    }
+
+    /// Ob das Werkzeug, so wie es daliegt, auf diesem Mac nicht starten kann: Es hat keine Fassung für
+    /// Apple-Chips (so kommt es von Valve, bis es sich einmal selbst aktualisiert hat), und Rosetta fehlt.
+    public func needsRosetta(rosettaInstalled: Bool = Rosetta.isInstalled) -> Bool {
+        isInstalled && !rosettaInstalled && Rosetta.hasArm64Slice(executable) == false
     }
 
     static func verifySignature(of file: URL) throws {
