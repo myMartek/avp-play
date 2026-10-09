@@ -126,7 +126,7 @@ public struct Toolchain: Sendable {
         let fresh = root.appendingPathComponent(".\(target).qi-new", isDirectory: true)
         try? fm.removeItem(at: fresh)
         let info = try ApkUnpacker().unpack(apk: source, to: fresh)
-        guard info.package == recipe.package, info.versionCode == String(recipe.versionCode) else {
+        guard Toolchain.apkMatches(info, recipe: recipe) else {
             try? fm.removeItem(at: fresh)
             throw RecipeError.invalid(L("the APK in the library doesn't match the recipe (\(info.package ?? "?"), code \(info.versionCode ?? "?"))",
                                         "Das APK im Bestand passt nicht zum Rezept (\(info.package ?? "?"), Code \(info.versionCode ?? "?"))"))
@@ -138,6 +138,13 @@ public struct Toolchain: Sendable {
         try want.write(to: fresh.appendingPathComponent(".qi-prepared"), atomically: true, encoding: .utf8)
         try? fm.removeItem(at: tree)
         try fm.moveItem(at: fresh, to: tree)
+    }
+
+    /// Ist das APK das des Rezepts? Der Versionscode muss stimmen. Das Paket auch – außer das Rezept kennt keines:
+    /// Der Katalog führt nicht zu jedem Spiel den Paketnamen, und ein Entwurf übernimmt dann ein leeres Feld. Das
+    /// ist kein anderes Paket, sondern ein unbekanntes; der Versionscode bleibt die Prüfung.
+    public static func apkMatches(_ info: ApkUnpacker.Info, recipe: Recipe) -> Bool {
+        (recipe.package.isEmpty || info.package == recipe.package) && info.versionCode == String(recipe.versionCode)
     }
 
     /// Welches Icon ein Spiel bekommt und woher es stammt. Reihenfolge: eigenes Bild des Nutzers, dann das
