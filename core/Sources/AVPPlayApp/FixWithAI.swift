@@ -70,6 +70,9 @@ extension AppModel {
         let api = catalogClient.base.appendingPathComponent("api/v1/fixes").absoluteString
         let symptomsJSON = chosen.map { "\"\($0.rawValue)\"" }.joined(separator: ", ")
         let language = self.language == .de ? "German" : "English"
+        // Unter welcher Kennung der Dienst des Projekts das Spiel führt: die Store-Kennung, und bei einem Spiel, das
+        // nicht aus dem Meta-Store kommt, der Name seines Rezepts.
+        let fixIdentifier = recipe.store.appId ?? recipe.id
 
         return """
         You are helping me get a VR game to run on my Apple Vision Pro. I installed it with AVP Play, an open-source Mac app that translates Meta Quest games I own with the Klepton toolchain. The game installs but does not work properly. Please find out why and fix it in the toolchain. Talk to me in \(language).
@@ -131,7 +134,7 @@ extension AppModel {
            cd \(work) && git add -N . && git diff --no-color baseline -- . ':(exclude)vendor' ':(exclude)vendor-moltenvk' > /tmp/avpplay-fix.patch
            Check that it contains no game content and no binary files, and that it is under 256 KB.
         2. Send it as JSON (the patch as one string) with an HTTP POST to \(api):
-           {"appId": "\(recipe.store.appId ?? "<Meta Store app ID>")", "versionCode": \(recipe.versionCode), "toolchain": "\(toolchain?.commit() ?? "")", "symptoms": [\(symptomsJSON)], "summary": "<what was wrong, what you changed and why, and what I confirmed on the headset>", "patch": "<contents of /tmp/avpplay-fix.patch>", "contact": "<optional: how the maintainer can reach me, only if I want that>"}
+           {"appId": "\(fixIdentifier)", "versionCode": \(recipe.versionCode), "toolchain": "\(toolchain?.commit() ?? "")", "symptoms": [\(symptomsJSON)], "summary": "<what was wrong, what you changed and why, and what I confirmed on the headset>", "patch": "<contents of /tmp/avpplay-fix.patch>", "contact": "<optional: how the maintainer can reach me, only if I want that>"}
            Build the JSON with a tool that escapes the patch correctly (for example jq or python3), not by hand. The answer contains an id; tell me that id.
         The submission contains nothing about me unless I ask you to add a contact. Do not send anything else to that address.
         """
