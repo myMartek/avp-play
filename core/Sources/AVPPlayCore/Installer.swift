@@ -56,6 +56,9 @@ public struct InstallRequest: Codable, Sendable, Equatable {
     public var interval: Double = 5
     /// Auch installieren, wenn die App gerade läuft (sie wird dabei beendet). Ohne Angabe: nein.
     public var replaceRunning: Bool?
+    /// Der Auftrag lädt nur. Was der Nutzer selbst bereitstellen muss, darf dann noch fehlen: es wird genannt,
+    /// hält das Laden der übrigen Dateien aber nicht auf. Ohne Angabe: nein.
+    public var downloadOnly: Bool?
 
     public init(toolchain: String) { self.toolchain = toolchain }
 }
@@ -79,6 +82,10 @@ public enum InstallStep: String, Codable, Sendable, CaseIterable {
     /// laden, aufs Gerät legen und freischalten. Gebaut und installiert wird dabei nichts – das Programm auf dem
     /// Gerät bleibt, wie es ist.
     public static let addonSync: [InstallStep] = [.account, .fetch, .stage, .unlock]
+
+    /// Nur die Dateien laden, die das Programm selbst besorgen kann. Dafür braucht es das Konto, bei dem das Spiel
+    /// gekauft ist, und sonst nichts – kein Xcode, kein Apple-Team, keine Vision Pro. Gebaut wird später.
+    public static let download: [InstallStep] = [.account, .fetch]
 
     public var title: String {
         switch self {
@@ -218,8 +225,9 @@ public struct Installer: Sendable {
     /// Datei angefragt, nur um zu sehen, ob Meta sie herausgibt.
     func fetch() async throws {
         let plan = FetchPlan.plan(recipe: recipe, selection: selection()) { store.state(of: $0, in: recipe) }
+        let onlyDownload = request.downloadOnly ?? false
         let fromUser = plan.filter { $0.action == .needsUser }
-        guard fromUser.isEmpty else {
+        guard fromUser.isEmpty || onlyDownload else {
             throw InstallError.userFilesNeeded(names: fromUser.map(\.file.name), hint: fromUser.first?.file.source?.hint?.text)
         }
         // Ordnerbestände mit freier Adresse (etwa Valves Laufzeitumgebung für ein Linux-Spiel) holt das Programm
@@ -230,14 +238,25 @@ public struct Installer: Sendable {
             try await treeStore.fetch(tree, in: recipe) { report($0) }
         }
         let trees = treeStore.missing(recipe: recipe)
-        guard trees.isEmpty else { throw InstallError.missingTrees(trees.map(\.name), recipe: recipe.id) }
-        let todo = plan.filter { $0.action != .keep }
+        guard trees.isEmpty || onlyDownload else { throw InstallError.missingTrees(trees.map(\.name), recipe: recipe.id) }
+        // Beim reinen Laden bleibt offen, was nur der Nutzer hat. Gesagt wird es trotzdem – am Ende, wo man es liest.
+        let open = fromUser.map(\.file.name) + trees.map(\.name)
+        defer {
+            if onlyDownload, !open.isEmpty {
+                report(L("Still missing, and yours to provide before the game can be built: \(open.joined(separator: ", ")). The game's page says where they come from.",
+                         "Es fehlt noch, und das stellst du selbst bereit, bevor das Spiel gebaut werden kann: \(open.joined(separator: ", ")). Auf der Seite des Spiels steht, woher es kommt."))
+            }
+        }
+        let todo = plan.filter { $0.action != .keep && $0.action != .needsUser }
+        let kept = plan.filter { $0.action == .keep }.count
         guard !todo.isEmpty else {
-            report(L("Files: \(plan.count) needed, all in the library.", "Dateien: \(plan.count) gebraucht, alle im Bestand."))
+            report(kept == plan.count
+                ? L("Files: \(plan.count) needed, all in the library.", "Dateien: \(plan.count) gebraucht, alle im Bestand.")
+                : L("Files: \(plan.count) needed, \(kept) in the library, nothing to download.", "Dateien: \(plan.count) gebraucht, \(kept) im Bestand, nichts zu laden."))
             return
         }
-        report(L("Files: \(plan.count) needed, \(plan.count - todo.count) in the library, \(todo.count) to download.",
-                 "Dateien: \(plan.count) gebraucht, \(plan.count - todo.count) im Bestand, \(todo.count) zu laden."))
+        report(L("Files: \(plan.count) needed, \(kept) in the library, \(todo.count) to download.",
+                 "Dateien: \(plan.count) gebraucht, \(kept) im Bestand, \(todo.count) zu laden."))
 
         var client = MetaClient(token: "unbenutzt")       // ohne Meta-Dateien wird er nie benutzt
         if todo.contains(where: { $0.file.source == nil }) {

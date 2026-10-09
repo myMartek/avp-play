@@ -699,6 +699,33 @@ final class JobTests: XCTestCase {
         XCTAssertEqual(seen.get(), [.stage, .unlock])
     }
 
+    /// Laden geht vor allem anderen: ohne Toolchain, und auch wenn noch fehlt, was nur der Nutzer hat.
+    func testADownloadOnlyJobNeedsNoToolchainAndLeavesOwnFilesOpen() async throws {
+        let (store, full) = try setup()
+        var own = helper.file("pak000.pk4"); own.source = FileSource(kind: .user, url: nil, hint: nil)
+        let recipe = helper.recipe(files: [own])
+        let content = ContentStore(root: store.directory.appendingPathComponent("bestand"))
+
+        var request = InstallRequest(toolchain: "")
+        do { try await Installer(recipe: recipe, request: request, store: content) { _ in }.perform(.fetch); XCTFail("ohne die eigene Datei wird nicht installiert") }
+        catch { XCTAssertEqual(FailureKind.of(error), .ownFiles) }
+
+        request.downloadOnly = true
+        let said = LockedBox<[String]>([])
+        try await Installer(recipe: recipe, request: request, store: content) { said.set(said.get() + [$0]) }.perform(.fetch)
+        XCTAssertTrue(said.get().contains { $0.contains("pak000.pk4") }, "was offen bleibt, wird genannt")
+
+        let job = Job(recipe: recipe, request: request, steps: InstallStep.download, toolchainCommit: "")
+        XCTAssertTrue(job.isDownloadOnly)
+        XCTAssertFalse(job.isAddonSync)
+        XCTAssertFalse(full.isDownloadOnly)
+        XCTAssertTrue(Job(recipe: recipe, request: request, steps: InstallStep.addonSync, toolchainCommit: "abc1234").isAddonSync)
+        let seen = LockedBox<[InstallStep]>([])
+        let done = try await JobRunner(store: store).run(job, currentToolchain: "unbekannt") { step, _ in seen.set(seen.get() + [step]) }
+        XCTAssertEqual(seen.get(), [.account, .fetch])
+        XCTAssertEqual(done.state, .finished)
+    }
+
     func testCancelledJobDoesNotRunAndUnknownIdsAreRejected() async throws {
         let (store, job) = try setup()
         try store.save(job)

@@ -276,6 +276,23 @@ enum Snapshot {
             while model.runningJob != nil { await pause(1) }
             await pause(1.5)
         }
+        // `--download <Kennung>`: nur laden, über die Oberfläche ausgelöst – auch wo Xcode, Toolchain oder Gerät fehlen.
+        if let i = CommandLine.arguments.firstIndex(of: "--download"), i + 1 < CommandLine.arguments.count,
+           let game = model.games.first(where: { $0.id == CommandLine.arguments[i + 1] }) {
+            let before = "Installieren: \(model.blocker(for: game) ?? "frei") | Laden: \(model.downloadBlocker(for: game) ?? "frei") | zu laden: \(game.status.bytesToDownload)"
+            model.section = .games
+            model.gamePath = [game.id]
+            await pause(1.5)
+            capture("2-spiel-\(game.id)-vor-dem-laden", dir)
+            model.download(game)
+            await pause(3)
+            while model.runningJob != nil { await pause(1) }
+            await pause(1.5)
+            capture("3-auftrag-nur-laden", dir)
+            let job = model.jobs.first { $0.recipe.id == game.id }
+            let after = "Auftrag: \(job.map { "\($0.state) \($0.steps.map(\.rawValue))" } ?? "keiner") | Hinweis: \(model.notice ?? "-")"
+            try? [before, after].joined(separator: "\n").write(to: dir.appendingPathComponent("laden.txt"), atomically: true, encoding: .utf8)
+        }
         // `--sync <Kennung>`: die Zusatzinhalte eines installierten Spiels über die Oberfläche abgleichen.
         if let i = CommandLine.arguments.firstIndex(of: "--sync"), i + 1 < CommandLine.arguments.count,
            let game = model.games.first(where: { $0.id == CommandLine.arguments[i + 1] }) {

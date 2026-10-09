@@ -332,6 +332,19 @@ struct GameDetail: View {
                         if let why = model.blocker(for: game) {
                             Text(why).font(.callout).foregroundStyle(.secondary)
                                 .multilineTextAlignment(.trailing).frame(maxWidth: 280, alignment: .trailing)
+                            // Steht nur dem Bauen etwas im Weg, lassen sich die Dateien trotzdem schon holen.
+                            if model.hasDownloads(game), !model.isBusy(game.id), model.downloadBlocker(for: game) != why {
+                                Button(action: { model.download(game) }) {
+                                    Text(L("Download Files Now", "Dateien schon laden")).frame(minWidth: 150)
+                                }
+                                .controlSize(.large)
+                                .disabled(model.downloadBlocker(for: game) != nil)
+                                Text(model.downloadBlocker(for: game)
+                                     ?? L("\(Installer.gigabytes(game.status.bytesToDownload)) – this already works; building and installing follow later.",
+                                          "\(Installer.gigabytes(game.status.bytesToDownload)) – das geht schon jetzt; gebaut und installiert wird später."))
+                                    .font(.callout).foregroundStyle(.secondary)
+                                    .multilineTextAlignment(.trailing).frame(maxWidth: 280, alignment: .trailing)
+                            }
                         }
                     }
                 }

@@ -28,10 +28,15 @@ public enum DeviceError: Error, CustomStringConvertible {
     case tool(String)
     case noDevice
     case ambiguous([String])
+    /// Ohne Xcode gibt es `devicectl` nicht – das ist kein Fehler des Geräts.
+    case noXcode
 
     public var description: String {
         switch self {
         case .tool(let m): return L("devicectl reported an error: \(m)", "devicectl meldet einen Fehler: \(m)")
+        case .noXcode:
+            return L("The Vision Pro is reached through a tool that comes with Xcode. Install Xcode first.",
+                     "Die Vision Pro wird über ein Werkzeug angesprochen, das mit Xcode kommt. Zuerst Xcode installieren.")
         case .noDevice: return L("No paired, reachable Vision Pro found.", "Keine gekoppelte, erreichbare Vision Pro gefunden.")
         case .ambiguous(let names):
             let list = names.joined(separator: ", ")
@@ -174,6 +179,7 @@ public struct DeviceControl: Sendable {
 
     @discardableResult
     private func run(_ args: [String]) throws -> String {
+        guard DeveloperTools.present else { throw DeviceError.noXcode }
         let p = Process()
         p.executableURL = URL(fileURLWithPath: "/usr/bin/xcrun")
         p.arguments = ["devicectl"] + args

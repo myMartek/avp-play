@@ -25,6 +25,7 @@ extension Toolchain {
     /// Wo das Spiel seine Haupt-Datendatei sucht, relativ zum Datenordner der App – gefragt bei der Toolchain,
     /// die es am entpackten APK erkennt (Versuch) oder aus ihrer Tabelle weiß. `nil`, wenn sie das Target nicht kennt.
     public func obbDestination(recipe: Recipe) -> String? {
+        guard DeveloperTools.present else { return nil }
         let p = Process()
         p.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
         p.arguments = [root.appendingPathComponent("visionos/targets.py").path, recipe.toolchain.target, "obb"]
@@ -51,6 +52,8 @@ extension Toolchain {
     /// Target nicht kennt oder der Eintrag leer ist.
     public func targetValue(_ target: String, key: String) -> String? {
         guard !target.isEmpty, key.allSatisfy({ $0.isASCII && $0.isLetter }), target.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "-" || $0 == "_") }) else { return nil }
+        // Python kommt mit Xcode; ohne es ist `/usr/bin/python3` nur der Platzhalter, der zum Installieren auffordert.
+        guard DeveloperTools.present else { return nil }
         let p = Process()
         p.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
         p.arguments = ["-c", """

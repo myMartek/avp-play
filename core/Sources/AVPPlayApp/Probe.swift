@@ -92,7 +92,8 @@ enum Probe {
 
         s.toolPresent = (try? MetaTool(url: metaToolURL).verify()) != nil
 
-        let version = capture(["/usr/bin/xcrun", "xcodebuild", "-version"])
+        // Ohne Entwicklerordner nicht fragen: `xcrun` wäre dann nur der Platzhalter, der zum Installieren auffordert.
+        let version = DeveloperTools.present ? capture(["/usr/bin/xcrun", "xcodebuild", "-version"]) : (status: Int32(1), out: "")
         if let first = version.out.split(separator: "\n").first, version.status == 0 {
             if capture(["/usr/bin/xcrun", "xcodebuild", "-showsdks"]).out.contains("xros") {
                 s.xcodeText = L("\(first) with visionOS support.", "\(first) mit visionOS-Unterstützung.")

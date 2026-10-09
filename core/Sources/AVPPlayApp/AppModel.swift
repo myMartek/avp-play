@@ -630,6 +630,36 @@ final class AppModel: ObservableObject {
         enqueue(game, steps: InstallStep.allCases)
     }
 
+    /// Was dem bloßen Laden im Weg steht. Es braucht nur, was mit den Dateien zu tun hat: den Ordner für Downloads,
+    /// das Konto, bei dem das Spiel gekauft ist, und Platz. Xcode, Toolchain, Apple-Team und Vision Pro spielen
+    /// keine Rolle – wer die noch nicht hat, kann schon laden und später bauen.
+    func downloadBlocker(for game: Game) -> String? {
+        if let why = storeBlocker { return why }
+        if game.draft, !game.prepared {
+            return prepareNote[game.id] ?? L("The files of this game have not been looked up yet.", "Die Dateien dieses Spiels sind noch nicht nachgeschlagen.")
+        }
+        if game.needsMetaAccount, account != .signedIn { return L("Sign in to Meta first (see “Setup”).", "Erst bei Meta anmelden (siehe „Einrichtung“).") }
+        if owned(game) == .no {
+            return L("This game is not in your Meta account, so nothing is downloaded.",
+                     "Dieses Spiel gehört nicht zu deinem Meta-Konto. Es wird nichts geladen.")
+        }
+        if isBusy(game.id) { return L("A job for this game is already running.", "Für dieses Spiel läuft schon ein Auftrag.") }
+        if let free = freeBytes, game.status.bytesToDownload + 2_000_000_000 > free {
+            return L("Not enough free space on this Mac: \(Installer.gigabytes(game.status.bytesToDownload)) to download, \(Installer.gigabytes(free)) free.",
+                     "Auf diesem Mac ist zu wenig Platz: \(Installer.gigabytes(game.status.bytesToDownload)) zu laden, \(Installer.gigabytes(free)) frei.")
+        }
+        return nil
+    }
+
+    /// Ob es für das Spiel etwas gibt, das das Programm selbst laden kann und das noch fehlt.
+    func hasDownloads(_ game: Game) -> Bool { game.status.bytesToDownload > 0 }
+
+    /// Lädt die Dateien des Spiels, ohne es zu bauen oder zu installieren.
+    func download(_ game: Game) {
+        guard hasDownloads(game), downloadBlocker(for: game) == nil else { return }
+        enqueue(game, steps: InstallStep.download)
+    }
+
     /// Was dem Abgleich der Zusatzinhalte im Weg steht. Anders als eine Installation braucht er kein Xcode und
     /// kein Apple-Team – aber das Spiel muss schon auf dem Gerät sein.
     func syncBlocker(for game: Game) -> String? {
@@ -651,8 +681,12 @@ final class AppModel: ObservableObject {
     }
 
     private func enqueue(_ game: Game, steps: [InstallStep], addons: Bool? = nil) {
-        guard let toolchain else { return }
-        var request = InstallRequest(toolchain: toolchain.root.path)
+        // Nur wer baut oder aufs Gerät kopiert, braucht die Toolchain.
+        let downloadOnly = steps == InstallStep.download
+        let toolchain = toolchain
+        guard toolchain != nil || downloadOnly else { return }
+        var request = InstallRequest(toolchain: toolchain?.root.path ?? "")
+        if downloadOnly { request.downloadOnly = true }
         request.team = teamId
         request.device = device?.udid
         let chosen = options(for: game)
@@ -662,7 +696,7 @@ final class AppModel: ObservableObject {
         if !customBundlePrefix.isEmpty { request.bundleId = "\(customBundlePrefix).\(game.recipe.toolchain.target)" }
         do {
             // Eingefroren wird der Stand, mit dem der Auftrag beginnt.
-            let job = Job(recipe: game.recipe, request: request, steps: steps, toolchainCommit: toolchain.commit())
+            let job = Job(recipe: game.recipe, request: request, steps: steps, toolchainCommit: toolchain?.commit() ?? "")
             try paths.jobs.save(job)
             queued.append(job.id)
             reloadJobs()
@@ -780,7 +814,10 @@ final class AppModel: ObservableObject {
                     try Task.checkCancellation()
                     try await installer.perform(step)
                 }
-                feed.yield(job.isAddonSync
+                feed.yield(job.isDownloadOnly
+                    ? L("Done: the files of \(job.recipe.title) are on this Mac. Once everything under “Setup” is in place, “Install” builds the game and puts it on the Vision Pro – without downloading again.",
+                        "Fertig: Die Dateien von \(job.recipe.title) liegen auf diesem Mac. Sobald unter „Einrichtung“ alles beisammen ist, baut „Installieren“ das Spiel und bringt es auf die Vision Pro – ohne noch einmal zu laden.")
+                    : job.isAddonSync
                     ? L("Done: the add-on content of \(job.recipe.title) is up to date. If the game is running, quit it and start it again so that it sees the new content.",
                         "Fertig: Die Zusatzinhalte von \(job.recipe.title) sind auf dem Stand. Läuft das Spiel gerade, beende es und starte es neu, damit es die neuen Inhalte sieht.")
                     : L("Done: \(job.recipe.title) is ready on the device.", "Fertig: \(job.recipe.title) ist auf dem Gerät bereit."))
@@ -826,9 +863,11 @@ final class AppModel: ObservableObject {
         let content = UNMutableNotificationContent()
         content.title = job.recipe.title
         switch job.state {
-        case .finished: content.body = job.isAddonSync ? L("Add-on content is up to date.", "Zusatzinhalte sind auf dem Stand.")
+        case .finished: content.body = job.isDownloadOnly ? L("The files are downloaded.", "Die Dateien sind geladen.")
+                                     : job.isAddonSync ? L("Add-on content is up to date.", "Zusatzinhalte sind auf dem Stand.")
                                                        : L("Ready on your Vision Pro.", "Auf deiner Vision Pro bereit.")
-        case .failed: content.body = L("The installation has stopped and needs your attention.", "Die Installation ist angehalten und braucht dich.")
+        case .failed: content.body = job.isDownloadOnly ? L("The download has stopped and needs your attention.", "Der Download ist angehalten und braucht dich.")
+                                                        : L("The installation has stopped and needs your attention.", "Die Installation ist angehalten und braucht dich.")
         default: return
         }
         content.sound = .default

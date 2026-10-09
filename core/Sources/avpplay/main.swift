@@ -114,6 +114,7 @@ avpplay – command line for the AVP Play core library
              --no-store-art          don't fetch the cover image from the store page (the icon from the APK is used instead)
              --replace-running       install even if the game is running (it will be quit)
              --addons-only           job start: only sync purchased add-on content of an installed game (no build, no --team)
+             --download-only         job start: only download the files (needs no Xcode, toolchain, --team or device)
              --build-only            job start: check, download, build and install the app, but do not copy the game data yet
 
 Selection: --locale de-DE      also include a language variant (can be repeated)
@@ -156,6 +157,7 @@ avpplay – Kommandozeile zur Kern-Bibliothek von AVP Play
              --no-store-art          kein Titelbild von der Store-Seite holen (dann Icon aus dem APK)
              --replace-running       auch installieren, wenn das Spiel gerade läuft (es wird dabei beendet)
              --addons-only           job start: nur gekaufte Zusatzinhalte eines installierten Spiels abgleichen (kein Bau, kein --team)
+             --download-only         job start: nur die Dateien laden (braucht weder Xcode noch Toolchain, --team oder Gerät)
              --build-only            job start: prüfen, laden, bauen und die App installieren, aber die Spieldaten noch nicht kopieren
 
 Auswahl:   --locale de-DE      Sprachvariante dazunehmen (mehrfach möglich)
@@ -690,7 +692,10 @@ case "job":
         do {
             let now = (try? Toolchain(root: URL(fileURLWithPath: job.request.toolchain)).commit()) ?? L("unknown", "unbekannt")
             let done = try await runner.run(job, currentToolchain: now, log: { print($0) }) { step, _ in try await installer.perform(step) }
-            print(done.isAddonSync
+            print(done.isDownloadOnly
+                ? L("Job \(done.id) finished: the files of \(done.recipe.title) are downloaded.",
+                    "Auftrag \(done.id) abgeschlossen: Die Dateien von \(done.recipe.title) sind geladen.")
+                : done.isAddonSync
                 ? L("Job \(done.id) finished: the add-on content of \(done.recipe.title) is up to date.",
                     "Auftrag \(done.id) abgeschlossen: Die Zusatzinhalte von \(done.recipe.title) sind auf dem Stand.")
                 : !done.steps.contains(.stage)
@@ -711,19 +716,24 @@ case "job":
         // Nur prüfen, laden, bauen und installieren – ohne die Spieldaten aufs Gerät zu kopieren. Zum Ausprobieren,
         // ob ein Spiel überhaupt durch die Toolchain kommt, bevor Dutzende Gigabyte übertragen werden.
         let buildOnly = o.flags.contains("build-only")
-        if o.value("team") == nil, !addonsOnly {
+        // Nur laden, was das Programm selbst besorgen kann. Braucht weder Xcode noch Toolchain, Team oder Gerät.
+        let downloadOnly = o.flags.contains("download-only")
+        if o.value("team") == nil, !addonsOnly, !downloadOnly {
             fail(L("For a job, give the Apple Team ID with --team.", "Für einen Auftrag die Apple-Team-ID mit --team angeben."))
         }
         let r: Recipe
         do { r = try RecipeStore(directory: recipesDirectory(o)).load(id: o.positional[2]) } catch { fail("\(error)") }
         var request = installRequest(o)
         if addonsOnly { request.addons = true }
+        if downloadOnly { request.downloadOnly = true }
         do {
-            // Eingefroren wird der Stand, mit dem der Auftrag beginnt.
-            let commit = try Toolchain(root: URL(fileURLWithPath: request.toolchain)).commit()
-            let job = Job(recipe: r, request: request, steps: addonsOnly ? InstallStep.addonSync : buildOnly ? [.account, .fetch, .build] : InstallStep.allCases, toolchainCommit: commit)
+            // Eingefroren wird der Stand, mit dem der Auftrag beginnt. Wer nur lädt, braucht keine Toolchain.
+            let commit = downloadOnly ? "" : try Toolchain(root: URL(fileURLWithPath: request.toolchain)).commit()
+            let steps = downloadOnly ? InstallStep.download : addonsOnly ? InstallStep.addonSync : buildOnly ? [.account, .fetch, .build] : InstallStep.allCases
+            let job = Job(recipe: r, request: request, steps: steps, toolchainCommit: commit)
             try jobs.save(job)
-            print(L("Job \(job.id) created (\(r.title), toolchain \(commit)).", "Auftrag \(job.id) angelegt (\(r.title), Toolchain \(commit))."))
+            print(downloadOnly ? L("Job \(job.id) created (\(r.title), download only).", "Auftrag \(job.id) angelegt (\(r.title), nur laden).")
+                               : L("Job \(job.id) created (\(r.title), toolchain \(commit)).", "Auftrag \(job.id) angelegt (\(r.title), Toolchain \(commit))."))
             await run(job)
         } catch { fail("\(error)") }
     case "resume":

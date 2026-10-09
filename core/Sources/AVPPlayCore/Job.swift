@@ -62,7 +62,10 @@ public struct Job: Codable, Sendable, Identifiable, Equatable {
 
     public var remaining: [InstallStep] { steps.filter { !completed.contains($0) } }
     /// Ein Auftrag, der nur die Zusatzinhalte abgleicht und nichts baut.
-    public var isAddonSync: Bool { !steps.contains(.build) }
+    public var isAddonSync: Bool { !steps.contains(.build) && steps.contains(.stage) }
+    /// Ein Auftrag, der nur lädt: nichts wird gebaut, nichts geht aufs Gerät. Er braucht weder Xcode noch eine
+    /// Toolchain, ein Apple-Team oder die Vision Pro.
+    public var isDownloadOnly: Bool { !steps.contains(.build) && !steps.contains(.stage) }
 
     public static func == (a: Job, b: Job) -> Bool {
         a.id == b.id && a.state == b.state && a.completed == b.completed && a.current == b.current
@@ -123,7 +126,8 @@ public struct JobRunner: Sendable {
         case .cancelled: throw JobError.cancelled(job.id)
         case .waiting, .running, .failed: break
         }
-        guard currentToolchain == job.toolchainCommit else {
+        // Wer nur lädt, benutzt die Toolchain nicht; ihr Stand spielt dann keine Rolle.
+        guard job.isDownloadOnly || currentToolchain == job.toolchainCommit else {
             throw JobError.toolchainChanged(was: job.toolchainCommit, now: currentToolchain)
         }
         job.attempts += 1

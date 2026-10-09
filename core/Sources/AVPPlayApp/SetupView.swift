@@ -12,7 +12,7 @@ struct SetupView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                Text(L("To put a game on the Vision Pro, this Mac needs four things: Xcode, the Vision Pro, an Apple developer team and the toolchain. The two accounts are only needed for their own games – Meta for games from the Meta Store, Steam for Doom 3 and Half-Life: Alyx. Green means: checked and fine.", "Damit ein Spiel auf die Vision Pro kommt, braucht dieser Mac vier Dinge: Xcode, die Vision Pro, ein Apple-Entwicklerteam und die Toolchain. Die beiden Konten braucht es nur für ihre eigenen Spiele – Meta für Spiele aus dem Meta-Store, Steam für Doom 3 und Half-Life: Alyx. Grün heißt: geprüft und in Ordnung."))
+                Text(L("To put a game on the Vision Pro, this Mac needs four things: Xcode, the Vision Pro, an Apple developer team and the toolchain. The two accounts are only needed for their own games – Meta for games from the Meta Store, Steam for Doom 3 and Half-Life: Alyx. Green means: checked and fine. Downloading a game's files already works with its account alone; building and installing follow once the four things are in place.", "Damit ein Spiel auf die Vision Pro kommt, braucht dieser Mac vier Dinge: Xcode, die Vision Pro, ein Apple-Entwicklerteam und die Toolchain. Die beiden Konten braucht es nur für ihre eigenen Spiele – Meta für Spiele aus dem Meta-Store, Steam für Doom 3 und Half-Life: Alyx. Grün heißt: geprüft und in Ordnung. Die Dateien eines Spiels lassen sich schon mit dem Konto allein laden; gebaut und installiert wird, sobald die vier Dinge beisammen sind."))
                     .fixedSize(horizontal: false, vertical: true)
                     .foregroundStyle(.secondary)
 
@@ -35,7 +35,8 @@ struct SetupView: View {
                         }
                         .fixedSize()
                     }
-                    if model.device == nil, model.devices.isEmpty {
+                    // Die Schritte zum Koppeln setzen Xcode voraus; ohne es steht oben schon, was zuerst kommt.
+                    if model.device == nil, model.devices.isEmpty, model.xcodeText != nil {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(L("If this is the first time, the Vision Pro has to be paired with this Mac once:",
                                    "Beim ersten Mal muss die Vision Pro einmal mit diesem Mac gekoppelt werden:"))
