@@ -1,0 +1,563 @@
+{
+ "files": [
+  {
+   "dest": "",
+   "id": "26412807568308743",
+   "localName": "x3240283705987790.apk",
+   "name": "PILO-Android-Shipping-arm64.apk",
+   "required": true,
+   "role": "apk",
+   "size": 87914481,
+   "sha256": "bbb88a16684868b362adc4f5ffbb6cce1b1968f4e34f23934e61df91a30f9e35"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412805751642258",
+   "name": "char_player.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 2519264803,
+   "sha256": "868b8f99760323a0e80de8a0c16fa1af8b6aa96bcb15878a1052f9a9663cbc85"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412793628310137",
+   "name": "char_all.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 1720477967,
+   "sha256": "f52e7f91e38d82d8fd185a34ad46484745da195a6adeed9688c0ef69b6385453"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412793384976828",
+   "name": "env_sym2.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 1183361103,
+   "sha256": "90bbae144afb4a5aa339f5a5ca319cbd95a7553396ab36a9546895b3a90a36c4"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412793021643531",
+   "name": "global_generated.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 892561095,
+   "sha256": "c62f831e4ca362c828f41f73e2ac90569387ad0590ba6c8a1f3b79659297a61e"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412792751643558",
+   "name": "map_scl.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 923492548,
+   "sha256": "2367e5fd5f6786010cca09c31de9e537918a828a9a647c523f7d0cdcdad4cdca"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412791258310374",
+   "name": "char_enemy.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 1186554483,
+   "sha256": "a47a4264f7a2670ab4de4158daae8678a225436c8aed06092044e64a3fbb7989"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412789714977195",
+   "name": "art_weapon.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 601950112,
+   "sha256": "e54b9ebe68f6d156740d794cc71594f3fab66a9f2c763e92371d93bc31869e73"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412789338310566",
+   "name": "art_vfx.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 676510067,
+   "sha256": "859c6490142d282e359f2eda9c25bbd2996054f03ae71eaabbd0422d07f596b0"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412789231643910",
+   "name": "map_yas.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 405446533,
+   "sha256": "6293d3de13efcc3f115089c6affc592063df0744fb9b90ee9b6882db3f7d440a"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412789128310587",
+   "name": "map_sym.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 409520081,
+   "sha256": "1b58294c2fbd92d11095e77e8a466e602f9c1ee1e64e72e3a81950ac651e4d4d"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412789071643926",
+   "name": "art_ui.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 454864359,
+   "sha256": "631346f80734d461d4e7c3816242a3db89490c6e71b5947a991eea9142f6f0e2"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412789068310593",
+   "name": "map_hvg.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 289505355,
+   "sha256": "cfb5dac89f79b05b27b0f3d821f6a5813a054a4e5b543b442a4bb425305bb6d5"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412789054977261",
+   "name": "art_all.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 222854146,
+   "sha256": "1c85730a8072888c4ff75e6d3022fe22aa2f95eb0ac1c2d2a55878e095668699"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412789028310597",
+   "name": "env_sox2.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 519229892,
+   "sha256": "0284103810eb02d5f0b667b5775db8d179671793f46a0340e8b6cad056f14017"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412788731643960",
+   "name": "map_hvb.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 395110473,
+   "sha256": "aac8d514c6a26043bd4b2133c85496e7bb4d3b8c296eacdd49689c66643a5a8a"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412788478310652",
+   "name": "map_pro.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 299922926,
+   "sha256": "a46a3d35f0eaf19ddaaa331f050eb323607bced88df3a756f188cac70d0f3cc4"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412788424977324",
+   "name": "map_sox.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 441348356,
+   "sha256": "505945d013446b35a0038beb2798ddb0e7b4187b33dc3d9e1b2b894d616bea3a"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412788361643997",
+   "name": "art_vehicle.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 251855535,
+   "sha256": "e482af016c704084ce575694ee63f2157955bb3ddfd03a12ae80115efe5b5199"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412788158310684",
+   "name": "env_hub.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 349882250,
+   "sha256": "ceb6dce403e2ecd5c893a23dc54d6eb496344cacfe9400817b40d21d7e3073db"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412787974977369",
+   "name": "map_dre.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 163574025,
+   "sha256": "44a17fac7a9fe0d9c52fee502c3b96099c884f8c88cf47d407bc7f2b2ccb7d16"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412787654977401",
+   "name": "env_hvg1.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 646770063,
+   "sha256": "a5b387661e90db6deaf0c701aeb3f5c564f3ac18433d6429c0b54d02f7a38d9e"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412787494977417",
+   "name": "map_all.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 604273869,
+   "sha256": "a6de7656c56b23790e53e4be3d8f98a325c01c0fbf673b41b201b4b80351ef1d"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412787354977431",
+   "name": "map_mjo.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 130262209,
+   "sha256": "931540e90a57b9f0a533abf4b57e74f3dbfb12de1fdd5dccd0f51e77fc19ba24"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412787331644100",
+   "name": "map_bam.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 96873319,
+   "sha256": "05cf02f6d87d81e8efecfaabb935750c00f5d0848da1b90d6afe0330207f6e6c"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412787294977437",
+   "name": "map_sen.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 116317502,
+   "sha256": "83ae8cfe8a52fc067cc6001da96016455705cda7b3fa3e59c79b9aab62afb03f"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412787224977444",
+   "name": "global_blueprint.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 48590843,
+   "sha256": "90b734afb46e87c3788513a9a0253a43cbd09f7732063c24a72bd4796f793968"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412787028310797",
+   "name": "map_kra.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 97783336,
+   "sha256": "8399df2a910aafa434bf55a9cdd613e77bc3423a95394b9a43e0d43670768428"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412786564977510",
+   "name": "global_engine.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 71858805,
+   "sha256": "8da04f681b10df46ce530cdea90fef4530e52ea5e772d3837e1a49970b2432d1"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412786438310856",
+   "name": "global_infrequent.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 7541018,
+   "sha256": "311c535072ef609f18d9ec1d9e17fccf818f52a17fc0d5f984184ab65a77cbc9"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412786431644190",
+   "name": "map_hub.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 50438209,
+   "sha256": "240309d764bbc250987e37db8e042c90275a15cc21b3e9b3315fca991c13cc08"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412786348310865",
+   "name": "global_localize.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 33682277,
+   "sha256": "65bdc7007585a37f7167d8cf64c72083e4d7b40f5bec48fbbe820168921c6a06"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412786088310891",
+   "name": "global_config.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 119629,
+   "sha256": "18b1089a39a64a2d81a2d66025f0a9616aa45bac7348917fe36b03464fff5b0f"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412785984977568",
+   "name": "global_datatable.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 1213562,
+   "sha256": "a68d74742ea1d70a215b35fb4ab84c25a874772b76fb839d2b580b6c4678dfdc"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412785894977577",
+   "name": "env_scl.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 120145380,
+   "sha256": "ded810b751d8c69f8d48d149475235929e21e62f8f1b3ff5d41f4361faf5746e"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412785891644244",
+   "name": "fr.lang",
+   "required": true,
+   "role": "content-bundle",
+   "size": 3085743950,
+   "sha256": "08cc165e2d1696d89a46157eec232befa32662c7a16b828009285658ac24e818"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412785871644246",
+   "name": "map_pri.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 226705062,
+   "sha256": "73c5df35da8b217ba53a170af889a1c0fa22f9af56c6de64123b6d4c27e69825"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412785558310944",
+   "name": "env_pri.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 238213746,
+   "sha256": "84b0ab5341c62fbb5c1ac655072295496c9ee9bb3bbb5f50155cd5a33470b0b9"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412785544977612",
+   "name": "env_mjo.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 250983281,
+   "sha256": "2b18a0560520cc5aed10f4d17af201ff2b847f15aaa99f25ed52d37bb9ddf7af"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412785518310948",
+   "name": "env_kra.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 390370138,
+   "sha256": "b64cf770def04dbd51c4c528f298726e5444b4a2716f21ef75ad356ffd34e730"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412785508310949",
+   "name": "env_pro2.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 274154606,
+   "sha256": "93bc8a0149ac31c8162dff7b68650180e940998c54abe83c928d1fd98f1e7694"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412785474977619",
+   "name": "env_bam.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 363460766,
+   "sha256": "c400fbc667321b26c4c34fb243b7a2f46091ccd87407de605ffc97a4b4c4679c"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412785448310955",
+   "name": "env_sen.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 295464270,
+   "sha256": "386e399ca71d35c2de70db8a713776742d69c83d33f6d9a62e9fef901257a9a6"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412785404977626",
+   "name": "env_dre.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 390943461,
+   "sha256": "fccf7a036bbbe21a8387978565335beb8892a0aff4a9aa09c14caec3a7d8e27e"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412785331644300",
+   "name": "global_videos.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 405236552,
+   "sha256": "edc319032ae83fd35b0be8ad2963af221e873246c47e574123d24522d88309d5"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412785321644301",
+   "name": "env_sym1.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 2288667544,
+   "sha256": "5a1bf9781b3d07ba95c8b4a778468b637de808c4c0f4a703552eed827d610e1b"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412785311644302",
+   "name": "en.lang",
+   "required": true,
+   "role": "content-bundle",
+   "size": 3213363608,
+   "sha256": "7acdfaba8b978400f523e866fb2d72381f54d9f345cce75f0eed1f38d3775f3a"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412785271644306",
+   "name": "env_yas1.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 1564224245,
+   "sha256": "c9895056fca8be79f84225501e5b7b8eb81f3d2c407c4037dc0f318404c26374"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412785158310984",
+   "name": "env_hvg2.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 398498862,
+   "sha256": "2fb69c6af79ec5d40e553b5b538889ec380a70d453172124a847db821b0e91ff"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412784718311028",
+   "name": "env_all.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 429572137,
+   "sha256": "4167966fc8efcb7c3ec44b60c88762c91b3c4a4d67fa330a68472ea7dc372882"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412784368311063",
+   "name": "es-mx.lang",
+   "required": true,
+   "role": "content-bundle",
+   "size": 3247674165,
+   "sha256": "83c6bf19f2044faf1b46820ce89769c7e46687b7aea44db038a8f73f8c74044f"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412784241644409",
+   "name": "env_sox1.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 1069982010,
+   "sha256": "73a9f91b7f90586ccebe6c0b83b39fc56aaf67b4bc1015bb117af62105dc1386"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412784098311090",
+   "name": "env_hvb.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 1000396123,
+   "sha256": "2a55b962a57640e56c13091fec6eba2ea93e6cf89363d785f913a4207bf23ece"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412783818311118",
+   "name": "env_yas2.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 952120633,
+   "sha256": "0673c35ce16b15ba3429df96ae0269aa1d002a62a05028c7c3a68461c9401b9b"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412783461644487",
+   "name": "env_pro1.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 740221142,
+   "sha256": "409d20da7dba9387b37a9ddfffd104d3fbfd09db3fb810885bad41245c0179dd"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412782438311256",
+   "name": "de.lang",
+   "required": true,
+   "role": "content-bundle",
+   "size": 3256791074,
+   "sha256": "2d042f7475bb611675012c17816ac86937f5af033bace6ab692a003f737deca7"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412781741644659",
+   "name": "es.lang",
+   "required": true,
+   "role": "content-bundle",
+   "size": 3366955276,
+   "sha256": "f21233e005709c06e91e7d9e011403220ce3aa55587ff731e8472a3b15dbb335"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412779154978251",
+   "name": "ja.lang",
+   "required": true,
+   "role": "content-bundle",
+   "size": 3442971619,
+   "sha256": "4aea4065269ab06cdf98807f9456c61da5de550af6c9047c0a444fc40cd5d45d"
+  },
+  {
+   "dest": "android-files/Android/obb/com.twistedpixelgames.PILO",
+   "id": "26412776704978496",
+   "name": "audio_all.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 3771942902,
+   "sha256": "44f47a1161c6dc2a1ff4e8602997372719f20b800ace40b65f802a859f5150de"
+  }
+ ],
+ "id": "store-3240283705987790",
+ "package": "com.twistedpixelgames.PILO",
+ "schema": 1,
+ "status": {
+  "playability": "verified",
+  "download": "proven",
+  "notes": [
+   {
+    "en": "Marked as verified by the project on 2026-10-09. File list as Meta's tool reports it for this build; 59 of 59 checksums recorded from a download.",
+    "de": "Vom Projekt am 2026-10-09 als geprüft markiert. Dateiliste, wie Metas Werkzeug sie für diesen Build nennt; 59 von 59 Prüfsummen aus einem Download erfasst."
+   },
+   {
+    "en": "Marvel's Deadpool VR. Played by the author with PlayStation VR2 Sense controllers, with sound. The first start compiles shaders for several minutes. All six language packs are downloaded and copied (about 51 GB in total), because Meta lists them all as required. Body and face tracking are not available on the Vision Pro; the game runs without them.",
+    "de": "Marvel's Deadpool VR. Vom Autor mit PlayStation-VR2-Sense-Controllern gespielt, mit Ton. Der erste Start kompiliert mehrere Minuten lang Shader. Alle sechs Sprachpakete werden geladen und kopiert (zusammen rund 51 GB), weil Meta sie alle als Pflicht führt. Körper- und Gesichts-Tracking gibt es auf der Vision Pro nicht; das Spiel läuft ohne."
+   }
+  ]
+ },
+ "store": {
+  "appId": "3240283705987790"
+ },
+ "title": "Marvel's Deadpool VR",
+ "toolchain": {
+  "minCommit": "6b4da99",
+  "target": "x3240283705987790"
+ },
+ "versionCode": 8742,
+ "versionName": "1.0.40.356975.Quest"
+}
