@@ -27,7 +27,9 @@ cp ".build-app/release/avpplay" "$NEW/Contents/Helpers/avpplay"
 cp "$ROOT"/recipes/*.json "$NEW/Contents/Resources/recipes/"
 # Die Toolchain kommt mit: das neueste Paket aus dist/ samt Beschreibung (oder AVPPLAY_TOOLCHAIN_ARCHIVE).
 # Die App installiert es beim ersten Start – geprüft gegen die Beschreibung wie jedes andere Paket.
-TOOLCHAIN="${AVPPLAY_TOOLCHAIN_ARCHIVE:-$(ls -t "$ROOT"/dist/klepton-toolchain-*.tar.gz 2>/dev/null | head -1)}"
+# Ohne Archiv in dist/ scheitert das `ls` – unter `set -e` samt pipefail würde die Zuweisung das Skript stillschweigend
+# beenden, statt in den Zweig „ohne Toolchain“ zu laufen. Deshalb `|| true`.
+TOOLCHAIN="${AVPPLAY_TOOLCHAIN_ARCHIVE:-$(ls -t "$ROOT"/dist/klepton-toolchain-*.tar.gz 2>/dev/null | head -1 || true)}"
 if [ -n "$TOOLCHAIN" ] && [ -f "$TOOLCHAIN" ] && [ -f "$TOOLCHAIN.json" ]; then
   mkdir -p "$NEW/Contents/Resources/toolchain"
   cp "$TOOLCHAIN" "$TOOLCHAIN.json" "$NEW/Contents/Resources/toolchain/"
