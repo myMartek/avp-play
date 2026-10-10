@@ -983,6 +983,38 @@ final class UntestedGameTests: XCTestCase {
         XCTAssertTrue(draft.files.allSatisfy { $0.sha256 == nil && $0.size == nil && $0.source == nil }, "nichts als Metas Kennungen")
         XCTAssertThrowsError(try DraftRecipe.make(game: game, build: build, files: Array(files.dropFirst()), target: "somegame", minCommit: "abc1234"))
 
+        // Kennt der Katalog den Paketnamen nicht, bleibt der Ordner der weiteren Dateien offen, bis das APK entpackt ist.
+        let nameless = CatalogGame(appId: "1921533091289407", title: "Some Game", package: "", publisher: nil, status: "untested",
+                                   noteEn: nil, noteDe: nil, target: "somegame", works: 0, problems: 0, fails: 0, build: nil)
+        let open = try DraftRecipe.make(game: nameless, build: build, files: files, target: "somegame", minCommit: "abc1234")
+        XCTAssertEqual(open.package, "")
+        XCTAssertEqual(open.files[2].dest, DraftRecipe.packageFolderPlaceholder)
+        XCTAssertTrue(DraftRecipe.needsPackage(open.files[2].dest))
+        XCTAssertTrue(DraftRecipe.needsPackage("android-files/Android/obb/"), "ein Entwurf von vor dem Platzhalter")
+        XCTAssertFalse(DraftRecipe.needsPackage(draft.files[2].dest))
+        XCTAssertFalse(DraftRecipe.needsPackage(DraftRecipe.obbPlaceholder))
+
+        // Den Namen liefert dann das entpackte APK – aber nur, wenn er als Ordnername taugt.
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("avpplay-pkg-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let tree = root.appendingPathComponent("somegame", isDirectory: true)
+        try FileManager.default.createDirectory(at: tree, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: root.appendingPathComponent("visionos"), withIntermediateDirectories: true)
+        try Data().write(to: root.appendingPathComponent("visionos/run.sh"))
+        let toolchain = try Toolchain(root: root)
+        XCTAssertNil(toolchain.packageName(recipe: open), "noch nichts entpackt")
+        XCTAssertEqual(toolchain.packageName(recipe: draft), "com.example.game", "ein Rezept mit Namen braucht das APK nicht")
+        func manifest(_ package: String) throws {
+            try "<?xml version=\"1.0\"?>\n<manifest xmlns:android=\"http://schemas.android.com/apk/res/android\" android:versionCode=\"528\" package=\"\(package)\" platformBuildVersionCode=\"32\">\n  <application android:label=\"x\" package=\"wrong.place\"/>\n</manifest>\n"
+                .write(to: tree.appendingPathComponent("AndroidManifest.xml"), atomically: true, encoding: .utf8)
+        }
+        try manifest("com.Example.Eye_Of.Temple2")
+        XCTAssertEqual(toolchain.packageName(recipe: open), "com.Example.Eye_Of.Temple2")
+        for bad in ["../../etc", "com/example", "com..example", ""] {
+            try manifest(bad)
+            XCTAssertNil(toolchain.packageName(recipe: open), bad)
+        }
+
         // Ein Spiel, das die Toolchain nicht kennt, bekommt einen Namen aus seiner Store-Kennung.
         let generic = DraftRecipe.genericTarget(appId: game.appId)
         XCTAssertEqual(generic, "x1921533091289407")

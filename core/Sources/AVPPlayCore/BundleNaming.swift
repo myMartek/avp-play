@@ -29,6 +29,24 @@ extension Toolchain {
         return "android-files/\(obb)"
     }
 
+    /// Der Android-Paketname des Spiels: der des Rezepts, und wo der fehlt (ein Entwurf zu einem Spiel, dessen
+    /// Paketnamen der Katalog nicht kennt), der aus dem entpackten APK. `nil`, solange es nicht entpackt ist.
+    public func packageName(recipe: Recipe) -> String? {
+        if !recipe.package.isEmpty { return recipe.package }
+        let target = recipe.toolchain.target
+        guard Recipe.isSafeName(target) else { return nil }
+        let manifest = root.appendingPathComponent(target).appendingPathComponent("AndroidManifest.xml")
+        guard let text = try? String(contentsOf: manifest, encoding: .utf8),
+              let tag = text.range(of: "<manifest"), let end = text.range(of: ">", range: tag.upperBound..<text.endIndex),
+              let key = text.range(of: " package=\"", range: tag.upperBound..<end.lowerBound),
+              let close = text.range(of: "\"", range: key.upperBound..<end.lowerBound) else { return nil }
+        let name = String(text[key.upperBound..<close.lowerBound])
+        // Nur was als Ordnername taugt: Buchstaben, Ziffern, Punkt, Unterstrich.
+        guard !name.isEmpty, name.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "." || $0 == "_") }),
+              !name.contains("..") else { return nil }
+        return name
+    }
+
     /// Der Name der Bibliothek, bei der die Toolchain die App startet (`libmain`, `libUE4`, …) – auch für ein
     /// Spiel, das als Versuch gebaut wird: dann liest sie ihn am entpackten APK ab.
     public func entryLibrary(recipe: Recipe) -> String? {

@@ -145,11 +145,24 @@ public enum DraftRecipe {
     /// die kennt erst die Toolchain, wenn das APK entpackt ist – deshalb wird der Ort beim Kopieren eingesetzt.
     public static let obbPlaceholder = "@obb"
 
+    /// Steht als Ziel der weiteren Dateien, wenn der Katalog den Paketnamen des Spiels nicht kennt: der Ordner
+    /// `Android/obb/<Paket>` lässt sich dann erst benennen, wenn das APK entpackt ist.
+    public static let packageFolderPlaceholder = "@package-obb"
+
+    /// Der Ordner, in dem eine Quest die weiteren Dateien eines Spiels ablegt.
+    public static func packageFolder(package: String) -> String { "android-files/Android/obb/\(package)" }
+
+    /// Ob ein Ziel noch auf den Paketnamen wartet – der Platzhalter, oder der Ordner ohne Namen aus einem
+    /// Entwurf, der vor dem Platzhalter entstand.
+    public static func needsPackage(_ dest: String?) -> Bool {
+        dest == packageFolderPlaceholder || dest == packageFolder(package: "")
+    }
+
     /// - Parameter target: der Name des Spiels in der Toolchain – ein Eintrag ihrer Tabelle oder `genericTarget`.
     public static func make(game: CatalogGame, build: CatalogBuild, files: [ListedFile], target: String,
                             minCommit: String) throws -> Recipe {
         guard let apk = files.first(where: { $0.kind == "APK" }) else { throw ListingError.nothingListed }
-        let androidObb = "android-files/Android/obb/\(game.package)"
+        let androidObb = game.package.isEmpty ? packageFolderPlaceholder : packageFolder(package: game.package)
         var list = [RecipeFile(name: apk.name, role: "apk", id: apk.id, size: nil, sha256: nil, required: true, dest: "",
                                localName: "\(target).apk", locale: nil, source: nil)]
         var seen: Set<String> = [apk.name]

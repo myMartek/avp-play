@@ -126,7 +126,9 @@ public struct Toolchain: Sendable {
         let fresh = root.appendingPathComponent(".\(target).qi-new", isDirectory: true)
         try? fm.removeItem(at: fresh)
         let info = try ApkUnpacker().unpack(apk: source, to: fresh)
-        guard info.package == recipe.package, info.versionCode == String(recipe.versionCode) else {
+        // Ein Entwurf kennt den Paketnamen nur, wenn der Katalog ihn kennt – und der hat ihn nicht für jedes Spiel
+        // (Eye of the Temple: leer). Dann gibt es nichts zu vergleichen; der Versionscode bleibt die Prüfung.
+        guard recipe.package.isEmpty || info.package == recipe.package, info.versionCode == String(recipe.versionCode) else {
             try? fm.removeItem(at: fresh)
             throw RecipeError.invalid(L("the APK in the library doesn't match the recipe (\(info.package ?? "?"), code \(info.versionCode ?? "?"))",
                                         "Das APK im Bestand passt nicht zum Rezept (\(info.package ?? "?"), Code \(info.versionCode ?? "?"))"))

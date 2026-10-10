@@ -1,0 +1,37 @@
+{
+ "files": [
+  {
+   "dest": "",
+   "id": "7151584668264652",
+   "localName": "x5361030930653377.apk",
+   "name": "TempleVR.apk",
+   "required": true,
+   "role": "apk",
+   "size": 230946911,
+   "sha256": "46e43e51c833cc56a14ecab970dc8c5f1aee11dbbaa59d3de28efaaea9a753d9"
+  }
+ ],
+ "id": "store-5361030930653377",
+ "package": "com.RuneSkovboJohansen.EyeOfTheTemple",
+ "schema": 1,
+ "status": {
+  "playability": "verified",
+  "download": "proven",
+  "notes": [
+   {
+    "en": "Marked as verified by the project on 2026-10-10. File list as Meta's tool reports it for this build; 1 of 1 checksums recorded from a download.",
+    "de": "Vom Projekt am 2026-10-10 als geprüft markiert. Dateiliste, wie Metas Werkzeug sie für diesen Build nennt; 1 von 1 Prüfsummen aus einem Download erfasst."
+   }
+  ]
+ },
+ "store": {
+  "appId": "5361030930653377"
+ },
+ "title": "Eye of the Temple",
+ "toolchain": {
+  "minCommit": "82d7acb",
+  "target": "x5361030930653377"
+ },
+ "versionCode": 528,
+ "versionName": "1.528"
+}

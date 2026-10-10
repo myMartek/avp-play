@@ -343,7 +343,21 @@ public struct Installer: Sendable {
         let (device, bundle, toolchain) = try target()
         // Ein Entwurf lässt offen, wo die Haupt-Datendatei hingehört; jetzt, mit entpacktem APK, weiß es die Toolchain.
         var obb: String?
+        var packageFolder: String?
         let local = try localFiles().map { entry -> (file: RecipeFile, url: URL, size: Int64) in
+            // Ebenso der Ordner mit dem Paketnamen, wenn der Katalog den Namen nicht kannte.
+            if DraftRecipe.needsPackage(entry.file.dest) {
+                if packageFolder == nil {
+                    guard let name = toolchain.packageName(recipe: recipe) else {
+                        throw RecipeError.invalid(L("the game's package name is unknown, so there is no place for '\(entry.file.name)'",
+                                                    "Der Paketname des Spiels ist unbekannt, also gibt es keinen Ort für '\(entry.file.name)'"))
+                    }
+                    packageFolder = DraftRecipe.packageFolder(package: name)
+                }
+                var file = entry.file
+                file.dest = packageFolder
+                return (file, entry.url, entry.size)
+            }
             guard entry.file.dest == DraftRecipe.obbPlaceholder else { return entry }
             if obb == nil { obb = toolchain.obbDestination(recipe: recipe) ?? "android-files/obb" }
             var file = entry.file
