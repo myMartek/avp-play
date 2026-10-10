@@ -341,22 +341,31 @@ struct GameDetail: View {
                         .buttonStyle(.borderedProminent)
                         .controlSize(.large)
                         .disabled(model.blocker(for: game) != nil)
-                        if let why = model.blocker(for: game) {
+                        let blocked = model.blocker(for: game)
+                        if let why = blocked {
                             Text(why).font(.callout).foregroundStyle(.secondary)
                                 .multilineTextAlignment(.trailing).frame(maxWidth: 280, alignment: .trailing)
-                            // Steht nur dem Bauen etwas im Weg, lassen sich die Dateien trotzdem schon holen.
-                            if model.hasDownloads(game), !model.isBusy(game.id), model.downloadBlocker(for: game) != why {
-                                Button(action: { model.download(game) }) {
-                                    Text(L("Download Files Now", "Dateien schon laden")).frame(minWidth: 150)
-                                }
-                                .controlSize(.large)
-                                .disabled(model.downloadBlocker(for: game) != nil)
-                                Text(model.downloadBlocker(for: game)
-                                     ?? L("\(Installer.gigabytes(game.status.bytesToDownload)) – this already works; building and installing follow later.",
-                                          "\(Installer.gigabytes(game.status.bytesToDownload)) – das geht schon jetzt; gebaut und installiert wird später."))
-                                    .font(.callout).foregroundStyle(.secondary)
-                                    .multilineTextAlignment(.trailing).frame(maxWidth: 280, alignment: .trailing)
+                        }
+                        // Nur laden: bei Spielen aus dem Meta Store immer angeboten, solange etwas fehlt – wer den
+                        // Bestand erst füllen und später (oder an einem anderen Tag) bauen will, braucht dafür weder
+                        // Toolchain noch Vision Pro. Bei allen anderen wie bisher nur, wenn allein dem Bauen etwas
+                        // im Weg steht. Steht dem Laden dasselbe im Weg wie dem Installieren, sagt es der Text oben.
+                        let downloadBlocked = model.downloadBlocker(for: game)
+                        if model.hasDownloads(game), !model.isBusy(game.id),
+                           blocked == nil ? game.needsMetaAccount : downloadBlocked != blocked {
+                            Button(action: { model.download(game) }) {
+                                Text(L("Download Only", "Nur herunterladen")).frame(minWidth: 150)
                             }
+                            .controlSize(.large)
+                            .disabled(downloadBlocked != nil)
+                            Text(downloadBlocked
+                                 ?? (blocked == nil
+                                     ? L("\(Installer.gigabytes(game.status.bytesToDownload)) – fetches the files to this Mac; nothing is built or installed.",
+                                         "\(Installer.gigabytes(game.status.bytesToDownload)) – holt die Dateien auf diesen Mac; gebaut und installiert wird nichts.")
+                                     : L("\(Installer.gigabytes(game.status.bytesToDownload)) – this already works; building and installing follow later.",
+                                         "\(Installer.gigabytes(game.status.bytesToDownload)) – das geht schon jetzt; gebaut und installiert wird später.")))
+                                .font(.callout).foregroundStyle(.secondary)
+                                .multilineTextAlignment(.trailing).frame(maxWidth: 280, alignment: .trailing)
                         }
                     }
                 }

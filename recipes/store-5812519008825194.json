@@ -366,7 +366,7 @@
  },
  "title": "Assassin’s Creed® Nexus VR",
  "toolchain": {
-  "minCommit": "ace19e3",
+  "minCommit": "8073c5e",
   "target": "x5812519008825194"
  },
  "versionCode": 207706,
