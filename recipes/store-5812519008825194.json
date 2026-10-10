@@ -1,0 +1,374 @@
+{
+ "files": [
+  {
+   "dest": "",
+   "id": "6814366978640387",
+   "localName": "x5812519008825194.apk",
+   "name": "NexusVR.apk",
+   "required": true,
+   "role": "apk",
+   "size": 205092788,
+   "sha256": "9023b2434404f043cfe957ee1c500ee5b73d5169b9fbbb9217b9a929d8765350"
+  },
+  {
+   "dest": "android-files/Android/obb/com.Ubisoft.ACNexusVR",
+   "id": "6814365865307165",
+   "name": "start0",
+   "required": true,
+   "role": "content-bundle",
+   "size": 4294967296,
+   "sha256": "e6915a1115796be096c3cdff6c1c6f269cae18130e9f15071e1a99ab0f738a7d"
+  },
+  {
+   "dest": "android-files/Android/obb/com.Ubisoft.ACNexusVR",
+   "id": "6814363675307384",
+   "name": "start1",
+   "required": true,
+   "role": "content-bundle",
+   "size": 4294967296,
+   "sha256": "2eac49fbe267639f4f74cf05b2905b269eb59f7b529ad2ba7f476175db9b1b3a"
+  },
+  {
+   "dest": "android-files/Android/obb/com.Ubisoft.ACNexusVR",
+   "id": "6814361361974282",
+   "name": "fr.lang",
+   "required": true,
+   "role": "content-bundle",
+   "size": 3941352263,
+   "sha256": "9c6648d18534f299a5173b9bd2057db5215637e9eb1456a5753afcd0fc593d18"
+  },
+  {
+   "dest": "android-files/Android/obb/com.Ubisoft.ACNexusVR",
+   "id": "6814361178640967",
+   "name": "start2",
+   "required": true,
+   "role": "content-bundle",
+   "size": 1195254310,
+   "sha256": "8f86e1b02f1b0d5f2be76ea627465ee9668fa3357f96cb3350a34cec5d796dc9"
+  },
+  {
+   "dest": "android-files/Android/obb/com.Ubisoft.ACNexusVR",
+   "id": "6814360945307657",
+   "name": "de.lang",
+   "required": true,
+   "role": "content-bundle",
+   "size": 3827298067,
+   "sha256": "db67af0add89efb68a25a23af47435049e684cd8fb650f0a8e788ddd6aa89737"
+  },
+  {
+   "dest": "android-files/Android/obb/com.Ubisoft.ACNexusVR",
+   "id": "6814360618641023",
+   "name": "tod_theinformant_assets_all.bundle",
+   "required": true,
+   "role": "content-bundle",
+   "size": 273566623,
+   "sha256": "dbd8d4079930322622fba7c10a696c0af40467c0226e238fc41695d0548d8251"
+  },
+  {
+   "dest": "android-files/Android/obb/com.Ubisoft.ACNexusVR",
+   "id": "6814360481974370",
+   "name": "es.lang",
+   "required": true,
+   "role": "content-bundle",
+   "size": 4117569400,
+   "sha256": "a9a451ea7f3586988b70b2891a17accb31530c9befdadc44b541e956f52fc569"
+  },
+  {
+   "dest": "android-files/Android/obb/com.Ubisoft.ACNexusVR",
+   "id": "6814360351974383",
+   "name": "tod_huntingthebow_assets_all.bundle",
+   "required": true,
+   "role": "content-bundle",
+   "size": 198283181,
+   "sha256": "8f0a46c8a4c31f27c060af6066b519d45e20465d41a1285f763e03387a60ff6d"
+  },
+  {
+   "dest": "android-files/Android/obb/com.Ubisoft.ACNexusVR",
+   "id": "6814359831974435",
+   "name": "tod_battleformunychia_assets_all.bundle",
+   "required": true,
+   "role": "content-bundle",
+   "size": 127394303,
+   "sha256": "e392e123778c1aee779ee04d344246201e50947596c8b68771075cfb2827739a"
+  },
+  {
+   "dest": "android-files/Android/obb/com.Ubisoft.ACNexusVR",
+   "id": "6814352211975197",
+   "name": "persistent",
+   "required": true,
+   "role": "content-bundle",
+   "size": 226763605,
+   "sha256": "8a4fe1d1754d1de221ce5b0aa251ebe5392f6cd2a9629eb72188931d8a99cd5f"
+  },
+  {
+   "dest": "android-files/Android/obb/com.Ubisoft.ACNexusVR",
+   "id": "6814351898641895",
+   "name": "runtimeanimatorcontrollers_assets_all.bundle",
+   "required": true,
+   "role": "content-bundle",
+   "size": 534312532,
+   "sha256": "7997607656a28d3d88406b3aca5e6b7505df2177d1e3968edca108d0939330fa"
+  },
+  {
+   "dest": "android-files/Android/obb/com.Ubisoft.ACNexusVR",
+   "id": "6814351568641928",
+   "name": "performancehud_assets_all.bundle",
+   "required": true,
+   "role": "content-bundle",
+   "size": 26079,
+   "sha256": "52fcbc81c1169062848c178d0e4d0bfd04c55eb9ec9264320c567ab75b9650a4"
+  },
+  {
+   "dest": "android-files/Android/obb/com.Ubisoft.ACNexusVR",
+   "id": "6814351435308608",
+   "name": "Master.pck",
+   "required": true,
+   "role": "content-bundle",
+   "size": 1305430263,
+   "sha256": "a2ff8374824fa54401d1685260097f296055403fd8d6a4712415d87638bd301b"
+  },
+  {
+   "dest": "android-files/Android/obb/com.Ubisoft.ACNexusVR",
+   "id": "6814351161975302",
+   "name": "MasterAnimationTexture_r.bulk",
+   "required": true,
+   "role": "content-bundle",
+   "size": 8388608,
+   "sha256": "f93df0468355c207579d7225c47b4789d1ec1252d76dac1d127ca5bb636d5403"
+  },
+  {
+   "dest": "android-files/Android/obb/com.Ubisoft.ACNexusVR",
+   "id": "6814350965308655",
+   "name": "MasterAnimationTexture_p.bulk",
+   "required": true,
+   "role": "content-bundle",
+   "size": 8388608,
+   "sha256": "4df8b2d83263fa50ce906a39c868d19ea6f83d396a6709cbcd1968a2dfdbc8e4"
+  },
+  {
+   "dest": "android-files/Android/obb/com.Ubisoft.ACNexusVR",
+   "id": "6814350855308666",
+   "name": "FacialData_Common.bytes",
+   "required": true,
+   "role": "content-bundle",
+   "size": 56633639,
+   "sha256": "5a7cb2017f5ac3bed3172526c7317e585f6b518e373a87a28df788e6e173ddfa"
+  },
+  {
+   "dest": "android-files/Android/obb/com.Ubisoft.ACNexusVR",
+   "id": "6814350738642011",
+   "name": "f87dd8586673a076960e436c211fb2d7.climb",
+   "required": true,
+   "role": "content-bundle",
+   "size": 7630392,
+   "sha256": "7e618d61539a8683d18f32803ebd87c5209d7a88ed169b12c465aceb26e4124a"
+  },
+  {
+   "dest": "android-files/Android/obb/com.Ubisoft.ACNexusVR",
+   "id": "6814350645308687",
+   "name": "en.lang",
+   "required": true,
+   "role": "content-bundle",
+   "size": 3894397382,
+   "sha256": "589c29256c58ab3998bcf58916d02eaf3b13b45d8fd3824ed7979b84b2906506"
+  },
+  {
+   "dest": "android-files/Android/obb/com.Ubisoft.ACNexusVR",
+   "id": "6814350208642064",
+   "name": "e285144ceceaabad76d2b7a33f8872b3.climb",
+   "required": true,
+   "role": "content-bundle",
+   "size": 22423112,
+   "sha256": "f49d8e100b200248f75d38ea261480ac8937c34ee084b137cef84db80eec7253"
+  },
+  {
+   "dest": "android-files/Android/obb/com.Ubisoft.ACNexusVR",
+   "id": "6814350008642084",
+   "name": "ec268eeebc2cb683bb5bb25a36590afb.climb",
+   "required": true,
+   "role": "content-bundle",
+   "size": 1528776,
+   "sha256": "b58a60ba6c176ff2cd9b0cf126048fbb866ca829debe7cdfdd27aaccefdf8d72"
+  },
+  {
+   "dest": "android-files/Android/obb/com.Ubisoft.ACNexusVR",
+   "id": "6814349931975425",
+   "name": "ea0adaa329fb44e89aa80103a67ef901.climb",
+   "required": true,
+   "role": "content-bundle",
+   "size": 3366552,
+   "sha256": "ebadec55fa8632d38bddc4a2fbf8f0a3377c2475d6c72a2b3da06a5482687bcf"
+  },
+  {
+   "dest": "android-files/Android/obb/com.Ubisoft.ACNexusVR",
+   "id": "6814349798642105",
+   "name": "ce0998ec6f2dfbc29be9de89a1f5f65e.climb",
+   "required": true,
+   "role": "content-bundle",
+   "size": 18351048,
+   "sha256": "5279742bc69ab2f56397dfbac4c2bd443f105e8a58dee7be40d3cfb7c9b942b3"
+  },
+  {
+   "dest": "android-files/Android/obb/com.Ubisoft.ACNexusVR",
+   "id": "6814349658642119",
+   "name": "de6f47a506e2b37acf4e9cef837f1620.climb",
+   "required": true,
+   "role": "content-bundle",
+   "size": 28749016,
+   "sha256": "d34ebecd9ab57aa2f4325744842c40dde673ea1c5f5cc7120976d8fda53b59f5"
+  },
+  {
+   "dest": "android-files/Android/obb/com.Ubisoft.ACNexusVR",
+   "id": "6814349531975465",
+   "name": "d4e910c15d4778758c2baf7f249807f5.climb",
+   "required": true,
+   "role": "content-bundle",
+   "size": 7794360,
+   "sha256": "85ae9c165e1e507432956fc367a4a084e3d64ad8ae68b7c29d4088f69ed2c1f0"
+  },
+  {
+   "dest": "android-files/Android/obb/com.Ubisoft.ACNexusVR",
+   "id": "6814349378642147",
+   "name": "9c1d3e510894c2358954fcba2729932f.climb",
+   "required": true,
+   "role": "content-bundle",
+   "size": 11324360,
+   "sha256": "ee0be29244f2b8643165dd49677e3afa83b33325350a190195f902a4fbf98d4b"
+  },
+  {
+   "dest": "android-files/Android/obb/com.Ubisoft.ACNexusVR",
+   "id": "6814349241975494",
+   "name": "799900c092c946fa31e674ff7fee4c56.climb",
+   "required": true,
+   "role": "content-bundle",
+   "size": 35737768,
+   "sha256": "00cf84a2c793a80b74991b5717874a573f2c512bc62fd2ca4e4ae7df080178ee"
+  },
+  {
+   "dest": "android-files/Android/obb/com.Ubisoft.ACNexusVR",
+   "id": "6814348878642197",
+   "name": "68b82391aac9d91aa63da9d7618e5ab8.climb",
+   "required": true,
+   "role": "content-bundle",
+   "size": 4668840,
+   "sha256": "df07266ed198f96d9c6dddffa4d1dfc47d8f360e8d9f5b79e21498deb8db2a98"
+  },
+  {
+   "dest": "android-files/Android/obb/com.Ubisoft.ACNexusVR",
+   "id": "6814348758642209",
+   "name": "50da40d9ab0a9044b03d1706f9b5e85d.climb",
+   "required": true,
+   "role": "content-bundle",
+   "size": 35156296,
+   "sha256": "b87701830c627d00db3682bacee21dca8c954a020296833a629267234c6e3241"
+  },
+  {
+   "dest": "android-files/Android/obb/com.Ubisoft.ACNexusVR",
+   "id": "6814348608642224",
+   "name": "4f4fb68f6a058816eca36d44db58ef5d.climb",
+   "required": true,
+   "role": "content-bundle",
+   "size": 27193816,
+   "sha256": "1725d113cc1fb7d61387d6e1371d9402075f04a0acefd8e9b22a11756f97bbbc"
+  },
+  {
+   "dest": "android-files/Android/obb/com.Ubisoft.ACNexusVR",
+   "id": "6814348428642242",
+   "name": "6ac09505803f0657d01324c965f34d7e.climb",
+   "required": true,
+   "role": "content-bundle",
+   "size": 23512360,
+   "sha256": "42b6f5500b5708323b3d3b9047999d43691acee43224b936514695e190938fc3"
+  },
+  {
+   "dest": "android-files/Android/obb/com.Ubisoft.ACNexusVR",
+   "id": "6814348318642253",
+   "name": "49276651ab112b852e8fd9bae117f1e6.climb",
+   "required": true,
+   "role": "content-bundle",
+   "size": 30048728,
+   "sha256": "07ef18a7ce2dc0d35edc6ceb06b1aa1add7d70ce989dce3ce2f683b7169218ff"
+  },
+  {
+   "dest": "android-files/Android/obb/com.Ubisoft.ACNexusVR",
+   "id": "6814348121975606",
+   "name": "40717a39c2c30712d5fc7f3f32408c58.climb",
+   "required": true,
+   "role": "content-bundle",
+   "size": 34875048,
+   "sha256": "95744dc205e1fdb030096efbbd88ec9032e91ae9bac2ed6ed8822559815ee15e"
+  },
+  {
+   "dest": "android-files/Android/obb/com.Ubisoft.ACNexusVR",
+   "id": "6814347775308974",
+   "name": "3e1a4068dccd55523878ce94f76cfe6d.climb",
+   "required": true,
+   "role": "content-bundle",
+   "size": 1618744,
+   "sha256": "fde85444b2af484b0fa8c711c4aa7aec1ad4777659c90e90645414a11ed3167d"
+  },
+  {
+   "dest": "android-files/Android/obb/com.Ubisoft.ACNexusVR",
+   "id": "6814347701975648",
+   "name": "283f771ecebd528903f523489e2ff359.climb",
+   "required": true,
+   "role": "content-bundle",
+   "size": 2698056,
+   "sha256": "4ec1ca12848de0f7c2626269f1bd4db79444df9af02fab785b70d678c76be709"
+  },
+  {
+   "dest": "android-files/Android/obb/com.Ubisoft.ACNexusVR",
+   "id": "6814347471975671",
+   "name": "10e3824194b0bd16f875aefbaee01245.climb",
+   "required": true,
+   "role": "content-bundle",
+   "size": 10745272,
+   "sha256": "4e470fad0298a836fd42485e57d79ead845496847e5ff2a0074332f78fee972f"
+  },
+  {
+   "dest": "android-files/Android/obb/com.Ubisoft.ACNexusVR",
+   "id": "6814347461975672",
+   "name": "04b64d03757e6ad14fbe546b181b1dfe.climb",
+   "required": true,
+   "role": "content-bundle",
+   "size": 3643304,
+   "sha256": "a7e0dce0925210bbf9622d8f881191a25c1bdd699366fa2429b3fe4c2f89b5f9"
+  },
+  {
+   "dest": "android-files/Android/obb/com.Ubisoft.ACNexusVR",
+   "id": "6814347238642361",
+   "name": "0b6eb69ffd1b0c67d0a1c071b4aeb727.climb",
+   "required": true,
+   "role": "content-bundle",
+   "size": 36150392,
+   "sha256": "7399115ce67ca15ff7b920f3afe4a748417d36218c2be54ae0219f27b0c09a3c"
+  }
+ ],
+ "id": "store-5812519008825194",
+ "package": "com.Ubisoft.ACNexusVR",
+ "schema": 1,
+ "status": {
+  "playability": "verified",
+  "download": "proven",
+  "notes": [
+   {
+    "en": "Marked as verified by the project on 2026-10-10. File list as Meta's tool reports it for this build; 38 of 38 checksums recorded from a download.",
+    "de": "Vom Projekt am 2026-10-10 als geprüft markiert. Dateiliste, wie Metas Werkzeug sie für diesen Build nennt; 38 von 38 Prüfsummen aus einem Download erfasst."
+   },
+   {
+    "en": "Assassin's Creed Nexus VR. Tested by the author on a Vision Pro M5: it starts, has sound, shows its menu cards, the hands touch and grab, and levels load and play at up to the display's full rate. The audio languages on the headset can be chosen in the game. Known: edges shimmer somewhat, passthrough is not supported, highlighted objects look pale.",
+    "de": "Assassin's Creed Nexus VR. Vom Autor auf einer Vision Pro M5 getestet: startet, hat Ton, zeigt seine Menükarten, die Hände greifen, Level laden und laufen mit bis zur vollen Bildrate des Displays. Die Sprachausgaben auf dem Headset lassen sich im Spiel wählen. Bekannt: Kanten flimmern etwas, Passthrough wird nicht unterstützt, hervorgehobene Gegenstände wirken blass."
+   }
+  ]
+ },
+ "store": {
+  "appId": "5812519008825194"
+ },
+ "title": "Assassin’s Creed® Nexus VR",
+ "toolchain": {
+  "minCommit": "ace19e3",
+  "target": "x5812519008825194"
+ },
+ "versionCode": 207706,
+ "versionName": "MAIN.450412.207706.final"
+}
