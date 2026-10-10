@@ -252,14 +252,17 @@ struct OwnershipLabel: View {
 }
 
 struct CoverImage: View {
+    @EnvironmentObject var model: AppModel
     let game: Game
+    /// Das nachgeladene Bild eines Spiels, dessen Dateien (und damit sein eigenes Bild) noch nicht auf dem Mac liegen.
+    @State private var fetched: NSImage?
 
     var body: some View {
         Color.clear
             .aspectRatio(16.0 / 9.0, contentMode: .fit)
             .overlay {
-                if let cover = game.cover {
-                    Image(nsImage: cover).resizable().scaledToFill()
+                if let cover = game.cover ?? fetched {
+                    Image(nsImage: cover).resizable().scaledToFill().transition(.opacity)
                 } else {
                     // Ohne Bild: eine ruhige Fläche mit dem Namen, damit die Karte nicht leer wirkt.
                     LinearGradient(colors: [Color(nsColor: .controlAccentColor).opacity(0.55), Color.black.opacity(0.75)],
@@ -269,6 +272,15 @@ struct CoverImage: View {
                 }
             }
             .clipped()
+            .animation(.easeIn(duration: 0.25), value: fetched != nil)
+            // Erst die Farbfläche, dann das Bild von der Store-Seite – nur für Karten, die gerade zu sehen sind:
+            // scrollt eine aus dem Bild, endet ihre Aufgabe, und ein noch nicht begonnener Abruf entfällt.
+            .task(id: game.id) {
+                fetched = nil
+                guard game.cover == nil, model.storePictures, let appId = game.recipe.store.appId,
+                      let data = await model.covers.image(appId: appId), !Task.isCancelled else { return }
+                fetched = NSImage(data: data)
+            }
     }
 }
 

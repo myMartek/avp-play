@@ -42,6 +42,8 @@ struct StorageOverview {
     var toolchains: [StoredToolchain]
     /// Was von einem abgebrochenen Abruf bei SteamCMD liegen geblieben ist.
     var steamLeftover: Int64
+    /// Der Zwischenspeicher der Titelbilder aus dem Store.
+    var pictureCache: Int64 = 0
 
     var gamesBytes: Int64 { games.map(\.bytes).reduce(0, +) }
     var olderToolchains: [StoredToolchain] { toolchains.filter { !$0.inUse } }
@@ -109,7 +111,7 @@ extension AppModel {
             let overview = StorageOverview(
                 root: root, isCustom: StoreLocation.custom() != nil, available: StoreLocation.isAvailable(root), games: stored,
                 freeBytes: StoreLocation.freeBytes(at: root),
-                toolchains: toolchains, steamLeftover: steam)
+                toolchains: toolchains, steamLeftover: steam, pictureCache: CoverCache().size())
             await MainActor.run {
                 self.storage = overview
                 self.storageScanning = false
@@ -149,6 +151,14 @@ extension AppModel {
                 self.notice = L("\(removed.count) older toolchain(s) removed.", "\(removed.count) ältere Toolchain(s) entfernt.")
                 self.scanStorage()
             }
+        }
+    }
+
+    /// Leert den Zwischenspeicher der Titelbilder. Sie werden bei Bedarf neu geholt.
+    func removePictureCache() {
+        Task.detached {
+            CoverCache().clear()
+            await MainActor.run { self.scanStorage() }
         }
     }
 

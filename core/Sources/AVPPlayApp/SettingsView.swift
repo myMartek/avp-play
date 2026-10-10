@@ -39,6 +39,14 @@ struct SettingsView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
+            Section(L("Pictures", "Bilder")) {
+                Toggle(L("Load pictures of games from the Meta Store", "Bilder der Spiele aus dem Meta-Store laden"), isOn: $model.storePictures)
+                Text(L("For games whose files are not on this Mac yet, the app fetches the picture from the game's public page in the Meta Store (meta.com) – only for games you are looking at, without your Meta sign-in, and keeps a small copy in a cache that the Data page can empty. Without this, such games show a coloured tile with their name.",
+                       "Für Spiele, deren Dateien noch nicht auf diesem Mac liegen, holt die App das Bild von der öffentlichen Seite des Spiels im Meta-Store (meta.com) – nur für Spiele, die du gerade siehst, ohne deine Meta-Anmeldung, und hält eine kleine Kopie in einem Zwischenspeicher, den die Datenverwaltung leeren kann. Ohne das zeigen solche Spiele eine farbige Fläche mit ihrem Namen."))
+                    .font(.callout).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
             Section(L("Downloads", "Downloads")) {
                 StoreLocationBox()
                 Text(L("Downloaded games are kept here – easily tens of gigabytes each. You can choose a folder on another disk, for example an external one; the games already downloaded move there. While that disk is not connected, nothing is downloaded or installed. Under “Data” in the main window you see what is stored and can remove it.",

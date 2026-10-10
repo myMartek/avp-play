@@ -39,7 +39,7 @@ struct DataView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
-                if let storage = model.storage, !storage.toolchains.isEmpty || storage.steamLeftover > 0 {
+                if let storage = model.storage, !storage.toolchains.isEmpty || storage.steamLeftover > 0 || storage.pictureCache > 0 {
                     GroupBox(L("Other Data on This Mac", "Weitere Daten auf diesem Mac")) {
                         VStack(alignment: .leading, spacing: 10) {
                             if !storage.toolchains.isEmpty {
@@ -66,6 +66,19 @@ struct DataView: View {
                                     }
                                     Spacer()
                                     Button(L("Remove", "Entfernen")) { model.removeSteamLeftovers() }.disabled(!model.steamBusy.isEmpty)
+                                }
+                            }
+                            if storage.pictureCache > 0 {
+                                Divider()
+                                HStack(alignment: .firstTextBaseline) {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(L("Pictures from the Meta Store", "Bilder aus dem Meta-Store"))
+                                        Text(L("\(StoredGameRow.size(storage.pictureCache)) of pictures for games that are not downloaded. The app fetches them again when they are needed and keeps this below 300 MB by itself.",
+                                               "\(StoredGameRow.size(storage.pictureCache)) an Bildern für Spiele, die nicht geladen sind. Die App holt sie bei Bedarf neu und hält das von selbst unter 300 MB."))
+                                            .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                                    }
+                                    Spacer()
+                                    Button(L("Remove", "Entfernen")) { model.removePictureCache() }
                                 }
                             }
                         }

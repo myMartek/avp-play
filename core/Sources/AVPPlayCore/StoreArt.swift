@@ -62,6 +62,30 @@ public struct StoreArt: Sendable {
         await cover(appId: appId, accept: StoreArt.isLandscapeCover)
     }
 
+    /// Der Anfang der Store-Seite, bis einschließlich des Blocks mit den Bildadressen. Die Seite ist einige hundert
+    /// Kilobyte groß, der Block steht in den ersten dreißig; danach wird nicht weitergelesen.
+    static func pageHead(_ request: URLRequest, session: URLSession, limit: Int = 300_000) async -> String? {
+        guard let (bytes, response) = try? await session.bytes(for: request),
+              (response as? HTTPURLResponse)?.statusCode == 200 else { return nil }
+        var data = Data()
+        data.reserveCapacity(64_000)
+        let opening = Data("application/ld+json".utf8), closing = Data("</script>".utf8)
+        var seenAt: Int?
+        do {
+            for try await byte in bytes {
+                data.append(byte)
+                // Nur am Ende eines Tags nachsehen, nicht bei jedem Byte.
+                if byte == 0x3E {
+                    if seenAt == nil, let r = data.range(of: opening) { seenAt = r.upperBound }
+                    if let from = seenAt, data.count - from >= closing.count, data.suffix(closing.count) == closing { break }
+                }
+                if data.count >= limit { break }
+            }
+        } catch { return nil }
+        bytes.task.cancel()
+        return String(decoding: data, as: UTF8.self)
+    }
+
     func cover(appId: String, accept: (Int, Int) -> Bool) async -> Data? {
         guard !appId.isEmpty, appId.allSatisfy(\.isNumber),
               let page = URL(string: "https://www.meta.com/experiences/\(appId)/") else { return nil }
@@ -74,10 +98,9 @@ public struct StoreArt: Sendable {
 
         var request = URLRequest(url: page)
         request.setValue(StoreArt.userAgent, forHTTPHeaderField: "User-Agent")
-        guard let (data, response) = try? await session.data(for: request),
-              (response as? HTTPURLResponse)?.statusCode == 200 else { return nil }
+        guard let head = await StoreArt.pageHead(request, session: session) else { return nil }
         // Die ersten Bilder der Seite sind die Titelbilder (quer, quadratisch, hoch), danach folgen Screenshots.
-        for url in StoreArt.imageURLs(inStorePage: String(decoding: data, as: UTF8.self)).prefix(4) {
+        for url in StoreArt.imageURLs(inStorePage: head).prefix(4) {
             guard let (image, imageResponse) = try? await session.data(from: url),
                   (imageResponse as? HTTPURLResponse)?.statusCode == 200,
                   let size = StoreArt.pixelSize(image) else { continue }

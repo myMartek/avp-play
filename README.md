@@ -103,6 +103,10 @@ their own recipe.
   Steam whether your account owns the game, and Steam itself only hands out what it does. You do not need Steam
   installed. Valve ships SteamCMD as an Intel program, so a Mac that has never run one needs Apple's Rosetta once;
   the Setup page says so and installs it at the click of a button.
+- **Pictures** of games whose files are not on your Mac yet come from the game's public page in the Meta Store
+  (meta.com): only for games you are looking at, two at a time, without your Meta sign-in or cookies. A small
+  copy is kept in a cache (`~/Library/Caches/AVPPlay`) that the *Data* page can empty; Settings › Pictures turns
+  this off. Games whose store page names no picture keep a coloured tile with their name.
 - **Ownership** is asked of Meta before anything is downloaded, and once a day so the app can show which games
   are yours. Add-on content is downloaded only for purchases Meta confirms. Bought
   something later? **Sync DLCs** on the game's page asks again, downloads what is new and adds it to the installed

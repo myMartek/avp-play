@@ -162,6 +162,10 @@ final class AppModel: ObservableObject {
     @Published var favourites: Set<String> = Set(UserDefaults.standard.stringArray(forKey: "favourites") ?? [])
     @Published var sentFeedback: [String: String] = UserDefaults.standard.dictionary(forKey: "sentFeedback") as? [String: String] ?? [:]
     @AppStorage("onlineCatalog") var onlineCatalog = true
+    /// Titelbilder für Spiele, die noch nicht geladen sind, von deren öffentlicher Store-Seite holen.
+    @AppStorage("storePictures") var storePictures = true
+    /// Besorgt diese Bilder: zwei Abrufe zugleich, mit Zwischenspeicher.
+    let covers = CoverLoader()
     @AppStorage("filterFavourites") var filterFavourites = false
     /// Was das Gerät zuletzt als installiert gemeldet hat, und ab welcher Toolchain-Nummer ein Bau aktuell ist.
     var installedApps: [InstalledApp]?

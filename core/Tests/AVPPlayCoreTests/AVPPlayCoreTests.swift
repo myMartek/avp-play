@@ -830,6 +830,86 @@ final class JobTests: XCTestCase {
     }
 }
 
+final class CoverTests: XCTestCase {
+    func folder() -> URL {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("qi-covers-\(UUID().uuidString)", isDirectory: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: dir) }
+        return dir
+    }
+
+    /// Ein einfarbiges Bild in der Größe, in der die Store-Seite ihre Titelbilder liefert.
+    func picture(width: Int = 2560, height: Int = 1440) -> Data {
+        let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
+                                space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)!
+        context.setFillColor(red: 0.2, green: 0.4, blue: 0.6, alpha: 1)
+        context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+        let out = NSMutableData()
+        let dest = CGImageDestinationCreateWithData(out, "public.png" as CFString, 1, nil)!
+        CGImageDestinationAddImage(dest, context.makeImage()!, nil)
+        CGImageDestinationFinalize(dest)
+        return out as Data
+    }
+
+    func testStoresASmallCopyAndRemembersWhatHasNoPicture() throws {
+        let cache = CoverCache(directory: folder())
+        XCTAssertNil(cache.cached(appId: "123456"))
+        let small = try XCTUnwrap(cache.store(appId: "123456", original: picture()))
+        let size = try XCTUnwrap(StoreArt.pixelSize(small))
+        XCTAssertEqual(size.width, 1024)
+        XCTAssertEqual(size.height, 576)
+        XCTAssertEqual(cache.cached(appId: "123456"), small)
+        XCTAssertNil(cache.store(appId: "123456", original: Data("kein Bild".utf8)))
+        XCTAssertNil(cache.store(appId: "../etc", original: picture()), "nur Ziffern sind eine Kennung")
+        XCTAssertNil(cache.cached(appId: "../../etc/passwd"))
+
+        XCTAssertFalse(cache.isKnownMissing(appId: "777"))
+        cache.noteMissing(appId: "777")
+        XCTAssertTrue(cache.isKnownMissing(appId: "777"))
+        XCTAssertFalse(cache.isKnownMissing(appId: "777", now: Date().addingTimeInterval(8 * 24 * 3600)), "nach einer Woche wird wieder gefragt")
+
+        XCTAssertGreaterThan(cache.size(), 0)
+        cache.prune(maxBytes: 0)
+        XCTAssertNil(cache.cached(appId: "123456"))
+        cache.clear()
+        XCTAssertEqual(cache.size(), 0)
+    }
+
+    func testLoaderAsksOncePerGameAndNeverMoreThanTwoAtATime() async throws {
+        let cache = CoverCache(directory: folder())
+        let original = picture(width: 1280, height: 720)
+        let calls = LockedBox<[String]>([]), active = LockedBox<Int>(0), peak = LockedBox<Int>(0)
+        let loader = CoverLoader(cache: cache, concurrent: 2) { id in
+            calls.set(calls.get() + [id])
+            active.set(active.get() + 1); peak.set(max(peak.get(), active.get()))
+            try? await Task.sleep(for: .milliseconds(40))
+            active.set(active.get() - 1)
+            return id == "404" ? nil : original
+        }
+        // Dasselbe Spiel in Liste und Spielseite zugleich, dazu weitere.
+        async let a = loader.image(appId: "1"), b = loader.image(appId: "1"), c = loader.image(appId: "2")
+        async let d = loader.image(appId: "3"), e = loader.image(appId: "4"), none = loader.image(appId: "404")
+        let results = await [a, b, c, d, e]
+        let missing = await none
+        XCTAssertTrue(results.allSatisfy { $0 != nil })
+        XCTAssertNil(missing)
+        XCTAssertEqual(calls.get().filter { $0 == "1" }.count, 1, "ein Abruf je Spiel")
+        XCTAssertLessThanOrEqual(peak.get(), 2)
+
+        let before = calls.get().count
+        let again = await loader.image(appId: "2")
+        let stillNone = await loader.image(appId: "404")
+        XCTAssertNotNil(again)
+        XCTAssertNil(stillNone)
+        XCTAssertEqual(calls.get().count, before, "weder das Geholte noch das Fehlende wird neu gefragt")
+        // Ein neuer Lader findet die Bilder auf der Platte.
+        let second = CoverLoader(cache: cache) { _ in XCTFail("nicht aus dem Netz"); return nil }
+        let fromDisk = await second.image(appId: "3")
+        XCTAssertNotNil(fromDisk)
+        let notAnId = await second.image(appId: "alyx")
+        XCTAssertNil(notAnId)
+    }
+}
+
 final class RosettaTests: XCTestCase {
     /// So kommt SteamCMD von Valve: eine einzelne Intel-Fassung. Nach seiner Selbstaktualisierung hat es zwei.
     func testSeesWhetherAProgramHasASliceForAppleSilicon() throws {

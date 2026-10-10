@@ -137,6 +137,7 @@ struct RootView: View {
         .sheet(isPresented: $model.showReport) { ReportSheet(job: model.reportJob).environmentObject(model) }
         .task {
             model.installBundledToolchainIfNewer()
+            Task.detached(priority: .background) { CoverCache().prune() }
             model.refresh()
             model.checkAccount()
             model.loadCatalog()
