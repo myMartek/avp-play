@@ -330,7 +330,8 @@ final class AppModel: ObservableObject {
 
     /// Wie weit der Download eines Auftrags ist: vorhandene und angefangene Bytes gegen die bekannte Summe.
     func downloadProgress(_ job: Job) -> (done: Int64, total: Int64)? {
-        var selection = FetchSelection(locales: Set(job.request.locales), optionalNames: Set(job.request.optionalNames))
+        var selection = FetchSelection(locales: Set(job.request.locales), optionalNames: Set(job.request.optionalNames),
+                                       withheld: paths.store.withheld(for: job.recipe))
         if job.recipe.addons?.kind == .deliveredAssets, job.request.addons,
            let purchases = PurchaseRecord.load(store: paths.store, recipe: job.recipe) { selection.ownedSKUs = Set(purchases.skus) }
         var done: Int64 = 0, total: Int64 = 0

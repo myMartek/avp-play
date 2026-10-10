@@ -164,7 +164,8 @@ public struct Installer: Sendable {
     }
 
     func selection() -> FetchSelection {
-        var sel = FetchSelection(locales: Set(request.locales), optionalNames: Set(request.optionalNames))
+        var sel = FetchSelection(locales: Set(request.locales), optionalNames: Set(request.optionalNames),
+                                 withheld: store.withheld(for: recipe))
         if recipe.addons?.kind == .deliveredAssets, let p = confirmedPurchases() { sel.ownedSKUs = Set(p.skus) }
         return sel
     }
@@ -293,6 +294,10 @@ public struct Installer: Sendable {
         let summary = try await fetcher.run(plan, recipe: recipe) { report("  " + $0) }
         report(L("Downloaded: \(summary.downloaded) files, \(summary.kept) were already there.",
                  "Geladen: \(summary.downloaded) Dateien, \(summary.kept) waren vorhanden."))
+        if !summary.withheld.isEmpty {
+            report(L("Without \(summary.withheld.count) add-on file(s) Meta doesn't deliver for this account: \(summary.withheld.joined(separator: ", ")). The game is installed without them. After buying the add-on, remove the game's files on its page and download again.",
+                     "Ohne \(summary.withheld.count) Zusatzdatei(en), die Meta für dieses Konto nicht ausliefert: \(summary.withheld.joined(separator: ", ")). Das Spiel wird ohne sie installiert. Nach einem Kauf des Zusatzinhalts: die Dateien des Spiels auf seiner Seite entfernen und neu laden."))
+        }
     }
 
     /// Bauen und installieren. Der Container muss existieren, bevor Daten kopiert werden; deshalb steht der

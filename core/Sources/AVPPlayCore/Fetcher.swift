@@ -28,6 +28,16 @@ public struct Fetcher: Sendable {
         public var learned: [Learned] = []
         /// Dateien, die der Nutzer selbst bereitstellen muss.
         public var needsUser: [String] = []
+        /// Zusatzdateien, die Meta diesem Konto nicht ausliefert (nicht gekaufter Zusatzinhalt); übersprungen.
+        public var withheld: [String] = []
+    }
+
+    /// Darf eine Ablehnung dieser Datei als „gehört nicht zu den Käufen“ gelten? Nur für die weiteren Dateien
+    /// eines ungeprüften Entwurfs: Metas Dateiliste nennt dort auch kostenpflichtige Zusatzinhalte, ohne sie zu
+    /// kennzeichnen. Das APK, die Haupt-Datendatei und alles, wofür ein Rezept eine Prüfsumme kennt, gehören
+    /// zum Spiel selbst – wird so etwas verweigert, stimmt etwas anderes nicht, und der Lauf endet wie bisher.
+    public static func mayBeWithheld(_ file: RecipeFile) -> Bool {
+        file.source == nil && file.role == "content-bundle" && file.sha256 == nil
     }
 
     let client: MetaClient
@@ -73,6 +83,16 @@ public struct Fetcher: Sendable {
                 } else {
                     outcome = try await client.download(id: file.id, to: partial, resumeFrom: offset)
                 }
+            } catch MetaError.denied(status: 404) where Fetcher.mayBeWithheld(file) {
+                // Kein unerwarteter Ausgang, sondern Metas Antwort auf einen Zusatzinhalt, der nicht gekauft ist.
+                // Die Datei wird vermerkt und nie wieder angefragt; die übrigen kommen jede genau einmal dran.
+                await gate.requestFinished()
+                try? FileManager.default.removeItem(at: partial)
+                try store.noteWithheld(file, in: recipe)
+                summary.withheld.append(file.name)
+                log(L("not delivered by Meta for this account (HTTP 404): \(file.name) – most likely add-on content that isn't purchased. Skipped and remembered; it won't be requested again.",
+                      "von Meta für dieses Konto nicht ausgeliefert (HTTP 404): \(file.name) – sehr wahrscheinlich ein Zusatzinhalt, der nicht gekauft ist. Übersprungen und vermerkt; die Datei wird nicht wieder angefragt."))
+                continue
             } catch {
                 await gate.requestFinished()
                 throw error            // erster unerwarteter Ausgang: nichts weiter anfragen

@@ -1009,6 +1009,37 @@ final class UntestedGameTests: XCTestCase {
         XCTAssertEqual(MetaListing.parse("nothing here"), [])
     }
 
+    /// Eine Zusatzdatei, die Meta dem Konto verweigert (nicht gekaufter Zusatzinhalt – Maestro), wird vermerkt und
+    /// danach weder eingeplant noch vermisst. Für das Spiel selbst gilt das nie.
+    func testAnAddOnFileMetaWithholdsIsRememberedAndLeftOut() throws {
+        let game = CatalogGame(appId: "1921533091289407", title: "Some Game", package: "com.example.game", publisher: nil, status: "untested",
+                               noteEn: nil, noteDe: nil, target: "somegame", works: 0, problems: 0, fails: 0, build: nil)
+        let build = CatalogBuild(buildId: "8254815691289807", version: "1.2", versionCode: 151047, fileName: nil)
+        let draft = try DraftRecipe.make(game: game, build: build, files: MetaListing.parse(listing), target: "somegame", minCommit: "abc1234")
+        let (apk, obb, extra) = (draft.files[0], draft.files[1], draft.files[2])
+        XCTAssertTrue(Fetcher.mayBeWithheld(extra))
+        XCTAssertFalse(Fetcher.mayBeWithheld(apk), "das Programm selbst")
+        XCTAssertFalse(Fetcher.mayBeWithheld(obb), "die Haupt-Datendatei")
+        var proven = extra; proven.sha256 = String(repeating: "a", count: 64)
+        XCTAssertFalse(Fetcher.mayBeWithheld(proven), "was ein geprüftes Rezept mit Prüfsumme nennt, gehört zum Spiel")
+
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("avpplay-withheld-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = ContentStore(root: root)
+        XCTAssertEqual(store.withheld(for: draft), [])
+        try store.noteWithheld(extra, in: draft)
+        try store.noteWithheld(extra, in: draft)
+        XCTAssertEqual(store.withheldFiles(for: draft).map(\.name), [extra.name], "einmal vermerkt, nicht doppelt")
+        XCTAssertEqual(store.withheld(for: draft), [extra.id])
+
+        let all = FetchPlan.wantedFiles(recipe: draft, selection: FetchSelection())
+        let without = FetchPlan.wantedFiles(recipe: draft, selection: FetchSelection(withheld: store.withheld(for: draft)))
+        XCTAssertEqual(all.map(\.name), draft.files.map(\.name))
+        XCTAssertEqual(without.map(\.name), [apk.name, obb.name])
+        let plan = FetchPlan.plan(recipe: draft, selection: FetchSelection(withheld: store.withheld(for: draft))) { _ in .missing }
+        XCTAssertFalse(plan.contains { $0.file.id == extra.id }, "nie wieder angefragt")
+    }
+
     /// Ein APK ohne 64-Bit-Code (République VR: nur armeabi-v7a) kann auf der Vision Pro nie laufen.
     func testAnApkWithout64BitCodeIsRecognised() {
         let old = ["AndroidManifest.xml", "lib/armeabi-v7a/libunity.so", "lib/armeabi-v7a/libil2cpp.so", "assets/bin/Data/x.so"]

@@ -10,13 +10,17 @@ public struct FetchSelection: Sendable, Equatable {
     public var ownedSKUs: Set<String> = []
     /// Beschränkt den Plan auf diese Dateinamen (für gezielte Abrufe und Tests).
     public var only: Set<String>? = nil
+    /// Kennungen von Dateien, die Meta diesem Konto schon einmal verweigert hat (`ContentStore.withheld`). Sie
+    /// werden nicht mehr eingeplant und nicht mehr gebraucht.
+    public var withheld: Set<String> = []
 
     public init(locales: Set<String> = [], optionalNames: Set<String> = [], ownedSKUs: Set<String> = [],
-                only: Set<String>? = nil) {
+                only: Set<String>? = nil, withheld: Set<String> = []) {
         self.locales = locales
         self.optionalNames = optionalNames
         self.ownedSKUs = ownedSKUs
         self.only = only
+        self.withheld = withheld
     }
 }
 
@@ -49,6 +53,7 @@ public enum FetchPlan {
                 .filter { selection.ownedSKUs.contains($0.sku) }
                 .map { $0.asFile(dest: addons.dest) }
         }
+        if !selection.withheld.isEmpty { wanted = wanted.filter { $0.id.isEmpty || !selection.withheld.contains($0.id) } }
         if let only = selection.only { wanted = wanted.filter { only.contains($0.name) } }
         return wanted
     }

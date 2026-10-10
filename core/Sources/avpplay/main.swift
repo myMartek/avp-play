@@ -226,7 +226,8 @@ func describe(_ j: Job) -> String {
 }
 
 func selection(_ o: Options, recipe: Recipe, client: MetaClient?) async -> FetchSelection {
-    var s = FetchSelection(locales: Set(o.values["locale"] ?? []), optionalNames: Set(o.values["with"] ?? []))
+    var s = FetchSelection(locales: Set(o.values["locale"] ?? []), optionalNames: Set(o.values["with"] ?? []),
+                           withheld: contentStore(o).withheld(for: recipe))
     if let only = o.values["only"] { s.only = Set(only) }
     if o.flags.contains("addons"), recipe.addons?.kind == .deliveredAssets {
         guard let client, let app = recipe.store.appId else { fail("\(MetaError.missingAppId)") }
