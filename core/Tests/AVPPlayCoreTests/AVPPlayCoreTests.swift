@@ -150,6 +150,28 @@ final class SupportTests: XCTestCase {
         XCTAssertEqual(Redaction.redact("nichts Geheimes"), "nichts Geheimes")
     }
 
+    func testTransferDropIsRecognisedFromTheSyncLog() throws {
+        let drop = """
+        [stage] -> Documents/lx/game/hlvr
+        ERROR: The specified file could not be transferred. (com.apple.dt.CoreDeviceError error 7000 (0x1B58))
+            The file service client failed to write data to the network socket because the socket was closed unexpectedly.
+        !! staging game/hlvr failed — run this again to resume
+        """
+        XCTAssertTrue(Installer.isTransferDrop(drop))
+        XCTAssertFalse(Installer.isTransferDrop("!! no mirror for target alyx — KL_LX_GAME is not set"))
+        // Nur der Teil ab der Marke zählt: ein früherer Abbruch im selben Protokoll macht aus einem neuen Fehler keinen Abbruch.
+        let log = FileManager.default.temporaryDirectory.appendingPathComponent("qi-sync-\(UUID().uuidString).log")
+        defer { try? FileManager.default.removeItem(at: log) }
+        try Data((drop + "\n").utf8).write(to: log)
+        let mark = ContentStore.fileSize(log) ?? 0
+        let handle = try FileHandle(forWritingTo: log)
+        try handle.seekToEnd()
+        try handle.write(contentsOf: Data("!! something else\n".utf8))
+        try handle.close()
+        XCTAssertFalse(Installer.isTransferDrop(Installer.text(of: log, from: mark)))
+        XCTAssertTrue(Installer.isTransferDrop(Installer.text(of: log, from: 0)))
+    }
+
     func testGateDelay() {
         let t0 = ContinuousClock.now
         XCTAssertEqual(RequestGate.delay(lastFinished: nil, now: t0, minInterval: .seconds(5)), .zero)

@@ -435,7 +435,32 @@ public struct Installer: Sendable {
                      "Spieldaten: \(want.count) Dateien (\(total)) gehören aufs Gerät; "
                      + "übertragen wird nur, was dort fehlt oder sich geändert hat …"))
             let started = Date()
-            try toolchain.syncTrees(recipe: recipe, environment: env, device: device, bundleId: request.bundleId, copy: true, log: log)
+            // Die Toolchain überträgt ordnerweise und sagt dazwischen nichts; wie viel schon drüben liegt, weiß das
+            // Gerät. Solange die Übertragung läuft, wird es regelmäßig gefragt und der Stand als Fortschritt gemeldet.
+            let totalBytes = want.values.reduce(0, +)
+            let polling = StopFlag()
+            defer { polling.stop() }
+            pollTreeProgress(device: device, bundle: bundle, total: totalBytes, until: polling)
+            // Bei stundenlangen Übertragungen reißt die Verbindung gelegentlich ab (das Gerät schläft ein, ein Socket
+            // schließt). Der Abgleich ist wiederholbar – was schon drüben ist, lässt devicectl aus –, also geht es
+            // nach einer Pause weiter, statt den Auftrag anzuhalten. Nur Abbrüche der Übertragung werden wiederholt;
+            // ein anderer Fehler der Toolchain hält wie bisher an.
+            let attempts = 6
+            for attempt in 1...attempts {
+                let mark = ContentStore.fileSize(log) ?? 0
+                do {
+                    try toolchain.syncTrees(recipe: recipe, environment: env, device: device, bundleId: request.bundleId, copy: true, log: log)
+                    break
+                } catch {
+                    guard attempt < attempts, Installer.isTransferDrop(Installer.text(of: log, from: mark)) else { throw error }
+                    let pause = Double(attempt) * 15
+                    report(L("  Connection to the Vision Pro lost – continuing in \(Int(pause)) s (attempt \(attempt + 1) of \(attempts)); what is already there is kept.",
+                             "  Verbindung zur Vision Pro unterbrochen – weiter in \(Int(pause)) s (Versuch \(attempt + 1) von \(attempts)); was schon drüben ist, bleibt."))
+                    Thread.sleep(forTimeInterval: pause)
+                }
+            }
+            polling.stop()
+            progress(InstallProgress(step: .stage, done: totalBytes, total: totalBytes))
             report(String(format: L("Game data synced (%.0f s).", "Spieldaten abgeglichen (%.0f s)."), Date().timeIntervalSince(started)))
         }
 
@@ -470,6 +495,44 @@ public struct Installer: Sendable {
         } else {
             report(L("Assets: \(localCount) files are already on the device.", "Assets: \(localCount) Dateien liegen schon auf dem Gerät."))
         }
+    }
+
+    /// Wo die Toolchain die Ordnerbestände auf dem Gerät ablegt (siehe stage_sync.py: `<container>/Documents/lx`).
+    static let treeDestination = "Documents/lx"
+
+    /// Fragt das Gerät während eines Ordnerabgleichs alle halbe Minute, wie viel unter `Documents/lx` liegt, und
+    /// meldet das als Fortschritt – bis `until` gesetzt ist. Eine Abfrage, die während der Übertragung scheitert,
+    /// wird übergangen; die nächste kommt ohnehin. Die rekursive Liste des Geräts kann bei großen Bäumen unvollständig
+    /// sein; der Balken zeigt dann eher zu wenig als zu viel.
+    func pollTreeProgress(device: Device, bundle: String, total: Int64, every seconds: TimeInterval = 30, until stop: StopFlag) {
+        guard total > 0 else { return }
+        let control = self.control, progress = self.progress
+        Thread.detachNewThread {
+            Thread.sleep(forTimeInterval: 5)
+            while !stop.isSet {
+                if let files = try? control.files(device: device, bundle: bundle, subdirectory: Installer.treeDestination, recursive: true) {
+                    let done = files.filter { !$0.isDirectory }.reduce(Int64(0)) { $0 + $1.size }
+                    if !stop.isSet { progress(InstallProgress(step: .stage, done: min(done, total), total: total)) }
+                }
+                for _ in 0..<Int(seconds * 2) where !stop.isSet { Thread.sleep(forTimeInterval: 0.5) }
+            }
+        }
+    }
+
+    /// Sagt der Ausschnitt eines Abgleich-Protokolls, dass die Übertragung abriss (und nicht, dass etwas anderes
+    /// schiefging)? Die Toolchain markiert das selbst („run this again to resume“); daneben die Meldungen von
+    /// devicectl, wie sie am Gerät beobachtet wurden.
+    static func isTransferDrop(_ logText: String) -> Bool {
+        ["run this again to resume", "socket was closed", "could not be transferred", "CoreDeviceError", "Connection reset"]
+            .contains { logText.contains($0) }
+    }
+
+    /// Der Teil eines Protokolls ab einer Stelle – für die Beurteilung eines einzelnen Versuchs.
+    static func text(of log: URL, from offset: Int64) -> String {
+        guard let handle = try? FileHandle(forReadingFrom: log) else { return "" }
+        defer { try? handle.close() }
+        try? handle.seek(toOffset: UInt64(max(offset, 0)))
+        return String(decoding: (try? handle.readToEnd()) ?? Data(), as: UTF8.self)
     }
 
     /// Die Verbindung zum Gerät reißt bei langen Kopierläufen gelegentlich ab (am Gerät beobachtet: nach einigen
@@ -529,4 +592,13 @@ public struct Installer: Sendable {
     }
 
     public static func gigabytes(_ bytes: Int64) -> String { String(format: "%.2f GB", Double(bytes) / 1e9) }
+}
+
+/// Ein Schalter, den ein Thread setzt und ein anderer liest.
+public final class StopFlag: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value = false
+    public init() {}
+    public var isSet: Bool { lock.lock(); defer { lock.unlock() }; return value }
+    public func stop() { lock.lock(); value = true; lock.unlock() }
 }
