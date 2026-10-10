@@ -1009,6 +1009,19 @@ final class UntestedGameTests: XCTestCase {
         XCTAssertEqual(MetaListing.parse("nothing here"), [])
     }
 
+    /// Ein APK ohne 64-Bit-Code (République VR: nur armeabi-v7a) kann auf der Vision Pro nie laufen.
+    func testAnApkWithout64BitCodeIsRecognised() {
+        let old = ["AndroidManifest.xml", "lib/armeabi-v7a/libunity.so", "lib/armeabi-v7a/libil2cpp.so", "assets/bin/Data/x.so"]
+        XCTAssertEqual(ApkUnpacker.architectures(entries: old), ["armeabi-v7a"])
+        XCTAssertTrue(ApkUnpacker.lacksArm64(ApkUnpacker.architectures(entries: old)))
+        let both = old + ["lib/arm64-v8a/libunity.so", "lib/arm64-v8a/"]
+        XCTAssertEqual(ApkUnpacker.architectures(entries: both), ["armeabi-v7a", "arm64-v8a"])
+        XCTAssertFalse(ApkUnpacker.lacksArm64(ApkUnpacker.architectures(entries: both)))
+        // Ohne nativen Code ist es eine andere Frage (eine Java-App) – die beantwortet die Prüfung der Einstiegsbibliothek.
+        XCTAssertFalse(ApkUnpacker.lacksArm64(ApkUnpacker.architectures(entries: ["AndroidManifest.xml", "classes.dex", "lib/readme.txt"])))
+        XCTAssertTrue(InstallError.wrongArchitecture("Some Game", ["armeabi-v7a"]).description.contains("armeabi-v7a"))
+    }
+
     func testDraftRecipePlacesFilesByEngineAndIsMarkedUntested() throws {
         let game = CatalogGame(appId: "1921533091289407", title: "Some Game", package: "com.example.game", publisher: nil, status: "untested",
                                noteEn: nil, noteDe: nil, target: "somegame", works: 0, problems: 0, fails: 0, build: nil)

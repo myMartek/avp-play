@@ -33,6 +33,9 @@ public struct Fetcher: Sendable {
     let client: MetaClient
     let store: ContentStore
     let gate: RequestGate
+    /// Wird nach jeder fertig geladenen und geprüften Datei aufgerufen. Wirft er, endet der Lauf dort: was noch
+    /// aussteht, wird nicht mehr angefragt.
+    public var afterFile: (@Sendable (RecipeFile, URL) throws -> Void)?
 
     public init(client: MetaClient, store: ContentStore, gate: RequestGate = RequestGate()) {
         self.client = client
@@ -92,6 +95,7 @@ public struct Fetcher: Sendable {
             }
             try? FileManager.default.removeItem(at: final)
             try FileManager.default.moveItem(at: partial, to: final)
+            try afterFile?(file, final)
             summary.downloaded += 1
             summary.bytes += size - offset
             log(L("downloaded: \(file.name) (\(size) bytes\(outcome.resumed ? ", resumed" : "")\(file.sha256 == nil ? ", checksum newly recorded" : ", checksum matches"))",

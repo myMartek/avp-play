@@ -36,7 +36,7 @@ public enum FailureKind: String, Codable, Sendable {
             case .teamMissing: return .setup
             case .appNotInstalled: return .build
             case .badIcon: return .other
-            case .notANativeApp: return .unsupported
+            case .notANativeApp, .wrongArchitecture: return .unsupported
             }
         case let e as MetaError:
             if case .tokenRejected = e { return .signIn }

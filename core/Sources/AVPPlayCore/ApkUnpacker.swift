@@ -39,6 +39,29 @@ public struct ApkUnpacker: Sendable {
         return !name.split(separator: "/", omittingEmptySubsequences: false).contains { $0 == ".." }
     }
 
+    /// Für welche Prozessoren das APK Programmcode mitbringt: die Namen der Ordner unter `lib/`, in denen
+    /// mindestens eine Bibliothek liegt (`arm64-v8a`, `armeabi-v7a`, …). Leer, wenn es keinen nativen Code hat
+    /// oder sich nicht lesen lässt.
+    public static func architectures(of apk: URL) -> Set<String> {
+        guard let names = try? run(["/usr/bin/unzip", "-Z1", apk.path]).text else { return [] }
+        return architectures(entries: names.split(separator: "\n").map(String.init))
+    }
+
+    static func architectures(entries: [String]) -> Set<String> {
+        var found = Set<String>()
+        for name in entries where name.hasPrefix("lib/") && name.hasSuffix(".so") {
+            let parts = name.split(separator: "/")
+            if parts.count == 3 { found.insert(String(parts[1])) }
+        }
+        return found
+    }
+
+    /// Ob ein APK nur Code für andere Prozessoren enthält als den der Vision Pro – ein reines 32-Bit-Spiel.
+    /// Die Toolchain übersetzt 64-Bit-ARM-Code; 32-Bit-Code kann der Prozessor gar nicht ausführen.
+    public static func lacksArm64(_ architectures: Set<String>) -> Bool {
+        !architectures.isEmpty && !architectures.contains("arm64-v8a")
+    }
+
     public func unpack(apk: URL, to destination: URL) throws -> Info {
         let names = try ApkUnpacker.run(["/usr/bin/unzip", "-Z1", apk.path]).text
             .split(separator: "\n").map(String.init)

@@ -11,6 +11,8 @@ public enum InstallError: Error, CustomStringConvertible, Equatable {
     case appRunning(String)
     /// Die App ist kein Programm, das die Toolchain starten könnte (für Androids Java-Laufzeit geschrieben).
     case notANativeApp(String)
+    /// Das APK bringt nur Programmcode für einen anderen Prozessor mit (ein reines 32-Bit-Spiel).
+    case wrongArchitecture(String, [String])
 
     public var description: String {
         switch self {
@@ -37,6 +39,10 @@ public enum InstallError: Error, CustomStringConvertible, Equatable {
         case .notANativeApp(let title):
             return L("\(title) cannot run on the Vision Pro with this tool. It is an ordinary Android app, written for Android's Java runtime, not a game built on a native engine such as Unity or Unreal – and that runtime does not exist here. Nothing was installed. This is not something a fix can change.",
                      "\(title) kann mit diesem Werkzeug nicht auf der Vision Pro laufen. Es ist eine gewöhnliche Android-App, geschrieben für Androids Java-Laufzeit, kein Spiel auf einer nativen Engine wie Unity oder Unreal – und diese Laufzeit gibt es hier nicht. Installiert wurde nichts. Ein Fix kann daran nichts ändern.")
+        case .wrongArchitecture(let title, let found):
+            let list = found.joined(separator: ", ")
+            return L("\(title) cannot run on the Vision Pro. This build is a 32-bit game (it only contains code for \(list)); the Vision Pro's processor runs 64-bit code only, and this tool translates 64-bit Quest games. Nothing can be changed about that from here – only a 64-bit build from the developer would work. The files already downloaded can be removed on the game's page.",
+                     "\(title) kann auf der Vision Pro nicht laufen. Dieser Build ist ein 32-Bit-Spiel (er enthält nur Code für \(list)); der Prozessor der Vision Pro führt ausschließlich 64-Bit-Code aus, und dieses Werkzeug übersetzt 64-Bit-Spiele der Quest. Daran lässt sich von hier aus nichts ändern – nur ein 64-Bit-Build des Entwicklers würde gehen. Die schon geladenen Dateien lassen sich auf der Seite des Spiels entfernen.")
         case .appRunning(let title):
             return L("\(title) is currently running on the Vision Pro. Installing would quit the game. Quit the game, then resume.",
                      "\(title) läuft gerade auf der Vision Pro. Eine Installation würde das Spiel beenden. Spiel beenden und dann fortsetzen.")
@@ -275,7 +281,15 @@ public struct Installer: Sendable {
                 guard try await client.ownsApp(appId: app, userId: user) else { throw InstallError.notOwned(recipe.title) }
             }
         }
-        let fetcher = Fetcher(client: client, store: store, gate: RequestGate(minInterval: .seconds(request.interval)))
+        var fetcher = Fetcher(client: client, store: store, gate: RequestGate(minInterval: .seconds(request.interval)))
+        // Sobald das APK da ist, steht fest, ob es überhaupt 64-Bit-Code enthält. Wenn nicht, wird nichts weiter
+        // geladen – bei République VR wären das 3,4 GB für ein Spiel gewesen, das nie starten kann.
+        let title = recipe.title
+        fetcher.afterFile = { file, url in
+            guard file.role == "apk" else { return }
+            let found = ApkUnpacker.architectures(of: url)
+            if ApkUnpacker.lacksArm64(found) { throw InstallError.wrongArchitecture(title, found.sorted()) }
+        }
         let summary = try await fetcher.run(plan, recipe: recipe) { report("  " + $0) }
         report(L("Downloaded: \(summary.downloaded) files, \(summary.kept) were already there.",
                  "Geladen: \(summary.downloaded) Dateien, \(summary.kept) waren vorhanden."))
@@ -290,6 +304,11 @@ public struct Installer: Sendable {
         let commit = toolchain.commit()
         report(L("Device: \(device.name) (visionOS \(device.osVersion)); app: \(bundle); toolchain: \(commit)",
                  "Gerät: \(device.name) (visionOS \(device.osVersion)); App: \(bundle); Toolchain: \(commit)"))
+        // Dasselbe für ein APK, das schon im Bestand lag: ohne 64-Bit-Code gibt es nichts zu bauen.
+        if let apk = recipe.files.first(where: { $0.role == "apk" }) {
+            let found = ApkUnpacker.architectures(of: store.url(for: apk, in: recipe))
+            if ApkUnpacker.lacksArm64(found) { throw InstallError.wrongArchitecture(recipe.title, found.sorted()) }
+        }
         try await prepare(toolchain)
         // Ein Versuch mit einer App, die gar kein natives Programm ist, würde gebaut, installiert und als fertig
         // gemeldet – und könnte nie starten. Das sagt man besser hier.
