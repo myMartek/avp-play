@@ -956,7 +956,11 @@ struct Paths: Sendable {
         let fm = FileManager.default
         if let bundled = Bundle.main.resourceURL?.appendingPathComponent("recipes", isDirectory: true),
            fm.fileExists(atPath: bundled.path) { return bundled }
-        for start in [Bundle.main.bundleURL, URL(fileURLWithPath: fm.currentDirectoryPath)] {
+        // Von Xcode gestartet liegt das Programm in DerivedData und das Arbeitsverzeichnis irgendwo – beides führt
+        // nicht zum Quelltext. Der Pfad dieser Datei tut es, solange er auf diesem Rechner existiert (in einem
+        // weitergegebenen Programmpaket tut er das nicht, dann zählt er einfach nicht).
+        let source = URL(fileURLWithPath: #filePath)
+        for start in [Bundle.main.bundleURL, URL(fileURLWithPath: fm.currentDirectoryPath), source] {
             var dir = start
             for _ in 0..<6 {
                 let candidate = dir.appendingPathComponent("recipes", isDirectory: true)

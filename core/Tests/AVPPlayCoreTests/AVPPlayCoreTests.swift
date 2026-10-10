@@ -172,6 +172,26 @@ final class SupportTests: XCTestCase {
         XCTAssertTrue(Installer.isTransferDrop(Installer.text(of: log, from: 0)))
     }
 
+    func testApkMatchesRecipeEvenWhenTheRecipeKnowsNoPackage() {
+        // Der Katalog führt nicht zu jedem Spiel den Paketnamen; ein Entwurf hat dann ein leeres Feld (Battle Talent).
+        let helper = RecipeTests()
+        var r = helper.recipe(files: [helper.file("a.apk")])            // com.example.demo, Code 7
+        let info = ApkUnpacker.Info(package: "com.example.demo", versionCode: "7", versionName: "1.0", files: 1)
+        XCTAssertTrue(Toolchain.apkMatches(info, recipe: r))
+        XCTAssertFalse(Toolchain.apkMatches(ApkUnpacker.Info(package: "com.example.other", versionCode: "7", versionName: nil, files: 1), recipe: r))
+        XCTAssertFalse(Toolchain.apkMatches(ApkUnpacker.Info(package: "com.example.demo", versionCode: "8", versionName: nil, files: 1), recipe: r))
+        r.package = ""
+        XCTAssertTrue(Toolchain.apkMatches(info, recipe: r), "unbekanntes Paket: der Versionscode entscheidet")
+        XCTAssertFalse(Toolchain.apkMatches(ApkUnpacker.Info(package: "com.example.demo", versionCode: "8", versionName: nil, files: 1), recipe: r))
+    }
+
+    func testToolStartErrorsNameTheToolAndTheRemedy() {
+        // Derselbe Fehlertyp dient Metas und Valves Werkzeug; die Meldung muss sagen, welches gemeint ist.
+        XCTAssertTrue("\(LoginError.couldNotStart(tool: "steamcmd", why: "x"))".hasPrefix("steamcmd "))
+        let rosetta = "\(LoginError.needsRosetta(tool: "steamcmd"))"
+        XCTAssertTrue(rosetta.contains("steamcmd") && rosetta.contains(LoginError.rosettaCommand), rosetta)
+    }
+
     func testGateDelay() {
         let t0 = ContinuousClock.now
         XCTAssertEqual(RequestGate.delay(lastFinished: nil, now: t0, minInterval: .seconds(5)), .zero)

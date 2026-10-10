@@ -4,10 +4,16 @@ import Darwin
 public enum LoginError: Error, CustomStringConvertible, Equatable {
     case toolMissing(String)
     case wrongSigner(String)
-    case couldNotStart(String)
+    /// Das Werkzeug (Metas oder Valves) ließ sich nicht starten; `tool` ist sein Dateiname.
+    case couldNotStart(tool: String, why: String)
+    /// Das Werkzeug ist nur für Intel-Prozessoren gebaut, und auf diesem Apple-Silicon-Mac fehlt Rosetta.
+    case needsRosetta(tool: String)
     case toolFailed(Int32)
     case noToken
     case notExecutable(String)
+
+    /// Der Befehl, mit dem der Nutzer Rosetta einmalig nachinstalliert.
+    public static let rosettaCommand = "softwareupdate --install-rosetta --agree-to-license"
 
     public var description: String {
         switch self {
@@ -17,7 +23,12 @@ public enum LoginError: Error, CustomStringConvertible, Equatable {
         case .wrongSigner(let who):
             return L("The file isn't signed by Meta (\(who)). It will not be run.",
                      "Die Datei ist nicht von Meta signiert (\(who)). Sie wird nicht gestartet.")
-        case .couldNotStart(let why): return L("ovr-platform-util couldn't be started: \(why)", "ovr-platform-util ließ sich nicht starten: \(why)")
+        case .couldNotStart(let tool, let why): return L("\(tool) couldn't be started: \(why)", "\(tool) ließ sich nicht starten: \(why)")
+        case .needsRosetta(let tool):
+            return L("\(tool) is built for Intel processors. On this Mac it needs Apple's Rosetta, which isn't installed yet. "
+                     + "Install it once in Terminal with “\(LoginError.rosettaCommand)”, then try again.",
+                     "\(tool) ist für Intel-Prozessoren gebaut. Auf diesem Mac braucht es Apples Rosetta, das noch nicht installiert ist. "
+                     + "Einmalig im Terminal mit „\(LoginError.rosettaCommand)“ installieren, dann noch einmal versuchen.")
         case .toolFailed(let status):
             return L("Sign-in wasn't completed (ovr-platform-util exited with status \(status)).",
                      "Die Anmeldung wurde nicht abgeschlossen (ovr-platform-util endete mit Status \(status)).")
