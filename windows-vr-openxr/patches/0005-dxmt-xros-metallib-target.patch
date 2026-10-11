@@ -21,7 +21,7 @@ diff --git a/src/airconv/metallib_writer.cpp b/src/airconv/metallib_writer.cpp
    header.VersionMinor = 7;
 +#if defined(DXMT_VISIONOS)
 +  header.Platform = static_cast<Platform>(WVR_METALLIB_TARGET_PLATFORM);
-+  header.OS = static_cast<OS>(WVR_METALLIB_TARGET_OS);
++  header.OS = static_cast<enum OS>(WVR_METALLIB_TARGET_OS);
 +  header.OSVersionMajor = WVR_METALLIB_TARGET_OS_MAJOR;
 +  header.OSVersionMinor = WVR_METALLIB_TARGET_OS_MINOR;
 +#else

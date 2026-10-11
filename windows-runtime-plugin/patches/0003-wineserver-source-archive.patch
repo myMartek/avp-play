@@ -1,0 +1,172 @@
+--- a/build/wineserver/build.sh
++++ b/build/wineserver/build.sh
+@@ -12,15 +12,10 @@
+ OBJ_DIR="$BUILD_DIR/obj"
+ mkdir -p "$OBJ_DIR"
+ 
+-# Copy the base library if we don't have one yet
+-if [ ! -f "$OBJ_DIR/libwineserver.a" ]; then
+-    if [ -f "$APP_LIB" ]; then
+-        cp "$APP_LIB" "$OBJ_DIR/libwineserver.a"
+-    else
+-        echo "ERROR: No base libwineserver.a found"
+-        exit 1
+-    fi
+-fi
++# A source-only overlay intentionally contains no prebuilt iOS archive. Start
++# from a clean object directory and compile the complete pinned server source
++# list for xros below.
++rm -f "$OBJ_DIR"/*.o "$OBJ_DIR"/*.err "$OBJ_DIR"/err-*.txt "$OBJ_DIR/libwineserver.a"
+ 
+ CC_FLAGS=(
+     -arch arm64 -isysroot "$SDK" -target arm64-apple-xros27.0 -O2
+@@ -66,13 +61,11 @@
+     "mach_ios:mach_ios.c:mach.o"
+     "unicode_ios:unicode_ios.c:unicode.o"
+     "fd_ios:fd_ios.c:fd.o"
+-    # ml574: object.c must appear in BOTH lists — SOURCES compiles it,
+-    # REPLACEMENTS inserts it into the prebuilt base archive. An entry in
+-    # only the first compiles, prints OK, and is silently discarded.
++    # ml574: object.c must appear in BOTH lists — this replacement is compiled
++    # in place of the source-list member so its instrumentation is archived.
+     "object:$WINE_SRC/server/object.c:object.o"
+     # ml805: event/handle carry the [evt-hist] instrumentation. Both MUST be
+-    # listed here -- they are otherwise linked from a prebuilt object and the
+-    # source edits would be dead code, the same trap as the unix/*.c forks.
++    # listed here so the source edits replace their source-list members.
+     "event:$WINE_SRC/server/event.c:event.o"
+     # Fastsync's semaphore half (madeira_semaphore_cell_index and friends in
+     # server/semaphore.c) is referenced by inproc_sync.c and thread.c, so it is
+@@ -113,6 +106,42 @@
+     "hidparse_ios:$REPO_ROOT/build/hidpad/hidparse_ios.c:hidparse_ios.o"
+ )
+ 
++echo "=== Building unpatched wineserver sources from Makefile.in ==="
++while IFS= read -r rel_src; do
++    source_obj="$(basename "$rel_src" .c).o"
++    replaced=0
++    for entry in "${PATCHED_FILES[@]}"; do
++        IFS=: read -r _ _ old_obj <<< "$entry"
++        if [[ "$old_obj" == "$source_obj" ]]; then replaced=1; break; fi
++    done
++    if (( replaced )); then continue; fi
++    compile_one "$WINE_SRC/server/$rel_src" "${source_obj%.o}"
++done < <(python3 - "$WINE_SRC/server/Makefile.in" <<'PY'
++import pathlib, sys
++path = pathlib.Path(sys.argv[1])
++lines = path.read_text(encoding="utf-8").splitlines()
++active = False
++sources = []
++for line in lines:
++    if not active:
++        if line.startswith("SOURCES ="):
++            active = True
++            line = line.split("=", 1)[1]
++        else:
++            continue
++    continued = line.rstrip().endswith("\\")
++    for token in line.replace("\\", " ").split():
++        if token.endswith(".c"):
++            sources.append(token)
++    if not continued:
++        break
++if not sources:
++    raise SystemExit(f"No C sources found in {path} SOURCES list")
++for source in sources:
++    print(source)
++PY
++)
++
+ echo "=== Building kill wrapper (without kill macro) ==="
+ echo -n "  wineserver_ios_kill... "
+ # Compile WITHOUT -include wineserver_ios_kill.h to avoid recursive macro
+@@ -124,36 +153,33 @@
+     echo "FAILED"; cat "$OBJ_DIR/err-kill.txt"; exit 1
+ fi
+ 
+-case "${1:-all}" in
+-    all)
+-        echo "=== Building all patched wineserver files ==="
+-        for entry in "${PATCHED_FILES[@]}"; do
+-            IFS=: read -r name src old_obj <<< "$entry"
+-            # Support absolute paths (e.g. upstream files via $WINE_SRC)
+-            if [[ "$src" == /* ]]; then
+-                compile_one "$src" "$name"
+-            else
+-                compile_one "$BUILD_DIR/$src" "$name"
+-            fi
+-        done
+-        ;;
+-    request|main|mach|unicode)
+-        for entry in "${PATCHED_FILES[@]}"; do
+-            IFS=: read -r name src old_obj <<< "$entry"
+-            if [[ "$name" == "${1}_ios" || "$name" == "${1}" ]]; then
+-                compile_one "$BUILD_DIR/$src" "$name"
+-            fi
+-        done
+-        ;;
+-    *)
+-        echo "Usage: $0 [all|request|main|mach|unicode]"
+-        exit 1
+-        ;;
+-esac
++if [[ "${1:-all}" != "all" ]]; then
++    echo "Usage: $0 [all]"
++    exit 1
++fi
++echo "=== Building all patched wineserver files ==="
++for entry in "${PATCHED_FILES[@]}"; do
++    IFS=: read -r name src old_obj <<< "$entry"
++    # Support absolute paths (e.g. upstream files via $WINE_SRC)
++    if [[ "$src" == /* ]]; then
++        compile_one "$src" "$name"
++    else
++        compile_one "$BUILD_DIR/$src" "$name"
++    fi
++done
+ 
+ echo ""
+ echo "=== Updating libwineserver.a ==="
+ 
++# Build a fresh complete xros archive from the source members and replacement
++# objects above; no cached native archive is accepted as an input.
++SERVER_OBJECTS=("$OBJ_DIR"/*.o)
++if (( ${#SERVER_OBJECTS[@]} == 0 )); then
++    echo "ERROR: No wineserver objects were compiled."
++    exit 1
++fi
++ar rcs "$OBJ_DIR/libwineserver.a" "${SERVER_OBJECTS[@]}"
++
+ # Map of patched .o files to the original .o names they replace
+ # Pairs of "new_obj_filename:old_obj_filename_in_archive". Plain array
+ # iteration to avoid bash assoc-array word-splitting issues seen in zsh-launched
+@@ -178,10 +204,8 @@
+     "sock.o:sock.o"
+     "object.o:object.o"
+     "async.o:async.o"
+-    # ml805: BOTH lists matter. PATCHED_FILES only compiles; REPLACEMENTS is what
+-    # actually swaps the object into the archive. Adding to one and not the other
+-    # compiles cleanly, ships the OLD object, and fails at link with an undefined
+-    # symbol -- which is exactly what happened first try.
++    # ml805: BOTH lists matter. PATCHED_FILES compiles; REPLACEMENTS removes the
++    # source-list member before archiving the instrumented replacement.
+     "event.o:event.o"
+     "semaphore.o:semaphore.o"
+     "handle.o:handle.o"
+@@ -206,8 +230,14 @@
+ # we know collide with win32u-unix, repackage. Affects definitions AND
+ # references uniformly, so cross-file calls inside wineserver still
+ # resolve. Externals (win32u, etc.) only see the ws_-prefixed names.
+-OBJCOPY=$(command -v llvm-objcopy || echo /opt/homebrew/opt/llvm/bin/llvm-objcopy)
+-[ -x "$OBJCOPY" ] || OBJCOPY=/opt/homebrew/Cellar/llvm/22.1.0/bin/llvm-objcopy
++OBJCOPY="${LLVM_OBJCOPY:-$REPO_ROOT/toolchains/llvm-host-build/bin/llvm-objcopy}"
++if [ ! -x "$OBJCOPY" ]; then
++    OBJCOPY="$(command -v llvm-objcopy || true)"
++fi
++[ -n "$OBJCOPY" ] && [ -x "$OBJCOPY" ] || {
++    echo "ERROR: llvm-objcopy is required to isolate wineserver symbols; build LLVM host target llvm-objcopy first."
++    exit 1
++}
+ COLLISIONS=(
+     alloc_user_handle free_user_handle get_virtual_screen_rect
+     destroy_thread_windows get_window_thread is_desktop_class

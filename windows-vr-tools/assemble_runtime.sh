@@ -23,7 +23,12 @@ require_absolute() {
     esac
 }
 
-for name in AVPPLAY_WINE_PREFIX_TEMPLATE AVPPLAY_WINE_PREFIX_PROVENANCE AVPPLAY_LLVM_MINGW_ROOT AVPPLAY_BUILD_ROOT AVPPLAY_DEVELOPMENT_TEAM; do
+sign_app="${AVPPLAY_SIGN_APP:-1}"
+case "$sign_app" in 0|1) ;; *) echo "AVPPLAY_SIGN_APP must be 0 or 1." >&2; exit 1 ;; esac
+if [[ "$sign_app" == 1 ]]; then
+    require_value AVPPLAY_DEVELOPMENT_TEAM
+fi
+for name in AVPPLAY_WINE_PREFIX_TEMPLATE AVPPLAY_WINE_PREFIX_PROVENANCE AVPPLAY_LLVM_MINGW_ROOT AVPPLAY_BUILD_ROOT; do
     require_value "$name"
 done
 for name in AVPPLAY_WINE_PREFIX_TEMPLATE AVPPLAY_WINE_PREFIX_PROVENANCE AVPPLAY_LLVM_MINGW_ROOT AVPPLAY_BUILD_ROOT; do
@@ -127,7 +132,7 @@ if [[ "$d3d12_enabled" == 1 ]]; then
 fi
 
 MADEIRA_LICENSE="${AVPPLAY_MADEIRA_LICENSE:-$runtime_source/LICENSE}"
-OPENCOMPOSITE_LICENSE="${AVPPLAY_OPENCOMPOSITE_LICENSE:-$source_cache/opencomposite/LICENSE}"
+OPENCOMPOSITE_LICENSE="${AVPPLAY_OPENCOMPOSITE_LICENSE:-$source_cache/opencomposite/LICENSE.txt}"
 OPENXR_LICENSE="${AVPPLAY_OPENXR_LICENSE:-$source_cache/openxr/LICENSE}"
 for license in "$MADEIRA_LICENSE" "$OPENCOMPOSITE_LICENSE" "$OPENXR_LICENSE"; do
     if [[ ! -s "$license" || -L "$license" ]]; then
@@ -137,6 +142,7 @@ for license in "$MADEIRA_LICENSE" "$OPENCOMPOSITE_LICENSE" "$OPENXR_LICENSE"; do
 done
 
 export AVPPLAY_RUNTIME_SOURCE="$runtime_source"
+export AVPPLAY_FREETYPE_SOURCE="${AVPPLAY_FREETYPE_SOURCE:-$source_cache/freetype}"
 export AVPPLAY_LLVM_MINGW_ROOT
 export AVPPLAY_LLVM_TOOLCHAINS_ROOT="${AVPPLAY_LLVM_TOOLCHAINS_ROOT:-$BUILD_ROOT/llvm-toolchains}"
 AVPPLAY_ALLOW_RUNTIME_BUILD=1 bash "$ROOT/windows-vr-tools/prepare_llvm.sh" build
@@ -199,15 +205,19 @@ python3 "$ROOT/windows-vr-tools/stage_resources.py" "${stage_args[@]}"
 
 xcodegen generate --spec "$ROOT/visionos-windows-vr/project.yml" \
     --project "$ROOT/visionos-windows-vr"
+signing_args=(CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO)
+if [[ "$sign_app" == 1 ]]; then
+    signing_args=(-allowProvisioningUpdates
+        "DEVELOPMENT_TEAM=$AVPPLAY_DEVELOPMENT_TEAM"
+        CODE_SIGN_STYLE=Automatic
+        'CODE_SIGN_IDENTITY=Apple Development')
+fi
 xcodebuild \
     -project "$ROOT/visionos-windows-vr/VisionOSWindowsVR.xcodeproj" \
     -scheme VisionOSWindowsVR \
     -configuration Debug \
     -destination 'generic/platform=visionOS' \
     -derivedDataPath "$BUILD_ROOT/xcode-derived" \
-    -allowProvisioningUpdates \
-    DEVELOPMENT_TEAM="$AVPPLAY_DEVELOPMENT_TEAM" \
-    CODE_SIGN_STYLE=Automatic \
-    CODE_SIGN_IDENTITY='Apple Development' \
+    "${signing_args[@]}" \
     AVPPLAY_DXMT_LINK_FLAG="$AVPPLAY_DXMT_LINK_FLAG" \
     build

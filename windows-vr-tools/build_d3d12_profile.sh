@@ -21,6 +21,45 @@ BUILD_ROOT="${AVPPLAY_D3D12_BUILD_ROOT:-${AVPPLAY_BUILD_ROOT:-}}"
 for tool in xcrun meson ninja python3 git; do command -v "$tool" >/dev/null 2>&1 || { echo "Missing D3D12 build tool: $tool" >&2; exit 1; }; done
 xcrun --sdk xros --show-sdk-path >/dev/null
 
+# Xcode distributes Metal as a separately mounted component. Prefer an
+# explicit toolchain root (useful in restricted runners), otherwise resolve
+# the installed component's search path from Xcode's component metadata.
+if [[ -z "${AVPPLAY_METAL_TOOLCHAIN_ROOT:-}" ]]; then
+    COMPONENT_JSON="$(xcodebuild -showComponent MetalToolchain -json 2>/dev/null || true)"
+    if [[ -n "$COMPONENT_JSON" ]]; then
+        COMPONENT_SEARCH_PATH="$(python3 -c 'import json,sys
+def walk(value):
+    if isinstance(value, dict):
+        path=value.get("toolchainSearchPath")
+        if isinstance(path, str): return path
+        for child in value.values():
+            found=walk(child)
+            if found: return found
+    elif isinstance(value, list):
+        for child in value:
+            found=walk(child)
+            if found: return found
+    return ""
+try: print(walk(json.loads(sys.stdin.read())))
+except Exception: print("")' <<< "$COMPONENT_JSON")"
+        if [[ -n "$COMPONENT_SEARCH_PATH" ]]; then
+            AVPPLAY_METAL_TOOLCHAIN_ROOT="$COMPONENT_SEARCH_PATH/Metal.xctoolchain"
+        fi
+    fi
+fi
+if [[ -n "${AVPPLAY_METAL_TOOLCHAIN_ROOT:-}" && ! -x "$AVPPLAY_METAL_TOOLCHAIN_ROOT/usr/bin/metal" && -x "$AVPPLAY_METAL_TOOLCHAIN_ROOT/Metal.xctoolchain/usr/bin/metal" ]]; then
+    AVPPLAY_METAL_TOOLCHAIN_ROOT="$AVPPLAY_METAL_TOOLCHAIN_ROOT/Metal.xctoolchain"
+fi
+if [[ -n "${AVPPLAY_METAL_TOOLCHAIN_ROOT:-}" ]]; then
+    [[ -x "$AVPPLAY_METAL_TOOLCHAIN_ROOT/usr/bin/metal" && -x "$AVPPLAY_METAL_TOOLCHAIN_ROOT/usr/bin/metallib" ]] || {
+        echo "Metal Toolchain root lacks usr/bin/metal and usr/bin/metallib: $AVPPLAY_METAL_TOOLCHAIN_ROOT" >&2; exit 1;
+    }
+    export PATH="$AVPPLAY_METAL_TOOLCHAIN_ROOT/usr/bin:$PATH"
+else
+    echo "Set AVPPLAY_METAL_TOOLCHAIN_ROOT or allow xcodebuild -showComponent MetalToolchain to resolve the installed component." >&2
+    exit 1
+fi
+
 NATIVE_SOURCE="$PROFILE/dxmt"
 NATIVE_BUILD="$BUILD_ROOT/dxmt-d3d12-meson"
 NATIVE_FILE="$BUILD_ROOT/dxmt-d3d12-xros-native.ini"
@@ -74,20 +113,14 @@ export PATH="$AVPPLAY_LLVM_MINGW_ROOT/bin:$PATH"
 
 cat > "$NATIVE_FILE" <<MESON
 [binaries]
-c = ['xcrun', '--sdk', 'xros', 'clang']
-cpp = ['xcrun', '--sdk', 'xros', 'clang++']
+c = ['xcrun', 'clang']
+cpp = ['xcrun', 'clang++']
 ar = ['xcrun', '--sdk', 'xros', 'ar']
 strip = ['xcrun', '--sdk', 'xros', 'strip']
 
-[properties]
-sys_root = 'xros'
-needs_exe_wrapper = true
-
 [built-in options]
-c_args = ['-target', 'arm64-apple-xros27.0', '-DDXMT_VISIONOS=1', '-D__wine_unix_call_funcs=dxmt_winemetal_unix_call_funcs', '-D__wine_unix_call_wow64_funcs=dxmt_winemetal_unix_call_wow64_funcs']
-cpp_args = ['-target', 'arm64-apple-xros27.0', '-DDXMT_VISIONOS=1', '-I$BUILD_ROOT/d3d12-generated', '-D__wine_unix_call_funcs=dxmt_winemetal_unix_call_funcs', '-D__wine_unix_call_wow64_funcs=dxmt_winemetal_unix_call_wow64_funcs']
-c_link_args = ['-target', 'arm64-apple-xros27.0']
-cpp_link_args = ['-target', 'arm64-apple-xros27.0']
+c_args = []
+cpp_args = ['-I$BUILD_ROOT/d3d12-generated']
 MESON
 
 # One Meson graph gives the guest PE targets the pinned LLVM-MinGW cross-file
@@ -99,6 +132,7 @@ meson setup "$NATIVE_BUILD" "$NATIVE_SOURCE" \
     -Dbuildtype=release \
     -Dwine_build_path="$WINE_BUILD" \
     -Dnative_llvm_path="$LLVM_BUILD" \
+    -Dnative_llvm_source_path="$LLVM_SOURCE/llvm" \
     -Denable_d3d12=true \
     -Dvisionos_native=true \
     -Dbuild_airconv_for_windows=false \
@@ -176,7 +210,7 @@ for target in (airconv_target, parser_target):
     outputs=target_outputs(target)
     if not outputs: raise SystemExit("Native Meson target has no output.")
     output=pathlib.Path(outputs[0]); output=output if output.is_absolute() else build/output
-    run(["ninja", "-C", str(build), output.relative_to(build).as_posix()])
+    run(["ninja", "-C", str(build), output.resolve().relative_to(build.resolve()).as_posix()])
 
 compile_db = json.loads((build / "compile_commands.json").read_text(encoding="utf-8"))
 needed = {p.resolve() for p in unix_sources}
@@ -216,11 +250,11 @@ regular(archive, "combined native DXMT archive")
 # Build all four PE modules from this exact modern DXMT Meson graph.
 for dll in ("d3d11.dll", "d3d12.dll", "dxgi.dll", "winemetal.dll"):
     output=output_path(guest_targets[dll],dll)
-    run(["ninja", "-C", str(build), output.relative_to(build).as_posix()])
+    run(["ninja", "-C", str(build), output.resolve().relative_to(build.resolve()).as_posix()])
     post=[t for t in targets if any(pathlib.PurePath(v).name == dll+".postproc" for v in target_outputs(t))]
     if len(post) != 1: raise SystemExit(f"Missing unique Wine builtin postprocessor for {dll}.")
     output=output_path(post[0],dll+".postproc")
-    run(["ninja", "-C", str(build), output.relative_to(build).as_posix()])
+    run(["ninja", "-C", str(build), output.resolve().relative_to(build.resolve()).as_posix()])
 for dll, target in guest_targets.items():
     source_file = output_path(target, dll)
     regular(source_file, f"ARM64EC {dll}")
@@ -235,9 +269,12 @@ required_symbols = ("_dxmt_winemetal_unix_call_funcs", "_dxmt_winemetal_unix_cal
 missing_symbols = [symbol for symbol in required_symbols if symbol not in nm]
 if missing_symbols: raise SystemExit("Native archive is missing dispatch exports: " + ", ".join(missing_symbols))
 sys.path.insert(0, str(root / "windows-vr-tools"))
-from stage_resources import pe_machine
-for dll in guest.glob("*.dll"):
-    if pe_machine(dll) != 0xA641: raise SystemExit(f"Expected ARM64EC PE machine 0xA641: {dll}")
+from stage_resources import is_arm64ec_pe
+ # This receipt covers DXMT's four executable graphics modules. Wine's
+ # broader farm also contains data-only API-set DLLs without CHPE code.
+for name in ("d3d11.dll", "d3d12.dll", "dxgi.dll", "winemetal.dll"):
+    dll = guest / name
+    if not is_arm64ec_pe(dll): raise SystemExit(f"Expected ARM64EC PE or valid AMD64+CHPE builtin: {dll}")
 
 source_receipt_path = profile / "AVPPLAY_D3D12_SOURCE_PROVENANCE.json"
 adaptation_path = profile / "AVPPLAY_D3D12_NATIVE_ADAPTATION_RECEIPT.json"

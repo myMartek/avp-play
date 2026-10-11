@@ -14,7 +14,7 @@ struct ContentView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Game library") {
+                Section {
                     Picker("Saved game", selection: Binding(
                         get: { model.selectedLibraryEntryID ?? "" },
                         set: { identifier in
@@ -47,11 +47,13 @@ struct ContentView: View {
                         }
                         .disabled(!model.canChangeSelection)
                     }
-                } footer: {
+                } header: {
+                        Text("Game library")
+                    } footer: {
                     Text("Saved folders use local security-scoped bookmarks. Access is reopened only when you select a game and is released when its session ends or selection changes.")
                 }
 
-                Section("Mac transfers") {
+                Section {
                     Button("Refresh transferred games", systemImage: "arrow.clockwise") { model.refreshTransferredGames() }
                         .disabled(!model.canChangeSelection)
                     ForEach(model.transferredGames) { game in
@@ -63,7 +65,9 @@ struct ContentView: View {
                     if let error = model.transferImportError {
                         Text(error).font(.footnote).foregroundStyle(.orange)
                     }
-                } footer: {
+                } header: {
+                        Text("Mac transfers")
+                    } footer: {
                     Text("The Mac companion copies owned local files into this app. Only folders with a final manifest marker appear; copying is not game compatibility verification.")
                 }
 
@@ -88,7 +92,7 @@ struct ContentView: View {
                 }
 
                 if let manifest = model.manifest {
-                    Section("Per-game profiles") {
+                    Section {
                         if let entry = model.selectedEntry, !entry.profiles.isEmpty {
                             Picker("Profile", selection: Binding(
                                 get: { model.selectedProfileID ?? "" },
@@ -138,6 +142,8 @@ struct ContentView: View {
                             }
                             .disabled(!model.canChangeSelection)
                         }
+                    } header: {
+                        Text("Per-game profiles")
                     } footer: {
                         Text("Use a JSON array of strings. Arguments are passed as exact separate argv entries. Backend and graphics choices remain manifest-defined; unsupported graphics are blocked rather than silently substituted.")
                     }
@@ -152,7 +158,7 @@ struct ContentView: View {
                         }
                     }
 
-                    Section("Runtime session") {
+                    Section {
                         Button {
                             Task { await startLaunch() }
                         } label: {
@@ -187,6 +193,8 @@ struct ContentView: View {
                                 .font(.callout)
                                 .foregroundStyle(.orange)
                         }
+                    } header: {
+                        Text("Runtime session")
                     } footer: {
                         Text("Plugin acceptance and Wine process activity do not report game readiness or rendered output.")
                     }

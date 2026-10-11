@@ -1,10 +1,7 @@
 diff --git a/src/d3d12/d3d12_command_queue.cpp b/src/d3d12/d3d12_command_queue.cpp
 --- a/src/d3d12/d3d12_command_queue.cpp
 +++ b/src/d3d12/d3d12_command_queue.cpp
-@@ -19,8 +19,14 @@
- #include "d3d12_device.hpp"
- #include "d3d12_pageable.hpp"
- #include "dxgi_interfaces.h"
+@@ -24,6 +24,12 @@
  #include "log/log.hpp"
  #include "util_env.hpp"
  #include <atomic>
@@ -16,7 +13,8 @@ diff --git a/src/d3d12/d3d12_command_queue.cpp b/src/d3d12/d3d12_command_queue.c
 +#include "WindowsVRWMTBridge.h"
  #include "d3d10_1.h"
  #include "d3d11_4.h"
-@@ -35,9 +41,18 @@ const GUID kD3D12CommandQueueDownlevelUUID = {
+ 
+@@ -35,12 +41,21 @@
      0x38a8c5ef, 0x7ccb, 0x4e81, {0x91, 0x4f, 0xa6, 0xe9, 0xd0, 0x72, 0xc4, 0x94}
  };
  
@@ -36,12 +34,20 @@ diff --git a/src/d3d12/d3d12_command_queue.cpp b/src/d3d12/d3d12_command_queue.c
 +  };
 +  std::mutex windows_vr_lease_mutex_;
 +  std::unordered_map<ID3D12Resource *, WindowsVRImageLease> windows_vr_leases_;
-@@ -119,3 +134,3 @@ public:
+ 
+   std::atomic_uint64_t inflight_cmdbuf_seq_ = 1;
+   std::atomic_uint64_t inflight_cmdbuf_count_ = 0;
+@@ -117,7 +132,7 @@
+ 
+ public:
    MTLD3D12CommandQueueImpl(MTLD3D12Device *pDevice) :
 -      MTLD3D12Pageable<MTLD3D12CommandQueue, IMTLSwapChainFactory>(pDevice),
 +      MTLD3D12Pageable<MTLD3D12CommandQueue, IMTLSwapChainFactory, IMTLD3D12CommandQueueExt>(pDevice),
        inflight_cmdbuf_wait_thread_([this]() { this->CommandBufferWaitingThread(); }) {}
-@@ -142,5 +157,8 @@ public:
+ 
+   ~MTLD3D12CommandQueueImpl() {
+@@ -140,6 +155,9 @@
+     queue_.addResidencySet(device_->GetGlobalResidencySet());
  
      fence_ = metal_device.newFence();
 +    windows_vr_producer_event_ = metal_device.newSharedEvent();
@@ -50,26 +56,25 @@ diff --git a/src/d3d12/d3d12_command_queue.cpp b/src/d3d12/d3d12_command_queue.c
  
      return S_OK;
    }
-@@ -155,8 +173,15 @@ public:
-     if (riid == __uuidof(IUnknown) || riid == __uuidof(ID3D12Object) || riid == __uuidof(ID3D12DeviceChild) ||
-         riid == __uuidof(ID3D12Pageable) || riid == __uuidof(ID3D12CommandQueue)) {
-       *ppvObject = ref(this);
+@@ -158,6 +176,13 @@
        return S_OK;
      }
-+
+ 
 +    if (riid == kWVRD3D12CommandQueueExtIID) {
 +      if (desc_.Type != D3D12_COMMAND_LIST_TYPE_DIRECT)
 +        return E_NOINTERFACE;
 +      *ppvObject = ref_and_cast<IMTLD3D12CommandQueueExt>(this);
 +      return S_OK;
 +    }
- 
++
      if (riid == __uuidof(IMTLSwapChainFactory)) {
        *ppvObject = ref_and_cast<IMTLSwapChainFactory>(this);
-@@ -183,4 +208,207 @@ public:
+       return S_OK;
+@@ -178,6 +203,210 @@
+     }
  
      return E_NOINTERFACE;
-   }
++  }
 +
 +  HRESULT STDMETHODCALLTYPE GetWindowsVRTargets(WVRDXMTTargetInfoV1 *out) final {
 +    if (!out)
@@ -172,7 +177,7 @@ diff --git a/src/d3d12/d3d12_command_queue.cpp b/src/d3d12/d3d12_command_queue.c
 +    if (!belongs_to_queue_device(frame->left) || !belongs_to_queue_device(frame->right))
 +      return DXGI_ERROR_INVALID_CALL;
 +
- +    auto *left = static_cast<MTLD3D12Resource *>(frame->left);
++    auto *left = static_cast<MTLD3D12Resource *>(frame->left);
 +    auto *right = static_cast<MTLD3D12Resource *>(frame->right);
 +    D3D12_RESOURCE_DESC left_desc{}, right_desc{};
 +    frame->left->GetDesc(&left_desc);
@@ -273,14 +278,17 @@ diff --git a/src/d3d12/d3d12_command_queue.cpp b/src/d3d12/d3d12_command_queue.c
 +    // StartCommitting commits on scope destruction. This queue wait is ordered
 +    // before any subsequent command-list writes to the reacquired image.
 +    return S_OK;
-+  }
+   }
+ 
+   void STDMETHODCALLTYPE UpdateTileMappings(
 diff --git a/src/winemetal/winemetal_thunks.c b/src/winemetal/winemetal_thunks.c
 --- a/src/winemetal/winemetal_thunks.c
 +++ b/src/winemetal/winemetal_thunks.c
-@@ -21,3 +21,13 @@
+@@ -20,6 +20,16 @@
+ #endif
  
  #define PtrToUInt64(v) ((uint64_t)(uintptr_t)(v))
- 
++
 +#ifndef DXMT_NATIVE
 +#define WVR_DXMT_UNDEF_NATIVE 1
 +#define DXMT_NATIVE 1
@@ -290,8 +298,11 @@ diff --git a/src/winemetal/winemetal_thunks.c b/src/winemetal/winemetal_thunks.c
 +#undef DXMT_NATIVE
 +#undef WVR_DXMT_UNDEF_NATIVE
 +#endif
-+
-@@ -1332,2 +1342,28 @@
+ 
+ WINEMETAL_API void
+ NSObject_retain(obj_handle_t obj) {
+@@ -1331,3 +1341,29 @@
+   params.bytes_per_image = bytes_per_image;
    UNIX_CALL(145, &params);
  }
 +
@@ -320,11 +331,10 @@ diff --git a/src/winemetal/winemetal_thunks.c b/src/winemetal/winemetal_thunks.c
 +  UNIX_CALL(147, &params);
 +  return request->status;
 +}
-
 diff --git a/src/winemetal/unix/winemetal_unix.c b/src/winemetal/unix/winemetal_unix.c
 --- a/src/winemetal/unix/winemetal_unix.c
 +++ b/src/winemetal/unix/winemetal_unix.c
-@@ -12,3 +12,13 @@
+@@ -12,10 +12,25 @@
  #define WINEMETAL_API
  #include "../winemetal_thunks.h"
  #include "../airconv_thunks.h"
@@ -338,7 +348,8 @@ diff --git a/src/winemetal/unix/winemetal_unix.c b/src/winemetal/unix/winemetal_
 +#undef WVR_DXMT_UNDEF_NATIVE
 +#endif
 +#include "../WindowsVRCompositorBridge.h"
-@@ -16,2 +26,7 @@
+ 
+ typedef int NTSTATUS;
  #define STATUS_SUCCESS 0
  #define STATUS_UNSUCCESSFUL 0xC0000001
 +#define STATUS_INVALID_ADDRESS ((NTSTATUS)0xC0000141)
@@ -346,7 +357,11 @@ diff --git a/src/winemetal/unix/winemetal_unix.c b/src/winemetal/unix/winemetal_
 +struct unixcall_windows_vr_bridge_v1 {
 +  struct WMTMemoryPointer request;
 +};
-@@ -56,5 +71,12 @@
+ 
+ void
+ execute_on_main(dispatch_block_t block) {
+@@ -55,7 +70,14 @@
+ static NTSTATUS
  _MTLCopyAllDevices(void *obj) {
    struct unixcall_generic_obj_ret *params = obj;
 -  params->ret = (obj_handle_t)MTLCopyAllDevices();
@@ -360,20 +375,13 @@ diff --git a/src/winemetal/unix/winemetal_unix.c b/src/winemetal/unix/winemetal_
 +  params->ret = (obj_handle_t)[[NSArray alloc] init];
    return STATUS_SUCCESS;
  }
-@@ -3142,13 +3164,94 @@
- _MTLTexture_getBytes(void *obj) {
-   struct unixcall_mtltexture_replaceregion *params = obj;
-   [(id<MTLTexture>)params->texture getBytes:params->data.ptr
-                                 bytesPerRow:params->bytes_per_row
-                               bytesPerImage:params->bytes_per_image
-                                  fromRegion:MTLRegionMake3D(
-                                                 params->origin.x, params->origin.y, params->origin.z,
-                                                 params->size.width, params->size.height, params->size.depth
+ 
+@@ -3150,6 +3172,87 @@
                                              )
                                  mipmapLevel:params->level
                                        slice:params->slice];
-   return STATUS_SUCCESS;
- }
++  return STATUS_SUCCESS;
++}
 +
 +static NTSTATUS
 +_WMTWindowsVRBridgeCallV1(void *obj) {
@@ -453,15 +461,23 @@ diff --git a/src/winemetal/unix/winemetal_unix.c b/src/winemetal/unix/winemetal_
 +    request->consumerEvent = (uint64_t)(uintptr_t)consumer_event;
 +  else
 +    wvr_compositor_release_object_v1(consumer_event);
-+  return STATUS_SUCCESS;
-+}
-@@ -3312,2 +3415,4 @@
+   return STATUS_SUCCESS;
+ }
+ 
+@@ -3310,6 +3413,8 @@
+     &_MTLDevice_newIndirectCommandBuffer,
+     &_MTLDevice_newLibraryWithSource,
      &_MTLTexture_getBytes,
 +    &_WMTWindowsVRBridgeCallV1, /* 146 */
 +    &_WMTWindowsVRBridgeCallV2, /* 147 */
  };
-@@ -3462,2 +3567,4 @@
+ 
+ #ifndef DXMT_NATIVE
+@@ -3460,5 +3565,7 @@
+     &_MTLDevice_newIndirectCommandBuffer,
+     &_MTLDevice_newLibraryWithSource,
      &_MTLTexture_getBytes,
 +    &_WMTWindowsVRBridgeCallV1, /* 146: fixed-width WOW64 request */
 +    &_WMTWindowsVRBridgeCallV2, /* 147: fixed-width WOW64 request */
  };
+ #endif

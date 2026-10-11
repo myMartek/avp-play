@@ -72,10 +72,10 @@ for name in ("d3d11.dll","d3d12.dll","dxgi.dll","winemetal.dll"):
     if artifacts.get(f"guest/arm64ec-windows/{name}") != sha(path): fail(f"ARM64EC {name} does not match the same-source build receipt.")
     dll_hashes[name]=sha(path)
     sys.path.insert(0,str(root/"windows-vr-tools"))
-from stage_resources import pe_machine
+from stage_resources import is_arm64ec_pe
     
 for name in dll_hashes:
-    if pe_machine(source_dlls/name) != 0xA641: fail(f"{name} is not an ARM64EC Wine builtin.")
+    if not is_arm64ec_pe(source_dlls/name): fail(f"{name} is not an ARM64EC PE or valid AMD64+CHPE Wine builtin.")
 if stage_root.exists(): fail(f"Refusing to replace existing D3D12 stage: {stage_root}")
 stage_root.parent.mkdir(parents=True,exist_ok=True)
 staging=pathlib.Path(tempfile.mkdtemp(prefix=".d3d12-stage-",dir=stage_root.parent))

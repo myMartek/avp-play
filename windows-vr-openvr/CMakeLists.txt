@@ -14,10 +14,12 @@ option(WINDOWS_VR_BUILD_ARM64EC "Also package an ARM64EC OpenComposite guest" OF
 option(WINDOWS_VR_ENABLE_D3D12 "Build experimental D3D12 OpenComposite support" OFF)
 if(WINDOWS_VR_ENABLE_D3D12)
     set(OPENCOMPOSITE_GRAPHICS_PATCH "${CMAKE_CURRENT_SOURCE_DIR}/patches/0002-direct3d-openxr-build.patch")
+    set(OPENCOMPOSITE_LLVM_MINGW_PATCH "${CMAKE_CURRENT_SOURCE_DIR}/patches/0003-llvm-mingw-direct3d-compat.patch")
     set(OPENCOMPOSITE_GRAPHICS_OPTION "-DWINDOWS_VR_DIRECT3D_ONLY=ON")
 else()
     # Preserve the baseline DLL dependency closure when no D3D12 package exists.
     set(OPENCOMPOSITE_GRAPHICS_PATCH "${CMAKE_CURRENT_SOURCE_DIR}/patches/0001-d3d11-only-openxr-build.patch")
+    set(OPENCOMPOSITE_LLVM_MINGW_PATCH "${CMAKE_CURRENT_SOURCE_DIR}/patches/0003-llvm-mingw-direct3d-compat.patch")
     set(OPENCOMPOSITE_GRAPHICS_OPTION "-DWINDOWS_VR_D3D11_ONLY=ON")
 endif()
 find_package(Git REQUIRED)
@@ -89,6 +91,7 @@ function(add_opencomposite_variant variant platform)
             DOWNLOAD_COMMAND "${CMAKE_COMMAND}" -E copy_directory "${OPENCOMPOSITE_SOURCE_ROOT}" <SOURCE_DIR>
             UPDATE_COMMAND ""
             PATCH_COMMAND "${GIT_EXECUTABLE}" -C <SOURCE_DIR> apply "${OPENCOMPOSITE_GRAPHICS_PATCH}"
+                COMMAND "${GIT_EXECUTABLE}" -C <SOURCE_DIR> apply "${OPENCOMPOSITE_LLVM_MINGW_PATCH}"
             CMAKE_ARGS
                 "-DCMAKE_INSTALL_PREFIX=${OPENCOMPOSITE_STAGE_ROOT}/WindowsVR/Guest/${variant}"
                 "-DERROR_ON_WARNING=OFF"
@@ -132,12 +135,26 @@ endfunction()
 # root from the guest executable's PE Machine field before creating the guest.
 add_opencomposite_variant(x64 x64)
 set(OPENCOMPOSITE_PACKAGE_DEPENDENCIES OpenComposite_x64)
+set(OPENCOMPOSITE_PACKAGE_VARIANTS x64)
 if(WINDOWS_VR_BUILD_ARM64EC)
     add_opencomposite_variant(arm64ec ARM64EC)
     list(APPEND OPENCOMPOSITE_PACKAGE_DEPENDENCIES OpenComposite_arm64ec)
+    list(APPEND OPENCOMPOSITE_PACKAGE_VARIANTS arm64ec)
 endif()
+
+set(OPENCOMPOSITE_PACKAGE_COPY_COMMANDS)
+foreach(_variant IN LISTS OPENCOMPOSITE_PACKAGE_VARIANTS)
+    list(APPEND OPENCOMPOSITE_PACKAGE_COPY_COMMANDS
+        COMMAND "${CMAKE_COMMAND}" -E make_directory
+            "${OPENCOMPOSITE_STAGE_ROOT}/WindowsVR/Guest/${_variant}/OpenComposite/bin"
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+            "${CMAKE_BINARY_DIR}/build/${_variant}/bin/vrclient_x64.dll"
+            "${OPENCOMPOSITE_STAGE_ROOT}/WindowsVR/Guest/${_variant}/OpenComposite/bin/vrclient_x64.dll"
+    )
+endforeach()
 
 add_custom_target(package_opencomposite
     DEPENDS ${OPENCOMPOSITE_PACKAGE_DEPENDENCIES}
+    ${OPENCOMPOSITE_PACKAGE_COPY_COMMANDS}
     COMMENT "Stage pinned OpenComposite guest runtime trees"
 )

@@ -76,6 +76,9 @@ targets:
       - path: ${AVPPLAY_RUNTIME_SOURCE}/app/Madeira/FEXBridge.mm
       - path: ${AVPPLAY_RUNTIME_SOURCE}/app/Madeira/JITAllocator.c
       - path: ${AVPPLAY_RUNTIME_SOURCE}/app/Madeira/PrefixExtractor.c
+      - path: ${AVPPLAY_RUNTIME_SOURCE}/app/Madeira/AVPPlayWineBuild.c
+      - path: ${AVPPLAY_RUNTIME_SOURCE}/app/Madeira/IOSDisplayShim.m
+      - path: ${AVPPLAY_RUNTIME_SOURCE}/app/Madeira/Winios
     dependencies:
       - target: WindowsVRNativeBridge
       - package: WindowsVRMetal
@@ -90,7 +93,7 @@ targets:
         MADEIRA_FEX_BUILD_DIR: ${AVPPLAY_RUNTIME_SOURCE}/FEX/build-ios
         MADEIRA_WINE_BUILD_DIR: ${AVPPLAY_RUNTIME_SOURCE}/app/Madeira
         MADEIRA_DXMT_BUILD_DIR: ${AVPPLAY_RUNTIME_SOURCE}/app/Madeira
-        AVPPLAY_DXMT_LINK_FLAG: -ldxmt_combined
+        AVPPLAY_DXMT_LINK_FLAG: ${AVPPLAY_DXMT_LINK_FLAG}
         HEADER_SEARCH_PATHS:
           - $(inherited)
           - $(SRCROOT)/../windows-vr/include
@@ -141,6 +144,13 @@ targets:
           - -lz
           - -lsqlite3
           - -llzma
+          # Optional legacy DXMT release diagnostics are absent in the modern
+          # backend; preserve the existing weak-import/null-check semantics.
+          - -Wl,-U,_madeira_wmt_released_class
+          - -framework
+          - IOKit
+          - -framework
+          - CoreText
           - -framework
           - AVFoundation
           - -framework

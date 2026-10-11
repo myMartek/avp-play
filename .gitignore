@@ -22,5 +22,12 @@
 /third-party/alvr-visionos/
 /third-party/opencomposite/
 /runtime-source
+/runtime-source-d3d12-experimental
 /visionos-windows-vr/Resources/Runtime/
+/visionos-windows-vr/Resources/WindowsVR/
+/visionos-windows-vr/.compile-only.yml
 /visionos-windows-vr/Generated-Info.plist
+__pycache__/
+/.swiftpm/
+/windows-vr/.swiftpm/
+/windows-vr-metal/.swiftpm/

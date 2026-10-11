@@ -1,0 +1,34 @@
+--- a/dlls/win32u/dibdrv/bitblt.c
++++ b/dlls/win32u/dibdrv/bitblt.c
+@@ -1012,6 +1012,7 @@
+      * one that already carries the displaced panel. Watching it names the
+      * GUEST code that wrote each region. Only the big paint qualifies; the
+      * watch itself is one-shot and env-gated (MADEIRA_SRCWATCH). */
++#if 0 /* Host Wine build: this iOS-only diagnostic requires application hooks. */
+     if (dst && bits && bits->ptr && dst->visrect.right - dst->visrect.left >= 640
+         && dst->visrect.bottom - dst->visrect.top >= 400)
+     {
+@@ -1070,6 +1071,7 @@
+                                               (dst->visrect.bottom - dst->visrect.top)) );
+         }
+     }
++#endif
+ 
+     if (dst && src && dst->visrect.right - dst->visrect.left >= 24)
+     {
+--- a/dlls/ntdll/unix/sync.c
++++ b/dlls/ntdll/unix/sync.c
+@@ -5309,7 +5309,12 @@
+         {
+             unsigned long long spin_end = mach_absolute_time() + ios_alert_spin_ticks;
+             __sync_fetch_and_add( &ios_alert_spin_tries, 1 );
+-            while (!*(volatile LONG *)futex && mach_absolute_time() < spin_end) __asm__ __volatile__( "yield" );
++            while (!*(volatile LONG *)futex && mach_absolute_time() < spin_end)
++#if defined(__x86_64__)
++                __asm__ __volatile__( "pause" );
++#else
++                __asm__ __volatile__( "yield" );
++#endif
+             if (*(volatile LONG *)futex) __sync_fetch_and_add( &ios_alert_spin_hits, 1 );
+         }
+         while (!InterlockedExchange( futex, 0 ))

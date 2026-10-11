@@ -16,7 +16,10 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 
 def ignore_cache_files(directory, names):
-    ignored = {".git", "tests", "unittests", "research", "build-ios", "build-arm64ec", "build-macos", "obj"}
+    # Preserve the pinned source graph, including disabled test metadata:
+    # Wine's makedep parses test Makefile.in files even with --disable-tests.
+    # Build flags and resource staging prevent tests from running or shipping.
+    ignored = {".git", "research", "build-ios", "build-arm64ec", "build-macos", "obj"}
     return [name for name in names if name in ignored or name.endswith((".a", ".o"))]
 
 
@@ -31,6 +34,13 @@ def project_patch_hashes():
     for directory in directories:
         if directory.exists():
             for patch in sorted(directory.glob("*.patch")):
+                # The baseline applies only the D3D11 transport patch here.
+                # Modern DXMT patches have their own profile source-tree and
+                # integration-input receipts; changing them must not invalidate
+                # an unchanged Madeira/FEX/Wine baseline source overlay.
+                if (directory == ROOT / "windows-vr-openxr/patches"
+                        and patch.name != "0001-dxmt-wvr-frame-bridge.patch"):
+                    continue
                 hashes[patch.relative_to(ROOT).as_posix()] = hashlib.sha256(patch.read_bytes()).hexdigest()
     # Transport headers and copied adapter sources are ABI inputs too. Reusing
     # an overlay after only a header changed would mix incompatible host/guest code.
@@ -46,6 +56,7 @@ def project_patch_hashes():
         "windows-vr-openxr/src/WindowsVROpenXR.cpp",
         "windows-vr-openxr/CMakeLists.txt",
         "windows-vr-tools/prepare_runtime.py",
+        "windows-vr-tools/prepare_wine_native.sh",
         "windows-runtime-plugin/d3d12/0001-embedded-dxmt-dispatch.patch",
     )
     for relative in additional_inputs:
@@ -94,6 +105,12 @@ def main():
     atexit.register(shutil.rmtree, staging_root, ignore_errors=True)
     output = staging_root / "overlay"
     shutil.copytree(source, output, ignore=ignore_cache_files, symlinks=True)
+    wine_version = (source / "wine/VERSION").read_text(encoding="utf-8").strip()
+    (output / "app/Madeira/AVPPlayWineBuild.c").write_text(
+        "/* Generated from the locked Wine source version. */\n"
+        f"const char wine_build[] = {json.dumps(wine_version)};\n",
+        encoding="utf-8",
+    )
     # Isolate git apply from the enclosing project's repository and keep its
     # normal path traversal protections enabled.
     subprocess.run(["git", "init", "--quiet"], cwd=output, check=True)
@@ -102,7 +119,7 @@ def main():
     for path in (output / "build").rglob("*.sh"):
         original = path.read_text()
         updated = original.replace("--sdk iphoneos", "--sdk xros").replace("-sdk iphoneos", "-sdk xros")
-        updated = updated.replace("-DCMAKE_SYSTEM_NAME=iOS", "-DCMAKE_SYSTEM_NAME=visionOS")
+        updated = updated.replace("-DCMAKE_SYSTEM_NAME=iOS", "-DCMAKE_SYSTEM_NAME=visionOS -DCMAKE_SYSTEM_PROCESSOR=arm64")
         updated = updated.replace("-DCMAKE_OSX_SYSROOT=iphoneos", "-DCMAKE_OSX_SYSROOT=xros")
         updated = updated.replace("-DCMAKE_OSX_DEPLOYMENT_TARGET=17.0", "-DCMAKE_OSX_DEPLOYMENT_TARGET=27.0")
         updated = updated.replace("-miphoneos-version-min=17.0", "-target arm64-apple-xros27.0")
@@ -112,6 +129,80 @@ def main():
         # Keep output folder names stable for upstream relative includes. The
         # generated directory has no pre-existing iOS objects or CMake cache.
         path.write_text(updated)
+    fex_revision = subprocess.check_output(
+        ["git", "rev-parse", "HEAD:FEX"], cwd=source, text=True
+    ).strip()
+    fex_build_script = output / "build/fex-ios/build.sh"
+    fex_build_script.write_text(fex_build_script.read_text().replace(
+        "-DENABLE_CCACHE=ON",
+        "-DENABLE_CCACHE=OFF -DTUNE_CPU=generic -DFEX_IOS_HOST_BUILD=ON "
+        f"-DOVERRIDE_VERSION=FEX-{fex_revision[:7]} -DOVERRIDE_HASH={fex_revision}"
+    ).replace(
+        "--target FEXCore FEXCore_Base",
+        "--target FEXCore FEXCore_Base JemallocLibs"
+    ))
+    fex_pe_script = output / "build/fex-arm64ec/build.sh"
+    fex_pe_config = fex_pe_script.read_text()
+    if "-DMINGW_TRIPLE=" not in fex_pe_config:
+        fex_pe_config = fex_pe_config.replace(
+            "-DENABLE_CCACHE=ON \\",
+            "-DENABLE_CCACHE=OFF -DMINGW_TRIPLE=arm64ec-w64-mingw32 "
+            "-DTUNE_CPU=generic -DENABLE_LTO=OFF -DFEX_IOS_HOST_BUILD=ON "
+            f"-DOVERRIDE_VERSION=FEX-{fex_revision[:7]} -DOVERRIDE_HASH={fex_revision} \\",
+        )
+    if "-DCMAKE_CXX_FLAGS=-DFEX_IOS_HOST" not in fex_pe_config:
+        fex_pe_config = fex_pe_config.replace(
+            "-DBUILD_TESTING=OFF",
+            "-DCMAKE_C_FLAGS=-DFEX_IOS_HOST "
+            '"-DCMAKE_CXX_FLAGS=-DFEX_IOS_HOST -D__USE_MINGW_ANSI_STDIO=1 '
+            '-D__USE_MINGW_ACCESS -fno-lto" '
+            "-DCMAKE_ASM_FLAGS=-DFEX_IOS_HOST -DBUILD_TESTING=OFF",
+            1,
+        )
+        if "-DCMAKE_CXX_FLAGS=-DFEX_IOS_HOST" not in fex_pe_config:
+            raise SystemExit("Could not inject the ARM64EC FEX cross-compiler flags into build/fex-arm64ec/build.sh")
+    if "-DMINGW_TRIPLE=arm64ec-w64-mingw32" not in fex_pe_config:
+        raise SystemExit("Could not select the ARM64EC LLVM-MinGW triple in build/fex-arm64ec/build.sh")
+    fex_pe_toolchain = output / "build/fex-arm64ec/avp_toolchain.cmake"
+    fex_pe_toolchain.write_text(
+        'include("${CMAKE_CURRENT_LIST_DIR}/../../FEX/Data/CMake/toolchain_mingw.cmake")\n'
+        'set(CMAKE_CXX_STANDARD_LIBRARIES '
+        '"'
+        '${CMAKE_CURRENT_LIST_DIR}/../../toolchains/llvm-mingw-20260421-ucrt-macos-universal/'
+        'arm64ec-w64-mingw32/lib/libc++.dll.a '
+        '${CMAKE_CURRENT_LIST_DIR}/../../toolchains/llvm-mingw-20260421-ucrt-macos-universal/'
+        'arm64ec-w64-mingw32/lib/libunwind.dll.a" CACHE STRING "" FORCE)\n'
+        'set(CMAKE_CXX_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIBRARIES} '
+        '${CMAKE_CURRENT_LIST_DIR}/../../toolchains/llvm-mingw-20260421-ucrt-macos-universal/'
+        'arm64ec-w64-mingw32/lib/libmingwex.a" CACHE STRING "" FORCE)\n'
+        # FEX's ARM64EC C++ code references the Windows UCRT spelling of
+        # snprintf/access directly. The compiler driver normally supplies
+        # this archive, but the target's `-static` option suppresses the
+        # needed EC thunk archive members, so make the pinned UCRT explicit.
+        'set(CMAKE_CXX_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIBRARIES} '
+        '${CMAKE_CURRENT_LIST_DIR}/../../toolchains/llvm-mingw-20260421-ucrt-macos-universal/'
+        'arm64ec-w64-mingw32/lib/libucrtbase.a" CACHE STRING "" FORCE)\n'
+        # The ARM64EC LLVM-MinGW toolchain's libc++.a is incomplete for the
+        # APIs FEX uses; the matching libc++.dll import library supplies them.
+        # `-nostdlib++` is applied to this target below, so do not also request
+        # `-static-libstdc++` here (that would pull libc++.a and duplicate
+        # exports from libc++.dll.a). Keep the C/SEH runtimes static.
+        'set(CMAKE_SHARED_LINKER_FLAGS "-static -static-libgcc -Wl,--file-alignment=4096,/mllvm:-align-loops=1" CACHE STRING "" FORCE)\n'
+        'set(CMAKE_EXE_LINKER_FLAGS "-static -static-libgcc -Wl,--file-alignment=4096,/mllvm:-align-loops=1" CACHE STRING "" FORCE)\n'
+    )
+    fex_pe_cmake = output / "FEX/Source/Windows/ARM64EC/CMakeLists.txt"
+    fex_pe_cmake.write_text(fex_pe_cmake.read_text().replace(
+        "target_link_options(arm64ecfex PRIVATE -static)",
+        "target_link_options(arm64ecfex PRIVATE -static -nostdlib++)",
+    ))
+    fex_pe_config = fex_pe_config.replace(
+        '-DCMAKE_TOOLCHAIN_FILE="$R/FEX/Data/CMake/toolchain_mingw.cmake"',
+        '-DCMAKE_TOOLCHAIN_FILE="$R/build/fex-arm64ec/avp_toolchain.cmake"',
+    )
+    fex_pe_config = fex_pe_config.replace(
+        'B="$R/FEX/build-arm64ec"', 'B="$R/FEX/build-arm64ec-avp"'
+    )
+    fex_pe_script.write_text(fex_pe_config)
     # Extend only the generated build-system platform allowlist. FEX's Apple
     # source path already uses APPLE; its top-level allowlist predates visionOS.
     fex_cmake = output / "FEX/CMakeLists.txt"

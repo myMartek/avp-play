@@ -1,0 +1,205 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 98c8ffd..e2311eb 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -7,6 +7,9 @@ endif ()
+ 
+ cmake_minimum_required(VERSION 3.16)
+ project(OpenComposite)
++if (WIN32)
++	add_compile_definitions(WIN32)
++endif ()
+ set(CMAKE_CXX_STANDARD 20)
+ set(CMAKE_CXX_EXTENSIONS OFF)
+ 
+@@ -253,6 +256,9 @@ add_library(DrvOpenXR STATIC
+ target_include_directories(DrvOpenXR PUBLIC DrvOpenXR/pub ${CMAKE_BINARY_DIR})
+ target_include_directories(DrvOpenXR PRIVATE DrvOpenXR OpenOVR)
+ target_link_libraries(DrvOpenXR PUBLIC OpenVR ${XrLib} ${jsoncppLib} ${glmLib})
++if (WIN32)
++	target_link_libraries(DrvOpenXR PUBLIC shlwapi)
++endif ()
+ if (NOT WIN32 AND NOT ANDROID)
+ 	target_link_libraries(DrvOpenXR PRIVATE X11) # for XFree()
+ endif ()
+@@ -528,6 +534,7 @@ if (NOT WIN32)
+ else ()
+ 	# On Windows this isn't a problem since the linker knows how to figure this stuff out
+ 	target_link_libraries(OCOVR OCCore DrvOpenXR)
++	target_link_libraries(OCOVR d3d11 d3d12 dxgi d3dcompiler)
+ endif ()
+ 
+ # If we're on Linux, compile everything as position-independent
+diff --git a/DrvOpenXR/DrvOpenXR.cpp b/DrvOpenXR/DrvOpenXR.cpp
+index 8e3bd9c..7af1576 100644
+--- a/DrvOpenXR/DrvOpenXR.cpp
++++ b/DrvOpenXR/DrvOpenXR.cpp
+@@ -3,6 +3,9 @@
+ //
+ 
+ #include "DrvOpenXR.h"
++#ifdef _WIN32
++#include <shlwapi.h>
++#endif
+ 
+ #include "../OpenOVR/Misc/Config.h"
+ #include "../OpenOVR/Misc/android_api.h"
+diff --git a/DrvOpenXR/XrBackend.cpp b/DrvOpenXR/XrBackend.cpp
+index 3e246d9..2329b87 100644
+--- a/DrvOpenXR/XrBackend.cpp
++++ b/DrvOpenXR/XrBackend.cpp
+@@ -154,6 +154,7 @@ void XrBackend::GetDeviceToAbsoluteTrackingPose(
+ 	}
+ }
+ 
++#if defined(SUPPORT_VK)
+ static void find_queue_family_and_queue_idx(VkDevice dev, VkPhysicalDevice pdev, VkQueue desired_queue, uint32_t& out_queueFamilyIndex, uint32_t& out_queueIndex)
+ {
+ 	uint32_t queue_family_count;
+@@ -179,6 +180,7 @@ static void find_queue_family_and_queue_idx(VkDevice dev, VkPhysicalDevice pdev,
+ 	OOVR_ABORT("Couldn't find the queue family index/queue index of the queue that the OpenVR app gave us!"
+ 	           "This is really odd and really shouldn't ever happen");
+ }
++#endif // SUPPORT_VK
+ 
+ /* Submitting Frames */
+ void XrBackend::CheckOrInitCompositors(const vr::Texture_t* tex)
+@@ -259,6 +261,7 @@ void XrBackend::CheckOrInitCompositors(const vr::Texture_t* tex)
+ #endif
+ 			break;
+ 		}
++#if defined(SUPPORT_VK)
+ 		case vr::TextureType_Vulkan: {
+ 			const vr::VRVulkanTextureData_t* vktex = (vr::VRVulkanTextureData_t*)tex->handle;
+ 
+@@ -291,6 +294,7 @@ void XrBackend::CheckOrInitCompositors(const vr::Texture_t* tex)
+ 			DrvOpenXR::SetupSession();
+ 			break;
+ 		}
++#endif // SUPPORT_VK
+ 		case vr::TextureType_OpenGL: {
+ #ifdef SUPPORT_GL
+ 			// The spec requires that we call this before starting a session using OpenGL. Unfortunately we
+diff --git a/OpenOVR/Compositor/compositor.h b/OpenOVR/Compositor/compositor.h
+index e83a16a..a9b0335 100644
+--- a/OpenOVR/Compositor/compositor.h
++++ b/OpenOVR/Compositor/compositor.h
+@@ -3,7 +3,6 @@
+ #include "generated/interfaces/vrtypes.h"
+ #ifdef WIN32
+ // Windows template libraries
+-#include <atlbase.h>
+ #include <wrl/client.h>
+ #endif
+ 
+diff --git a/OpenOVR/Compositor/dx11compositor.cpp b/OpenOVR/Compositor/dx11compositor.cpp
+index 2ed44d2..50d31ae 100644
+--- a/OpenOVR/Compositor/dx11compositor.cpp
++++ b/OpenOVR/Compositor/dx11compositor.cpp
+@@ -350,7 +350,7 @@ void DX11Compositor::CopyToSwapchain(const vr::Texture_t* texture, const vr::VRT
+ 		context->RSGetState(&pRSState);
+ 		context->RSSetState(nullptr);
+ 
+-		D3D11_VIEWPORT viewport = CD3D11_VIEWPORT(src, swapchain_rtvs[currentIndex]);
++		D3D11_VIEWPORT viewport = { 0.0f, 0.0f, static_cast<float>(createInfo.width), static_cast<float>(createInfo.height), 0.0f, 1.0f };
+ 		context->RSSetViewports(1, &viewport);
+ 		D3D11_RECT rects[1];
+ 		rects[0].top = 0;
+diff --git a/OpenOVR/Compositor/dx12compositor.cpp b/OpenOVR/Compositor/dx12compositor.cpp
+index ff2fedd..05003b4 100644
+--- a/OpenOVR/Compositor/dx12compositor.cpp
++++ b/OpenOVR/Compositor/dx12compositor.cpp
+@@ -6,7 +6,6 @@
+ 
+ #include <string>
+ 
+-#include <atlbase.h>
+ 
+ #include <DirectXMath.h>
+ #include <d3dcompiler.h>
+diff --git a/OpenOVR/Misc/Keyboard/VRKeyboard.cpp b/OpenOVR/Misc/Keyboard/VRKeyboard.cpp
+index 6766ed4..ebed2b3 100644
+--- a/OpenOVR/Misc/Keyboard/VRKeyboard.cpp
++++ b/OpenOVR/Misc/Keyboard/VRKeyboard.cpp
+@@ -298,7 +298,7 @@ void VRKeyboard::Refresh()
+ 		{ pixels, sizeof(pix_t) * desc.Width, sizeof(pix_t) * desc.Width * desc.Height }
+ 	};
+ 
+-	CComPtr<ID3D11Texture2D> tex;
++	Microsoft::WRL::ComPtr<ID3D11Texture2D> tex;
+ 	HRESULT rres = dev->CreateTexture2D(&desc, init, &tex);
+ 	// HRESULT hrr = dev->GetDeviceRemovedReason();
+ 	OOVR_FAILED_DX_ABORT(rres);
+@@ -309,7 +309,7 @@ void VRKeyboard::Refresh()
+ 	int index;
+ 	OOVR_FAILED_OVR_ABORT(ovr_GetTextureSwapChainCurrentIndex(*ovr::session, chain, &index));
+ 
+-	CComPtr<ID3D11Texture2D> dst;
++	Microsoft::WRL::ComPtr<ID3D11Texture2D> dst;
+ 	OOVR_FAILED_OVR_ABORT(ovr_GetTextureSwapChainBufferDX(*ovr::session, chain, index, IID_PPV_ARGS(&dst)));
+ 
+ 	ctx->CopyResource(dst, tex);
+diff --git a/OpenOVR/Reimpl/BaseClientCore.cpp b/OpenOVR/Reimpl/BaseClientCore.cpp
+index 5f06605..acf1066 100644
+--- a/OpenOVR/Reimpl/BaseClientCore.cpp
++++ b/OpenOVR/Reimpl/BaseClientCore.cpp
+@@ -4,6 +4,7 @@
+ #include "steamvr_abi.h"
+ 
+ #include <codecvt>
++#include <filesystem>
+ #include <fstream>
+ #include <locale>
+ 
+@@ -25,7 +26,7 @@ static std::wstring_convert<std::codecvt_utf8<wchar_t>> CHAR_CONV;
+ 
+ static bool ReadJson(wstring path, Json::Value& result)
+ {
+-	std::ifstream in(APISTR(path), std::ios::binary);
++	std::ifstream in{ std::filesystem::path(APISTR(path)), std::ios::binary };
+ 	if (in) {
+ 		std::stringstream contents;
+ 		contents << in.rdbuf();
+@@ -39,7 +40,7 @@ static bool ReadJson(wstring path, Json::Value& result)
+ 
+ static void WriteJson(wstring path, const Json::Value& value)
+ {
+-	std::ofstream out(APISTR(path), std::ios::binary);
++	std::ofstream out{ std::filesystem::path(APISTR(path)), std::ios::binary };
+ 	if (!out) {
+ 		OOVR_ABORTF("Failed to write applist json: %s", strerror(errno));
+ 	}
+diff --git a/OpenOVR/Reimpl/BaseInput.cpp b/OpenOVR/Reimpl/BaseInput.cpp
+index 1091a21..90e5a5d 100644
+--- a/OpenOVR/Reimpl/BaseInput.cpp
++++ b/OpenOVR/Reimpl/BaseInput.cpp
+@@ -15,6 +15,7 @@
+ #include <codecvt>
+ #include <cstdint>
+ #include <cstdlib>
++#include <filesystem>
+ #include <fstream>
+ #ifndef GLM_ENABLE_EXPERIMENTAL
+ #define GLM_ENABLE_EXPERIMENTAL
+@@ -78,7 +79,7 @@ static bool ReadJson(const std::wstring& path, Json::Value& result)
+ #endif
+ 
+ #ifndef ANDROID
+-	std::ifstream in(real_path, std::ios::binary);
++	std::ifstream in{ std::filesystem::path(real_path), std::ios::binary };
+ 	if (in) {
+ 		std::stringstream contents;
+ 		contents << in.rdbuf();
+diff --git a/OpenOVR/logging.h b/OpenOVR/logging.h
+index bf95c4a..5cce2f7 100644
+--- a/OpenOVR/logging.h
++++ b/OpenOVR/logging.h
+@@ -36,7 +36,7 @@ std::string GetEnv(const std::string& var);
+ 	} while (0)
+ #define OOVR_ABORTF(msg, ...)                                                        \
+ 	do {                                                                             \
+-		oovr_abort_raw(__FILE__, __LINE__, __FUNCTION__, msg, nullptr, __VA_ARGS__); \
++		oovr_abort_raw(__FILE__, __LINE__, __FUNCTION__, msg, nullptr, ##__VA_ARGS__); \
+ 	} while (0)
+ 
+ /**

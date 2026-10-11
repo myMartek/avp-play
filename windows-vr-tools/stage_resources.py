@@ -15,12 +15,17 @@ from resource_receipt import GUEST_RECEIPT_NAME, sha256_file, validate_receipts
 ROOT = Path(__file__).resolve().parents[1]
 WINE_TOOLS = {
     "wineboot.exe", "services.exe", "winedevice.exe", "explorer.exe",
-    "conhost.exe", "rundll32.exe", "start.exe", "plugplay.exe",
+    "conhost.exe", "rundll32.exe", "start.exe", "plugplay.exe", "ntoskrnl.exe",
     "rpcss.exe", "winecfg.exe",
 }
 REQUIRED_BUILTINS = {
     "ntdll.dll", "kernel32.dll", "kernelbase.dll", "wineboot.exe",
-    "services.exe", "winedevice.exe", "rpcss.exe",
+    "services.exe", "winedevice.exe", "rpcss.exe", "apisetschema.dll",
+    "mswsock.dll", "dnsapi.dll", "iphlpapi.dll", "winhttp.dll",
+}
+ARM64EC_REQUIRED_BUILTINS = {
+    # Required by Madeira's freshly built ARM64EC FEX translator.
+    "xtajit64.dll", "libc++.dll", "libunwind.dll",
 }
 FORBIDDEN = ("steamclient", "codex", "test", "probe", "canary", "hello", "triangle", "cube", "thumper")
 MAX_ARCHIVE_MEMBERS = 250_000
@@ -122,19 +127,106 @@ def validate_prefix_archive(template):
         fail(f"Cannot read Wine prefix template as a safe gzip tar archive: {exc}")
 
 
+def _read_pe_info(path):
+    """Return (COFF machine, ARM64EC CHPE metadata present), or (None, False).
+
+    Wine emits ARM64EC images with an AMD64 COFF machine value, so use the
+    PE32+ load-config CHPEMetadataPointer (IMAGE_LOAD_CONFIG_DIRECTORY64 +0xC8)
+    to distinguish them from ordinary x64 images.
+    """
+    try:
+        size = path.stat().st_size
+        with path.open("rb") as stream:
+            def read_at(offset, count):
+                if offset < 0 or count < 0 or offset + count > size:
+                    return None
+                stream.seek(offset)
+                value = stream.read(count)
+                return value if len(value) == count else None
+
+            dos = read_at(0, 64)
+            if not dos or dos[:2] != b"MZ":
+                return None, False
+            pe_offset = int.from_bytes(dos[0x3C:0x40], "little")
+            coff = read_at(pe_offset, 24)
+            if not coff or coff[:4] != b"PE\0\0":
+                return None, False
+            machine = int.from_bytes(coff[4:6], "little")
+            section_count = int.from_bytes(coff[6:8], "little")
+            optional_size = int.from_bytes(coff[20:22], "little")
+            optional_offset = pe_offset + 24
+            optional = read_at(optional_offset, optional_size)
+            if not optional:
+                return machine, False
+            # ARM64EC may use its own machine value; AMD64 requires valid CHPE
+            # metadata before being classified as ARM64EC.
+            if machine == 0xA641:
+                return machine, True
+            if machine != 0x8664 or len(optional) < 112 or optional[:2] != b"\x0b\x02":
+                return machine, False
+            image_base = int.from_bytes(optional[24:32], "little")
+            size_of_image = int.from_bytes(optional[56:60], "little")
+            size_of_headers = int.from_bytes(optional[60:64], "little")
+            directory_count = int.from_bytes(optional[108:112], "little")
+            if directory_count <= 10 or len(optional) < 112 + 11 * 8:
+                return machine, False
+            load_rva = int.from_bytes(optional[112 + 10 * 8:116 + 10 * 8], "little")
+            load_size = int.from_bytes(optional[116 + 10 * 8:120 + 10 * 8], "little")
+            if not load_rva or load_size < 0xD0 or not size_of_image:
+                return machine, False
+
+            section_table = optional_offset + optional_size
+            sections = []
+            for index in range(section_count):
+                section = read_at(section_table + index * 40, 40)
+                if not section:
+                    return machine, False
+                virtual_size = int.from_bytes(section[8:12], "little")
+                virtual_address = int.from_bytes(section[12:16], "little")
+                raw_size = int.from_bytes(section[16:20], "little")
+                raw_offset = int.from_bytes(section[20:24], "little")
+                sections.append((virtual_address, max(virtual_size, raw_size), raw_size, raw_offset))
+
+            def rva_to_offset(rva, count):
+                if rva < size_of_headers and rva + count <= size_of_headers:
+                    return rva if rva + count <= size else None
+                for va, span, raw_size, raw_offset in sections:
+                    if va <= rva and rva + count <= va + span:
+                        delta = rva - va
+                        if delta + count <= raw_size and raw_offset + delta + count <= size:
+                            return raw_offset + delta
+                return None
+
+            load_offset = rva_to_offset(load_rva, 0xD0)
+            if load_offset is None:
+                return machine, False
+            load_config = read_at(load_offset, 0xD0)
+            if not load_config or int.from_bytes(load_config[:4], "little") < 0xD0:
+                return machine, False
+            metadata_va = int.from_bytes(load_config[0xC8:0xD0], "little")
+            if metadata_va < image_base or metadata_va - image_base >= size_of_image:
+                return machine, False
+            metadata_offset = rva_to_offset(metadata_va - image_base, 4)
+            if metadata_offset is None:
+                return machine, False
+            version = int.from_bytes(read_at(metadata_offset, 4), "little")
+            return machine, version in (1, 2)
+    except (OSError, OverflowError, ValueError):
+        return None, False
+
+
 def pe_machine(path):
-    with path.open("rb") as stream:
-        dos = stream.read(64)
-        if len(dos) != 64 or dos[:2] != b"MZ":
-            return None
-        offset = int.from_bytes(dos[0x3C:0x40], "little")
-        if offset < 64 or offset > 16 * 1024 * 1024:
-            return None
-        stream.seek(offset)
-        header = stream.read(6)
-        if len(header) != 6 or header[:4] != b"PE\0\0":
-            return None
-        return int.from_bytes(header[4:6], "little")
+    """Return the raw COFF machine field for compatibility with callers."""
+    return _read_pe_info(path)[0]
+
+
+def is_arm64ec_pe(path):
+    """Whether a PE is ARM64EC by machine type or valid AMD64 CHPE metadata."""
+    return _read_pe_info(path)[1]
+
+
+def _is_x64_pe(path):
+    return pe_machine(path) == 0x8664 and not is_arm64ec_pe(path)
 
 
 def require_license(path, label):
@@ -202,18 +294,18 @@ def validate_existing_stage(output, guest_output, template, prefix_provenance,
 
 def validate_guest_tree(guest_root):
     regular_tree(guest_root, "WindowsVR guest stage")
-    required = {
-        guest_root / "Guest/x64/OpenComposite/bin/vrclient_x64.dll": 0x8664,
-        guest_root / "Guest/x64/wvr_openxr.dll": 0x8664,
-    }
-    for path, expected_machine in required.items():
+    required = (
+        guest_root / "Guest/x64/OpenComposite/bin/vrclient_x64.dll",
+        guest_root / "Guest/x64/wvr_openxr.dll",
+    )
+    for path in required:
         regular_file(path, "Required x64 guest runtime DLL")
-        if pe_machine(path) != expected_machine:
+        if not _is_x64_pe(path):
             fail(f"Guest DLL is not a valid x64 PE image: {path}")
     arm64ec_root = guest_root / "Guest/arm64ec"
     if arm64ec_root.exists():
         pair = [arm64ec_root / "OpenComposite/bin/vrclient_x64.dll", arm64ec_root / "wvr_openxr.dll"]
-        if any(not path.is_file() or path.is_symlink() or pe_machine(path) != 0xA641 for path in pair):
+        if any(not path.is_file() or path.is_symlink() or not is_arm64ec_pe(path) for path in pair):
             fail("An ARM64EC guest package must contain matching ARM64EC OpenComposite and OpenXR PE DLLs.")
 
 
@@ -292,7 +384,7 @@ def validate_d3d12_stage(stage_root, native_archive):
     for name in sorted(expected_guest):
         path = guest_root / name
         regular_file(path, "D3D12 ARM64EC guest DLL")
-        if pe_machine(path) != 0xA641:
+        if not is_arm64ec_pe(path):
             fail(f"D3D12 package requires an ARM64EC Wine builtin: {path}")
         if artifacts.get(f"guest/arm64ec-windows/{name}") != sha256_file(path):
             fail(f"Staged ARM64EC {name} does not match the D3D12 build receipt.")
@@ -353,12 +445,21 @@ def validate_wine_resources(source):
         missing = sorted(REQUIRED_BUILTINS - set(names))
         if missing:
             fail(f"Wine builtin farm {farm} is missing required files: {', '.join(missing)}")
+        if farm == "arm64ec-windows":
+            missing = sorted(ARM64EC_REQUIRED_BUILTINS - set(names))
+            if missing:
+                fail(f"Wine ARM64EC farm is missing required translator/runtime files: {', '.join(missing)}")
         graphics_required = {"d3d11.dll", "winemetal.dll"} if farm == "arm64ec-windows" else set()
         if not graphics_required.issubset(names):
             fail("ARM64EC resource farm must include the matching-overlay DXMT d3d11.dll and winemetal.dll.")
         for name in REQUIRED_BUILTINS | graphics_required:
             if names[name].stat().st_size == 0:
                 fail(f"Required Wine builtin is empty: {names[name]}")
+        if farm == "arm64ec-windows":
+            for name in ARM64EC_REQUIRED_BUILTINS:
+                path = names[name]
+                if not is_arm64ec_pe(path):
+                    fail(f"ARM64EC runtime farm requires ARM64EC PE files: {path}")
         for name, path in names.items():
             if (path.suffix.casefold() == ".dll" or name in WINE_TOOLS) and any(term in name for term in FORBIDDEN):
                 fail(f"Wine builtin farm contains an excluded test/game resource: {path}")
@@ -376,6 +477,10 @@ def copy_builtins(source, destination):
         missing = sorted(REQUIRED_BUILTINS - names)
         if missing:
             fail(f"Staged Wine builtin farm {farm} is incomplete: {', '.join(missing)}")
+        if farm == "arm64ec-windows":
+            missing = sorted(ARM64EC_REQUIRED_BUILTINS - names)
+            if missing:
+                fail(f"Staged Wine ARM64EC farm is missing translator/runtime files: {', '.join(missing)}")
     shutil.copytree(source / "nls", destination / "nls")
     shutil.copytree(source / "legal", destination / "legal")
 

@@ -10,12 +10,17 @@ diff --git a/src/d3d11/d3d11_interfaces.hpp b/src/d3d11/d3d11_interfaces.hpp
 diff --git a/src/d3d11/d3d11_context_impl.cpp b/src/d3d11/d3d11_context_impl.cpp
 --- a/src/d3d11/d3d11_context_impl.cpp
 +++ b/src/d3d11/d3d11_context_impl.cpp
-@@ -23,1 +23,5 @@
+@@ -21,6 +21,10 @@
+  */
+ 
  #include "Metal.hpp"
 +#include <chrono>
 +#include <cstring>
 +#include <mutex>
 +#include <unordered_map>
+ #include "d3d11_annotation.hpp"
+ #include "d3d11_context.hpp"
+ #include "d3d11_device_child.hpp"
 @@ -646,8 +650,16 @@
      }
  
@@ -250,12 +255,17 @@ diff --git a/src/d3d11/d3d11_context_impl.cpp b/src/d3d11/d3d11_context_impl.cpp
 diff --git a/src/dxmt/dxmt_context.hpp b/src/dxmt/dxmt_context.hpp
 --- a/src/dxmt/dxmt_context.hpp
 +++ b/src/dxmt/dxmt_context.hpp
-@@ -21,1 +21,5 @@
+@@ -19,6 +19,10 @@
+ #pragma once
+ 
  #include "Metal.hpp"
 +#include <condition_variable>
 +#include <memory>
 +#include <mutex>
 +#include "WindowsVRWMTBridge.h"
+ #include "dxmt_buffer.hpp"
+ #include "dxmt_command.hpp"
+ #include "dxmt_command_clear.hpp"
 @@ -40,6 +44,12 @@
  #define DXMT_UNREACHABLE __builtin_unreachable();
  

@@ -1,0 +1,22 @@
+diff --git a/wine/programs/wineboot/wineboot.c b/wine/programs/wineboot/wineboot.c
+index 0000000..0000000 100644
+--- a/wine/programs/wineboot/wineboot.c
++++ b/wine/programs/wineboot/wineboot.c
+@@ -187,7 +187,7 @@ static DWORD set_reg_value_dword( HKEY hkey, const WCHAR *name, DWORD value )
+     return RegSetValueExW( hkey, name, 0, REG_DWORD, (const BYTE *)&value, sizeof(value) );
+ }
+ 
+-#if defined(__i386__) || defined(__x86_64__)
++#if (defined(__i386__) || defined(__x86_64__)) && !defined(__arm64ec__)
+ 
+ static BOOL is_tsc_trusted_by_the_kernel(void)
+ {
+@@ -299,7 +299,7 @@ static UINT64 read_tsc_frequency(void)
+     return freq;
+ }
+ 
+-#elif defined(__aarch64__)
++#elif defined(__aarch64__) || defined(__arm64ec__)
+ 
+ static UINT64 read_tsc_frequency(void)
+ {

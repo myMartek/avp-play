@@ -22,11 +22,28 @@ NATIVE_ARCHIVES = (
     "app/Madeira/libhogweed.a",
     "app/Madeira/libnettle.a",
     "app/Madeira/libgmp.a",
+    "app/Madeira/libavformat.a",
+    "app/Madeira/libavcodec.a",
+    "app/Madeira/libswresample.a",
+    "app/Madeira/libavutil.a",
+    "FEX/build-ios/FEXCore/Source/libFEXCore.a",
+    "FEX/build-ios/FEXCore/Source/libFEXCore_Base.a",
+    "FEX/build-ios/FEXCore/Source/libJemallocLibs.a",
+    "FEX/build-ios/External/fmt/libfmt.a",
+    "FEX/build-ios/External/cephes/libcephes_128bit.a",
+    "FEX/build-ios/External/xxhash/cmake_unofficial/libxxhash.a",
+    "FEX/build-ios/External/SoftFloat-3e/libsoftfloat_3e.a",
 )
 WINE_TOOLS = {
     "wineboot.exe", "services.exe", "winedevice.exe", "explorer.exe",
-    "conhost.exe", "rundll32.exe", "start.exe", "plugplay.exe",
+    "conhost.exe", "rundll32.exe", "start.exe", "plugplay.exe", "ntoskrnl.exe",
     "rpcss.exe", "winecfg.exe",
+}
+LLVM_MINGW_PIN = {
+    "release": "20260421",
+    "archive": "llvm-mingw-20260421-ucrt-macos-universal.tar.xz",
+    "archiveSha256": "bd85a3975723815cef28dbbd2ca2cb0c926f6b348a12a0453f39f7af273cb3f7",
+    "arm64ecRuntimeDlls": ["libc++.dll", "libunwind.dll"],
 }
 
 
@@ -40,6 +57,70 @@ def sha256_file(path):
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def pe_machine(path):
+    """Read the bounded COFF machine field without loading or executing a PE."""
+    try:
+        size = path.stat().st_size
+        with path.open("rb") as stream:
+            if size < 0x40:
+                return None
+            stream.seek(0x3C)
+            raw_offset = stream.read(4)
+            if len(raw_offset) != 4:
+                return None
+            pe_offset = int.from_bytes(raw_offset, "little")
+            if pe_offset < 0x40 or pe_offset > size - 6:
+                return None
+            stream.seek(pe_offset)
+            if stream.read(4) != b"PE\0\0":
+                return None
+            machine = stream.read(2)
+            return int.from_bytes(machine, "little") if len(machine) == 2 else None
+    except (OSError, OverflowError, ValueError):
+        return None
+
+
+def fex_translator_build(runtime_root, resource_source):
+    # LLVM reports the effective ARM64EC architecture for AMD64 images with
+    # CHPE metadata too; validate that metadata rather than only the raw field.
+    from stage_resources import is_arm64ec_pe
+    build_relative = "FEX/build-arm64ec-avp/Bin/libarm64ecfex.dll"
+    guest_relative = "arm64ec-windows/xtajit64.dll"
+    build_artifact = runtime_root / build_relative
+    guest_artifact = resource_source / guest_relative
+    ensure_regular_nonempty(build_artifact, "Fresh ARM64EC FEX translator build output")
+    ensure_regular_nonempty(guest_artifact, "ARM64EC FEX translator guest resource")
+    if not is_arm64ec_pe(build_artifact) or not is_arm64ec_pe(guest_artifact):
+        fail("FEX translator build and packaged xtajit64.dll must both be native ARM64EC PE files.")
+    build_hash = sha256_file(build_artifact)
+    if sha256_file(guest_artifact) != build_hash:
+        fail("Packaged xtajit64.dll is not byte-identical to this overlay's fresh FEX build output.")
+    return {
+        "buildArtifact": build_relative,
+        "guestResource": guest_relative,
+        "sha256": build_hash,
+    }
+
+
+def aarch64_winedevice_build(runtime_root, resource_source):
+    build_relative = "wine/build-avp-aarch64/programs/winedevice/aarch64-windows/winedevice.exe"
+    guest_relative = "aarch64-windows/winedevice.exe"
+    build_artifact = runtime_root / build_relative
+    guest_artifact = resource_source / guest_relative
+    ensure_regular_nonempty(build_artifact, "Fresh AArch64 Wine winedevice build output")
+    ensure_regular_nonempty(guest_artifact, "AArch64 Wine winedevice guest resource")
+    if pe_machine(build_artifact) != 0xAA64 or pe_machine(guest_artifact) != 0xAA64:
+        fail("AArch64 Wine winedevice build and packaged resource must use the ARM64 PE machine type.")
+    build_hash = sha256_file(build_artifact)
+    if sha256_file(guest_artifact) != build_hash:
+        fail("Packaged AArch64 winedevice.exe is not byte-identical to this overlay's Wine build output.")
+    return {
+        "buildArtifact": build_relative,
+        "guestResource": guest_relative,
+        "sha256": build_hash,
+    }
 
 
 def read_json(path, description):
@@ -145,6 +226,7 @@ def guest_resource_files(source):
 
 
 def write_guest(args):
+    from stage_resources import is_arm64ec_pe
     runtime_root = args.runtime_source.resolve()
     source = args.resource_source.resolve()
     pinned, provenance, provenance_hash = overlay_provenance(runtime_root)
@@ -160,6 +242,13 @@ def write_guest(args):
         ensure_regular_nonempty(path, "Native Madeira archive")
         if native_artifacts.get(relative) != sha256_file(path):
             fail(f"Native Madeira archive changed after its receipt was recorded: {relative}")
+    translator = fex_translator_build(runtime_root, source)
+    aarch64_device = aarch64_winedevice_build(runtime_root, source)
+    for name in LLVM_MINGW_PIN["arm64ecRuntimeDlls"]:
+        runtime_dll = source / "arm64ec-windows" / name
+        ensure_regular_nonempty(runtime_dll, "Pinned LLVM-MinGW ARM64EC runtime DLL")
+        if not is_arm64ec_pe(runtime_dll):
+            fail(f"LLVM-MinGW runtime dependency must be an ARM64EC PE file: {runtime_dll}")
     guest = {
         "source": {
             "sourceUrl": pinned["url"],
@@ -171,7 +260,12 @@ def write_guest(args):
     }
     receipt = {"schemaVersion": 1, "source": guest["source"],
                "nativeReceiptSha256": guest["nativeReceiptSha256"],
-               "guest": {"resourcesSha256": guest["resourcesSha256"]}}
+               "guest": {
+                   "resourcesSha256": guest["resourcesSha256"],
+                   "fexTranslator": translator,
+                   "wineAarch64Device": aarch64_device,
+                   "llvmMingw": LLVM_MINGW_PIN,
+               }}
     output = args.output.absolute() if args.output else source / GUEST_RECEIPT_NAME
     write_json_atomic(output, receipt)
     print(f"Recorded Windows guest resource provenance at {output}")
@@ -209,6 +303,20 @@ def validate_receipts(source, runtime_root, native_receipt_path):
     actual_files = guest_resource_files(source)
     if not isinstance(expected_files, dict) or expected_files != actual_files:
         fail("Windows guest resource files do not match their recorded build receipt.")
+    expected_translator = fex_translator_build(runtime_root, source)
+    if guest.get("guest", {}).get("fexTranslator") != expected_translator:
+        fail("Windows guest receipt does not bind xtajit64.dll to the fresh FEX build output.")
+    expected_aarch64_device = aarch64_winedevice_build(runtime_root, source)
+    if guest.get("guest", {}).get("wineAarch64Device") != expected_aarch64_device:
+        fail("Windows guest receipt does not bind aarch64 winedevice.exe to the fresh Wine build output.")
+    if guest.get("guest", {}).get("llvmMingw") != LLVM_MINGW_PIN:
+        fail("Windows guest receipt does not identify the pinned LLVM-MinGW runtime dependency source.")
+    for name in LLVM_MINGW_PIN["arm64ecRuntimeDlls"]:
+        runtime_dll = source / "arm64ec-windows" / name
+        ensure_regular_nonempty(runtime_dll, "Pinned LLVM-MinGW ARM64EC runtime DLL")
+        from stage_resources import is_arm64ec_pe
+        if not is_arm64ec_pe(runtime_dll):
+            fail(f"LLVM-MinGW runtime dependency must be an ARM64EC PE file: {runtime_dll}")
     return native, guest
 
 

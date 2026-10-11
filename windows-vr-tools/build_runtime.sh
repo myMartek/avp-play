@@ -1,5 +1,5 @@
 #!/bin/bash
-# Source build recipe only. This file has NOT been executed.
+# Opt-in source build recipe for the pinned visionOS runtime.
 # The caller must explicitly opt in; do not run it for static inspection.
 set -euo pipefail
 if [[ "${AVPPLAY_ALLOW_RUNTIME_BUILD:-0}" != "1" ]]; then
@@ -50,6 +50,47 @@ fi
 bash "$runtime_root/build/gnutls-ios/build.sh"
 bash "$runtime_root/build/ffmpeg/build.sh"
 bash "$runtime_root/build/fex-ios/build.sh"
+# The prepared source overlay intentionally excludes generated Wine build
+# directories and every cached archive. Recreate the host headers/code
+# generators before compiling the xros native ntdll/wineserver/win32u sources.
+bash "$task_root/windows-vr-tools/prepare_wine_native.sh"
+# Wine's dwrite and win32u Unix archives compile the pinned FreeType source
+# into the xros application. Madeira's build script expects research/freetype
+# inside the prepared profile, so provide a verified symlink to the external
+# source checkout rather than copying or relabeling a macOS/Homebrew archive.
+freetype_source="${AVPPLAY_FREETYPE_SOURCE:-$task_root/third-party/freetype}"
+if [[ ! -d "$freetype_source/.git" ]]; then
+    echo "Missing pinned FreeType source checkout: $freetype_source (set AVPPLAY_FREETYPE_SOURCE)." >&2
+    exit 1
+fi
+expected_freetype_revision="$(python3 - "$task_root/windows-vr-tools/sources.lock.json" <<'PY'
+import json, pathlib, sys
+lock = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+print(next(item["revision"] for item in lock["sources"] if item["name"] == "freetype"))
+PY
+)"
+actual_freetype_revision="$(git -C "$freetype_source" rev-parse HEAD)"
+if [[ "$actual_freetype_revision" != "$expected_freetype_revision" ]]; then
+    echo "FreeType checkout revision mismatch: expected $expected_freetype_revision, got $actual_freetype_revision." >&2
+    exit 1
+fi
+freetype_link="$runtime_root/research/freetype"
+mkdir -p "$(dirname "$freetype_link")"
+if [[ -e "$freetype_link" || -L "$freetype_link" ]]; then
+    source_real="$(cd "$freetype_source" && pwd -P)"
+    if [[ ! -d "$freetype_link" ]]; then
+        echo "Refusing invalid profile FreeType path: $freetype_link" >&2
+        exit 1
+    fi
+    link_real="$(cd "$freetype_link" && pwd -P)"
+    if [[ "$source_real" != "$link_real" ]]; then
+        echo "Refusing unexpected profile FreeType path: $freetype_link" >&2
+        exit 1
+    fi
+else
+    ln -s "$freetype_source" "$freetype_link"
+fi
+bash "$runtime_root/build/freetype-ios/build.sh"
 bash "$runtime_root/build/ntdll-unix/build.sh"
 bash "$runtime_root/build/wineserver/build.sh"
 bash "$runtime_root/build/win32u-unix/build.sh"

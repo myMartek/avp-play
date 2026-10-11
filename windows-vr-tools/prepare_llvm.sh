@@ -66,6 +66,11 @@ fi
 llvm_source="$toolchains/llvm-project"
 host_build="$toolchains/llvm-host-build"
 visionos_build="$toolchains/llvm-ios-build"
+build_jobs="${AVPPLAY_BUILD_JOBS:-4}"
+if [[ ! "$build_jobs" =~ ^[1-9][0-9]*$ ]]; then
+    echo "AVPPLAY_BUILD_JOBS must be a positive integer." >&2
+    exit 2
+fi
 
 if [[ ! -d "$llvm_source/.git" ]]; then
     if [[ -e "$llvm_source" ]]; then
@@ -136,16 +141,22 @@ cmake -S "$llvm_source/llvm" -B "$host_build" -G Ninja \
     -DLLVM_BUILD_TOOLS=ON \
     -DLLVM_INCLUDE_TESTS=OFF \
     -DLLVM_ENABLE_ZLIB=OFF
-cmake --build "$host_build" --target llvm-tblgen --parallel
+cmake --build "$host_build" --target llvm-tblgen llvm-objcopy --parallel "$build_jobs"
 host_tblgen="$host_build/bin/llvm-tblgen"
+host_objcopy="$host_build/bin/llvm-objcopy"
 if [[ ! -x "$host_tblgen" ]]; then
     echo "Host TableGen bootstrap did not produce $host_tblgen." >&2
     exit 1
 fi
+if [[ ! -x "$host_objcopy" ]]; then
+    echo "Host LLVM symbol rewriter did not produce $host_objcopy." >&2
+    exit 1
+fi
 
 # Reconstructs Madeira's recorded LLVM cache and retargets iOS 17 to visionOS
-# 27. `LLVM_NATIVE_TOOL_DIR` prevents target configuration from attempting to
-# execute an xros TableGen binary on the build host.
+# 27. `LLVM_TABLEGEN` points at the separately built host tool. Disable LLVM's
+# auxiliary utilities here: this LLVM revision treats cross-target utility
+# executables as app bundles during install generation, which fails for xros.
 cmake -S "$llvm_source/llvm" -B "$visionos_build" -G Ninja \
     -DCMAKE_SYSTEM_NAME=visionOS \
     -DCMAKE_OSX_ARCHITECTURES=arm64 \
@@ -158,13 +169,42 @@ cmake -S "$llvm_source/llvm" -B "$visionos_build" -G Ninja \
     -DLLVM_TARGETS_TO_BUILD= \
     -DLLVM_ENABLE_PROJECTS= \
     -DLLVM_BUILD_TOOLS=OFF \
+    -DLLVM_BUILD_EXAMPLES=OFF \
+    -DLLVM_INCLUDE_EXAMPLES=OFF \
+    -DLLVM_BUILD_BENCHMARKS=OFF \
+    -DLLVM_INCLUDE_BENCHMARKS=OFF \
+    -DLLVM_BUILD_DOCS=OFF \
+    -DLLVM_INCLUDE_DOCS=OFF \
+    -DLLVM_ENABLE_PLUGINS=OFF \
+    -DLLVM_TOOL_LTO_BUILD=OFF \
+    -DLLVM_TOOL_LLVM_LTO_BUILD=OFF \
+    -DLLVM_TOOL_LLVM_LTO2_BUILD=OFF \
+    -DLLVM_BUILD_UTILS=OFF \
     -DLLVM_INCLUDE_TESTS=OFF \
     -DLLVM_ENABLE_ZLIB=OFF \
-    -DLLVM_NATIVE_TOOL_DIR="$host_build/bin" \
+    -DLLVM_ENABLE_ZSTD=OFF \
+    -DLLVM_ENABLE_CURL=OFF \
+    -DLLVM_ENABLE_LIBXML2=OFF \
+    -DLLVM_ENABLE_LIBEDIT=OFF \
+    -DLLVM_ENABLE_TERMINFO=OFF \
+    -DLLVM_ENABLE_LIBPFM=OFF \
+    -DLLVM_ENABLE_FFI=OFF \
+    -DLLVM_NO_DEAD_STRIP=ON \
     -DLLVM_TABLEGEN="$host_tblgen"
 
 if [[ "$mode" == "build" ]]; then
-    cmake --build "$visionos_build" --parallel
+    archive_targets=()
+    while IFS= read -r target; do
+        [[ -n "$target" ]] && archive_targets+=("$target")
+    done < <(ninja -C "$visionos_build" -t targets all | sed -n 's/^\(lib\/libLLVM[^:]*\.a\):.*/\1/p')
+    if (( ${#archive_targets[@]} == 0 )); then
+        echo "The xros Ninja graph contains no LLVM static archive targets." >&2
+        exit 1
+    fi
+    # Build the static archive closure used by the native runtime. The LLVM
+    # all target also includes host-style shared libraries and fuzzer tools,
+    # whose ELF linker flags are invalid for the visionOS SDK.
+    cmake --build "$visionos_build" --target "${archive_targets[@]}" --parallel "$build_jobs"
     shopt -s nullglob
     archives=("$visionos_build/lib/"*.a)
     if (( ${#archives[@]} == 0 )); then

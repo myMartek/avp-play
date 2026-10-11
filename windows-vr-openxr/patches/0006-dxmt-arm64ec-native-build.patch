@@ -1,7 +1,7 @@
 diff --git a/meson.build b/meson.build
 --- a/meson.build
 +++ b/meson.build
-@@ -172,12 +172,13 @@
+@@ -182,12 +182,13 @@
      endif
      windows_builtin_install_dir = 'x86_64-windows'
    elif cpu_family == 'aarch64'
@@ -20,13 +20,8 @@ diff --git a/meson.build b/meson.build
 diff --git a/src/winemetal/unix/meson.build b/src/winemetal/unix/meson.build
 --- a/src/winemetal/unix/meson.build
 +++ b/src/winemetal/unix/meson.build
-@@ -35,6 +35,18 @@
- endif
- winemetal_unix_link_depends = []
- 
+@@ -38,1 +38,11 @@
 +if get_option('visionos_native')
-+  # Rebuilt native objects are statically linked with Madeira's existing Unix
-+  # runtime. Do not link or package desktop winemac.so / ntdll.so.
 +  static_library('WVRWinemetalNative', winemetal_unix_src,
 +    include_directories : [ dxmt_include_path, include_directories('..') ],
 +    dependencies : [ airconv_dep_darwin ],
@@ -37,11 +32,29 @@ diff --git a/src/winemetal/unix/meson.build b/src/winemetal/unix/meson.build
 +  )
 +else
  shared_library('winemetal', winemetal_unix_src,
-   name_prefix         : '',
-   dependencies        : [ airconv_dep_darwin ],
-@@ -51,4 +63,5 @@
+@@ -51,4 +61,5 @@
  meson.add_install_script(
    'install.sh', get_option('strip').to_string(), unix_install_dir, 
    install_tag: 'runtime'
--)+)
+-)
+\ No newline at end of file
++)
 +endif
+diff --git a/build-arm64ec.txt b/build-arm64ec.txt
+--- a/build-arm64ec.txt
++++ b/build-arm64ec.txt
+@@ -9,10 +9,10 @@
+ needs_exe_wrapper = true
+ 
+ [built-in options]
+-c_args = ['-marm64x']
+-cpp_args = ['-marm64x']
+-c_link_args = ['-marm64x']
+-cpp_link_args = ['-marm64x']
++c_args = []
++cpp_args = []
++c_link_args = []
++cpp_link_args = []
+ 
+ [host_machine]
+ system = 'windows'

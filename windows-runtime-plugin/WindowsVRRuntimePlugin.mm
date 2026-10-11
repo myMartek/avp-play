@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cerrno>
 #include <chrono>
+#include <climits>
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>
@@ -135,25 +136,112 @@ bool IsSafeRelativePath(const std::string &relative) {
     return true;
 }
 
-bool ReadPEMachine(const std::string &path, uint16_t &machine) {
+bool ReadPEInfo(const std::string &path, uint16_t &machine, bool &arm64ec) {
     FILE *file = std::fopen(path.c_str(), "rb");
     if (!file) return false;
+    arm64ec = false;
+    if (std::fseek(file, 0, SEEK_END) != 0) { std::fclose(file); return false; }
+    const long fileLength = std::ftell(file);
+    auto readAt = [file, fileLength](uint64_t offset, void *buffer, size_t count) {
+        if (fileLength < 0 || offset > static_cast<uint64_t>(fileLength) ||
+            count > static_cast<uint64_t>(fileLength) - offset || offset > static_cast<uint64_t>(LONG_MAX)) return false;
+        return std::fseek(file, static_cast<long>(offset), SEEK_SET) == 0 &&
+               std::fread(buffer, 1, count, file) == count;
+    };
+    auto u16 = [](const unsigned char *p) { return static_cast<uint16_t>(p[0] | (p[1] << 8)); };
+    auto u32 = [](const unsigned char *p) {
+        return static_cast<uint32_t>(p[0]) | (static_cast<uint32_t>(p[1]) << 8) |
+               (static_cast<uint32_t>(p[2]) << 16) | (static_cast<uint32_t>(p[3]) << 24);
+    };
+    auto u64 = [&u32](const unsigned char *p) {
+        return static_cast<uint64_t>(u32(p)) | (static_cast<uint64_t>(u32(p + 4)) << 32);
+    };
     unsigned char dos[64] = {};
-    unsigned char header[6] = {};
-    bool ok = std::fread(dos, 1, sizeof(dos), file) == sizeof(dos) && dos[0] == 'M' && dos[1] == 'Z';
-    uint32_t offset = static_cast<uint32_t>(dos[0x3c]) |
-                      (static_cast<uint32_t>(dos[0x3d]) << 8) |
-                      (static_cast<uint32_t>(dos[0x3e]) << 16) |
-                      (static_cast<uint32_t>(dos[0x3f]) << 24);
-    if (ok && offset >= sizeof(dos) && offset <= (16u << 20) && std::fseek(file, static_cast<long>(offset), SEEK_SET) == 0 &&
-        std::fread(header, 1, sizeof(header), file) == sizeof(header) &&
-        header[0] == 'P' && header[1] == 'E' && header[2] == 0 && header[3] == 0) {
-        machine = static_cast<uint16_t>(header[4] | (header[5] << 8));
-    } else {
-        ok = false;
+    bool ok = readAt(0, dos, sizeof(dos)) && dos[0] == 'M' && dos[1] == 'Z';
+    const uint32_t peOffset = ok ? u32(dos + 0x3c) : 0;
+    unsigned char coff[24] = {};
+    ok = ok && peOffset >= sizeof(dos) && peOffset <= (16u << 20) && readAt(peOffset, coff, sizeof(coff)) &&
+         coff[0] == 'P' && coff[1] == 'E' && coff[2] == 0 && coff[3] == 0;
+    if (ok) {
+        machine = u16(coff + 4);
+        const uint16_t sectionCount = u16(coff + 6);
+        const uint16_t optionalSize = u16(coff + 20);
+        std::vector<unsigned char> optional(optionalSize);
+        ok = optionalSize >= 112 && readAt(static_cast<uint64_t>(peOffset) + 24, optional.data(), optional.size());
+        if (ok && machine == 0xA641) {
+            arm64ec = true;
+        } else if (ok && machine == 0x8664 && u16(optional.data()) == 0x20b &&
+                   u32(optional.data() + 108) > 10 && optionalSize >= 200) {
+            const uint64_t imageBase = u64(optional.data() + 24);
+            const uint32_t imageSize = u32(optional.data() + 56);
+            const uint32_t headersSize = u32(optional.data() + 60);
+            const uint32_t loadRVA = u32(optional.data() + 192);
+            const uint32_t loadSize = u32(optional.data() + 196);
+            struct Section { uint32_t va, span, rawSize, rawOffset; };
+            std::vector<Section> sections;
+            const uint64_t sectionTable = static_cast<uint64_t>(peOffset) + 24 + optionalSize;
+            for (uint16_t index = 0; index < sectionCount && ok; ++index) {
+                unsigned char raw[40] = {};
+                ok = readAt(sectionTable + static_cast<uint64_t>(index) * 40, raw, sizeof(raw));
+                if (ok) {
+                    const uint32_t virtualSize = u32(raw + 8), va = u32(raw + 12), rawSize = u32(raw + 16);
+                    sections.push_back({va, std::max(virtualSize, rawSize), rawSize, u32(raw + 20)});
+                }
+            }
+            auto rvaToOffset = [&](uint32_t rva, uint32_t count, uint64_t &offset) {
+                if (rva < headersSize && static_cast<uint64_t>(rva) + count <= headersSize) {
+                    offset = rva;
+                    return offset + count <= static_cast<uint64_t>(fileLength);
+                }
+                for (const auto &section : sections) {
+                    if (rva >= section.va && static_cast<uint64_t>(rva) + count <=
+                            static_cast<uint64_t>(section.va) + section.span) {
+                        const uint64_t delta = rva - section.va;
+                        if (delta + count <= section.rawSize) {
+                            offset = static_cast<uint64_t>(section.rawOffset) + delta;
+                            return offset + count <= static_cast<uint64_t>(fileLength);
+                        }
+                    }
+                }
+                return false;
+            };
+            uint64_t loadOffset = 0;
+            unsigned char loadConfig[0xD0] = {};
+            if (ok && imageSize && loadRVA && loadSize >= sizeof(loadConfig) &&
+                rvaToOffset(loadRVA, sizeof(loadConfig), loadOffset) && readAt(loadOffset, loadConfig, sizeof(loadConfig)) &&
+                u32(loadConfig) >= sizeof(loadConfig)) {
+                const uint64_t metadataVA = u64(loadConfig + 0xC8);
+                if (metadataVA >= imageBase && metadataVA - imageBase < imageSize) {
+                    uint64_t metadataOffset = 0;
+                    unsigned char version[4] = {};
+                    if (rvaToOffset(static_cast<uint32_t>(metadataVA - imageBase), sizeof(version), metadataOffset) &&
+                        readAt(metadataOffset, version, sizeof(version))) {
+                        const uint32_t value = u32(version);
+                        arm64ec = value == 1 || value == 2;
+                    }
+                }
+            }
+        }
     }
     std::fclose(file);
     return ok;
+}
+
+bool ReadPEMachine(const std::string &path, uint16_t &machine) {
+    bool arm64ec = false;
+    return ReadPEInfo(path, machine, arm64ec);
+}
+
+bool IsARM64ECPE(const std::string &path) {
+    uint16_t machine = 0;
+    bool arm64ec = false;
+    return ReadPEInfo(path, machine, arm64ec) && arm64ec;
+}
+
+bool IsX64PE(const std::string &path) {
+    uint16_t machine = 0;
+    bool arm64ec = false;
+    return ReadPEInfo(path, machine, arm64ec) && machine == 0x8664 && !arm64ec;
 }
 
 bool IsAllowedEnvironmentKey(const std::string &key) {
@@ -171,12 +259,12 @@ bool IsAllowedEnvironmentKey(const std::string &key) {
            !starts("MADEIRA_");
 }
 
-bool InstallGuestOpenXRRuntime(uint16_t machine, NSString *driveC, std::string &runtimeABI,
+bool InstallGuestOpenXRRuntime(uint16_t machine, bool gameARM64EC, NSString *driveC, std::string &runtimeABI,
                                LaunchScope &scope, std::string &error) {
     // OpenComposite currently ships only an x64 guest build. ARM64EC is a
     // separate package and may only be selected for an ARM64EC PE image.
-    if (machine == 0x8664) runtimeABI = "x64";
-    else if (machine == 0xA641) runtimeABI = "arm64ec";
+    if (machine == 0x8664 && !gameARM64EC) runtimeABI = "x64";
+    else if (machine == 0xA641 || (machine == 0x8664 && gameARM64EC)) runtimeABI = "arm64ec";
     else {
         error = "No OpenComposite/OpenXR runtime package is available for this PE machine type.";
         return false;
@@ -204,7 +292,15 @@ bool InstallGuestOpenXRRuntime(uint16_t machine, NSString *driveC, std::string &
         error = "The bundled OpenComposite client or wvr_openxr.dll is not a readable PE image.";
         return false;
     }
-    if (clientMachine != expectedMachine || runtimeMachine != expectedMachine) {
+    const bool packageARM64EC = IsARM64ECPE(clientDLL.fileSystemRepresentation) &&
+                                IsARM64ECPE(runtimeDLL.fileSystemRepresentation);
+    const bool packageMachineMatches = gameARM64EC ?
+        ((clientMachine == 0x8664 || clientMachine == 0xA641) &&
+         (runtimeMachine == 0x8664 || runtimeMachine == 0xA641)) :
+        (clientMachine == expectedMachine && runtimeMachine == expectedMachine);
+    if (!packageMachineMatches || packageARM64EC != gameARM64EC ||
+        (runtimeABI == "x64" && (!IsX64PE(clientDLL.fileSystemRepresentation) ||
+                                 !IsX64PE(runtimeDLL.fileSystemRepresentation)))) {
         error = "The bundled OpenComposite client and wvr_openxr.dll must both match the selected game's PE machine type.";
         return false;
     }
@@ -422,7 +518,7 @@ bool ValidateD3D12Package() {
         uint16_t machine = 0;
         if (![info[NSFileType] isEqualToString:NSFileTypeRegular] ||
             !IsContainedPath(path.fileSystemRepresentation ?: "", resources.path.fileSystemRepresentation ?: "") ||
-            !ReadPEMachine(path.fileSystemRepresentation ?: "", machine) || machine != 0xA641) return false;
+            !IsARM64ECPE(path.fileSystemRepresentation ?: "")) return false;
         std::string artifactHash;
         if (!SHA256File(path.fileSystemRepresentation, artifactHash) ||
             ![receipt[@"guestArtifactsSha256"][relative.lastPathComponent]
@@ -476,7 +572,7 @@ int32_t PreflightRequest(LaunchRequest &request, std::string &error) {
         return EINVAL;
     }
     uint16_t machine = 0;
-    if (!ReadPEMachine(request.executablePath, machine) || machine != 0x8664) {
+    if (!IsX64PE(request.executablePath)) {
         error = "The first Windows VR runtime requires a readable x64 (AMD64) PE executable.";
         return ENOTSUP;
     }
@@ -509,6 +605,7 @@ int32_t PreflightRequest(LaunchRequest &request, std::string &error) {
         uint16_t guestMachine = 0;
         if (![attributes[NSFileType] isEqualToString:NSFileTypeRegular] ||
             !IsContainedPath(resourcePath.fileSystemRepresentation ?: "", resources.path.fileSystemRepresentation ?: "") ||
+            !IsX64PE(resourcePath.fileSystemRepresentation ?: "") ||
             !ReadPEMachine(resourcePath.fileSystemRepresentation ?: "", guestMachine) || guestMachine != machine) {
             error = "Required guest runtime DLL is absent or does not match the x64 game: " + std::string(path.UTF8String ?: "");
             return ENOENT;
@@ -546,7 +643,8 @@ int32_t RunRequest(LaunchRequest request) {
     }
 
     uint16_t machine = 0;
-    if (!ReadPEMachine(request.executablePath, machine)) {
+    bool gameARM64EC = false;
+    if (!ReadPEInfo(request.executablePath, machine, gameARM64EC)) {
         SetError("The selected file is not a readable PE executable.");
         return -1;
     }
@@ -555,7 +653,8 @@ int32_t RunRequest(LaunchRequest request) {
         SetError("Requested backend is not supported by the Madeira adapter.");
         return -1;
     }
-    if (nativeARM64 ? (machine != 0xAA64 && machine != 0xA641) : (machine != 0x8664 && machine != 0x014c)) {
+    if (nativeARM64 ? (machine != 0xAA64 && machine != 0xA641 && !(machine == 0x8664 && gameARM64EC)) :
+                      (machine != 0x8664 && machine != 0x014c) || (!nativeARM64 && gameARM64EC)) {
         SetError("Executable architecture does not match the explicitly selected backend.");
         return -1;
     }
@@ -615,7 +714,7 @@ int32_t RunRequest(LaunchRequest request) {
     }
     std::string runtimeABI;
     std::string runtimeError;
-    if (!InstallGuestOpenXRRuntime(machine, driveC, runtimeABI, scope, runtimeError)) {
+    if (!InstallGuestOpenXRRuntime(machine, gameARM64EC, driveC, runtimeABI, scope, runtimeError)) {
         SetError(runtimeError);
         return -1;
     }

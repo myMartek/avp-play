@@ -1,14 +1,26 @@
 # Windows VR implementation status
 
-## Bottom line
+## Current build checkpoint (2026-10-11)
 
-The repository contains a source implementation of the first local Windows
-x64/Direct3D 11 VR path, plus launcher, transfer, diagnostics, and assembly
-support. It is **not a finished, executable, validated headset product**.
-No tests, builds, benchmarks, executable probes, installs, or app/game launches
-were run for this continuation. Source inspection and Git diff review are not
-compile/runtime verification. Editing tools automatically checked Python/YAML
-syntax; those checks do not establish integration correctness.
+The complete unsigned Windows VR app built successfully with Xcode 27 for
+arm64 visionOS 27, including its validated Runtime and WindowsVR resource folders.
+The saved artifact is `dist/windows-vr-2026-10-11/AVP Play VR.app`, with build logs,
+file hashes, and native/guest/graphics/staging receipts beside it. See
+[the local build handoff](windows-vr-local-build.md).
+
+The build includes source-built Wine native archives, FEX core and ARM64EC
+translator, the translator's LLVM-MinGW runtime DLLs, the real Wine-generated
+portable prefix, x64 OpenXR/OpenComposite clients, and modern DXMT D3D11/D3D12
+native/guest libraries. The graphics receipt covers the four executable graphics
+DLLs; Wine's data-only API-set schema is preserved separately. Common runtime and
+fresh graphics profiles use identical common-overlay provenance and native binder
+sources; the final graphics binaries are recorded in the common resource ledger.
+
+Signing is blocked by the selected Personal Team's missing certificate private
+key. No signed/installable product is established. No tests, benchmarks, game
+launches, installations, or device runs were performed. Compilation and package
+validation do not establish JIT/device compatibility, game support, or near-native
+performance.
 
 The existing Quest and Linux ARM64 installation paths are kept separate.
 Windows changes do not imply new compatibility labels for those games.
@@ -21,11 +33,8 @@ See [windows-vr-d3d12.md](windows-vr-d3d12.md) for the exact contract and checkp
 The newer upstream DXMT source is pinned separately; the D3D11 baseline is not
 silently upgraded. The mobile storage/framework/shader port, embedded Wine
 binding, modern D3D11 bridge, native/guest build recipes and assembly integration
-are implemented in source. The old permanent build blocker is removed. No runtime
-capability marker or binary was produced; compilation/linkage and headset behavior
-remain unverified. The pinned upstream D3D12 route supports Shader Model 5.1/DXBC,
-not DXIL/Shader Model 6, ray tracing or mesh shaders. No tests, builds or executable
-validation were run.
+are implemented in source. The old permanent build blocker is removed. The guest OpenXR/OpenComposite DLLs have compiled with D3D12 enabled. The modern native/guest DXMT closure has compiled and passed receipt-backed staging; headset behavior remains unverified. The pinned upstream D3D12 route supports Shader Model 5.1/DXBC,
+not DXIL/Shader Model 6, ray tracing or mesh shaders. Tests and runtime validation remain deferred.
 
 ## Runtime completion pass
 
@@ -39,9 +48,9 @@ edits, which were finished and source-reviewed by the parent. No execution resul
 is implied by that source review.
 
 The provisioning scripts can rebuild the critical ARM64EC Wine/FEX/DXMT modules
-from the prepared pinned overlay. A clean prefix is still an external prerequisite:
-upstream creates it with `wineboot --init`, so no source-only fake registry template
-was added. The documented assembler targets a Mac with Xcode/xros; it was not run.
+from the prepared pinned overlay. The clean prefix is generated with the upstream `wineboot --init` script.
+`create_prefix_snapshot.sh` invokes the real Wine build and removes host-specific
+links and archive metadata through `sanitize_prefix_snapshot.py`. The documented assembler targets a Mac with Xcode/xros. Its component build commands, resource staging, and unsigned app link have completed. Signing and device/runtime verification remain outstanding.
 
 ## Implemented in source
 
@@ -79,7 +88,7 @@ The receiving bundle ID in the research app project is
 No store acquisition or DRM bypass was added. The CLI is implemented; a Windows
 workflow in the Mac SwiftUI game catalog is not delivered.
 
-For future assembly, see [the toolchain guide](../windows-vr-tools/README.md).
+For assembly instructions, see [the toolchain guide](../windows-vr-tools/README.md).
 It requires an Apple-silicon Mac with full Xcode/xros SDK, external toolchains,
 a clean prefix archive, Windows Wine/DXMT builtin resources compiled from the
 matching prepared overlay, license inputs, signing/provisioning, and space.
@@ -91,15 +100,15 @@ Its opt-in flag is not authorization to run it under a no-testing instruction.
 - No Windows VR title has been selected and established as compatible by this
   continuation. First-game acceptance, controller correctness, JIT/device
   compatibility, sustained play, saves, latency, and performance remain unknown.
-- Native/guest compilation and linking of the changed sources are outstanding.
-  Any historical build notes elsewhere apply only to the earlier source state.
+- The unsigned app and matching resource package are built. Signing and headset
+  runtime verification remain outstanding; a successful build is not runtime readiness.
 - Madeira still owns one native runtime session per app process. Stop now requests
   cooperative OpenXR exit and can cancel startup at safe boundaries; it does not
   forcibly kill a Wine thread. A guest that ignores the request still requires app
   restart. Access and ownership remain retained until actual Wine exit.
   Launch acceptance and active Wine are not evidence of game readiness.
-- Baseline packaging is x64/D3D11; transfer also accepts explicit D3D12 manifests without claiming execution support. Experimental D3D12 packaging has an explicit modern-profile build/staging route; actual binaries remain unbuilt. ARM64EC games need a separately matched
-  package; Vulkan, D3D12, arbitrary SteamVR drivers, and broad game support are
+- Baseline packaging is x64/D3D11; transfer also accepts explicit D3D12 manifests without claiming execution support. Experimental D3D12 packaging has an explicit modern-profile build/staging route; its binaries have compiled and passed final receipt-backed staging. ARM64EC games need a separately matched
+  package; Vulkan, arbitrary SteamVR drivers, and broad game support are
   not delivered by this path. Existing Klepton ARM64 support remains independent.
 - The guest OpenXR implementation is limited, not conformant. Color array slices
   and packed subrectangles are implemented through Ext3/V2; composition depth,

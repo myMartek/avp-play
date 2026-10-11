@@ -6,6 +6,7 @@
     {"name":"alvr-visionos","url":"https://github.com/alvr-org/alvr-visionos.git","revision":"fb2576a2a4df23a20647e327acc4d8f785da0d77","recursive":false},
     {"name":"openxr","url":"https://github.com/KhronosGroup/OpenXR-SDK.git","revision":"f2448a8797c85814aa892efc1ab8707900fbcc78","recursive":false},
     {"name":"opencomposite","url":"https://gitlab.com/znixian/OpenOVR.git","revision":"cff07db75c4823afe93ed7027b03d5f7bc86f164","recursive":true},
-    {"name":"dxmt-d3d12-experimental","url":"https://github.com/3Shain/dxmt.git","revision":"e94c312f5c054263acf261cfa109edf13e757587","recursive":true}
+    {"name":"dxmt-d3d12-experimental","url":"https://github.com/3Shain/dxmt.git","revision":"e94c312f5c054263acf261cfa109edf13e757587","recursive":true},
+    {"name":"freetype","url":"https://github.com/freetype/freetype.git","revision":"42608f77f20749dd6ddc9e0536788eaad70ea4b5","recursive":false}
   ]
 }

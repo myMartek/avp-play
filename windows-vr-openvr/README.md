@@ -17,8 +17,9 @@ and [pinned OpenXR driver source](https://gitlab.com/znixian/OpenOVR/-/raw/cff07
 The default still applies the D3D11-only overlay to preserve the baseline DLL
 imports. `WINDOWS_VR_ENABLE_D3D12=ON` selects the D3D11/D3D12-only overlay,
 excluding Vulkan/OpenGL dependencies rather than enabling unsupported backends.
-Use a fresh build directory when changing profiles. This source confirmation
-does not imply that this package was built or runtime-tested.
+Use a fresh build directory when changing profiles. The macOS llvm-mingw x64
+package has been compiled with this profile. This is build and staging evidence
+only; it has not been loaded by Wine/FEX or exercised with a headset or game.
 
 ## Package shape
 
@@ -65,23 +66,25 @@ this directory with the Visual Studio generator and build the
 the selected Visual Studio toolchain supports ARM64EC.
 
 An opt-in x64 cross-build from macOS uses the same LLVM-MinGW release and
-toolchain file described in the OpenXR runtime README. The pinned
-`third-party/opencomposite` checkout must be initialized at the commit recorded
-in `OPENCOMPOSITE_COMMIT`; the cross path verifies that commit and does not
-fetch source. Example:
+toolchain file described in the OpenXR runtime README. Set
+`OPENCOMPOSITE_SOURCE_ROOT` to an initialized checkout at the pinned commit;
+the cross path verifies the commit and required submodules and does not fetch
+source. `WINDOWS_VR_ENABLE_D3D12=ON` builds the D3D11/D3D12 profile, matching
+the project runtime's graphics support. Example:
 
 ```sh
 cmake -S windows-vr-openvr -B build/opencomposite-mingw -G Ninja \
   -DWINDOWS_VR_USE_LLVM_MINGW=ON \
-  -DLLVM_MINGW_ROOT="$PWD/toolchains/llvm-mingw-20260421-ucrt-macos-universal"
+  -DLLVM_MINGW_ROOT="$PWD/toolchains/llvm-mingw-20260421-ucrt-macos-universal" \
+  -DOPENCOMPOSITE_SOURCE_ROOT="$PWD/third-party/opencomposite" \
+  -DWINDOWS_VR_ENABLE_D3D12=ON
 cmake --build build/opencomposite-mingw --target package_opencomposite --config Release
 ```
 
 The upstream `RuntimeSwitcher.csproj` is included only by CMake's
-`include_external_msproject`, which CMake documents as ignored for non-Visual
-Studio generators. The cross-build therefore packages the OpenComposite DLL
-without its optional Windows GUI switcher. Cross-building is implemented but
-not yet built or validated here; ARM64EC remains on the Visual Studio route.
+`include_external_msproject`, which CMake ignores for non-Visual Studio
+generators. The cross-build therefore packages the OpenComposite DLL without
+its optional Windows GUI switcher. ARM64EC remains on the Visual Studio route.
 
 For a one-off game that does not honor `VR_OVERRIDE`, an experienced user may
 choose to deploy a matching OpenComposite `openvr_api.dll` beside their own game

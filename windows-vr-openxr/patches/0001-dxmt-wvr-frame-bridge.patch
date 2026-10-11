@@ -538,10 +538,12 @@ diff --git a/src/winemetal/wmt_api_names.h b/src/winemetal/wmt_api_names.h
 diff --git a/src/winemetal/unix/winemetal_unix.c b/src/winemetal/unix/winemetal_unix.c
 --- a/src/winemetal/unix/winemetal_unix.c
 +++ b/src/winemetal/unix/winemetal_unix.c
-@@ -45,6 +45,11 @@
+@@ -45,8 +45,13 @@
  #define WINEMETAL_API
  #include "../winemetal_thunks.h"
  #include "../airconv_thunks.h"
+ #include "WVRMetalFXWMTBridge.h"
+ #include "WVRMetalFXWMTBridge.inc"
 +#include "../WindowsVRCompositorBridge.h"
 +
 +struct unixcall_windows_vr_bridge_v1 {
