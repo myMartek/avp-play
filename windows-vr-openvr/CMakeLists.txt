@@ -11,6 +11,16 @@ set(OPENCOMPOSITE_SOURCE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../third-party/openco
 set(OPENCOMPOSITE_FETCH_SOURCE_ROOT "${CMAKE_BINARY_DIR}/_deps/opencomposite-src")
 set(OPENCOMPOSITE_OVERLAY_SOURCE_ROOT "${CMAKE_BINARY_DIR}/_deps/opencomposite-cross-src")
 option(WINDOWS_VR_BUILD_ARM64EC "Also package an ARM64EC OpenComposite guest" OFF)
+option(WINDOWS_VR_ENABLE_D3D12 "Build experimental D3D12 OpenComposite support" OFF)
+if(WINDOWS_VR_ENABLE_D3D12)
+    set(OPENCOMPOSITE_GRAPHICS_PATCH "${CMAKE_CURRENT_SOURCE_DIR}/patches/0002-direct3d-openxr-build.patch")
+    set(OPENCOMPOSITE_GRAPHICS_OPTION "-DWINDOWS_VR_DIRECT3D_ONLY=ON")
+else()
+    # Preserve the baseline DLL dependency closure when no D3D12 package exists.
+    set(OPENCOMPOSITE_GRAPHICS_PATCH "${CMAKE_CURRENT_SOURCE_DIR}/patches/0001-d3d11-only-openxr-build.patch")
+    set(OPENCOMPOSITE_GRAPHICS_OPTION "-DWINDOWS_VR_D3D11_ONLY=ON")
+endif()
+find_package(Git REQUIRED)
 option(WINDOWS_VR_USE_LLVM_MINGW "Cross-build the x64 guest package from macOS with llvm-mingw" OFF)
 set(LLVM_MINGW_ROOT "" CACHE PATH "Root of the extracted llvm-mingw macOS bundle")
 
@@ -49,11 +59,6 @@ if(WINDOWS_VR_USE_LLVM_MINGW)
         endif()
     endforeach()
     find_package(Git REQUIRED)
-    set(OPENCOMPOSITE_D3D11_OVERLAY
-        "${CMAKE_CURRENT_SOURCE_DIR}/patches/0001-d3d11-only-openxr-build.patch")
-    if(NOT EXISTS "${OPENCOMPOSITE_D3D11_OVERLAY}")
-        message(FATAL_ERROR "Missing project-owned OpenComposite overlay patch: ${OPENCOMPOSITE_D3D11_OVERLAY}")
-    endif()
     set(OPENCOMPOSITE_CROSS_CMAKE_ARGS
         "-DCMAKE_TOOLCHAIN_FILE=${LLVM_MINGW_TOOLCHAIN_FILE}"
         "-DLLVM_MINGW_ROOT=${LLVM_MINGW_ROOT}"
@@ -83,12 +88,12 @@ function(add_opencomposite_variant variant platform)
             ${_generator_platform_args}
             DOWNLOAD_COMMAND "${CMAKE_COMMAND}" -E copy_directory "${OPENCOMPOSITE_SOURCE_ROOT}" <SOURCE_DIR>
             UPDATE_COMMAND ""
-            PATCH_COMMAND "${GIT_EXECUTABLE}" -C <SOURCE_DIR> apply --whitespace=nowarn "${OPENCOMPOSITE_D3D11_OVERLAY}"
+            PATCH_COMMAND "${GIT_EXECUTABLE}" -C <SOURCE_DIR> apply "${OPENCOMPOSITE_GRAPHICS_PATCH}"
             CMAKE_ARGS
                 "-DCMAKE_INSTALL_PREFIX=${OPENCOMPOSITE_STAGE_ROOT}/WindowsVR/Guest/${variant}"
                 "-DERROR_ON_WARNING=OFF"
                 "-DOC_BACKTRACE=OFF"
-                "-DWINDOWS_VR_D3D11_ONLY=ON"
+                "${OPENCOMPOSITE_GRAPHICS_OPTION}"
                 ${OPENCOMPOSITE_CROSS_CMAKE_ARGS}
             BUILD_COMMAND "${CMAKE_COMMAND}" --build <BINARY_DIR> --config Release
             INSTALL_COMMAND "${CMAKE_COMMAND}" --install <BINARY_DIR> --config Release
@@ -106,10 +111,12 @@ function(add_opencomposite_variant variant platform)
         BINARY_DIR "${CMAKE_BINARY_DIR}/build/${variant}"
         CMAKE_GENERATOR "${CMAKE_GENERATOR}"
         ${_generator_platform_args}
+        PATCH_COMMAND "${GIT_EXECUTABLE}" -C <SOURCE_DIR> apply "${OPENCOMPOSITE_GRAPHICS_PATCH}"
         CMAKE_ARGS
             "-DCMAKE_INSTALL_PREFIX=${OPENCOMPOSITE_STAGE_ROOT}/WindowsVR/Guest/${variant}"
             "-DERROR_ON_WARNING=ON"
             "-DOC_BACKTRACE=OFF"
+            "${OPENCOMPOSITE_GRAPHICS_OPTION}"
         BUILD_COMMAND "${CMAKE_COMMAND}" --build <BINARY_DIR> --config Release
         INSTALL_COMMAND "${CMAKE_COMMAND}" --install <BINARY_DIR> --config Release
         UPDATE_DISCONNECTED TRUE

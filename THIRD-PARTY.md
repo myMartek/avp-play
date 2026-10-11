@@ -1,7 +1,7 @@
 # Third-party software
 
 AVP Play itself (this repository) is MIT-licensed and has no third-party code dependencies beyond Apple's
-system frameworks.
+system frameworks for the original Mac companion. The separate experimental Windows VR runtime has optional third-party source dependencies described below.
 
 The **toolchain package** that ships inside the app (`klepton-toolchain-<version>-<commit>.tar.gz`) contains:
 
@@ -28,3 +28,18 @@ OpenXR, GPL-3.0) from this repository's releases. It is upstream xrizer at a pin
 the build script, both changes and the commit are in [`third-party/xrizer`](third-party/xrizer), and the release
 carries the complete patched source next to the binary. It is a separate program that the game loads on the
 headset; it is not part of the app or the toolchain package.
+
+## Experimental Windows VR / DXMT D3D12
+
+The optional D3D12 source profile fetches [DXMT](https://github.com/3Shain/dxmt)
+at `e94c312f5c054263acf261cfa109edf13e757587`, separately from Madeira's
+pinned DXMT fork. Its D3D12 source headers carry CodeWeavers contributor notices
+and LGPL-2.1-or-later terms; retain upstream `LICENSE`, `COPYING.LIB`, source
+notices, and all submodule licenses. Project integration overlays do not replace
+upstream licensing obligations with this repository's MIT license.
+
+No D3D12 runtime binaries or game assets are delivered by this source pass.
+Before redistributing a built Wine/FEX/DXMT/OpenComposite closure, satisfy each
+component's license and corresponding-source obligations and ship the actual
+pinned modifications. The source profile and remaining mobile-runtime integration
+limits are documented in [`docs/windows-vr-d3d12.md`](docs/windows-vr-d3d12.md).

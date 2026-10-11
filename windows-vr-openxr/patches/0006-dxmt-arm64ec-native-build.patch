@@ -1,0 +1,47 @@
+diff --git a/meson.build b/meson.build
+--- a/meson.build
++++ b/meson.build
+@@ -172,12 +172,13 @@
+     endif
+     windows_builtin_install_dir = 'x86_64-windows'
+   elif cpu_family == 'aarch64'
++    dxmt_arm64ec = cpp.get_define('__arm64ec__') != '' or cpp.get_define('_M_ARM64EC') != ''
++    windows_builtin_install_dir = dxmt_arm64ec ? 'arm64ec-windows' : 'aarch64-windows'
+     if wine_builtin_dll
+-      windows_native_install_dir = 'aarch64-windows'
++      windows_native_install_dir = windows_builtin_install_dir
+     else
+       windows_native_install_dir = 'system32'
+     endif
+-    windows_builtin_install_dir = 'aarch64-windows'
+   else
+     error('invalid cpu family')
+   endif
+diff --git a/src/winemetal/unix/meson.build b/src/winemetal/unix/meson.build
+--- a/src/winemetal/unix/meson.build
++++ b/src/winemetal/unix/meson.build
+@@ -35,6 +35,18 @@
+ endif
+ winemetal_unix_link_depends = []
+ 
++if get_option('visionos_native')
++  # Rebuilt native objects are statically linked with Madeira's existing Unix
++  # runtime. Do not link or package desktop winemac.so / ntdll.so.
++  static_library('WVRWinemetalNative', winemetal_unix_src,
++    include_directories : [ dxmt_include_path, include_directories('..') ],
++    dependencies : [ airconv_dep_darwin ],
++    c_args : ['-ObjC', '-DDXMT_VISIONOS=1'],
++    native : true,
++    build_by_default : false,
++    install : false,
++  )
++else
+ shared_library('winemetal', winemetal_unix_src,
+   name_prefix         : '',
+   dependencies        : [ airconv_dep_darwin ],
+@@ -51,4 +63,5 @@
+ meson.add_install_script(
+   'install.sh', get_option('strip').to_string(), unix_install_dir, 
+   install_tag: 'runtime'
+-)+)
++endif

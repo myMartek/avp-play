@@ -1,7 +1,15 @@
 import Foundation
 import Observation
 import QuartzCore
+import UIKit
+import Darwin
 import WindowsVRCore
+
+struct TransferredWindowsVRGame: Identifiable {
+    let id: String
+    let manifest: WindowsGameManifest
+    let directory: URL
+}
 
 @MainActor
 @Observable
@@ -13,9 +21,20 @@ final class LauncherModel {
     private(set) var isLaunching = false
     private(set) var hasAcceptedLaunch = false
     private(set) var isStopping = false
+    private(set) var stopRequested = false
     private(set) var requiresRestart = false
     private(set) var runtimeStatus = "No runtime session"
     private(set) var launchError: String?
+    private(set) var library: [WindowsVRLibraryEntry] = []
+    private(set) var selectedLibraryEntryID: String?
+    private(set) var selectedProfileID: String?
+    private(set) var compositorCounters: WindowsVRCompositorCounters?
+    private(set) var libraryError: String?
+    private(set) var transferredGames: [TransferredWindowsVRGame] = []
+    private(set) var transferImportError: String?
+    var renderScaleDraft: Float = 1
+    var profileNameDraft = "Default"
+    var launchArgumentsText = "[]"
     var isShowingImportError = false
     private(set) var importError: String?
 
@@ -26,12 +45,63 @@ final class LauncherModel {
     private var immersiveSpaceClosedDuringLaunch = false
     private var statusMonitor: Task<Void, Never>?
 
+    init() {
+        do {
+            library = try WindowsVRLibraryStore.load()
+        } catch {
+            libraryError = error.localizedDescription
+        }
+    }
+
     var canLaunch: Bool {
-        manifest != nil && gameDirectory != nil && !isLaunching && !hasAcceptedLaunch && !isStopping && !requiresRestart
+        guard manifest != nil, gameDirectory != nil,
+              !isLaunching, !hasAcceptedLaunch, !isStopping, !requiresRestart,
+              runtime.isAvailable,
+              manifest.map({ runtime.supportsGraphics($0.graphics) }) == true,
+              manifest?.backend == .windowsWineFEX
+        else { return false }
+        let arguments = draftArguments
+        return arguments.count <= 64 && arguments.allSatisfy { !$0.contains("\0") }
+    }
+
+    var launchUnavailableReason: String? {
+        guard let manifest else { return "Import a Windows VR manifest and select a game folder." }
+        guard gameDirectory != nil else { return "Select the folder containing the game before launching." }
+        if manifest.backend != .windowsWineFEX {
+            return "This app packages the x64 Wine/FEX runtime only. A native ARM64/ARM64EC Windows VR package is not embedded."
+        }
+        if manifest.graphics == .vulkan {
+            return "Vulkan is not implemented by this runtime adapter. The request is blocked; no graphics fallback will be selected."
+        }
+        if !runtime.isAvailable {
+            return "The signed WindowsRuntimePlugin.framework is unavailable. Launch is blocked; no placeholder backend will run."
+        }
+        if !runtime.supportsGraphics(manifest.graphics) {
+            return "The app does not contain the matching experimental DXMT D3D12 runtime package. D3D11 is not substituted for a D3D12 request."
+        }
+        if requiresRestart {
+            return "This process has consumed its single runtime session. Restart the app before another launch."
+        }
+        if isLaunching || hasAcceptedLaunch || isStopping {
+            return "A runtime session is active or changing state."
+        }
+        if draftArguments.count > 64 || draftArguments.contains(where: { $0.contains("\0") }) {
+            return "The profile arguments exceed the plugin limit or contain an invalid NUL character."
+        }
+        return nil
     }
 
     var canChangeSelection: Bool {
         !isLaunching && !hasAcceptedLaunch && !isStopping && !requiresRestart
+    }
+
+    var selectedEntry: WindowsVRLibraryEntry? {
+        guard let selectedLibraryEntryID else { return nil }
+        return library.first(where: { $0.id == selectedLibraryEntryID })
+    }
+
+    var selectedProfileName: String? {
+        selectedEntry?.profiles.first(where: { $0.id == selectedProfileID })?.name
     }
 
     var sessionStatus: String {
@@ -46,18 +116,22 @@ final class LauncherModel {
         guard canChangeSelection else { return }
         do {
             guard let url = try result.get().first else { return }
-            let didStartAccess = url.startAccessingSecurityScopedResource()
-            guard didStartAccess else {
+            guard url.startAccessingSecurityScopedResource() else {
                 throw ImportFailure.manifestAccessDenied
             }
             defer { url.stopAccessingSecurityScopedResource() }
-
+            let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? Int.max
+            guard size <= 1024 * 1024 else { throw WindowsVRLibraryError.corruptLibrary }
             let data = try Data(contentsOf: url)
             let decoded = try JSONDecoder().decode(WindowsGameManifest.self, from: data)
             try decoded.validate()
-
             manifest = decoded
             manifestName = url.lastPathComponent
+            launchArgumentsText = Self.argumentText(decoded.launchArguments)
+            selectedLibraryEntryID = nil
+            selectedProfileID = nil
+            renderScaleDraft = 1
+            profileNameDraft = "Default"
             launchError = nil
         } catch {
             guard !isCancellation(error) else { return }
@@ -69,14 +143,17 @@ final class LauncherModel {
         guard canChangeSelection else { return }
         do {
             guard let url = try result.get().first else { return }
-            let didStartAccess = url.startAccessingSecurityScopedResource()
-            guard didStartAccess else {
+            guard url.startAccessingSecurityScopedResource() else {
                 throw ImportFailure.folderAccessDenied
             }
-
-            if let oldURL = gameDirectoryAccessURL {
-                oldURL.stopAccessingSecurityScopedResource()
+            do {
+                let values = try url.resourceValues(forKeys: [.isDirectoryKey])
+                guard values.isDirectory == true else { throw ImportFailure.folderAccessDenied }
+            } catch {
+                url.stopAccessingSecurityScopedResource()
+                throw error
             }
+            releaseGameDirectoryAccess()
             gameDirectoryAccessURL = url
             gameDirectory = url
             gameFolderName = url.lastPathComponent
@@ -87,25 +164,291 @@ final class LauncherModel {
         }
     }
 
-    func launch(prepareCompositor: () async throws -> Void) async {
-        guard canLaunch, let manifest, let gameDirectory else { return }
-        isLaunching = true
-        immersiveSpaceClosedDuringLaunch = false
-        launchError = nil
-        defer { isLaunching = false }
-
+    /// Discovers only app-container files copied by the Mac companion. External
+    /// folders still require explicit import/bookmark access, never a broad scan.
+    func refreshTransferredGames() {
+        guard canChangeSelection else { return }
+        transferredGames = []
+        transferImportError = nil
+        guard let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
+        let root = documents.appendingPathComponent("WindowsVR/Games", isDirectory: true)
+        guard FileManager.default.fileExists(atPath: root.path) else { return }
         do {
+            let fm = FileManager.default
+            let gameFolders = try fm.contentsOfDirectory(at: root, includingPropertiesForKeys: [.isDirectoryKey, .isSymbolicLinkKey])
+            var candidates: [URL] = []
+            for folder in gameFolders {
+                let info = try folder.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
+                guard info.isDirectory == true, info.isSymbolicLink != true, isAppOwnedURL(folder) else { continue }
+                // Accept both the original direct layout and immutable transfer
+                // generations; incomplete transfers have no manifest marker.
+                candidates.append(folder)
+                candidates.append(contentsOf: try fm.contentsOfDirectory(at: folder, includingPropertiesForKeys: [.isDirectoryKey, .isSymbolicLinkKey]))
+            }
+            for folder in candidates {
+                let info = try folder.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
+                guard info.isDirectory == true, info.isSymbolicLink != true, isAppOwnedURL(folder) else { continue }
+                let manifestURL = folder.appendingPathComponent("manifest.json")
+                guard fm.fileExists(atPath: manifestURL.path), isAppOwnedURL(manifestURL) else { continue }
+                let attributes = try fm.attributesOfItem(atPath: manifestURL.path)
+                guard attributes[.type] as? FileAttributeType == .typeRegular,
+                      ((attributes[.size] as? NSNumber)?.intValue ?? Int.max) <= 1024 * 1024 else { continue }
+                do {
+                    let decoded = try JSONDecoder().decode(WindowsGameManifest.self, from: Data(contentsOf: manifestURL))
+                    try decoded.validate()
+                    let executable = folder.appendingPathComponent(decoded.executableRelativePath.replacingOccurrences(of: String(decoding: [UInt8(92)], as: UTF8.self), with: "/")).resolvingSymlinksInPath()
+                    let prefix = folder.resolvingSymlinksInPath().path + "/"
+                    guard executable.path.hasPrefix(prefix),
+                          try executable.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile == true else { continue }
+                    transferredGames.append(.init(id: folder.path, manifest: decoded, directory: folder))
+                } catch {
+                    transferImportError = "Some transferred manifests could not be imported: " + error.localizedDescription
+                }
+            }
+            transferredGames.sort { $0.manifest.title.localizedCaseInsensitiveCompare($1.manifest.title) == .orderedAscending }
+        } catch {
+            transferImportError = "Transferred games could not be listed: " + error.localizedDescription
+        }
+    }
+
+    func selectTransferredGame(id: String) throws {
+        guard canChangeSelection else { return }
+        guard let game = transferredGames.first(where: { $0.id == id }), isAppOwnedURL(game.directory) else {
+            throw WindowsVRLibraryError.noSavedGame
+        }
+        releaseGameDirectoryAccess()
+        gameDirectory = game.directory
+        gameFolderName = game.directory.lastPathComponent
+        manifest = game.manifest
+        manifestName = "manifest.json — Mac transfer"
+        selectedLibraryEntryID = nil
+        selectedProfileID = nil
+        renderScaleDraft = 1
+        profileNameDraft = "Default"
+        launchArgumentsText = Self.argumentText(game.manifest.launchArguments)
+        launchError = nil
+    }
+
+    private func isAppOwnedURL(_ url: URL) -> Bool {
+        guard url.isFileURL,
+              let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return false }
+        let root = documents.resolvingSymlinksInPath().standardizedFileURL.path
+        let path = url.resolvingSymlinksInPath().standardizedFileURL.path
+        return path.hasPrefix(root + "/")
+    }
+
+    func saveCurrentGameToLibrary() throws {
+        guard canChangeSelection, let manifest, let gameDirectory else {
+            throw WindowsVRLibraryError.noActiveGame
+        }
+        let bookmark = try WindowsVRLibraryStore.makeFolderBookmark(for: gameDirectory)
+        let defaultProfile = try WindowsVRLaunchProfile(
+            name: "Default",
+            backend: manifest.backend,
+            graphics: manifest.graphics,
+            launchArguments: draftArguments,
+            environment: manifest.environment,
+            renderScale: renderScaleDraft
+        )
+        var updated = library
+        if let index = updated.firstIndex(where: { $0.manifest.id == manifest.id }) {
+            updated[index].manifest = manifest
+            updated[index].folderBookmark = bookmark
+            if updated[index].profiles.isEmpty {
+                updated[index].profiles = [defaultProfile]
+                updated[index].selectedProfileID = defaultProfile.id
+            }
+            updated[index].updatedAt = Date()
+            selectedLibraryEntryID = updated[index].id
+            selectedProfileID = updated[index].selectedProfileID
+        } else {
+            let entry = WindowsVRLibraryEntry(
+                manifest: manifest,
+                folderBookmark: bookmark,
+                profiles: [defaultProfile],
+                selectedProfileID: defaultProfile.id
+            )
+            updated.append(entry)
+            selectedLibraryEntryID = entry.id
+            selectedProfileID = defaultProfile.id
+        }
+        try persist(updated)
+        profileNameDraft = selectedProfileName ?? "Default"
+    }
+
+    func selectLibraryEntry(id: String) throws {
+        guard canChangeSelection else { return }
+        guard let entry = library.first(where: { $0.id == id }) else {
+            throw WindowsVRLibraryError.noSavedGame
+        }
+        let resolved = try WindowsVRLibraryStore.resolveFolderBookmark(entry.folderBookmark)
+        let didStartAccess = resolved.url.startAccessingSecurityScopedResource()
+        guard didStartAccess || isAppOwnedURL(resolved.url) else {
+            throw WindowsVRLibraryError.invalidBookmark
+        }
+        do {
+            let values = try resolved.url.resourceValues(forKeys: [.isDirectoryKey])
+            guard values.isDirectory == true else { throw WindowsVRLibraryError.invalidBookmark }
+            var updated = library
+            if let index = updated.firstIndex(where: { $0.id == id }), resolved.isStale {
+                updated[index].folderBookmark = try WindowsVRLibraryStore.makeFolderBookmark(for: resolved.url)
+                updated[index].updatedAt = Date()
+                try persist(updated)
+            }
+            releaseGameDirectoryAccess()
+            gameDirectoryAccessURL = didStartAccess ? resolved.url : nil
+            gameDirectory = resolved.url
+            gameFolderName = resolved.url.lastPathComponent
+            selectedLibraryEntryID = id
+            manifestName = "\(entry.manifest.title) — library"
+            manifest = entry.manifest
+            let profile = entry.selectedProfile
+            selectedProfileID = profile?.id
+            if let profile {
+                manifest = try profile.applying(to: entry.manifest)
+                renderScaleDraft = profile.renderScale
+                profileNameDraft = profile.name
+                launchArgumentsText = Self.argumentText(profile.launchArguments)
+            } else {
+                renderScaleDraft = 1
+                profileNameDraft = "Default"
+                launchArgumentsText = Self.argumentText(entry.manifest.launchArguments)
+            }
+            launchError = nil
+        } catch {
+            if didStartAccess { resolved.url.stopAccessingSecurityScopedResource() }
+            throw error
+        }
+    }
+
+    func selectProfile(id: String) throws {
+        guard canChangeSelection else { return }
+        guard let entry = selectedEntry,
+              let profile = entry.profiles.first(where: { $0.id == id }) else {
+            throw WindowsVRLibraryError.noSelectedProfile
+        }
+        manifest = try profile.applying(to: entry.manifest)
+        selectedProfileID = profile.id
+        renderScaleDraft = profile.renderScale
+        profileNameDraft = profile.name
+        launchArgumentsText = Self.argumentText(profile.launchArguments)
+        var updated = library
+        if let index = updated.firstIndex(where: { $0.id == entry.id }) {
+            updated[index].selectedProfileID = profile.id
+            updated[index].updatedAt = Date()
+            try persist(updated)
+        }
+    }
+
+    func saveProfile(asNew: Bool = false) throws {
+        guard canChangeSelection, let entry = selectedEntry else {
+            throw WindowsVRLibraryError.noSavedGame
+        }
+        guard let baseManifest = manifest else { throw WindowsVRLibraryError.noActiveGame }
+        let arguments = draftArguments
+        guard arguments.count <= 64, arguments.allSatisfy({ !$0.contains("\0") }) else {
+            throw WindowsVRLibraryError.invalidProfileArguments
+        }
+        let cleanName = profileNameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanName.isEmpty, cleanName.count <= 80 else {
+            throw WindowsVRLibraryError.invalidProfileName
+        }
+        let existing = asNew ? nil : entry.profiles.first(where: { $0.id == selectedProfileID })
+        let profile = try WindowsVRLaunchProfile(
+            id: existing?.id ?? UUID().uuidString,
+            name: cleanName,
+            backend: baseManifest.backend,
+            graphics: baseManifest.graphics,
+            launchArguments: arguments,
+            environment: baseManifest.environment,
+            renderScale: renderScaleDraft
+        )
+        var updated = library
+        guard let index = updated.firstIndex(where: { $0.id == entry.id }) else {
+            throw WindowsVRLibraryError.noSavedGame
+        }
+        if let profileIndex = updated[index].profiles.firstIndex(where: { $0.id == profile.id }) {
+            updated[index].profiles[profileIndex] = profile
+        } else {
+            updated[index].profiles.append(profile)
+        }
+        updated[index].selectedProfileID = profile.id
+        updated[index].updatedAt = Date()
+        try persist(updated)
+        selectedProfileID = profile.id
+        renderScaleDraft = profile.renderScale
+        profileNameDraft = profile.name
+        manifest = try profile.applying(to: updated[index].manifest)
+    }
+
+    func removeSelectedProfile() throws {
+        guard canChangeSelection, let entry = selectedEntry,
+              let selectedProfileID,
+              entry.profiles.contains(where: { $0.id == selectedProfileID }) else {
+            throw WindowsVRLibraryError.noSelectedProfile
+        }
+        var updated = library
+        guard let index = updated.firstIndex(where: { $0.id == entry.id }) else {
+            throw WindowsVRLibraryError.noSavedGame
+        }
+        updated[index].profiles.removeAll(where: { $0.id == selectedProfileID })
+        updated[index].selectedProfileID = updated[index].profiles.first?.id
+        updated[index].updatedAt = Date()
+        try persist(updated)
+        self.selectedProfileID = updated[index].selectedProfileID
+        if let profile = updated[index].selectedProfile {
+            manifest = try profile.applying(to: updated[index].manifest)
+            renderScaleDraft = profile.renderScale
+            profileNameDraft = profile.name
+            launchArgumentsText = Self.argumentText(profile.launchArguments)
+        } else {
+            manifest = updated[index].manifest
+            renderScaleDraft = 1
+            profileNameDraft = "Default"
+            launchArgumentsText = Self.argumentText(updated[index].manifest.launchArguments)
+        }
+    }
+
+    func removeLibraryEntry(id: String) throws {
+        guard canChangeSelection else { return }
+        var updated = library
+        guard updated.contains(where: { $0.id == id }) else { throw WindowsVRLibraryError.noSavedGame }
+        updated.removeAll(where: { $0.id == id })
+        try persist(updated)
+        if selectedLibraryEntryID == id {
+            releaseGameDirectoryAccess()
+            selectedLibraryEntryID = nil
+            selectedProfileID = nil
+            manifest = nil
+            manifestName = nil
+            gameDirectory = nil
+            gameFolderName = nil
+            launchArgumentsText = "[]"
+            renderScaleDraft = 1
+            profileNameDraft = "Default"
+        }
+    }
+
+    func launch(prepareCompositor: () async throws -> Void) async {
+        guard canLaunch, let gameDirectory else { return }
+        do {
+            let launchManifest = try effectiveManifest()
+            isLaunching = true
+            immersiveSpaceClosedDuringLaunch = false
+            launchError = nil
+            defer { isLaunching = false }
             guard runtime.isAvailable else { throw LauncherFailure.runtimePluginMissing }
-            // The debugger helper can temporarily switch away from this app.
-            // Prepare it before opening the compositor so that transition does
-            // not tear down an already-initialized immersive session.
+            try runtime.preflight(manifest: launchManifest, gameDirectory: gameDirectory)
             try await jitCoordinator.prepareDebugger()
+            guard wvr_compositor_set_render_scale_v1(renderScaleDraft) == 0 else {
+                throw WindowsVRLibraryError.invalidProfileArguments
+            }
             try await prepareCompositor()
             guard immersiveSpaceIsOpen, !immersiveSpaceClosedDuringLaunch else {
                 throw LaunchPreparationFailure.immersiveSpaceClosed
             }
-            try await runtime.launch(manifest: manifest, gameDirectory: gameDirectory)
-            // The plugin contract confirms enqueue/acceptance only, not game readiness or rendering.
+            // WindowsVRCore emits only the unchanged v1 plugin JSON request.
+            try await runtime.launch(manifest: launchManifest, gameDirectory: gameDirectory)
             hasAcceptedLaunch = true
             runtimeStatus = "Launch accepted; game readiness unknown"
             beginStatusMonitoring()
@@ -119,10 +462,13 @@ final class LauncherModel {
                 runtimeStatus = "Runtime stopped; restart the app before another launch"
             }
         } catch {
-            if immersiveSpaceClosedDuringLaunch, hasAcceptedLaunch {
-                requiresRestart = true
+            if immersiveSpaceClosedDuringLaunch && hasAcceptedLaunch { requiresRestart = true }
+            if hasAcceptedLaunch {
+                recordStopFailure(error, becauseImmersiveClosed: immersiveSpaceClosedDuringLaunch)
+            } else {
+                let detail = runtime.nativeStatus().lastError
+                launchError = "The game could not be launched: " + (detail?.isEmpty == false ? detail! : error.localizedDescription)
             }
-            launchError = "The game could not be launched: \(error.localizedDescription)"
         }
     }
 
@@ -131,15 +477,11 @@ final class LauncherModel {
         while ContinuousClock.now < deadline {
             try Task.checkCancellation()
             if !immersiveSpaceIsOpen { throw LaunchPreparationFailure.immersiveSpaceClosed }
-
             var readiness = WVRCompositorReadinessV1()
             readiness.structSize = UInt32(MemoryLayout<WVRCompositorReadinessV1>.size)
             let status = wvr_compositor_copy_readiness_v1(&readiness)
             let nowNanoseconds = UInt64(max(0, CACurrentMediaTime() * 1.0e9))
             let trackingTimestamp = readiness.trackingTimestampNanoseconds
-            // Compositor poses are predicted to the near-future display time.
-            // Accept up to 100 ms ahead and 500 ms behind, with ordered
-            // subtraction so UInt64 cannot underflow for a future timestamp.
             let poseIsFresh = trackingTimestamp <= nowNanoseconds
                 ? nowNanoseconds - trackingTimestamp < 500_000_000
                 : trackingTimestamp - nowNanoseconds <= 100_000_000
@@ -160,11 +502,8 @@ final class LauncherModel {
 
     func immersiveSpaceDidClose() async {
         immersiveSpaceIsOpen = false
-        if isLaunching {
-            immersiveSpaceClosedDuringLaunch = true
-        }
-        guard hasAcceptedLaunch, !isStopping else { return }
-
+        if isLaunching { immersiveSpaceClosedDuringLaunch = true }
+        guard hasAcceptedLaunch, !isStopping, !stopRequested else { return }
         isStopping = true
         defer { isStopping = false }
         do {
@@ -177,16 +516,15 @@ final class LauncherModel {
             releaseGameDirectoryAccess()
         } catch {
             requiresRestart = true
-            launchError = stopFailureMessage(error, becauseImmersiveClosed: true)
+            recordStopFailure(error, becauseImmersiveClosed: true)
         }
     }
 
     func stop() async {
-        guard hasAcceptedLaunch, !isStopping else { return }
+        guard hasAcceptedLaunch, !isStopping, !stopRequested else { return }
         isStopping = true
         launchError = nil
         defer { isStopping = false }
-
         do {
             try await runtime.stop()
             hasAcceptedLaunch = false
@@ -196,8 +534,162 @@ final class LauncherModel {
             statusMonitor = nil
             releaseGameDirectoryAccess()
         } catch {
-            launchError = stopFailureMessage(error, becauseImmersiveClosed: false)
+            recordStopFailure(error, becauseImmersiveClosed: false)
         }
+    }
+
+    func makeCompatibilityReport() -> WindowsVRCompatibilityReport? {
+        refreshCompositorCounters()
+        guard let manifest, let launchManifest = try? effectiveManifest() else { return nil }
+        let state = runtime.nativeStatus()
+        let wine = WindowsVRWineStatus(
+            stateCode: runtime.isAvailable ? state.state : nil,
+            state: runtime.isAvailable ? wineStateName(state.state) : "plugin unavailable",
+            detail: runtime.isAvailable ? state.lastError : WindowsRuntimeError.integrationMissing.localizedDescription
+        )
+        let profile = selectedEntry?.profiles.first(where: { $0.id == selectedProfileID })
+        let requested = WindowsVRRequestedProfile(
+            gameID: manifest.id,
+            gameTitle: manifest.title,
+            profileID: profile?.id,
+            profileName: profileNameDraft.isEmpty ? "Current manifest" : profileNameDraft,
+            backend: launchManifest.backend,
+            graphics: launchManifest.graphics,
+            executableRelativePath: launchManifest.executableRelativePath,
+            launchArguments: launchManifest.launchArguments,
+            environment: launchManifest.environment,
+            spatialRenderScale: renderScaleDraft
+        )
+        let pluginAvailable = runtime.isAvailable
+        let graphicsAssessment: WindowsVRCapabilityAssessment
+        if launchManifest.graphics == .vulkan {
+            graphicsAssessment = .init(id: "Vulkan", status: "unavailable", reason: "Vulkan requests are rejected; no graphics fallback is selected.")
+        } else if launchManifest.graphics == .direct3D12 {
+            graphicsAssessment = .init(id: "Direct3D 12", status: runtime.supportsGraphics(.direct3D12) ? "experimental / unverified" : "unavailable", reason: runtime.supportsGraphics(.direct3D12)
+                ? "The signed bundle declares a matching DXMT D3D12 transport package. The pinned backend exposes Shader Model 5.1/DXBC; DXIL/Shader Model 6, mesh shaders and ray tracing are unsupported. Headset execution, game compatibility and performance are not established by this report."
+                : "The matching experimental DXMT D3D12 native/guest package is absent. A D3D12 manifest is retained but cannot launch; D3D11 is not substituted.")
+        } else if pluginAvailable {
+            graphicsAssessment = .init(id: "Direct3D 11", status: "conditional", reason: "The signed plugin is loadable, but this source-only report cannot establish that game startup or frame submission succeeds.")
+        } else {
+            graphicsAssessment = .init(id: "Direct3D 11", status: "unavailable", reason: "The signed runtime plugin is not available in this app process.")
+        }
+        let backendAssessment = WindowsVRCapabilityAssessment(
+            id: launchManifest.backend.rawValue,
+            status: pluginAvailable && launchManifest.backend == .windowsWineFEX ? "conditional" : "unavailable",
+            reason: pluginAvailable && launchManifest.backend == .windowsWineFEX
+                ? "The version-1 plugin can receive this explicit backend request; guest readiness and runtime resource availability remain unverified. The plugin must reject unsupported backends without fallback."
+                : "The selected backend is not packaged or the signed runtime plugin is unavailable; launch is blocked."
+        )
+        let capabilities = [
+            backendAssessment,
+            graphicsAssessment,
+            .init(id: "Spatial eye scaling", status: "conditional", reason: "Uniform per-eye Metal bilinear scaling is implemented in source; default render scale is 1.0. Quality and GPU benefit are unmeasured."),
+            .init(id: "MetalFX temporal super resolution", status: "unavailable", reason: "The visionOS 27 SDK marks the temporal scaler unavailable on the initial target; no alternate SR backend is connected."),
+            .init(id: "Frame generation", status: "unavailable", reason: "No frame-generation adapter or measured stereo pacing path is implemented."),
+            .init(id: "Guest-pipeline foveation", status: "unavailable", reason: "No guest rendering-pass integration or validated gaze/raster-rate path is connected.")
+        ]
+        let device = UIDevice.current
+        return WindowsVRCompatibilityReport(
+            deviceModel: device.model + " (" + (Self.systemString("hw.machine") ?? "hardware identifier unavailable") + ")",
+            operatingSystemName: device.systemName,
+            operatingSystemVersion: device.systemVersion,
+            operatingSystemBuildDescription: ProcessInfo.processInfo.operatingSystemVersionString + " / " + (Self.systemString("kern.osversion") ?? "build identifier unavailable"),
+            requestedProfile: requested,
+            runtimePluginAvailable: pluginAvailable,
+            wineStatus: wine,
+            compositorCounters: compositorCounters,
+            capabilities: capabilities
+        )
+    }
+
+    func makeCompatibilityReportJSON() throws -> Data {
+        guard let report = makeCompatibilityReport() else { throw WindowsVRLibraryError.noActiveGame }
+        return try report.encodedJSON()
+    }
+
+    var reportFilename: String {
+        let name = manifest?.title ?? "windows-vr"
+        let safe = name.map { character in
+            character.isLetter || character.isNumber || character == "-" || character == "_" ? character : "-"
+        }
+        return "\(String(safe))-compatibility-report.json"
+    }
+
+    func dismissImportError() {
+        isShowingImportError = false
+        importError = nil
+    }
+
+    func presentLibraryError(_ error: Error) {
+        showImportError(error)
+    }
+
+    private var draftArguments: [String] {
+        // JSON preserves empty argv entries, spaces, and embedded newlines.
+        // Invalid drafts stay visibly invalid rather than silently repairing argv.
+        (try? JSONDecoder().decode([String].self, from: Data(launchArgumentsText.utf8))) ?? [String(decoding: [UInt8(0)], as: UTF8.self)]
+    }
+
+    private static func argumentText(_ arguments: [String]) -> String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .withoutEscapingSlashes]
+        guard let data = try? encoder.encode(arguments) else { return "[]" }
+        return String(decoding: data, as: UTF8.self)
+    }
+
+    private func effectiveManifest() throws -> WindowsGameManifest {
+        guard let manifest else { throw WindowsVRLibraryError.noActiveGame }
+        guard draftArguments.count <= 64, !draftArguments.contains(where: { $0.contains(String(decoding: [UInt8(0)], as: UTF8.self)) }) else {
+            throw WindowsVRLibraryError.invalidProfileArguments
+        }
+        let selectedProfile = selectedEntry?.profiles.first(where: { $0.id == selectedProfileID })
+        let base = try selectedProfile?.applying(to: selectedEntry?.manifest ?? manifest) ?? manifest
+        return try WindowsGameManifest(
+            id: base.id,
+            title: base.title,
+            executableRelativePath: base.executableRelativePath,
+            backend: base.backend,
+            graphics: base.graphics,
+            launchArguments: draftArguments,
+            environment: base.environment,
+            schemaVersion: base.schemaVersion
+        )
+    }
+
+    private static func systemString(_ key: String) -> String? {
+        var size = 0
+        guard sysctlbyname(key, nil, &size, nil, 0) == 0, size > 0, size <= 4096 else { return nil }
+        var bytes = [CChar](repeating: 0, count: size)
+        let result = bytes.withUnsafeMutableBufferPointer { buffer in
+            sysctlbyname(key, buffer.baseAddress, &size, nil, 0)
+        }
+        guard result == 0 else { return nil }
+        return String(decoding: bytes.prefix { $0 != 0 }.map { UInt8(bitPattern: $0) }, as: UTF8.self)
+    }
+
+    private func persist(_ updated: [WindowsVRLibraryEntry]) throws {
+        guard libraryError == nil else { throw WindowsVRLibraryError.corruptLibrary }
+        try WindowsVRLibraryStore.save(updated)
+        library = updated
+        libraryError = nil
+    }
+
+    private func refreshCompositorCounters() {
+        var stats = WVRCompositorStatsV1()
+        stats.abiVersion = WVR_COMPOSITOR_ABI_VERSION
+        stats.structSize = UInt32(MemoryLayout<WVRCompositorStatsV1>.size)
+        guard wvr_compositor_copy_stats_v1(&stats) == 0 else {
+            compositorCounters = nil
+            return
+        }
+        compositorCounters = WindowsVRCompositorCounters(
+            abiVersion: stats.abiVersion,
+            submittedFrames: stats.submittedFrames,
+            acquiredFrames: stats.acquiredFrames,
+            droppedFrames: stats.droppedFrames,
+            completedFrames: stats.completedFrames,
+            queuedFrames: stats.queuedFrames
+        )
     }
 
     private func beginStatusMonitoring() {
@@ -205,6 +697,7 @@ final class LauncherModel {
         statusMonitor = Task { [weak self] in
             while !Task.isCancelled, let self, self.hasAcceptedLaunch {
                 self.refreshRuntimeStatus()
+                self.refreshCompositorCounters()
                 try? await Task.sleep(for: .milliseconds(250))
             }
         }
@@ -218,14 +711,18 @@ final class LauncherModel {
         case 2: runtimeStatus = "Wine services starting"
         case 3: runtimeStatus = "Guest process launching"
         case 4: runtimeStatus = "Wine process active; game readiness and rendering unknown"
-        case 5: runtimeStatus = "Runtime stopping"
+        case 5:
+            stopRequested = true
+            runtimeStatus = "Exit requested; waiting for the guest and Wine process"
         case 6:
+            stopRequested = false
             runtimeStatus = "Runtime stopped; restart the app before another launch"
             hasAcceptedLaunch = false
             requiresRestart = true
             statusMonitor?.cancel()
             releaseGameDirectoryAccess()
         case 7:
+            stopRequested = false
             runtimeStatus = "Runtime failed; restart the app before another launch"
             hasAcceptedLaunch = false
             requiresRestart = true
@@ -238,9 +735,36 @@ final class LauncherModel {
         }
     }
 
+    private func wineStateName(_ state: Int32) -> String {
+        switch state {
+        case 0: "idle"
+        case 1: "preparing"
+        case 2: "Wine services starting"
+        case 3: "guest process launching"
+        case 4: "Wine process active; game readiness unknown"
+        case 5: "stopping"
+        case 6: "stopped"
+        case 7: "failed"
+        default: "unknown state"
+        }
+    }
+
     private func releaseGameDirectoryAccess() {
         gameDirectoryAccessURL?.stopAccessingSecurityScopedResource()
         gameDirectoryAccessURL = nil
+    }
+
+    private func recordStopFailure(_ error: Error, becauseImmersiveClosed: Bool) {
+        if case WindowsRuntimeError.stopPending = error {
+            stopRequested = true
+            runtimeStatus = "Exit requested; waiting for the guest and Wine process"
+            launchError = becauseImmersiveClosed
+                ? "The immersive renderer closed. Cooperative exit was requested; the runtime still owns the session until Wine exits."
+                : nil
+            // Keep both access and monitoring until native stopped/failed status.
+            return
+        }
+        launchError = stopFailureMessage(error, becauseImmersiveClosed: becauseImmersiveClosed)
     }
 
     private func stopFailureMessage(_ error: Error, becauseImmersiveClosed: Bool) -> String {
@@ -252,11 +776,6 @@ final class LauncherModel {
             return "The immersive renderer closed, but the runtime could not confirm a stop. Restart the app before another launch. \(error.localizedDescription)"
         }
         return "The runtime could not confirm that the session stopped. The session remains marked active. \(error.localizedDescription)"
-    }
-
-    func dismissImportError() {
-        isShowingImportError = false
-        importError = nil
     }
 
     private func showImportError(_ error: Error) {
@@ -273,7 +792,6 @@ final class LauncherModel {
 
 private enum LauncherFailure: LocalizedError {
     case runtimePluginMissing
-
     var errorDescription: String? {
         "The signed WindowsRuntimePlugin.framework is not embedded in this app, so no launch request was sent."
     }

@@ -26,6 +26,8 @@ targets:
         SWIFT_VERSION: "6.0"
         GENERATE_INFOPLIST_FILE: YES
         CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: Apple Development
+        CODE_SIGNING_REQUIRED: YES
         SWIFT_OBJC_BRIDGING_HEADER: Sources/WindowsVR-Bridging-Header.h
         INFOPLIST_KEY_NSWorldSensingUsageDescription: Head tracking places the game's stereo views in your surroundings.
         INFOPLIST_KEY_NSAccessoryTrackingUsageDescription: Tracked controllers provide poses and controls to your VR game.
@@ -33,11 +35,13 @@ targets:
       path: Generated-Info.plist
       properties:
         LSApplicationQueriesSchemes: [stikdebug, stikjit]
+        UIFileSharingEnabled: true
+        LSSupportsOpeningDocumentsInPlace: true
         GCSupportedGameControllers:
           - ProfileName: SpatialGamepad
     sources:
       - path: Sources
-      - path: ../runtime-source/app/Madeira/madeira-jit.js
+      - path: ${AVPPLAY_RUNTIME_SOURCE}/app/Madeira/madeira-jit.js
         buildPhase: resources
       - path: Resources/Runtime
         type: folder
@@ -67,11 +71,11 @@ targets:
       - path: ../windows-runtime-plugin/WindowsVRRuntimePlugin.mm
       - path: ../windows-vr/include/WindowsVRRuntimePlugin.h
         headerVisibility: public
-      - path: ../runtime-source/app/Madeira/WineProcessBridge.m
-      - path: ../runtime-source/app/Madeira/WineServerBridge.m
-      - path: ../runtime-source/app/Madeira/FEXBridge.mm
-      - path: ../runtime-source/app/Madeira/JITAllocator.c
-      - path: ../runtime-source/app/Madeira/PrefixExtractor.c
+      - path: ${AVPPLAY_RUNTIME_SOURCE}/app/Madeira/WineProcessBridge.m
+      - path: ${AVPPLAY_RUNTIME_SOURCE}/app/Madeira/WineServerBridge.m
+      - path: ${AVPPLAY_RUNTIME_SOURCE}/app/Madeira/FEXBridge.mm
+      - path: ${AVPPLAY_RUNTIME_SOURCE}/app/Madeira/JITAllocator.c
+      - path: ${AVPPLAY_RUNTIME_SOURCE}/app/Madeira/PrefixExtractor.c
     dependencies:
       - target: WindowsVRNativeBridge
       - package: WindowsVRMetal
@@ -83,23 +87,24 @@ targets:
         CODE_SIGN_STYLE: Automatic
         CLANG_ENABLE_OBJC_ARC: YES
         CLANG_CXX_LANGUAGE_STANDARD: c++20
-        MADEIRA_FEX_BUILD_DIR: $(SRCROOT)/../runtime-source/FEX/build-ios
-        MADEIRA_WINE_BUILD_DIR: $(SRCROOT)/../runtime-source/app/Madeira
-        MADEIRA_DXMT_BUILD_DIR: $(SRCROOT)/../runtime-source/app/Madeira
+        MADEIRA_FEX_BUILD_DIR: ${AVPPLAY_RUNTIME_SOURCE}/FEX/build-ios
+        MADEIRA_WINE_BUILD_DIR: ${AVPPLAY_RUNTIME_SOURCE}/app/Madeira
+        MADEIRA_DXMT_BUILD_DIR: ${AVPPLAY_RUNTIME_SOURCE}/app/Madeira
+        AVPPLAY_DXMT_LINK_FLAG: -ldxmt_combined
         HEADER_SEARCH_PATHS:
           - $(inherited)
           - $(SRCROOT)/../windows-vr/include
           - $(SRCROOT)/../windows-vr-native/include
           - $(SRCROOT)/../windows-vr-openxr/include
           - $(SRCROOT)/../windows-vr-metal/Sources/WindowsVRMetalABI/include
-          - $(SRCROOT)/../runtime-source/app/Madeira
-          - $(SRCROOT)/../runtime-source/build
-          - $(SRCROOT)/../runtime-source/FEX/FEXCore/include
-          - $(SRCROOT)/../runtime-source/FEX/FEXHeaderUtils
-          - $(SRCROOT)/../runtime-source/FEX/CodeEmitter
-          - $(SRCROOT)/../runtime-source/FEX/External/fmt/include
-          - $(SRCROOT)/../runtime-source/FEX/External/range-v3/include
-          - $(SRCROOT)/../runtime-source/FEX/External/unordered_dense/include
+          - ${AVPPLAY_RUNTIME_SOURCE}/app/Madeira
+          - ${AVPPLAY_RUNTIME_SOURCE}/build
+          - ${AVPPLAY_RUNTIME_SOURCE}/FEX/FEXCore/include
+          - ${AVPPLAY_RUNTIME_SOURCE}/FEX/FEXHeaderUtils
+          - ${AVPPLAY_RUNTIME_SOURCE}/FEX/CodeEmitter
+          - ${AVPPLAY_RUNTIME_SOURCE}/FEX/External/fmt/include
+          - ${AVPPLAY_RUNTIME_SOURCE}/FEX/External/range-v3/include
+          - ${AVPPLAY_RUNTIME_SOURCE}/FEX/External/unordered_dense/include
           - $(MADEIRA_FEX_BUILD_DIR)
           - $(MADEIRA_FEX_BUILD_DIR)/include
           - $(MADEIRA_FEX_BUILD_DIR)/FEXCore/Source
@@ -124,7 +129,7 @@ targets:
           - -lntdll_unix
           - -lwineserver
           - -lwin32u_unix
-          - -ldxmt_combined
+          - $(AVPPLAY_DXMT_LINK_FLAG)
           - -lgnutls
           - -lhogweed
           - -lnettle

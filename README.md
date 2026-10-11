@@ -156,6 +156,22 @@ extended for the games above. The toolchain package that ships with the app cont
 source together with prebuilt ANGLE and MoltenVK libraries and their licence texts; see
 [THIRD-PARTY.md](THIRD-PARTY.md).
 
+## Experimental local Windows VR
+
+The separate Windows VR research app has source implementations for a visionOS
+launcher/compositor, a Madeira Wine/FEX adapter, a D3D11 guest OpenXR runtime,
+and OpenComposite packaging. An [experimental DXMT D3D12 source path](docs/windows-vr-d3d12.md)
+adds guest bindings, queue transport, the native mobile port and explicit
+matching native/guest build recipes. Launch remains gated on actual package
+artifacts. It is **not a released or validated Windows game
+runtime** and does not change the existing Quest or Linux ARM64 installer.
+
+See [the implementation status](docs/windows-vr-status.md),
+[engineering plan](docs/windows-vr-plan.md), and
+[source integration guide](docs/windows-vr-integration.md). Native/guest builds,
+signing, JIT/device compatibility, and game execution remain delivery gates;
+source code is not evidence of performance or game compatibility.
+
 ## Legal
 
 AVP Play is an independent open-source project. It is **not affiliated with, endorsed by or supported by Apple,

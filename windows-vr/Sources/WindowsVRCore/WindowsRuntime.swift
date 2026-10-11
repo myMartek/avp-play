@@ -7,6 +7,8 @@ public enum WindowsRuntimeError: Error, LocalizedError, Sendable, Equatable {
     case missingExecutable
     case executableNotRegularFile
     case pluginRejectedRequest(Int32)
+    case stopPending
+    case graphicsPackageMissing(WindowsGraphicsAPI)
 
     public var errorDescription: String? {
         switch self {
@@ -18,6 +20,10 @@ public enum WindowsRuntimeError: Error, LocalizedError, Sendable, Equatable {
             return "The manifest executable does not exist in the game directory."
         case .executableNotRegularFile:
             return "The manifest executable path does not refer to a regular file."
+        case .graphicsPackageMissing(let graphics):
+            return "The signed runtime does not contain the required " + graphics.rawValue + " graphics package. No fallback was selected."
+        case .stopPending:
+            return "Cooperative exit has been requested; the Wine process has not yet confirmed a stop."
         case .pluginRejectedRequest(let status):
             return "The Windows runtime plugin rejected the launch request with status \(status)."
         }

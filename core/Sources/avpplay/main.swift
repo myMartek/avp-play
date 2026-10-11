@@ -106,6 +106,8 @@ avpplay – command line for the AVP Play core library
   avpplay toolchain install <archive>          check and install a package
   avpplay install <id> --team <team ID>        build, install, copy missing data, unlock add-on content
   avpplay stage <id>                           only copy missing data and add-on content (no build)
+  avpplay windows stage --from <folder> --manifest <path> --bundle-id <id> --owned [--device UDID]
+                                               transfer user-owned local x64/D3D11 Windows game files
   avpplay job start <id> --team <team ID>      job: check, download, build, install, copy, unlock
   avpplay job resume <job>                     resume an interrupted or stopped job
   avpplay job show|cancel <job>                show progress / cancel            avpplay jobs   all jobs
@@ -149,6 +151,8 @@ avpplay – Kommandozeile zur Kern-Bibliothek von AVP Play
   avpplay toolchain install <Archiv>           Paket prüfen und installieren
   avpplay install <id> --team <Team-ID>        bauen, installieren, Daten ergänzend kopieren, Zusatzinhalte freischalten
   avpplay stage <id>                           nur Daten und Zusatzinhalte ergänzend kopieren (ohne Build)
+  avpplay windows stage --from <Ordner> --manifest <Pfad> --bundle-id <ID> --owned [--device UDID]
+                                               selbst bereitgestellte x64/D3D11-Windows-Spieldateien übertragen
   avpplay job start <id> --team <Team-ID>      Auftrag: prüfen, laden, bauen, installieren, kopieren, freischalten
   avpplay job resume <Auftrag>                 unterbrochenen oder angehaltenen Auftrag fortsetzen
   avpplay job show|cancel <Auftrag>            Stand zeigen / abbrechen          avpplay jobs   alle Aufträge
@@ -170,7 +174,7 @@ Allgemein: --account <Name>    Eintrag im Schlüsselbund (Standard: default)
 """)
 }
 
-let valued: Set<String> = ["account", "steam-account", "store", "recipes", "locale", "with", "only", "interval", "from", "to",
+let valued: Set<String> = ["account", "steam-account", "store", "recipes", "locale", "with", "only", "interval", "from", "manifest", "to",
                            "team", "device", "bundle-id", "toolchain", "icon", "tool", "jobs", "toolchains"]
 let o = Options(Array(CommandLine.arguments.dropFirst()), valued: valued)
 guard let command = o.positional.first else { print(usage()); exit(0) }
@@ -576,6 +580,33 @@ case "devices":
                     "\(d.name)  visionOS \(d.osVersion)  \(d.udid)  \(d.paired ? "gekoppelt" : "nicht gekoppelt"), "
                     + "\(d.reachable ? "erreichbar" : "nicht erreichbar"), Entwicklermodus \(d.developerMode ? "an" : "aus")"))
         }
+    } catch { fail("\(error)") }
+
+case "windows":
+    let allowedValues: Set<String> = ["from", "manifest", "bundle-id", "device"]
+    guard o.positional == ["windows", "stage"], o.values.keys.allSatisfy({ allowedValues.contains($0) }),
+          o.flags == ["owned"],
+          let from = o.value("from"), o.values["from"]?.count == 1,
+          let manifest = o.value("manifest"), o.values["manifest"]?.count == 1,
+          let bundle = o.value("bundle-id"), o.values["bundle-id"]?.count == 1,
+          o.values["device"] == nil || o.values["device"]?.count == 1 else {
+        fail("Usage: avpplay windows stage --from <folder> --manifest <path> --bundle-id <id> --owned [--device UDID]")
+    }
+    do {
+        let summary = try WindowsGameTransfer().stage(
+            from: URL(fileURLWithPath: from), manifest: URL(fileURLWithPath: manifest),
+            bundleID: bundle, deviceUDID: o.value("device"), owned: true,
+            progress: { progress in
+                let label = progress.phase == .hashing ? "hashed source" : "transferred"
+                let percent = 100 * Double(progress.completedBytes) / Double(max(progress.totalBytes, 1))
+                let line = String(format: "  %@ %d/%d files  %.1f%%  %@", label,
+                                  progress.completedFiles, progress.totalFiles, percent, progress.currentFile)
+                FileHandle.standardError.write(Data(line.utf8) + Data([10]))
+            },
+            report: { print($0) }
+        )
+        print("Transfer complete: \(summary.copiedFiles) copied, \(summary.resumedFiles) resumed, "
+              + "\(summary.totalFiles) game files (\(gigabytes(summary.totalBytes))); \(summary.destination).")
     } catch { fail("\(error)") }
 
 case "install", "stage":

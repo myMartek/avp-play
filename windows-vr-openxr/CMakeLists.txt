@@ -31,6 +31,7 @@ target_include_directories(wvr_openxr PRIVATE
 )
 target_compile_definitions(wvr_openxr PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
 target_link_libraries(wvr_openxr PRIVATE d3d11 dxgi)
+# D3D12CreateDevice is resolved dynamically; D3D11-only packages remain loadable.
 set_target_properties(wvr_openxr PROPERTIES
     PREFIX ""
     OUTPUT_NAME "wvr_openxr"

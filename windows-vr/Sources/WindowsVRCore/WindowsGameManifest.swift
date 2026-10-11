@@ -7,12 +7,24 @@ public enum WindowsRuntimeBackend: String, Codable, Sendable, Equatable {
 
 public enum WindowsGraphicsAPI: String, Codable, Sendable, Equatable {
     case direct3D11
+    case direct3D12
     case vulkan
 }
 
-public enum WindowsGameManifestError: Error, Sendable, Equatable {
+public enum WindowsGameManifestError: Error, LocalizedError, Sendable, Equatable {
     case invalidExecutableRelativePath
     case unsupportedSchemaVersion(Int)
+    case invalidIdentity
+    case invalidLaunchConfiguration
+
+    public var errorDescription: String? {
+        switch self {
+        case .invalidExecutableRelativePath: "The executable must be a safe relative Windows path inside the selected game folder."
+        case .unsupportedSchemaVersion(let version): "Windows game manifest schema " + String(version) + " is unsupported."
+        case .invalidIdentity: "The game ID and title must be nonempty, bounded text without embedded NUL bytes."
+        case .invalidLaunchConfiguration: "Launch arguments or environment variables exceed runtime limits or include a reserved/invalid value."
+        }
+    }
 }
 
 /// Describes a Windows-compatible game without asserting that a runtime is installed.
@@ -53,16 +65,35 @@ public struct WindowsGameManifest: Codable, Sendable, Equatable {
         guard schemaVersion == Self.supportedSchemaVersion else {
             throw WindowsGameManifestError.unsupportedSchemaVersion(schemaVersion)
         }
+        guard !id.isEmpty, id.utf8.count <= 4096, !id.utf8.contains(0),
+              !title.isEmpty, title.utf8.count <= 4096, !title.utf8.contains(0) else {
+            throw WindowsGameManifestError.invalidIdentity
+        }
+        guard launchArguments.count <= 64,
+              launchArguments.allSatisfy({ $0.utf8.count <= 4096 && !$0.utf8.contains(0) }),
+              environment.count <= 128,
+              environment.allSatisfy({ Self.isAllowedEnvironmentKey($0.key) && $0.value.utf8.count <= 4096 && !$0.value.utf8.contains(0) }) else {
+            throw WindowsGameManifestError.invalidLaunchConfiguration
+        }
         guard Self.isSafeRelativePath(executableRelativePath) else {
             throw WindowsGameManifestError.invalidExecutableRelativePath
         }
+    }
+
+    private static func isAllowedEnvironmentKey(_ key: String) -> Bool {
+        guard !key.isEmpty, key.utf8.count <= 256,
+              key.range(of: "^[A-Za-z_][A-Za-z0-9_]*$", options: .regularExpression) != nil else { return false }
+        let reserved: Set<String> = ["HOME", "WINEPREFIX", "WINESERVERSOCKET", "VR_OVERRIDE", "XR_RUNTIME_JSON", "WINEDLLPATH", "WVR_REQUIRE_COMPOSITOR_DEVICE", "WVR_GRAPHICS_API", "WINEDLLOVERRIDES"]
+        return !reserved.contains(key) && !["DYLD_", "WINE_IOS_JIT_", "MADEIRA_"].contains(where: { key.hasPrefix($0) })
     }
 
     private static func isSafeRelativePath(_ path: String) -> Bool {
         guard !path.isEmpty,
               !path.hasPrefix("/"),
               !path.hasPrefix("\\"),
-              !path.contains("\0")
+              !path.contains("\0"),
+              !path.contains(":"),
+              path.utf8.count <= 350
         else {
             return false
         }

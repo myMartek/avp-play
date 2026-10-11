@@ -15,12 +15,17 @@ final class WindowsVRControllerProvider: @unchecked Sendable {
     private var controllersByRole: [UInt32: GCController] = [:]
     private var hapticEnginesByRole: [UInt32: CHHapticEngine] = [:]
     private var anchorUpdatesTask: Task<Void, Never>?
+    private var trackingGeneration: UInt64 = 0
 
     func configure(authorized: Bool) async -> [any DataProvider] {
         guard authorized, AccessoryTrackingProvider.isSupported else {
-            publishUnavailable(role: 0)
-            publishUnavailable(role: 1)
+            reset()
             return []
+        }
+
+        let generation = lock.withLock {
+            trackingGeneration &+= 1
+            return trackingGeneration
         }
 
         var accessories: [Accessory] = []
@@ -46,16 +51,16 @@ final class WindowsVRControllerProvider: @unchecked Sendable {
 
         let provider = AccessoryTrackingProvider(accessories: accessories)
         store(provider)
-        anchorUpdatesTask = Task { [weak self, provider] in
+        anchorUpdatesTask = Task { [weak self, provider, generation] in
             for await update in provider.anchorUpdates {
-                guard let self else { return }
+                guard let self, self.isCurrentTrackingGeneration(generation) else { return }
                 switch update.event {
                 case .added, .updated:
                     guard let role = Self.role(for: update.anchor.accessory.inherentChirality) else { continue }
-                    self.store(update.anchor, for: role)
+                    self.store(update.anchor, for: role, generation: generation)
                 case .removed:
                     guard let role = Self.role(for: update.anchor.accessory.inherentChirality) else { continue }
-                    self.removeAnchor(for: role)
+                    self.removeAnchor(for: role, generation: generation)
                     self.publishUnavailable(role: role)
                 @unknown default:
                     continue
@@ -63,6 +68,31 @@ final class WindowsVRControllerProvider: @unchecked Sendable {
             }
         }
         return [provider]
+    }
+
+    /// Clears all cached device samples and stops controller haptics when the
+    /// compositor is paused or invalidated. Fresh anchor updates repopulate the
+    /// cache after tracking is restarted.
+    func reset() {
+        let (updatesTask, engines) = lock.withLock {
+            let task = anchorUpdatesTask
+            anchorUpdatesTask = nil
+            trackingGeneration &+= 1
+            let engines = Array(hapticEnginesByRole.values)
+            hapticEnginesByRole.removeAll()
+            anchorsByRole.removeAll()
+            controllersByRole.removeAll()
+            accessoryProvider = nil
+            return (task, engines)
+        }
+        updatesTask?.cancel()
+        engines.forEach { $0.stop() }
+        publishUnavailableState()
+    }
+
+    func publishUnavailableState() {
+        publishUnavailable(role: 0)
+        publishUnavailable(role: 1)
     }
 
     /// Called once for each compositor frame using its predicted ARKit time.
@@ -183,12 +213,25 @@ final class WindowsVRControllerProvider: @unchecked Sendable {
         lock.withLock { accessoryProvider = provider }
     }
 
-    private func store(_ anchor: AccessoryAnchor, for role: UInt32) {
-        lock.withLock { anchorsByRole[role] = anchor }
+    private func store(_ anchor: AccessoryAnchor, for role: UInt32, generation: UInt64) {
+        lock.withLock {
+            guard trackingGeneration == generation else { return }
+            anchorsByRole[role] = anchor
+        }
     }
 
-    private func removeAnchor(for role: UInt32) {
-        lock.withLock { anchorsByRole.removeValue(forKey: role) }
+    private func removeAnchor(for role: UInt32, generation: UInt64) {
+        let engine: CHHapticEngine? = lock.withLock {
+            guard trackingGeneration == generation else { return nil }
+            anchorsByRole.removeValue(forKey: role)
+            controllersByRole.removeValue(forKey: role)
+            return hapticEnginesByRole.removeValue(forKey: role)
+        }
+        engine?.stop()
+    }
+
+    private func isCurrentTrackingGeneration(_ generation: UInt64) -> Bool {
+        lock.withLock { trackingGeneration == generation }
     }
 
     private static func role(for chirality: Accessory.Chirality) -> UInt32? {

@@ -2,6 +2,18 @@
 
 Date: 2026-10-10. Status: source implementation and unverified integration roadmap. The repository now contains a native headset launcher/compositor, Madeira Wine/FEX adapter, Windows OpenXR runtime, pinned OpenComposite packaging, DXMT host-transport overlays and a MetalFX/NGX Super Resolution source overlay. A native compositor bridge object has compiled for arm64 visionOS 27; no runtime binaries have been linked or launched, no game has run, and near-native performance is unmeasured. The visionOS 27 SDK marks MetalFX temporal scaling unavailable, so the current MetalFX NGX path cannot provide Super Resolution on the first M2 target.
 
+## Source continuation
+
+See [windows-vr-status.md](windows-vr-status.md) for the current implementation
+inventory and honest remaining gates. This continuation adds persistent launcher
+library/profiles, diagnostic reports, direct bounded Mac transfers with immutable
+content generations, OpenXR API/state/image handling, compositor lifecycle and
+last-frame snapshots, uniform ordinary-Metal spatial scaling, and hardened resource
+staging/opt-in assembly. No tests, builds, probes, installs, or app/game launches
+were run for this continuation. Temporal SR, guest-pipeline foveation, and stereo
+frame generation remain explicitly unsupported research milestones, not completed
+features. External native/guest build inputs and on-device acceptance are unresolved.
+
 ## Objective and performance contract
 
 Build a headset app that launches legitimately owned Windows VR games and executes them locally, with translated game code, native ARM64 compatibility libraries, GPU rendering through Metal, and direct integration with the visionOS compositor. Retain the existing ARM64 Linux/Android path when a compatible native build is available.
@@ -71,7 +83,7 @@ Deferred validation gate: FEX runs CPU correctness checks reliably on device, wi
 
 Port the necessary native Wine/FEX/DXMT portions to the visionOS target. Establish PE loading, threads, exceptions, filesystem, audio, controller input, and resource cleanup. Validate existing single-process adaptations rather than assuming desktop Wine process behavior is available.
 
-Plan support for a small D3D11 test program and then one lightweight Windows game. Deferred validation must cover texture formats, shader translation, synchronization, and native Metal resource access. Cache shaders within supported APIs. Enable a Vulkan/MoltenVK path only for titles whose requirements justify it; D3D12 is a separate later compatibility milestone.
+Plan support for a small D3D11 test program and then one lightweight Windows game. Deferred validation must cover texture formats, shader translation, synchronization, and native Metal resource access. Cache shaders within supported APIs. Enable a Vulkan/MoltenVK path only for titles whose requirements justify it; D3D12 now has an explicit experimental DXMT source-integration track; see [windows-vr-d3d12.md](windows-vr-d3d12.md). It remains separate from the D3D11 baseline and requires matching mobile native/guest packaging before launch capability is advertised.
 
 Deferred validation gate: repeatable on-device rendering with correct output, stable memory, measured CPU/GPU costs, and a recoverable launch/exit cycle. No rendering implementation has been exercised.
 

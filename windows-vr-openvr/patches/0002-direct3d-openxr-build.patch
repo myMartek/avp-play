@@ -1,0 +1,55 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -20,7 +20,8 @@
+ option(USE_SYSTEM_OPENXR "Try using system installation of OpenXR if available" OFF)
+ option(USE_SYSTEM_GLM "Try using system installation of glm if available" OFF)
+ option(OC_BACKTRACE "Print the backtrace on crash" OFF)
++option(WINDOWS_VR_DIRECT3D_ONLY "Build the Windows guest with D3D11 and D3D12, without Vulkan/OpenGL dependencies" OFF)
+ option(ERROR_ON_WARNING "Set all warnings to be errors" OFF)
+ 
+ # Directory for generated files, those being split headers and stubs
+ set(GENERATED_DIR ${CMAKE_BINARY_DIR}/generated)
+@@ -28,9 +29,13 @@
+ # Platform-dependent flags
+ # Support Vulkan on Linux instead of DirectX
+ if (WIN32)
+-	set(GRAPHICS_API_SUPPORT_FLAGS -DSUPPORT_DX -DSUPPORT_DX11 -DSUPPORT_DX12 -DSUPPORT_VK -DSUPPORT_GL)
++	if (WINDOWS_VR_DIRECT3D_ONLY)
++		set(GRAPHICS_API_SUPPORT_FLAGS -DSUPPORT_DX -DSUPPORT_DX11 -DSUPPORT_DX12)
++	else ()
++		set(GRAPHICS_API_SUPPORT_FLAGS -DSUPPORT_DX -DSUPPORT_DX11 -DSUPPORT_DX12 -DSUPPORT_VK -DSUPPORT_GL)
++	endif ()
+ elseif (ANDROID)
+ 	set(GRAPHICS_API_SUPPORT_FLAGS -DSUPPORT_VK -DSUPPORT_GLES)
+ else ()
+ 	set(GRAPHICS_API_SUPPORT_FLAGS -DSUPPORT_VK -DSUPPORT_GL)
+ endif()
+@@ -89,11 +94,13 @@
+-if (WIN32)
++if (WIN32 AND WINDOWS_VR_DIRECT3D_ONLY)
++	# The direct-graphics profile uses D3D11/12; no Vulkan SDK is needed.
++elseif (WIN32)
+ 	# On Windows, use the bundled copy
+ 	target_include_directories(Vulkan INTERFACE libs/vulkan/Include) # TODO make this private and put the public headers elsewhere
+ 	if ("${CMAKE_SIZEOF_VOID_P}" EQUAL "8")
+ 		target_link_libraries(Vulkan INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/libs/vulkan/Lib/vulkan-1.lib)
+ 	else ()
+ 		target_link_libraries(Vulkan INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/libs/vulkan/Lib32/vulkan-1.lib)
+ 	endif ()
+ 
+ 	target_compile_definitions(Vulkan INTERFACE -DVK_USE_PLATFORM_WIN32_KHR)
+ elseif (ANDROID)
+@@ -118,8 +125,10 @@
+-add_compile_definitions(XR_USE_GRAPHICS_API_OPENGL XR_USE_GRAPHICS_API_VULKAN)
++if (NOT (WIN32 AND WINDOWS_VR_DIRECT3D_ONLY))
++	add_compile_definitions(XR_USE_GRAPHICS_API_OPENGL XR_USE_GRAPHICS_API_VULKAN)
++endif ()
+ # Platform-dependent flags
+ if (WIN32)
+ 	add_compile_definitions(XR_OS_WINDOWS XR_USE_PLATFORM_WIN32
+-		XR_USE_GRAPHICS_API_D3D11 XR_USE_GRAPHICS_API_D3D12)
++		XR_USE_GRAPHICS_API_D3D11 XR_USE_GRAPHICS_API_D3D12)
+ else()
+ 	add_compile_definitions(XR_OS_LINUX XR_USE_PLATFORM_XLIB)
+ endif()

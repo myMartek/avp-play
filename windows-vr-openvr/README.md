@@ -9,6 +9,17 @@ is GPL-3.0-or-later; its generated OpenVR headers retain their upstream MIT
 license. Preserve upstream notices and include the GPL license when
 redistributing the resulting package.
 
+The pinned upstream source contains concrete Windows D3D12 support: its
+`CMakeLists.txt` enables `SUPPORT_DX12`, and `DrvOpenXR.cpp` enables
+`XR_KHR_D3D12_enable` when the runtime advertises it. See the [pinned CMake
+source](https://gitlab.com/znixian/OpenOVR/-/raw/cff07db75c4823afe93ed7027b03d5f7bc86f164/CMakeLists.txt)
+and [pinned OpenXR driver source](https://gitlab.com/znixian/OpenOVR/-/raw/cff07db75c4823afe93ed7027b03d5f7bc86f164/DrvOpenXR/DrvOpenXR.cpp).
+The default still applies the D3D11-only overlay to preserve the baseline DLL
+imports. `WINDOWS_VR_ENABLE_D3D12=ON` selects the D3D11/D3D12-only overlay,
+excluding Vulkan/OpenGL dependencies rather than enabling unsupported backends.
+Use a fresh build directory when changing profiles. This source confirmation
+does not imply that this package was built or runtime-tested.
+
 ## Package shape
 
 The CMake packaging target stages the upstream output at:

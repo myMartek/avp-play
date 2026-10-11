@@ -22,7 +22,7 @@ case "$mode" in
 esac
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
-runtime_root="$repo_root/runtime-source"
+runtime_root="${AVPPLAY_RUNTIME_SOURCE:-$repo_root/runtime-source}"
 lock_file="$repo_root/windows-vr-tools/llvm.lock.json"
 if [[ ! -d "$runtime_root" ]]; then
     echo "Prepare the pinned runtime source overlay first: $runtime_root is missing." >&2

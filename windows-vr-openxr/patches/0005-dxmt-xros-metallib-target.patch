@@ -1,0 +1,35 @@
+diff --git a/src/airconv/metallib_writer.cpp b/src/airconv/metallib_writer.cpp
+--- a/src/airconv/metallib_writer.cpp
++++ b/src/airconv/metallib_writer.cpp
+@@ -1,4 +1,7 @@
+ #include "metallib_writer.hpp"
++#if defined(DXMT_VISIONOS)
++#include "wvr_metallib_platform.h"
++#endif
+ #include "llvm/Bitcode/BitcodeWriter.h"
+ #include "llvm/IR/Constants.h"
+ 
+@@ -391,12 +394,22 @@
+   header.BitcodeSize = bitcode.size();
+ 
+   header.Type = FileType::MTLBType_Executable; // executable
+-  header.Platform = Platform::MTLBPlatform_macOS;
++  // Keep the writer's own version-2.7 section layout, but derive target
++  // metadata from a library produced by this build's actual xros compiler.
++  // Do not guess visionOS enum values or stamp generated AIR as macOS.
+   header.VersionMajor = 2;
+   header.VersionMinor = 7;
++#if defined(DXMT_VISIONOS)
++  header.Platform = static_cast<Platform>(WVR_METALLIB_TARGET_PLATFORM);
++  header.OS = static_cast<OS>(WVR_METALLIB_TARGET_OS);
++  header.OSVersionMajor = WVR_METALLIB_TARGET_OS_MAJOR;
++  header.OSVersionMinor = WVR_METALLIB_TARGET_OS_MINOR;
++#else
++  header.Platform = Platform::MTLBPlatform_macOS;
+   header.OS = OS::MTLBOS_macOS;
+   header.OSVersionMajor = 14;
+   header.OSVersionMinor = 4;
++#endif
+ 
+   // write to stream
+   OS << value(header);

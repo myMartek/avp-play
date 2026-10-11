@@ -13,10 +13,14 @@ def git(*arguments, directory=None):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cache-root", type=Path, default=ROOT / "third-party")
+    parser.add_argument("--include-d3d12-experimental", action="store_true",
+                        help="Also acquire the isolated, currently unported D3D12 DXMT source profile")
     args = parser.parse_args()
     args.cache_root.mkdir(parents=True, exist_ok=True)
     lock = json.loads((ROOT / "windows-vr-tools/sources.lock.json").read_text())
     for source in lock["sources"]:
+        if source["name"] == "dxmt-d3d12-experimental" and not args.include_d3d12_experimental:
+            continue
         destination = args.cache_root / source["name"]
         if not destination.exists():
             git("clone", "--no-checkout", source["url"], str(destination))

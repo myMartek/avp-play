@@ -20,12 +20,18 @@ diff --git a/src/d3d11/d3d11_context_impl.cpp b/src/d3d11/d3d11_context_impl.cpp
  #include "d3d11_annotation.hpp"
  #include "d3d11_context.hpp"
  #include "d3d11_device_child.hpp"
-@@ -836,7 +839,13 @@
+@@ -836,7 +839,19 @@
      }
  
      if (riid == __uuidof(IMTLD3D11ContextExt) || riid == __uuidof(IMTLD3D11ContextExt1)) {
 -      *ppvObject = ref(&ext_);
 +      *ppvObject = ref(static_cast<IMTLD3D11ContextExt1 *>(&ext_));
++      return S_OK;
++    }
++    if (riid == __uuidof(IMTLD3D11ContextExt3)) {
++      auto *extension = static_cast<IMTLD3D11ContextExt3 *>(&ext_);
++      extension->AddRef();
++      *ppvObject = extension;
 +      return S_OK;
 +    }
 +    if (riid == __uuidof(IMTLD3D11ContextExt2)) {
@@ -35,21 +41,27 @@ diff --git a/src/d3d11/d3d11_context_impl.cpp b/src/d3d11/d3d11_context_impl.cpp
        return S_OK;
      }
  
-@@ -5458,7 +5467,7 @@
+@@ -5458,7 +5473,7 @@
  };
  
  template <typename ContextInternalState>
 -class MTLD3D11ContextExt : public IMTLD3D11ContextExt1 {
-+class MTLD3D11ContextExt : public IMTLD3D11ContextExt1, public IMTLD3D11ContextExt2 {
++class MTLD3D11ContextExt : public IMTLD3D11ContextExt1, public IMTLD3D11ContextExt2, public IMTLD3D11ContextExt3 {
    class CachedTemporalScaler {
    public:
      WMTPixelFormat color_pixel_format;
-@@ -5478,6 +5487,14 @@
+@@ -5478,6 +5493,20 @@
  
    HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid,
                                             void **ppvObject) final {
 +    if (!ppvObject) return E_POINTER;
 +    *ppvObject = nullptr;
++    if (riid == __uuidof(IMTLD3D11ContextExt3)) {
++      auto *extension = static_cast<IMTLD3D11ContextExt3 *>(this);
++      AddRef();
++      *ppvObject = extension;
++      return S_OK;
++    }
 +    if (riid == __uuidof(IMTLD3D11ContextExt2)) {
 +      auto *extension = static_cast<IMTLD3D11ContextExt2 *>(this);
 +      AddRef();
@@ -59,7 +71,7 @@ diff --git a/src/d3d11/d3d11_context_impl.cpp b/src/d3d11/d3d11_context_impl.cpp
      return ctx_->QueryInterface(riid, ppvObject);
    }
  
-@@ -5670,10 +5687,158 @@
+@@ -5670,10 +5699,231 @@
      return E_INVALIDARG;
    };
  
@@ -152,8 +164,8 @@ diff --git a/src/d3d11/d3d11_context_impl.cpp b/src/d3d11/d3d11_context_impl.cpp
 +    static_cast<ID3D11Texture2D *>(frame->left)->GetDesc(&leftDesc);
 +    static_cast<ID3D11Texture2D *>(frame->right)->GetDesc(&rightDesc);
 +    auto formatMatches = [](DXGI_FORMAT format, uint32_t metalFormat) {
-+      return (format == DXGI_FORMAT_B8G8R8A8_UNORM && metalFormat == 80) ||
-+             (format == DXGI_FORMAT_R8G8B8A8_UNORM && metalFormat == 70);
++      return ((format == DXGI_FORMAT_B8G8R8A8_UNORM && metalFormat == 80) || (format == DXGI_FORMAT_B8G8R8A8_UNORM_SRGB && metalFormat == 81)) ||
++             ((format == DXGI_FORMAT_R8G8B8A8_UNORM && metalFormat == 70) || (format == DXGI_FORMAT_R8G8B8A8_UNORM_SRGB && metalFormat == 71));
 +    };
 +    if (leftDesc.Width != targets.width[0] || leftDesc.Height != targets.height[0] ||
 +        rightDesc.Width != targets.width[1] || rightDesc.Height != targets.height[1] ||
@@ -173,33 +185,101 @@ diff --git a/src/d3d11/d3d11_context_impl.cpp b/src/d3d11/d3d11_context_impl.cpp
 +    });
 +    ctx_->Commit();
 +    std::unique_lock<std::mutex> resultLock(result->mutex);
-+    if (!result->changed.wait_for(resultLock, std::chrono::seconds(2), [&] { return result->completed; }))
++    if (!result->changed.wait_for(resultLock, std::chrono::seconds(2), [&] { return result->completed; })) {
++      result->cancelled = true;
 +      return HRESULT_FROM_WIN32(ERROR_TIMEOUT);
++    }
 +    if (result->status != WVRCompositorStatusOK || !result->consumerEvent || !result->ticket)
-+      return E_FAIL;
++      return result->status == WVRCompositorStatusNoFrameAvailable ? S_FALSE : E_FAIL;
 +    WMT::Reference<WMT::SharedEvent> event(result->consumerEvent);
 +    result->eventClaimed = true;
 +    uint64_t ticket = result->ticket;
 +    resultLock.unlock();
 +    std::lock_guard<std::mutex> leaseLock(windows_vr_lease_mutex_);
-+    windows_vr_leases_[frame->left] = {event, ticket};
-+    windows_vr_leases_[frame->right] = {event, ticket};
++    windows_vr_leases_[frame->left] = {RetainWindowsVRResource(frame->left), event, ticket};
++    windows_vr_leases_[frame->right] = {RetainWindowsVRResource(frame->right), event, ticket};
++    return S_OK;
++  }
++
++  HRESULT STDMETHODCALLTYPE SubmitWindowsVRFrameV2(const WVRDXMTSubmitFrameV2 *frame) final {
++    if (!frame || !frame->left || !frame->right || !frame->targetGeneration) return E_INVALIDARG;
++    WVRDXMTTargetInfoV1 targets{};
++    if (FAILED(GetWindowsVRTargets(&targets)) || targets.generation != frame->targetGeneration)
++      return DXGI_ERROR_INVALID_CALL;
++    D3D11_RESOURCE_DIMENSION leftDimension{}, rightDimension{};
++    frame->left->GetType(&leftDimension); frame->right->GetType(&rightDimension);
++    if (leftDimension != D3D11_RESOURCE_DIMENSION_TEXTURE2D || rightDimension != D3D11_RESOURCE_DIMENSION_TEXTURE2D)
++      return E_INVALIDARG;
++    D3D11_TEXTURE2D_DESC leftDesc{}, rightDesc{};
++    static_cast<ID3D11Texture2D *>(frame->left)->GetDesc(&leftDesc);
++    static_cast<ID3D11Texture2D *>(frame->right)->GetDesc(&rightDesc);
++    auto valid = [](const D3D11_TEXTURE2D_DESC &d, uint32_t slice, uint32_t x, uint32_t y,
++                    uint32_t width, uint32_t height, uint32_t targetWidth, uint32_t targetHeight) {
++      return d.SampleDesc.Count == 1 && slice < d.ArraySize && width && height &&
++          x <= d.Width && y <= d.Height && width <= d.Width - x && height <= d.Height - y &&
++          width <= targetWidth && height <= targetHeight;
++    };
++    auto formatMatches = [](DXGI_FORMAT format, uint32_t metalFormat) {
++      return (format == DXGI_FORMAT_B8G8R8A8_UNORM && metalFormat == 80) ||
++             (format == DXGI_FORMAT_B8G8R8A8_UNORM_SRGB && metalFormat == 81) ||
++             (format == DXGI_FORMAT_R8G8B8A8_UNORM && metalFormat == 70) ||
++             (format == DXGI_FORMAT_R8G8B8A8_UNORM_SRGB && metalFormat == 71);
++    };
++    if (!valid(leftDesc, frame->leftArraySlice, frame->leftX, frame->leftY, frame->leftWidth,
++               frame->leftHeight, targets.width[0], targets.height[0]) ||
++        !valid(rightDesc, frame->rightArraySlice, frame->rightX, frame->rightY, frame->rightWidth,
++               frame->rightHeight, targets.width[1], targets.height[1]) ||
++        !formatMatches(leftDesc.Format, targets.pixelFormat[0]) ||
++        !formatMatches(rightDesc.Format, targets.pixelFormat[1])) return DXGI_ERROR_INVALID_CALL;
++    auto leftTexture = static_cast<D3D11ResourceCommon *>(frame->left)->texture();
++    auto rightTexture = static_cast<D3D11ResourceCommon *>(frame->right)->texture();
++    if (!leftTexture || !rightTexture) return E_INVALIDARG;
++    WMTWindowsVRRequestV2 layout{};
++    layout.targetGeneration = frame->targetGeneration; layout.frameID = frame->frameID;
++    layout.timestampNanoseconds = frame->timestampNanoseconds;
++    layout.leftSlice = frame->leftArraySlice; layout.leftX = frame->leftX; layout.leftY = frame->leftY;
++    layout.leftWidth = frame->leftWidth; layout.leftHeight = frame->leftHeight;
++    layout.rightSlice = frame->rightArraySlice; layout.rightX = frame->rightX; layout.rightY = frame->rightY;
++    layout.rightWidth = frame->rightWidth; layout.rightHeight = frame->rightHeight;
++    auto result = std::make_shared<WindowsVRSubmissionResult>();
++    ctx_->EmitOP([leftTexture = std::move(leftTexture), rightTexture = std::move(rightTexture),
++                  frameCopy = layout, result](ArgumentEncodingContext &enc) mutable {
++      enc.queueWindowsVRSubmissionV2(leftTexture->current()->texture(), rightTexture->current()->texture(),
++                                     frameCopy, result);
++    });
++    ctx_->Commit();
++    std::unique_lock<std::mutex> resultLock(result->mutex);
++    if (!result->changed.wait_for(resultLock, std::chrono::seconds(2), [&] { return result->completed; })) {
++      result->cancelled = true;
++      return HRESULT_FROM_WIN32(ERROR_TIMEOUT);
++    }
++    if (result->status != WVRCompositorStatusOK || !result->consumerEvent || !result->ticket)
++      return result->status == WVRCompositorStatusNoFrameAvailable ? S_FALSE : E_FAIL;
++    WMT::Reference<WMT::SharedEvent> event(result->consumerEvent);
++    result->eventClaimed = true;
++    const uint64_t ticket = result->ticket;
++    resultLock.unlock();
++    std::lock_guard<std::mutex> leaseLock(windows_vr_lease_mutex_);
++    windows_vr_leases_[frame->left] = {RetainWindowsVRResource(frame->left), event, ticket};
++    windows_vr_leases_[frame->right] = {RetainWindowsVRResource(frame->right), event, ticket};
 +    return S_OK;
 +  }
 +
 +  HRESULT STDMETHODCALLTYPE WaitWindowsVRImage(ID3D11Resource *resource) final {
 +    if (!resource) return E_INVALIDARG;
 +    WMT::Reference<WMT::SharedEvent> event;
++    std::shared_ptr<ID3D11Resource> retainedResource;
 +    uint64_t ticket = 0;
 +    {
 +      std::lock_guard<std::mutex> lock(windows_vr_lease_mutex_);
 +      auto found = windows_vr_leases_.find(resource);
 +      if (found == windows_vr_leases_.end()) return S_OK;
++      retainedResource = std::move(found->second.resource);
 +      event = found->second.event;
-+      ticket = found->second.ticket;
++      ticket = found->second.ticket; windows_vr_leases_.erase(found);
 +    }
 +    WMT::Reference<WMT::Event> waitEvent(event);
-+    ctx_->EmitOP([event = std::move(waitEvent), ticket](ArgumentEncodingContext &enc) mutable {
++    ctx_->EmitOP([event = std::move(waitEvent), retainedResource = std::move(retainedResource), ticket](ArgumentEncodingContext &enc) mutable {
 +      enc.waitEvent(std::move(event), ticket);
 +    });
 +    return S_OK;
@@ -209,7 +289,12 @@ diff --git a/src/d3d11/d3d11_context_impl.cpp b/src/d3d11/d3d11_context_impl.cpp
  
    MTLD3D11DeviceContextImplBase<ContextInternalState> *ctx_;
    std::vector<CachedTemporalScaler> scaler_cache_;
++  static std::shared_ptr<ID3D11Resource> RetainWindowsVRResource(ID3D11Resource *resource) {
++    resource->AddRef();
++    return std::shared_ptr<ID3D11Resource>(resource, [](ID3D11Resource *value) { value->Release(); });
++  }
 +  struct WindowsVRLease {
++    std::shared_ptr<ID3D11Resource> resource;
 +    WMT::Reference<WMT::SharedEvent> event;
 +    uint64_t ticket = 0;
 +  };
@@ -221,7 +306,7 @@ diff --git a/src/d3d11/d3d11_context_impl.cpp b/src/d3d11/d3d11_context_impl.cpp
 diff --git a/src/dxmt/dxmt_context.hpp b/src/dxmt/dxmt_context.hpp
 --- a/src/dxmt/dxmt_context.hpp
 +++ b/src/dxmt/dxmt_context.hpp
-@@ -15,12 +15,30 @@
+@@ -15,12 +15,31 @@
  #include "rc/util_rc_ptr.hpp"
  #include "airconv_public.h"
  #include <cassert>
@@ -240,6 +325,7 @@ diff --git a/src/dxmt/dxmt_context.hpp b/src/dxmt/dxmt_context.hpp
 +  std::mutex mutex;
 +  std::condition_variable changed;
 +  bool completed = false;
++  bool cancelled = false;
 +  bool eventClaimed = false;
 +  int32_t status = WVRCompositorStatusInvalidArgument;
 +  uint64_t consumerEvent = 0;
@@ -252,7 +338,7 @@ diff --git a/src/dxmt/dxmt_context.hpp b/src/dxmt/dxmt_context.hpp
  
  constexpr size_t kCommandChunkCPUHeapSize = 0x400000;
  constexpr size_t kCommandChunkGPUHeapSize = 0x400000;
-@@ -647,6 +665,18 @@
+@@ -647,6 +666,51 @@
    // which would make `signalEvent(std::move(ref), v)` ambiguous.
    void signalEventByHandle(obj_handle_t event_handle, uint64_t value);
    void waitEvent(WMT::Reference<WMT::Event> &&event, uint64_t value);
@@ -260,6 +346,15 @@ diff --git a/src/dxmt/dxmt_context.hpp b/src/dxmt/dxmt_context.hpp
 +                                uint64_t generation, uint64_t frameID,
 +                                uint64_t timestampNanoseconds,
 +                                std::shared_ptr<WindowsVRSubmissionResult> result) {
++    if (windows_vr_submission_) {
++      {
++        std::lock_guard<std::mutex> lock(result->mutex);
++        result->status = WVRCompositorStatusIncompatibleTexture;
++        result->completed = true;
++      }
++      result->changed.notify_all();
++      return;
++    }
 +    windows_vr_submission_.emplace();
 +    windows_vr_submission_->left = left;
 +    windows_vr_submission_->right = right;
@@ -268,10 +363,34 @@ diff --git a/src/dxmt/dxmt_context.hpp b/src/dxmt/dxmt_context.hpp
 +    windows_vr_submission_->timestampNanoseconds = timestampNanoseconds;
 +    windows_vr_submission_->result = std::move(result);
 +  }
++
++  void queueWindowsVRSubmissionV2(WMT::Texture left, WMT::Texture right,
++                                   const WMTWindowsVRRequestV2 &frame,
++                                   std::shared_ptr<WindowsVRSubmissionResult> result) {
++    if (windows_vr_submission_) {
++      {
++        std::lock_guard<std::mutex> lock(result->mutex);
++        result->status = WVRCompositorStatusIncompatibleTexture;
++        result->completed = true;
++      }
++      result->changed.notify_all();
++      return;
++    }
++    windows_vr_submission_.emplace();
++    auto &pending = *windows_vr_submission_;
++    pending.left = std::move(left); pending.right = std::move(right);
++    pending.generation = frame.targetGeneration; pending.frameID = frame.frameID;
++    pending.timestampNanoseconds = frame.timestampNanoseconds;
++    pending.leftSlice = frame.leftSlice; pending.leftX = frame.leftX; pending.leftY = frame.leftY;
++    pending.leftWidth = frame.leftWidth; pending.leftHeight = frame.leftHeight;
++    pending.rightSlice = frame.rightSlice; pending.rightX = frame.rightX; pending.rightY = frame.rightY;
++    pending.rightWidth = frame.rightWidth; pending.rightHeight = frame.rightHeight;
++    pending.version2 = true; pending.result = std::move(result);
++  }
  
    uint64_t
    nextEncoderId() {
-@@ -918,6 +948,15 @@
+@@ -918,6 +982,18 @@
  
    WMT::Device device_;
    CommandQueue& queue_;
@@ -281,6 +400,9 @@ diff --git a/src/dxmt/dxmt_context.hpp b/src/dxmt/dxmt_context.hpp
 +    uint64_t generation = 0;
 +    uint64_t frameID = 0;
 +    uint64_t timestampNanoseconds = 0;
++    uint32_t leftSlice = 0, leftX = 0, leftY = 0, leftWidth = 0, leftHeight = 0;
++    uint32_t rightSlice = 0, rightX = 0, rightY = 0, rightWidth = 0, rightHeight = 0;
++    bool version2 = false;
 +    std::shared_ptr<WindowsVRSubmissionResult> result;
 +  };
 +  std::optional<PendingWindowsVRSubmission> windows_vr_submission_;
@@ -290,7 +412,7 @@ diff --git a/src/dxmt/dxmt_context.hpp b/src/dxmt/dxmt_context.hpp
 diff --git a/src/dxmt/dxmt_context.cpp b/src/dxmt/dxmt_context.cpp
 --- a/src/dxmt/dxmt_context.cpp
 +++ b/src/dxmt/dxmt_context.cpp
-@@ -1379,6 +1379,33 @@
+@@ -1379,6 +1379,54 @@
  
    cmdbuf.encodeSignalEvent(queue_.event, event_seq_id);
  
@@ -310,14 +432,35 @@ diff --git a/src/dxmt/dxmt_context.cpp b/src/dxmt/dxmt_context.cpp
 +    request.frameID = pending.frameID;
 +    request.timestampNanoseconds = pending.timestampNanoseconds;
 +    request.targetGeneration = pending.generation;
-+    WMTWindowsVRBridgeCallV1(&request);
++    std::unique_lock<std::mutex> resultLock(pending.result->mutex);
++    if (!pending.result->cancelled) {
++    if (pending.version2) {
++      WMTWindowsVRRequestV2 extended{};
++      extended.abiVersion = WVR_COMPOSITOR_ABI_VERSION_V2;
++      extended.structSize = sizeof(extended);
++      extended.status = WVRCompositorStatusInvalidArgument;
++      extended.commandBuffer = request.commandBuffer; extended.producerEvent = request.producerEvent;
++      extended.producerValue = request.producerValue; extended.frameID = request.frameID;
++      extended.timestampNanoseconds = request.timestampNanoseconds; extended.targetGeneration = request.targetGeneration;
++      extended.leftTexture = request.leftTexture; extended.rightTexture = request.rightTexture;
++      extended.leftSlice = pending.leftSlice; extended.leftX = pending.leftX; extended.leftY = pending.leftY;
++      extended.leftWidth = pending.leftWidth; extended.leftHeight = pending.leftHeight;
++      extended.rightSlice = pending.rightSlice; extended.rightX = pending.rightX; extended.rightY = pending.rightY;
++      extended.rightWidth = pending.rightWidth; extended.rightHeight = pending.rightHeight;
++      WMTWindowsVRBridgeCallV2(&extended);
++      request.status = extended.status; request.consumerEvent = extended.consumerEvent;
++      request.compositorTicket = extended.compositorTicket;
++    } else {
++      WMTWindowsVRBridgeCallV1(&request);
++    }
 +    {
-+      std::lock_guard<std::mutex> lock(pending.result->mutex);
 +      pending.result->status = request.status;
 +      pending.result->consumerEvent = request.consumerEvent;
 +      pending.result->ticket = request.compositorTicket;
 +      pending.result->completed = true;
 +    }
++    } // cancelled submissions must not acquire a native consumer lease
++    resultLock.unlock();
 +    pending.result->changed.notify_all();
 +  }
 +
@@ -339,7 +482,7 @@ diff --git a/src/winemetal/winemetal.h b/src/winemetal/winemetal.h
 diff --git a/src/winemetal/winemetal_thunks.c b/src/winemetal/winemetal_thunks.c
 --- a/src/winemetal/winemetal_thunks.c
 +++ b/src/winemetal/winemetal_thunks.c
-@@ -45,6 +45,21 @@
+@@ -45,6 +45,31 @@
  
  #define PtrToUInt64(v) ((uint64_t)(uintptr_t)(v))
  
@@ -358,6 +501,16 @@ diff --git a/src/winemetal/winemetal_thunks.c b/src/winemetal/winemetal_thunks.c
 +  return request->status;
 +}
 +
++WINEMETAL_API int32_t
++WMTWindowsVRBridgeCallV2(WMTWindowsVRRequestV2 *request) {
++  if (!request) return WVRCompositorStatusInvalidArgument;
++  struct unixcall_windows_vr_bridge_v1 params;
++  memset(&params, 0, sizeof(params));
++  WMT_MEMPTR_SET(params.request, request);
++  UNIX_CALL(152, &params);
++  return request->status;
++}
++
  WINEMETAL_API void
  NSObject_retain(obj_handle_t obj) {
    UNIX_CALL(0, &obj);
@@ -369,15 +522,16 @@ diff --git a/src/winemetal/wmt_api_names.h b/src/winemetal/wmt_api_names.h
  #define WMT_API_NAMES_H
  
 -#define WMT_API_COUNT 151
-+#define WMT_API_COUNT 152
++#define WMT_API_COUNT 153
  
  static const char *const wmt_api_names[WMT_API_COUNT] = {
      "NSObject_retain",
-@@ -157,6 +157,7 @@
+@@ -157,6 +157,8 @@
      "thunk_DXSOGetCompiledBitcode",
      "thunk_DXSODestroyBitcode",
      "d3d9_nop",
 +    "WMTWindowsVRBridgeCallV1",
++    "WMTWindowsVRBridgeCallV2",
  };
  
  #endif
@@ -396,7 +550,7 @@ diff --git a/src/winemetal/unix/winemetal_unix.c b/src/winemetal/unix/winemetal_
  
  /* iOS-Madeira 2026-05-22 draw-call telemetry. Defined further down with
   * the present counter; forward-declared here so the draw command cases
-@@ -291,12 +296,109 @@
+@@ -291,12 +296,146 @@
  static NTSTATUS
  _MTLCopyAllDevices(void *obj) {
    struct unixcall_generic_obj_ret *params = obj;
@@ -492,7 +646,8 @@ diff --git a/src/winemetal/unix/winemetal_unix.c b/src/winemetal/unix/winemetal_
 +    frame.rightTexture = right;
 +    frame.producerReadyEvent = producer_event;
 +    frame.producerReadyValue = request->producerValue;
-+    request->status = wvr_compositor_submit_stereo_frame_v1(&frame, &request->compositorTicket);
++    request->status = wvr_compositor_submit_stereo_frame_for_generation_v1(
++        &frame, request->targetGeneration, &request->compositorTicket);
 +    if (request->status == WVRCompositorStatusOK)
 +      request->consumerEvent = (uint64_t)(uintptr_t)consumer_event;
 +    else
@@ -505,19 +660,57 @@ diff --git a/src/winemetal/unix/winemetal_unix.c b/src/winemetal/unix/winemetal_
 +  }
    return STATUS_SUCCESS;
  }
++
++static NTSTATUS
++_WMTWindowsVRBridgeCallV2(void *obj) {
++  struct unixcall_windows_vr_bridge_v1 *params = obj;
++  WMTWindowsVRRequestV2 *request = params->request.ptr;
++  if (!request || request->abiVersion != WVR_COMPOSITOR_ABI_VERSION_V2 || request->structSize != sizeof(*request))
++    return STATUS_INVALID_ADDRESS;
++  request->status = WVRCompositorStatusInvalidArgument;
++  if (wmtr_enabled()) {
++    request->status = WVRCompositorStatusUnsupportedABI;
++    return STATUS_SUCCESS;
++  }
++  id<MTLCommandBuffer> command_buffer = (id<MTLCommandBuffer>)(uintptr_t)request->commandBuffer;
++  id<MTLTexture> left = (id<MTLTexture>)(uintptr_t)request->leftTexture;
++  id<MTLTexture> right = (id<MTLTexture>)(uintptr_t)request->rightTexture;
++  id<MTLSharedEvent> producer_event = (id<MTLSharedEvent>)(uintptr_t)request->producerEvent;
++  id<MTLSharedEvent> consumer_event = (id<MTLSharedEvent>)wvr_compositor_copy_consumer_event_v1();
++  if (!command_buffer || !left || !right || !producer_event || !consumer_event) {
++    if (consumer_event) wvr_compositor_release_object_v1(consumer_event);
++    return STATUS_SUCCESS;
++  }
++  WVRSubmitStereoFrameV2 frame = {};
++  frame.abiVersion = WVR_COMPOSITOR_ABI_VERSION_V2; frame.structSize = sizeof(frame);
++  frame.producerFrameID = request->frameID; frame.producerTimestampNanoseconds = request->timestampNanoseconds;
++  frame.leftTexture = left; frame.rightTexture = right;
++  frame.producerReadyEvent = producer_event; frame.producerReadyValue = request->producerValue;
++  frame.targetGeneration = request->targetGeneration;
++  frame.leftSlice = request->leftSlice; frame.leftX = request->leftX; frame.leftY = request->leftY;
++  frame.leftWidth = request->leftWidth; frame.leftHeight = request->leftHeight;
++  frame.rightSlice = request->rightSlice; frame.rightX = request->rightX; frame.rightY = request->rightY;
++  frame.rightWidth = request->rightWidth; frame.rightHeight = request->rightHeight;
++  request->status = wvr_compositor_submit_stereo_frame_v2(&frame, &request->compositorTicket);
++  if (request->status == WVRCompositorStatusOK) request->consumerEvent = (uint64_t)(uintptr_t)consumer_event;
++  else wvr_compositor_release_object_v1(consumer_event);
++  return STATUS_SUCCESS;
++}
  
-@@ -7020,6 +7122,7 @@
+@@ -7020,6 +7159,8 @@
       * END of both tables, which is the only place a slot may be added --
       * rules 3 and 4 of section 7.4. 150 in both. */
      &_d3d9_nop,                         /* 150 */
 +    &_WMTWindowsVRBridgeCallV1,         /* 151: WVR target/tracking/haptic/frame bridge */
++    &_WMTWindowsVRBridgeCallV2,         /* 152: versioned array/region stereo submission */
  };
  
  #ifndef DXMT_NATIVE
-@@ -7182,5 +7285,6 @@
+@@ -7182,5 +7323,7 @@
       * sharing the 64-bit handler is correct, not a gap (section 7.11 says the
       * same about slots 47, 66, 67 and 72). */
      &_d3d9_nop,                         /* 150 */
 +    &_WMTWindowsVRBridgeCallV1,         /* 151: fixed-width request, identical for WOW64 */
++    &_WMTWindowsVRBridgeCallV2,         /* 152: fixed-width V2 submission for WOW64 */
  };
  #endif

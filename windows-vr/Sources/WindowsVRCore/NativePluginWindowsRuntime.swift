@@ -10,11 +10,14 @@ public final class NativePluginWindowsRuntime: WindowsRuntime, @unchecked Sendab
     private typealias LaunchFunction = @convention(c) (UnsafePointer<CChar>?) -> Int32
     private typealias StopFunction = @convention(c) () -> Int32
     private typealias StatusFunction = @convention(c) () -> Int32
+    private typealias GraphicsCapabilitiesFunction = @convention(c) () -> UInt32
     private typealias LastErrorFunction = @convention(c) (UnsafeMutablePointer<CChar>?, UInt64) -> UInt64
 
     private let lock = NSLock()
     private var libraryHandle: UnsafeMutableRawPointer?
     private var launchFunction: LaunchFunction?
+    private var preflightFunction: LaunchFunction?
+    private var graphicsCapabilitiesFunction: GraphicsCapabilitiesFunction?
     private var stopFunction: StopFunction?
     private var statusFunction: StatusFunction?
     private var lastErrorFunction: LastErrorFunction?
@@ -54,6 +57,12 @@ public final class NativePluginWindowsRuntime: WindowsRuntime, @unchecked Sendab
 
         libraryHandle = handle
         launchFunction = unsafeBitCast(launchAddress, to: LaunchFunction.self)
+        if let preflightAddress = dlsym(handle, "windows_vr_preflight_v1") {
+            preflightFunction = unsafeBitCast(preflightAddress, to: LaunchFunction.self)
+        }
+        if let capabilitiesAddress = dlsym(handle, "windows_vr_graphics_capabilities_v1") {
+            graphicsCapabilitiesFunction = unsafeBitCast(capabilitiesAddress, to: GraphicsCapabilitiesFunction.self)
+        }
         stopFunction = unsafeBitCast(stopAddress, to: StopFunction.self)
         statusFunction = unsafeBitCast(statusAddress, to: StatusFunction.self)
         lastErrorFunction = unsafeBitCast(lastErrorAddress, to: LastErrorFunction.self)
@@ -66,8 +75,27 @@ public final class NativePluginWindowsRuntime: WindowsRuntime, @unchecked Sendab
         _ = libraryHandle
     }
 
+    public func preflight(manifest: WindowsGameManifest, gameDirectory: URL) throws {
+        let requestJSON = try prepareRequest(manifest: manifest, gameDirectory: gameDirectory)
+        lock.lock()
+        defer { lock.unlock() }
+        guard launchFunction != nil else { throw WindowsRuntimeError.integrationMissing }
+        guard let preflightFunction else { return } // older signed V1 plugin
+        let status = requestJSON.withCString { preflightFunction($0) }
+        guard status == 0 else { throw WindowsRuntimeError.pluginRejectedRequest(status) }
+    }
+
     public func launch(manifest: WindowsGameManifest, gameDirectory: URL) async throws {
+        let requestJSON = try prepareRequest(manifest: manifest, gameDirectory: gameDirectory)
+        let status = try invokeLaunch(requestJSON)
+        guard status == 0 else { throw WindowsRuntimeError.pluginRejectedRequest(status) }
+    }
+
+    private func prepareRequest(manifest: WindowsGameManifest, gameDirectory: URL) throws -> String {
         try manifest.validate()
+        guard supportsGraphics(manifest.graphics) else {
+            throw WindowsRuntimeError.graphicsPackageMissing(manifest.graphics)
+        }
         guard gameDirectory.isFileURL else {
             throw WindowsRuntimeError.invalidGameDirectory
         }
@@ -90,6 +118,7 @@ public final class NativePluginWindowsRuntime: WindowsRuntime, @unchecked Sendab
 
         let request = LaunchRequest(
             schemaVersion: 1,
+            gameID: manifest.id,
             backend: manifest.backend.rawValue,
             graphics: manifest.graphics.rawValue,
             gameDirectory: rootURL.path,
@@ -102,9 +131,18 @@ public final class NativePluginWindowsRuntime: WindowsRuntime, @unchecked Sendab
             throw WindowsRuntimeError.integrationMissing
         }
 
-        let status = try invokeLaunch(requestJSON)
-        guard status == 0 else {
-            throw WindowsRuntimeError.pluginRejectedRequest(status)
+        return requestJSON
+    }
+
+    public func supportsGraphics(_ graphics: WindowsGraphicsAPI) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        guard launchFunction != nil else { return false }
+        let mask = graphicsCapabilitiesFunction?() ?? 1 // older signed V1 plugin: D3D11 only
+        switch graphics {
+        case .direct3D11: return mask & 1 != 0
+        case .direct3D12: return mask & 2 != 0
+        case .vulkan: return false
         }
     }
 
@@ -118,6 +156,9 @@ public final class NativePluginWindowsRuntime: WindowsRuntime, @unchecked Sendab
         guard let status = invokeStop() else {
             throw WindowsRuntimeError.integrationMissing
         }
+        #if canImport(Darwin)
+        if status == EINPROGRESS { throw WindowsRuntimeError.stopPending }
+        #endif
         guard status == 0 else {
             throw WindowsRuntimeError.pluginRejectedRequest(status)
         }
@@ -175,6 +216,7 @@ public final class NativePluginWindowsRuntime: WindowsRuntime, @unchecked Sendab
 
     private struct LaunchRequest: Encodable {
         let schemaVersion: Int
+        let gameID: String
         let backend: String
         let graphics: String
         let gameDirectory: String
