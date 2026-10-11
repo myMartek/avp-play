@@ -1,0 +1,4 @@
+# The authoritative XcodeGen target belongs to visionos-windows-vr/project.yml.
+# This source package deliberately has no standalone target: its framework must
+# share the app's WindowsVRMetal native bridge and freshly built visionOS Wine,
+# FEXCore, and DXMT archives. See README.md for the required integration inputs.

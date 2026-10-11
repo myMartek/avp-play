@@ -1,0 +1,46 @@
+diff --git a/src/winemetal/unix/winemetal_unix.c b/src/winemetal/unix/winemetal_unix.c
+--- a/src/winemetal/unix/winemetal_unix.c
++++ b/src/winemetal/unix/winemetal_unix.c
+@@ -3571,5 +3571,9 @@
+ static NTSTATUS
+ _MTLDevice_newTemporalScaler(void *obj) {
+   struct unixcall_mtldevice_newfxtemporalscaler *params = obj;
++#if TARGET_OS_VISION
++  params->ret = 0;
++  return STATUS_NOT_SUPPORTED;
++#else
+   MTLFXTemporalScalerDescriptor *desc = [[MTLFXTemporalScalerDescriptor alloc] init];
+   const struct WMTFXTemporalScalerInfo *info = params->info.ptr;
+@@ -3610,3 +3614,4 @@
+ 
+   [desc release];
+   return STATUS_SUCCESS;
++#endif
+ }
+@@ -3630,4 +3635,8 @@
+ static NTSTATUS
+ _MTLCommandBuffer_encodeTemporalScale(void *obj) {
+   struct unixcall_mtlcommandbuffer_temporal_scale *params = obj;
++#if TARGET_OS_VISION
++  (void)params;
++  return STATUS_NOT_SUPPORTED;
++#else
+   id<MTLCommandBuffer> cmdbuf = (id<MTLCommandBuffer>)params->cmdbuf;
+   id<MTLFXTemporalScaler> scaler = (id<MTLFXTemporalScaler>)params->scaler;
+@@ -3650,4 +3659,5 @@
+   scaler.preExposure = props->pre_exposure;
+   [scaler encodeToCommandBuffer:cmdbuf];
+   return STATUS_SUCCESS;
++#endif
+ }
+@@ -3811,6 +3821,10 @@
+ static NTSTATUS
+ _MTLDevice_supportsFXTemporalScaler(void *obj) {
+   struct unixcall_generic_obj_uint64_ret *params = obj;
++#if TARGET_OS_VISION
++  params->ret = 0;
++#else
+   params->ret = [MTLFXTemporalScalerDescriptor supportsDevice:(id<MTLDevice>)params->handle];
++#endif
+   return STATUS_SUCCESS;
+ }

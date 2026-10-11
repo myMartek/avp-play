@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "name": "llvm-project",
+  "url": "https://github.com/llvm/llvm-project.git",
+  "revision": "8dfdcc7b7bf66834a761bd8de445840ef68e4d1a",
+  "revisionPrefix": "8dfdcc7b7",
+  "commitSubject": "[libc++] Fix memory leaks when throwing inside std::vector constructors",
+  "target": "arm64-apple-xros27.0"
+}

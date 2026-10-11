@@ -1,0 +1,60 @@
+diff --git a/app/Madeira/WineProcessBridge.m b/app/Madeira/WineProcessBridge.m
+--- a/app/Madeira/WineProcessBridge.m
++++ b/app/Madeira/WineProcessBridge.m
+@@ -422,7 +422,7 @@
+         [fm createDirectoryAtPath:prefix withIntermediateDirectories:YES attributes:nil error:nil];
+ 
+         if (![fm fileExistsAtPath:stamp]) {
+-            NSString *tgz = [[NSBundle mainBundle] pathForResource:@"prefix-template" ofType:@"tar.gz"];
++            NSString *tgz = [[NSBundle mainBundle] pathForResource:@"prefix-template" ofType:@"tar.gz" inDirectory:@"Runtime"];
+             if (!tgz) {
+                 LOG("prefix-template.tar.gz missing from bundle!");
+             } else {
+@@ -859,7 +859,7 @@
+ 
+         // Set DLL search path to app bundle (contains aarch64-windows/ with PE DLLs)
+         {
+-            NSString *bundlePath = [[NSBundle mainBundle] bundlePath];
++            NSString *bundlePath = [[[NSBundle mainBundle] resourceURL] URLByAppendingPathComponent:@"Runtime"].path;
+             setenv("WINEDLLPATH", bundlePath.UTF8String, 1);
+             LOG("WINEDLLPATH=%{public}s", bundlePath.UTF8String);
+         }
+@@ -1232,7 +1232,7 @@
+         // roots, so crypt32's unix rootstore (crypt32_unixlib_ios.c)
+         // reads the bundled Mozilla CA set from this path instead.
+         {
+-            NSString *caPath = [[NSBundle mainBundle] pathForResource:@"cacert" ofType:@"pem"];
++            NSString *caPath = [[NSBundle mainBundle] pathForResource:@"cacert" ofType:@"pem" inDirectory:@"Runtime"];
+             if (caPath) {
+                 setenv("MADEIRA_CA_BUNDLE", caPath.UTF8String, 1);
+                 LOG("CA bundle: %{public}s", caPath.UTF8String);
+@@ -1275,7 +1275,7 @@
+          * unix loader resolves aarch64-windows for a process whose main image
+          * is i386), whatever the heuristic above chose. Any other target
+          * keeps the heuristic's answer unchanged. */
+-        NSString *bundleForProbe = [[NSBundle mainBundle] bundlePath];
++        NSString *bundleForProbe = [[[NSBundle mainBundle] resourceURL] URLByAppendingPathComponent:@"Runtime"].path;
+         const BOOL has_i386_set = madeira_bundle_has_i386(bundleForProbe);
+         const uint16_t target_machine = madeira_target_machine(madeira_exe, g_prefix_path, bundleForProbe);
+         const BOOL is_i386_target = has_i386_set && target_machine == MADEIRA_IMAGE_FILE_MACHINE_I386;
+@@ -1289,7 +1289,7 @@
+ 
+         // Ensure Wine prefix has system32 directory with DLLs from bundle
+         {
+-            NSString *bundlePath = [[NSBundle mainBundle] bundlePath];
++            NSString *bundlePath = [[[NSBundle mainBundle] resourceURL] URLByAppendingPathComponent:@"Runtime"].path;
+             NSString *dllSource = [bundlePath stringByAppendingPathComponent:[NSString stringWithUTF8String:bundle_subdir]];
+             NSString *prefix = [NSString stringWithUTF8String:g_prefix_path];
+             NSString *sys32Dir = [prefix stringByAppendingPathComponent:@"drive_c/windows/system32"];
+diff --git a/app/Madeira/WineServerBridge.m b/app/Madeira/WineServerBridge.m
+--- a/app/Madeira/WineServerBridge.m
++++ b/app/Madeira/WineServerBridge.m
+@@ -108,7 +108,7 @@
+         mkdir(g_prefix_path, 0755);
+ 
+         // Tell wineserver where NLS files are (inside the app bundle)
+-        NSString *nlsDir = [NSBundle.mainBundle.bundlePath stringByAppendingPathComponent:@"nls"];
++        NSString *nlsDir = [[[NSBundle mainBundle] resourceURL] URLByAppendingPathComponent:@"Runtime/nls"].path;
+         wineserver_set_nls_dir(nlsDir.UTF8String);
+         wine_log_msg("NLS dir=%s", nlsDir.UTF8String);
+ 

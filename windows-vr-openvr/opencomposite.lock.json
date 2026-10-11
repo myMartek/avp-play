@@ -1,0 +1,12 @@
+{
+  "name": "OpenComposite OpenXR branch",
+  "repository": "https://gitlab.com/znixian/OpenOVR.git",
+  "branch": "openxr",
+  "commit": "cff07db75c4823afe93ed7027b03d5f7bc86f164",
+  "license": "GPL-3.0-or-later",
+  "openvrHeadersLicense": "MIT",
+  "cmakeOutputs": {
+    "x64": "stage/WindowsVR/Guest/x64/OpenComposite/bin/vrclient_x64.dll",
+    "arm64ecOptional": "stage/WindowsVR/Guest/arm64ec/OpenComposite/bin/vrclient_x64.dll"
+  }
+}

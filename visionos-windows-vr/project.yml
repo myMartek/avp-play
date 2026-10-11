@@ -1,0 +1,154 @@
+name: VisionOSWindowsVR
+options:
+  minimumXcodeGenVersion: 2.38.0
+  deploymentTarget:
+    visionOS: "27.0"
+packages:
+  WindowsVRCore:
+    path: ../windows-vr
+  WindowsVRMetal:
+    path: ../windows-vr-metal
+targets:
+  VisionOSWindowsVR:
+    type: application
+    platform: visionOS
+    dependencies:
+      - package: WindowsVRCore
+      - package: WindowsVRMetal
+      - target: WindowsVRNativeBridge
+      - target: WindowsRuntimePlugin
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.avpplay.visionos-windows-vr
+        PRODUCT_NAME: AVP Play VR
+        TARGETED_DEVICE_FAMILY: "7"
+        XROS_DEPLOYMENT_TARGET: "27.0"
+        SWIFT_VERSION: "6.0"
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGN_STYLE: Automatic
+        SWIFT_OBJC_BRIDGING_HEADER: Sources/WindowsVR-Bridging-Header.h
+        INFOPLIST_KEY_NSWorldSensingUsageDescription: Head tracking places the game's stereo views in your surroundings.
+        INFOPLIST_KEY_NSAccessoryTrackingUsageDescription: Tracked controllers provide poses and controls to your VR game.
+    info:
+      path: Generated-Info.plist
+      properties:
+        LSApplicationQueriesSchemes: [stikdebug, stikjit]
+        GCSupportedGameControllers:
+          - ProfileName: SpatialGamepad
+    sources:
+      - path: Sources
+      - path: ../runtime-source/app/Madeira/madeira-jit.js
+        buildPhase: resources
+      - path: Resources/Runtime
+        type: folder
+        buildPhase: resources
+      - path: Resources/WindowsVR
+        type: folder
+        buildPhase: resources
+  WindowsVRNativeBridge:
+    type: framework
+    platform: visionOS
+    sources:
+      - path: ../windows-vr-native/Sources
+      - path: ../windows-vr-native/include
+        headerVisibility: public
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.avpplay.windows-vr.native-bridge
+        GENERATE_INFOPLIST_FILE: YES
+        CLANG_ENABLE_OBJC_ARC: YES
+        CLANG_CXX_LANGUAGE_STANDARD: c++20
+        HEADER_SEARCH_PATHS: $(SRCROOT)/../windows-vr-native/include
+        CODE_SIGN_STYLE: Automatic
+  WindowsRuntimePlugin:
+    type: framework
+    platform: visionOS
+    sources:
+      - path: ../windows-runtime-plugin/WindowsVRRuntimePlugin.mm
+      - path: ../windows-vr/include/WindowsVRRuntimePlugin.h
+        headerVisibility: public
+      - path: ../runtime-source/app/Madeira/WineProcessBridge.m
+      - path: ../runtime-source/app/Madeira/WineServerBridge.m
+      - path: ../runtime-source/app/Madeira/FEXBridge.mm
+      - path: ../runtime-source/app/Madeira/JITAllocator.c
+      - path: ../runtime-source/app/Madeira/PrefixExtractor.c
+    dependencies:
+      - target: WindowsVRNativeBridge
+      - package: WindowsVRMetal
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.avpplay.windows-vr.runtime
+        PRODUCT_NAME: WindowsRuntimePlugin
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGN_STYLE: Automatic
+        CLANG_ENABLE_OBJC_ARC: YES
+        CLANG_CXX_LANGUAGE_STANDARD: c++20
+        MADEIRA_FEX_BUILD_DIR: $(SRCROOT)/../runtime-source/FEX/build-ios
+        MADEIRA_WINE_BUILD_DIR: $(SRCROOT)/../runtime-source/app/Madeira
+        MADEIRA_DXMT_BUILD_DIR: $(SRCROOT)/../runtime-source/app/Madeira
+        HEADER_SEARCH_PATHS:
+          - $(inherited)
+          - $(SRCROOT)/../windows-vr/include
+          - $(SRCROOT)/../windows-vr-native/include
+          - $(SRCROOT)/../windows-vr-openxr/include
+          - $(SRCROOT)/../windows-vr-metal/Sources/WindowsVRMetalABI/include
+          - $(SRCROOT)/../runtime-source/app/Madeira
+          - $(SRCROOT)/../runtime-source/build
+          - $(SRCROOT)/../runtime-source/FEX/FEXCore/include
+          - $(SRCROOT)/../runtime-source/FEX/FEXHeaderUtils
+          - $(SRCROOT)/../runtime-source/FEX/CodeEmitter
+          - $(SRCROOT)/../runtime-source/FEX/External/fmt/include
+          - $(SRCROOT)/../runtime-source/FEX/External/range-v3/include
+          - $(SRCROOT)/../runtime-source/FEX/External/unordered_dense/include
+          - $(MADEIRA_FEX_BUILD_DIR)
+          - $(MADEIRA_FEX_BUILD_DIR)/include
+          - $(MADEIRA_FEX_BUILD_DIR)/FEXCore/Source
+        LIBRARY_SEARCH_PATHS:
+          - $(inherited)
+          - $(MADEIRA_WINE_BUILD_DIR)
+          - $(MADEIRA_DXMT_BUILD_DIR)
+          - $(MADEIRA_FEX_BUILD_DIR)/FEXCore/Source
+          - $(MADEIRA_FEX_BUILD_DIR)/External/fmt
+          - $(MADEIRA_FEX_BUILD_DIR)/External/cephes
+          - $(MADEIRA_FEX_BUILD_DIR)/External/xxhash/cmake_unofficial
+          - $(MADEIRA_FEX_BUILD_DIR)/External/SoftFloat-3e
+        OTHER_LDFLAGS:
+          - $(inherited)
+          - -lFEXCore
+          - -lFEXCore_Base
+          - -lJemallocLibs
+          - -lfmt
+          - -lcephes_128bit
+          - -lxxhash
+          - -lsoftfloat_3e
+          - -lntdll_unix
+          - -lwineserver
+          - -lwin32u_unix
+          - -ldxmt_combined
+          - -lgnutls
+          - -lhogweed
+          - -lnettle
+          - -lgmp
+          - -lavformat
+          - -lavcodec
+          - -lswresample
+          - -lavutil
+          - -lz
+          - -lsqlite3
+          - -llzma
+          - -framework
+          - AVFoundation
+          - -framework
+          - AudioToolbox
+          - -framework
+          - VideoToolbox
+          - -framework
+          - CoreMedia
+          - -framework
+          - CoreVideo
+          - -framework
+          - Metal
+          - -framework
+          - MetalFX
+          - -framework
+          - QuartzCore

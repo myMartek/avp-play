@@ -1,0 +1,271 @@
+diff --git a/src/d3d11/d3d11_interfaces.hpp b/src/d3d11/d3d11_interfaces.hpp
+--- a/src/d3d11/d3d11_interfaces.hpp
++++ b/src/d3d11/d3d11_interfaces.hpp
+@@ -19,12 +19,16 @@
+   ID3D11Resource *ExposureTexture;
+   FLOAT JitterOffsetX;
+   FLOAT JitterOffsetY;
++  /* Private DXMT/VR adapter fields; these are not NGX parameters. */
++  UINT64 FeatureIdentity;
++  UINT EyeIndex;
++  BOOL EyeRoutingAvailable;
+ };
+ 
+ DEFINE_COM_INTERFACE("43ace3ce-1956-448b-a4eb-aee68bdeb283",
+                      IMTLD3D11ContextExt)
+     : public IUnknown{
+-   virtual void STDMETHODCALLTYPE TemporalUpscale(const MTL_TEMPORAL_UPSCALE_D3D11_DESC *pDesc) = 0;
++   virtual HRESULT STDMETHODCALLTYPE TemporalUpscale(const MTL_TEMPORAL_UPSCALE_D3D11_DESC *pDesc) = 0;
+    virtual void STDMETHODCALLTYPE BeginUAVOverlap() = 0;
+    virtual void STDMETHODCALLTYPE EndUAVOverlap() = 0;
+ };
+diff --git a/src/nvngx/nvngx.cpp b/src/nvngx/nvngx.cpp
+--- a/src/nvngx/nvngx.cpp
++++ b/src/nvngx/nvngx.cpp
+@@ -7,8 +7,26 @@
+ #include "../d3d11/d3d11_interfaces.hpp"
+ #include "../dxgi/dxgi_interfaces.h"
+ #include <cmath>
++#include <atomic>
++#include "WindowsVRNGX.h"
+ 
+ namespace dxmt {
++static std::atomic<WVRNGXEyeRouteCallback> s_wvr_eye_router{nullptr};
++static std::atomic<bool> s_wvr_opted_in{false};
++static std::atomic<uint64_t> s_next_adapter_identity{1};
++
++NVNGX_API void
++NVSDK_NGX_WVR_SetEyeRouter(WVRNGXEyeRouteCallback callback, BOOL host_opted_in) {
++  s_wvr_eye_router.store(callback, std::memory_order_release);
++  s_wvr_opted_in.store(host_opted_in != FALSE, std::memory_order_release);
++}
++
++static bool
++wvr_eye_routing_ready() {
++  return s_wvr_opted_in.load(std::memory_order_acquire) &&
++         s_wvr_eye_router.load(std::memory_order_acquire) != nullptr;
++}
++
+ Logger Logger::s_instance("nvngx.log");
+ 
+ #define IMPLEMENT_ME                                                                                                   \
+@@ -55,6 +73,8 @@
+   if (FAILED(context->QueryInterface(IID_PPV_ARGS(&pCtxExt))))
+     return NVNGX_RESULT_INVALID_PARAMETER;
+   if (feature == NVNGX_FEATURE_SUPERSAMPLING) {
++    if (!wvr_eye_routing_ready())
++      return NVNGX_RESULT_FEATURE_NOT_SUPPORTED;
+     BOOL feature_supported = false;
+     if (FAILED(pCtxExt->CheckFeatureSupport(MTL_FEATURE_METALFX_TEMPORAL_SCALER, &feature_supported, sizeof(feature_supported))))
+       return NVNGX_RESULT_FEATURE_NOT_SUPPORTED;
+@@ -63,6 +83,7 @@
+ 
+     auto dlss = std::make_unique<DLSSFeature>();
+     dlss->feature = NVNGX_FEATURE_SUPERSAMPLING;
++    dlss->adapter_identity = s_next_adapter_identity.fetch_add(1, std::memory_order_relaxed);
+     if (NVNGX_FAILED(parameters->Get(NVNGX_Parameter_Width, &dlss->width)))
+       return NVNGX_RESULT_INVALID_PARAMETER;
+     if (NVNGX_FAILED(parameters->Get(NVNGX_Parameter_Height, &dlss->height)))
+@@ -116,6 +137,12 @@
+       return NVNGX_RESULT_INVALID_PARAMETER;
+     if (NVNGX_FAILED(parameters->Get(NVNGX_Parameter_DLSS_Render_Subrect_Dimensions_Height, &height)))
+       return NVNGX_RESULT_INVALID_PARAMETER;
++
++    WVRNGXEyeRouteCallback eye_router = s_wvr_eye_router.load(std::memory_order_acquire);
++    UINT eye_index = UINT_MAX;
++    if (!wvr_eye_routing_ready() || !eye_router ||
++        !eye_router(context, output, &eye_index) || eye_index > 1)
++      return NVNGX_RESULT_FEATURE_NOT_SUPPORTED;
+ 
+     MTL_TEMPORAL_UPSCALE_D3D11_DESC desc = {};
+     desc.InputContentWidth = width;
+@@ -145,10 +172,18 @@
+       desc.MotionVectorScaleY = 1.0;
+     if (NVNGX_FAILED(parameters->Get(NVNGX_Parameter_DLSS_Pre_Exposure, &desc.PreExposure)))
+       desc.PreExposure = 0;
+-
+-    pCtxExt->TemporalUpscale(&desc);
++    if (!desc.AutoExposure && !exposure)
++      return NVNGX_RESULT_INVALID_PARAMETER;
++
++    desc.FeatureIdentity = dlss->adapter_identity;
++    desc.EyeIndex = eye_index;
++    desc.EyeRoutingAvailable = TRUE;
++
++    HRESULT upscale_result = pCtxExt->TemporalUpscale(&desc);
+ 
+     pCtxExt->Release();
++    if (FAILED(upscale_result))
++      return NVNGX_RESULT_FAIL;
+ 
+     return NVNGX_RESULT_OK;
+     break;
+diff --git a/src/nvngx/nvngx_feature.hpp b/src/nvngx/nvngx_feature.hpp
+--- a/src/nvngx/nvngx_feature.hpp
++++ b/src/nvngx/nvngx_feature.hpp
+@@ -17,6 +17,7 @@
+   int quality;
+   int flag;
+   int enable_output_subrects;
++  uint64_t adapter_identity;
+ };
+ 
+ }
+\ No newline at end of file
+diff --git a/src/winemetal/winemetal.h b/src/winemetal/winemetal.h
+--- a/src/winemetal/winemetal.h
++++ b/src/winemetal/winemetal.h
+@@ -1610,6 +1610,10 @@
+   bool auto_exposure;
+   bool input_content_properties_enabled;
+   bool requires_synchronous_initialization;
++  /* Private adapter metadata; not part of MetalFX itself. */
++  uint64_t feature_identity;
++  uint32_t eye_index;
++  bool eye_routing_available;
+ };
+ 
+ struct WMTFXSpatialScalerInfo {
+@@ -1635,6 +1639,7 @@
+   float jitter_offset_x;
+   float jitter_offset_y;
+   float pre_exposure;
++  uint32_t eye_index;
+ };
+ 
+ WINEMETAL_API void MTLCommandBuffer_encodeTemporalScale(
+diff --git a/src/d3d11/d3d11_context_impl.cpp b/src/d3d11/d3d11_context_impl.cpp
+--- a/src/d3d11/d3d11_context_impl.cpp
++++ b/src/d3d11/d3d11_context_impl.cpp
+@@ -5470,6 +5470,8 @@
+     uint32_t input_height;
+     uint32_t output_width;
+     uint32_t output_height;
++    uint64_t feature_identity;
++    uint32_t eye_index;
+     WMT::Reference<WMT::FXTemporalScaler> scaler;
+     Rc<Texture> mv_downscaled;
+   };
+@@ -5509,23 +5511,23 @@
+     return WMTPixelFormatInvalid;
+   }
+ 
+-  void STDMETHODCALLTYPE TemporalUpscale(const MTL_TEMPORAL_UPSCALE_D3D11_DESC *pDesc) final {
++  HRESULT STDMETHODCALLTYPE TemporalUpscale(const MTL_TEMPORAL_UPSCALE_D3D11_DESC *pDesc) final {
+     Rc<Texture> input, output, depth, motion_vector, exposure;
+     if (!(input = static_cast<D3D11ResourceCommon *>(pDesc->Color)->texture()))
+-      return;
++      return E_INVALIDARG;
+     if (!(output = static_cast<D3D11ResourceCommon *>(pDesc->Output)->texture()))
+-      return;
++      return E_INVALIDARG;
+     if (!(depth = static_cast<D3D11ResourceCommon *>(pDesc->Depth)->texture()))
+-      return;
++      return E_INVALIDARG;
+     if (!(motion_vector = static_cast<D3D11ResourceCommon *>(pDesc->MotionVector)->texture()))
+-      return;
++      return E_INVALIDARG;
+     if (pDesc->ExposureTexture && !(exposure = static_cast<D3D11ResourceCommon *>(pDesc->ExposureTexture)->texture()))
+-      return;
++      return E_INVALIDARG;
+ 
+     WMTPixelFormat motion_vector_format = GetCorrectMotionVectorFormat(motion_vector->pixelFormat());
+     if (motion_vector_format == WMTPixelFormatInvalid) {
+       ERR("TemporalUpscale: invalid motion vector format ", motion_vector->pixelFormat());
+-      return;
++      return E_INVALIDARG;
+     }
+ 
+     WMT::Reference<WMT::FXTemporalScaler> scaler;
+@@ -5541,6 +5543,8 @@
+       if(output->pixelFormat() != entry.output_pixel_format) continue;
+       if(depth->pixelFormat() != entry.depth_pixel_format) continue;
+       if(motion_vector_format != entry.motion_vector_pixel_format) continue;
++      if(pDesc->FeatureIdentity != entry.feature_identity) continue;
++      if(pDesc->EyeIndex != entry.eye_index) continue;
+ 
+       scaler = entry.scaler;
+       mv_downscaled = entry.mv_downscaled;
+@@ -5563,6 +5567,11 @@
+       scaler_entry.input_height = input->height();
+       scaler_entry.output_width = output->width();
+       scaler_entry.output_height = output->height();
++      scaler_entry.feature_identity = pDesc->FeatureIdentity;
++      scaler_entry.eye_index = pDesc->EyeIndex;
++      info.feature_identity = pDesc->FeatureIdentity;
++      info.eye_index = pDesc->EyeIndex;
++      info.eye_routing_available = pDesc->EyeRoutingAvailable != FALSE;
+       info.auto_exposure = scaler_entry.auto_exposure;
+       info.input_width = scaler_entry.input_width;
+       info.input_height = scaler_entry.input_height;
+@@ -5573,6 +5582,8 @@
+       info.input_content_max_scale =  3.0f;
+       info.requires_synchronous_initialization = true;
+       scaler_entry.scaler = ctx_->device->GetMTLDevice().newTemporalScaler(info);
++      if (!scaler_entry.scaler)
++        return E_FAIL;
+       if (pDesc->MotionVectorInDisplayRes) {
+         WMTTextureInfo tex_info;
+         tex_info.width = scaler_entry.input_width;
+@@ -5613,6 +5624,7 @@
+                           pDesc->JitterOffsetX,
+                           pDesc->JitterOffsetY,
+                           pDesc->PreExposure,
++                          pDesc->EyeIndex,
+                       },
+                   motion_vector_format, mv_downscaled = std::move(mv_downscaled)
+                 ](ArgumentEncodingContext &enc) mutable {
+@@ -5645,6 +5657,7 @@
+         enc.upscaleTemporal(input, output, depth, motion_vector, mv_view, exposure, scaler, props);
+       }
+     });
++    return S_OK;
+   }
+ 
+   void STDMETHODCALLTYPE BeginUAVOverlap() final {
+diff --git a/src/winemetal/unix/winemetal_unix.c b/src/winemetal/unix/winemetal_unix.c
+--- a/src/winemetal/unix/winemetal_unix.c
++++ b/src/winemetal/unix/winemetal_unix.c
+@@ -45,6 +45,8 @@
+ #define WINEMETAL_API
+ #include "../winemetal_thunks.h"
+ #include "../airconv_thunks.h"
++#include "WVRMetalFXWMTBridge.h"
++#include "WVRMetalFXWMTBridge.inc"
+ 
+ /* iOS-Madeira 2026-05-22 draw-call telemetry. Defined further down with
+  * the present counter; forward-declared here so the draw command cases
+@@ -3600,7 +3601,13 @@
+       sigaction(SIGNALS[i], &new_action, &old_action[i]);
+   }
+ 
+-  params->ret = (obj_handle_t)[desc newTemporalScalerWithDevice:(id<MTLDevice>)params->device];
++  if (info->eye_routing_available && info->eye_index <= 1 && info->feature_identity) {
++    WVRMetalFXScalerBox *box = [[WVRMetalFXScalerBox alloc]
++        initWithDevice:(id<MTLDevice>)params->device info:info];
++    params->ret = (obj_handle_t)box;
++  } else {
++    params->ret = (obj_handle_t)[desc newTemporalScalerWithDevice:(id<MTLDevice>)params->device];
++  }
+ 
+   if (@available(macOS 16, *)) {} else {
+     for (unsigned int i = 0; i < sizeof(SIGNALS) / sizeof(int); i++)
+@@ -3631,7 +3638,17 @@
+ _MTLCommandBuffer_encodeTemporalScale(void *obj) {
+   struct unixcall_mtlcommandbuffer_temporal_scale *params = obj;
+   id<MTLCommandBuffer> cmdbuf = (id<MTLCommandBuffer>)params->cmdbuf;
+-  id<MTLFXTemporalScaler> scaler = (id<MTLFXTemporalScaler>)params->scaler;
++  id scaler_object = (id)params->scaler;
++  if ([scaler_object isKindOfClass:[WVRMetalFXScalerBox class]]) {
++    WVRMetalFXScalerBox *box = (WVRMetalFXScalerBox *)scaler_object;
++    const struct WMTFXTemporalScalerProps *props = params->props.ptr;
++    BOOL encoded = [box encodeCommandBuffer:cmdbuf color:(id<MTLTexture>)params->color
++        output:(id<MTLTexture>)params->output depth:(id<MTLTexture>)params->depth
++        motion:(id<MTLTexture>)params->motion exposure:(id<MTLTexture>)params->exposure
++        props:props];
++    return encoded ? STATUS_SUCCESS : STATUS_UNSUCCESSFUL;
++  }
++  id<MTLFXTemporalScaler> scaler = (id<MTLFXTemporalScaler>)scaler_object;
+   scaler.colorTexture = (id<MTLTexture>)params->color;
+   scaler.outputTexture = (id<MTLTexture>)params->output;
+   scaler.depthTexture = (id<MTLTexture>)params->depth;

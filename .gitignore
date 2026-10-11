@@ -13,3 +13,14 @@
 *.so
 *.tar.gz
 *.dmg
+
+# Pinned runtime source caches, acquired by windows-vr-tools/fetch_sources.py.
+# Their revisions and licenses are recorded separately; do not add embedded Git repos.
+/third-party/madeira/
+/third-party/openvr/
+/third-party/openxr/
+/third-party/alvr-visionos/
+/third-party/opencomposite/
+/runtime-source
+/visionos-windows-vr/Resources/Runtime/
+/visionos-windows-vr/Generated-Info.plist

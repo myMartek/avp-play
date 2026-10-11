@@ -1,0 +1,151 @@
+diff --git a/app/Madeira/WineProcessBridge.h b/app/Madeira/WineProcessBridge.h
+--- a/app/Madeira/WineProcessBridge.h
++++ b/app/Madeira/WineProcessBridge.h
+@@ -10,6 +10,17 @@
+ // prefix_path: path to the Wine prefix directory
+ // Returns 0 on success, -1 on error.
+ int wine_process_start(const char *prefix_path);
++
++// Seed the template and dosdevices links before wineserver startup.
++void madeira_seed_prefix_if_needed(const char *prefix_path);
++
++// Project adapter: configure one exact executable/argv profile before start.
++// Strings are copied; argc is limited to 64. force_aarch64 selects the ARM64
++// Windows DLL farm for a PE machine AA64 target.
++int wine_process_configure_launch(const char *executable_windows_path,
++                                  const char *working_directory_windows_path,
++                                  int argc, const char *const *argv,
++                                  int force_aarch64);
+ 
+ // Check if Wine process is running
+ int wine_process_is_running(void);
+diff --git a/app/Madeira/WineProcessBridge.m b/app/Madeira/WineProcessBridge.m
+--- a/app/Madeira/WineProcessBridge.m
++++ b/app/Madeira/WineProcessBridge.m
+@@ -290,6 +290,48 @@
+ 
+ static pthread_t g_wine_thread;
+ static volatile int g_wine_running = 0;
++
++// Project-owned launch profile; the app configures it before starting this
++// thread and the runtime permits only one launch per process.
++static pthread_mutex_t g_launch_profile_mutex = PTHREAD_MUTEX_INITIALIZER;
++static char *g_launch_executable = NULL;
++static char *g_launch_workdir = NULL;
++static char *g_launch_arguments[64] = {0};
++static int g_launch_argument_count = -1;
++static int g_launch_force_aarch64 = 0;
++
++int wine_process_configure_launch(const char *executable_windows_path,
++                                  const char *working_directory_windows_path,
++                                  int argc, const char *const *argv,
++                                  int force_aarch64)
++{
++    if (!executable_windows_path || !*executable_windows_path ||
++        strlen(executable_windows_path) >= 512 || argc < 0 || argc > 64 ||
++        (argc && !argv)) return -1;
++    char *exe = strdup(executable_windows_path);
++    char *cwd = working_directory_windows_path && *working_directory_windows_path
++        ? strdup(working_directory_windows_path) : NULL;
++    char *args[64] = {0};
++    if (!exe || ((working_directory_windows_path && *working_directory_windows_path) && !cwd)) {
++        free(exe); free(cwd); return -1;
++    }
++    for (int i = 0; i < argc; i++) {
++        if (!argv[i] || strlen(argv[i]) > 4096 || !(args[i] = strdup(argv[i]))) {
++            for (int j = 0; j < argc; j++) free(args[j]);
++            free(exe); free(cwd); return -1;
++        }
++    }
++    pthread_mutex_lock(&g_launch_profile_mutex);
++    free(g_launch_executable); free(g_launch_workdir);
++    for (int i = 0; i < 64; i++) { free(g_launch_arguments[i]); g_launch_arguments[i] = NULL; }
++    g_launch_executable = exe;
++    g_launch_workdir = cwd;
++    for (int i = 0; i < argc; i++) g_launch_arguments[i] = args[i];
++    g_launch_argument_count = argc;
++    g_launch_force_aarch64 = force_aarch64 != 0;
++    pthread_mutex_unlock(&g_launch_profile_mutex);
++    return 0;
++}
+ 
+ /* Session exit report for the library front end. The app marks one process as
+  * its own: the program it hands to __wine_main below, which is the session's
+@@ -1256,8 +1298,12 @@
+ 
+         // Pick which exe to run (env var override, default = cube.exe).
+         // Set MADEIRA_EXE=hello-x64.exe in env to launch the ARM64EC test path.
+-        const char *madeira_exe = getenv("MADEIRA_EXE");
++        pthread_mutex_lock(&g_launch_profile_mutex);
++        const char *madeira_exe = g_launch_executable ? g_launch_executable : getenv("MADEIRA_EXE");
++        const int force_aarch64 = g_launch_force_aarch64;
++        const int configured_argc = g_launch_argument_count;
+         if (!madeira_exe || !*madeira_exe) madeira_exe = "cube.exe";
++        pthread_mutex_unlock(&g_launch_profile_mutex);
+         // Heuristic: x86_64 guest exes (cube-x64, hello-x64, real games like
+         // Thumper) need the arm64ec-windows bundle (ARM64EC hybrid system
+         // DLLs that interop with FEX-translated x86_64 code). ARM64-native
+@@ -1269,6 +1315,7 @@
+         BOOL use_arm64ec = (force_ec && *force_ec == '1') ||
+                            (strstr(madeira_exe, "x64") != NULL) ||
+                            (strchr(madeira_exe, '\\') != NULL);
++        if (force_aarch64) use_arm64ec = NO;
+ 
+         /* WoW64: a 32-bit (i386) target, from the PE header on disk rather
+          * than the name. Its 64-bit half runs on the plain aarch64 core (the
+@@ -1530,7 +1577,13 @@
+         static char args_buf[4096];
+         char *extra_argv[64] = {0};
+         int extra_argc = 0;
++        if (configured_argc >= 0) {
++            pthread_mutex_lock(&g_launch_profile_mutex);
++            for (int i = 0; i < configured_argc; i++) extra_argv[extra_argc++] = g_launch_arguments[i];
++            pthread_mutex_unlock(&g_launch_profile_mutex);
++        }
+         const char *madeira_args = getenv("MADEIRA_ARGS");
++        if (configured_argc >= 0) madeira_args = NULL;
+         if (madeira_args && *madeira_args) {
+             strncpy(args_buf, madeira_args, sizeof(args_buf) - 1);
+             args_buf[sizeof(args_buf) - 1] = 0;
+@@ -1574,7 +1627,9 @@
+          * library working folder (LibraryEntry.launchDirectory: a chosen folder, or
+          * the program's own when explorer (desktop mode) or cmd.exe (a .bat, the
+          * services batch) is what starts). */
+-        const char *launch_workdir = getenv("MADEIRA_WORKDIR");   /* set by the library for one launch: the working folder (Steam's, or the entry's); not a setting */
++        pthread_mutex_lock(&g_launch_profile_mutex);
++        const char *launch_workdir = g_launch_workdir ? g_launch_workdir : getenv("MADEIRA_WORKDIR");
++        pthread_mutex_unlock(&g_launch_profile_mutex);
+         char workdir[512] = "";
+         if (launch_workdir && (launch_workdir[0] == 'C' || launch_workdir[0] == 'c') && launch_workdir[1] == ':' &&
+             launch_workdir[2] == '\\' && launch_workdir[3] && !strstr(launch_workdir, "..") &&
+diff --git a/app/Madeira/FEXBridge.h b/app/Madeira/FEXBridge.h
+--- a/app/Madeira/FEXBridge.h
++++ b/app/Madeira/FEXBridge.h
+@@ -33,6 +33,9 @@
+ // VM_FLAGS_ANYWHERE and is NOT guaranteed to sit at RX+0x10000000).
+ int64_t fex_get_jit_write_offset(void);
+ 
++// Project adapter: expose actual dual-mapped pool aliases after initialization.
++bool fex_get_jit_pool_info(uint64_t *rx, uint64_t *rw, uint64_t *size);
++
+ #ifdef __cplusplus
+ }
+ #endif
+diff --git a/app/Madeira/FEXBridge.mm b/app/Madeira/FEXBridge.mm
+--- a/app/Madeira/FEXBridge.mm
++++ b/app/Madeira/FEXBridge.mm
+@@ -355,6 +355,14 @@
+ extern "C" int64_t fex_get_jit_write_offset(void) {
+     if (!g_jit_rx_base || !g_jit_rw_base) return 0;
+     return reinterpret_cast<intptr_t>(g_jit_rw_base) - reinterpret_cast<intptr_t>(g_jit_rx_base);
++}
++
++extern "C" bool fex_get_jit_pool_info(uint64_t *rx, uint64_t *rw, uint64_t *size) {
++    if (!g_jit_rx_base || !g_jit_rw_base || !g_jit_pool_size || !rx || !rw || !size) return false;
++    *rx = reinterpret_cast<uintptr_t>(g_jit_rx_base);
++    *rw = reinterpret_cast<uintptr_t>(g_jit_rw_base);
++    *size = g_jit_pool_size;
++    return true;
+ }
+ 
+ bool fex_initialize(void) {

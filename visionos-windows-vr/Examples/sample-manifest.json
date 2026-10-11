@@ -1,0 +1,9 @@
+{
+  "id": "example.game-id",
+  "title": "Example game (replace with your own)",
+  "executableRelativePath": "Game.exe",
+  "backend": "windowsWineFEX",
+  "graphics": "direct3D11",
+  "launchArguments": [],
+  "schemaVersion": 1
+}
