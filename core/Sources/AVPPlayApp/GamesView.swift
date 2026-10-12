@@ -17,8 +17,18 @@ struct GamesView: View {
                         Toggle(L("Verified", "Geprüft"), isOn: $model.filterVerified)
                         if model.onlineCatalog { Toggle(L("Community Verified", "Von Nutzern bestätigt"), isOn: $model.filterCommunity) }
                         Toggle(L("Installed", "Installiert"), isOn: $model.filterInstalled)
+                        Toggle(L("Downloaded, Not Installed", "Geladen, nicht installiert"), isOn: $model.filterDownloaded)
+                            .help(L("Games whose files are completely on this Mac but which are not on the Vision Pro. While the Vision Pro is not reachable, every downloaded game is shown.",
+                                    "Spiele, deren Dateien vollständig auf diesem Mac liegen, die aber nicht auf der Vision Pro sind. Solange die Vision Pro nicht erreichbar ist, stehen hier alle geladenen Spiele."))
                         Toggle(L("Favourites", "Favoriten"), isOn: $model.filterFavourites)
                         Spacer()
+                        Button(L("Export List …", "Liste exportieren …")) { model.exportGameList(shownOnly: true) }
+                            .controlSize(.small).disabled(!model.canExportShown)
+                            .help(model.canExportShown
+                                  ? L("Writes the games that match the filters and the search into a text file to pass on – all of them, also favourites the overview has not loaded yet. Only a list: no game files, nothing about your account or device.",
+                                      "Schreibt die Spiele, die zu den Filtern und der Suche passen, in eine Textdatei zum Weitergeben – alle, auch Favoriten, die die Übersicht noch nicht geladen hat. Nur eine Liste: keine Spieldateien, nichts über dein Konto oder Gerät.")
+                                  : L("Set “Installed”, “Downloaded, Not Installed” or “Favourites” first: only those are lists this Mac knows completely.",
+                                      "Setze zuerst „Installiert“, „Geladen, nicht installiert“ oder „Favoriten“: Nur das sind Listen, die dieser Mac vollständig kennt."))
                         if model.searching {
                             ProgressView().controlSize(.small)
                             Text(L("Searching the catalogue …", "Katalog wird durchsucht …")).font(.callout).foregroundStyle(.secondary)
@@ -61,6 +71,9 @@ struct GamesView: View {
                     .padding(22)
                 }
             }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                SelectionBarHost(picked: model.picked)
+            }
             .navigationTitle(L("Games", "Spiele"))
             .searchable(text: $model.searchText, prompt: L("Search games", "Spiele suchen"))
             .onSubmit(of: .search) { model.searchCatalog() }
@@ -70,6 +83,8 @@ struct GamesView: View {
                 try? await Task.sleep(for: .milliseconds(800))
                 if !Task.isCancelled { model.searchCatalog() }
             }
+            // Unter dem Filter „Favoriten“ sollen alle stehen, auch die, bis zu denen der Katalog noch nicht geladen ist.
+            .task(id: model.filterFavourites) { if model.filterFavourites { await model.loadAllFavourites() } }
             .navigationDestination(for: String.self) { id in
                 if let game = model.allGames.first(where: { $0.id == id }) { GameDetail(game: game) }
             }
@@ -174,7 +189,7 @@ struct StatusBadge: View {
         if busy { return (L("Installing", "Wird installiert"), .blue, "arrow.triangle.2.circlepath") }
         switch status.onDevice {
         case .current: return (L("On the Vision Pro", "Auf der Vision Pro"), .green, "checkmark.circle.fill")
-        case .olderToolchain: return (L("Update available", "Aktualisierung möglich"), .orange, "arrow.up.circle.fill")
+        case .olderToolchain, .olderGame: return (L("Update available", "Aktualisierung möglich"), .orange, "arrow.up.circle.fill")
         case .unstamped: return (L("Installed, older build", "Installiert, älterer Stand"), .orange, "arrow.up.circle.fill")
         case .notInstalled: return (L("Not installed", "Nicht installiert"), .secondary, "circle.dashed")
         case .unknown: return (L("Device not reachable", "Gerät nicht erreichbar"), .secondary, "wifi.slash")
@@ -251,6 +266,39 @@ struct OwnershipLabel: View {
     }
 }
 
+/// Besitz in einer Zeile, mit dem Knopf, der Meta jetzt noch einmal fragt – auf der Seite jedes Spiels aus dem
+/// Meta-Store. Wer ein Spiel gerade gekauft hat, muss nicht warten, bis die App von selbst wieder fragt.
+struct PurchaseCheck: View {
+    @EnvironmentObject var model: AppModel
+    let game: Game
+    var trailing = false
+
+    var body: some View {
+        if let app = game.recipe.store.appId {
+            let checking = model.checkingPurchase.contains(game.id)
+            VStack(alignment: trailing ? .trailing : .leading, spacing: 4) {
+                HStack(spacing: 10) {
+                    OwnershipLabel(owned: model.owned(game), checking: checking || model.checkingOwnership, compact: false)
+                    Button(checking ? L("Checking …", "Wird geprüft …") : L("Check Purchase", "Kauf prüfen")) { model.checkPurchase(game) }
+                        .controlSize(.small)
+                        .disabled(checking)
+                        .help(L("Asks Meta now whether the account you are signed in with owns this game.",
+                                "Fragt Meta jetzt, ob das Konto, mit dem du angemeldet bist, dieses Spiel besitzt."))
+                }
+                if let note = model.purchaseNote[game.id] {
+                    Text(note).font(.callout).foregroundStyle(.secondary)
+                        .multilineTextAlignment(trailing ? .trailing : .leading)
+                        .frame(maxWidth: trailing ? 280 : .infinity, alignment: trailing ? .trailing : .leading)
+                } else if let record = model.ownership[app] {
+                    Text(L("Asked \(record.checked.formatted(date: .abbreviated, time: .shortened))",
+                           "Gefragt am \(record.checked.formatted(date: .abbreviated, time: .shortened))"))
+                        .font(.caption).foregroundStyle(.tertiary)
+                }
+            }
+        }
+    }
+}
+
 struct CoverImage: View {
     @EnvironmentObject var model: AppModel
     let game: Game
@@ -295,7 +343,11 @@ struct GameCard: View {
                 .overlay(alignment: .topTrailing) { TrustBadge(game: game).padding(8) }
                 .overlay(alignment: .topLeading) { FavouriteButton(game: game).padding(8) }
             VStack(alignment: .leading, spacing: 5) {
-                Text(game.recipe.title).font(.headline).lineLimit(1)
+                HStack(alignment: .firstTextBaseline) {
+                    Text(game.recipe.title).font(.headline).lineLimit(1)
+                    Spacer(minLength: 4)
+                    SelectionMark(game: game)
+                }
                 StatusBadge(status: game.status, busy: model.isBusy(game.id))
                 OwnershipLabel(owned: model.owned(game), checking: model.checkingOwnership)
             }
@@ -304,10 +356,102 @@ struct GameCard: View {
         }
         .background(Color(nsColor: .controlBackgroundColor))
         .clipShape(RoundedRectangle(cornerRadius: 12))
-        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(.separator.opacity(hovering ? 1 : 0.5)))
+        .overlay(SelectionBorder(picked: model.picked, id: game.id, hovering: hovering))
         .shadow(color: .black.opacity(hovering ? 0.22 : 0.1), radius: hovering ? 10 : 4, y: 2)
         .onHover { hovering = $0 }
         .animation(.easeOut(duration: 0.15), value: hovering)
+    }
+}
+
+/// Der Hinweis auf eine neuere Fassung im Meta-Store, mit der Wahl zwischen ihr und der geprüften.
+///
+/// Er erscheint nur bei Spielen mit einem geprüften Rezept, und nur, wenn der Store etwas Neueres führt oder
+/// gerade etwas Neueres gewählt ist. Gewechselt wird hier nur das Rezept; geladen und installiert wird mit dem
+/// üblichen Knopf darunter.
+struct StoreVersionBox: View {
+    @EnvironmentObject var model: AppModel
+    let game: Game
+
+    private func label(_ v: GameVersion) -> String {
+        switch (v.kind, v.isDefault) {
+        case (.verified, true): return L("\(v.versionName) – verified, recommended", "\(v.versionName) – geprüft, empfohlen")
+        case (.verified, false): return L("\(v.versionName) – verified", "\(v.versionName) – geprüft")
+        case (.store, true): return L("\(v.versionName) – newest in the store", "\(v.versionName) – neueste im Store")
+        case (.store, false): return L("\(v.versionName) – untested", "\(v.versionName) – ungetestet")
+        }
+    }
+
+    var body: some View {
+        let newer = model.storeUpdate(for: game)
+        let versions = model.versions(for: game)
+        if newer != nil || game.testedVersion != nil || versions.count > 1 {
+            GroupBox {
+                VStack(alignment: .leading, spacing: 8) {
+                    // Die Wahl der Fassung: oben die mit eigenem Rezept des Projekts, darunter, was der Store sonst nennt.
+                    if versions.count > 1 {
+                        let verified = versions.filter { $0.kind == .verified }
+                        let others = versions.filter { $0.kind == .store }
+                        Picker(L("Version", "Fassung"), selection: Binding(
+                            get: { game.recipe.versionCode },
+                            set: { model.chooseVersion(game, versionCode: $0) })) {
+                            if !verified.isEmpty {
+                                Section(L("Verified by the project", "Vom Projekt geprüft")) {
+                                    ForEach(verified) { Text(label($0)).tag($0.versionCode) }
+                                }
+                            }
+                            if !others.isEmpty {
+                                Section(verified.isEmpty ? L("From the Meta Store", "Aus dem Meta-Store")
+                                                         : L("Other versions from the Meta Store – not tested with AVP Play",
+                                                             "Weitere Fassungen aus dem Meta-Store – mit AVP Play nicht getestet")) {
+                                    ForEach(others) { Text(label($0)).tag($0.versionCode) }
+                                }
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .frame(maxWidth: 460, alignment: .leading)
+                        .disabled(model.preparing.contains(game.id))
+                        .help(L("Which version is downloaded and installed. Changing it changes nothing on the Vision Pro until you install.",
+                                "Welche Fassung geladen und installiert wird. Ein Wechsel ändert nichts auf der Vision Pro, bis du installierst."))
+                    }
+                    if let tested = game.testedVersion {
+                        Label(L("You are using version \(game.recipe.versionName) from the Meta Store – not tested with AVP Play",
+                                "Du verwendest Fassung \(game.recipe.versionName) aus dem Meta-Store – mit AVP Play nicht getestet"),
+                              systemImage: "exclamationmark.triangle").font(.headline).foregroundStyle(.orange)
+                        Text(L("The project tested version \(tested). This one may not start, may show errors, and add-on content may stay locked. If it works, say so with the feedback buttons below – that is how others learn of it. Your saved games stay on the Vision Pro either way.",
+                               "Geprüft hat das Projekt Fassung \(tested). Diese startet vielleicht nicht, zeigt vielleicht Fehler, und Zusatzinhalte bleiben vielleicht gesperrt. Wenn sie läuft, melde das mit den Knöpfen unten – so erfahren es die anderen. Deine Spielstände bleiben in beiden Fällen auf der Vision Pro."))
+                            .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                        HStack {
+                            Button(L("Go Back to Tested Version \(tested)", "Zurück zur geprüften Fassung \(tested)")) { model.useTestedVersion(game) }
+                            if let newer {
+                                Button(L("Switch to \(newer.version)", "Auf \(newer.version) wechseln")) { model.useNewestVersion(game) }
+                                    .help(L("The Meta Store has an even newer version by now.", "Der Meta-Store führt inzwischen eine noch neuere Fassung."))
+                            }
+                        }
+                        .disabled(model.preparing.contains(game.id))
+                    } else if let newer {
+                        Label(L("The Meta Store has a newer version: \(newer.version)", "Im Meta-Store gibt es eine neuere Fassung: \(newer.version)"),
+                              systemImage: "arrow.up.circle").font(.headline)
+                        Text(L("AVP Play installs version \(game.recipe.versionName), the one the project tested. You can use the newest one instead – it has not been tested with AVP Play: it may not start, and add-on content may stay locked. You can come back to the tested version at any time.",
+                               "AVP Play installiert Fassung \(game.recipe.versionName), die das Projekt geprüft hat. Du kannst stattdessen die neueste verwenden – sie ist mit AVP Play nicht getestet: Sie startet vielleicht nicht, und Zusatzinhalte bleiben vielleicht gesperrt. Zur geprüften Fassung kommst du jederzeit zurück."))
+                            .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                        HStack {
+                            Button(L("Use Newest Version \(newer.version) (Untested)", "Neueste Fassung \(newer.version) verwenden (ungetestet)")) {
+                                model.useNewestVersion(game)
+                            }
+                            Text(L("Tested: \(game.recipe.versionName)", "Geprüft: \(game.recipe.versionName)")).font(.callout).foregroundStyle(.secondary)
+                        }
+                        .disabled(model.preparing.contains(game.id))
+                    }
+                    if model.preparing.contains(game.id), !game.draft {
+                        HStack { ProgressView().controlSize(.small); Text(model.prepareNote[game.id] ?? "").font(.callout) }
+                    } else if !game.draft, let note = model.prepareNote[game.id] {
+                        Label(note, systemImage: "info.circle").font(.callout).fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(4)
+            }
+        }
     }
 }
 
@@ -322,6 +466,8 @@ struct GameDetail: View {
                 CoverImage(game: game)
                     .frame(maxHeight: 300)
                     .clipShape(RoundedRectangle(cornerRadius: 14))
+
+                StoreVersionBox(game: game)
 
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 6) {
@@ -345,7 +491,15 @@ struct GameDetail: View {
                         if let why = blocked {
                             Text(why).font(.callout).foregroundStyle(.secondary)
                                 .multilineTextAlignment(.trailing).frame(maxWidth: 280, alignment: .trailing)
+                        } else if model.usesFreeTeam {
+                            // Wer mit einem kostenlosen Konto signiert, soll es an der Stelle sehen, an der er installiert.
+                            Label(model.freeAccountLine, systemImage: "person.crop.circle.badge.exclamationmark")
+                                .font(.callout).foregroundStyle(.orange)
+                                .multilineTextAlignment(.trailing).frame(maxWidth: 280, alignment: .trailing)
                         }
+                        // Gilt das Spiel als nicht gekauft, steht der Weg, das zu ändern, gleich hier – nicht erst
+                        // unten unter „Gut zu wissen“.
+                        if model.owned(game) == .no { PurchaseCheck(game: game, trailing: true) }
                         // Nur laden: bei Spielen aus dem Meta Store immer angeboten, solange etwas fehlt – wer den
                         // Bestand erst füllen und später (oder an einem anderen Tag) bauen will, braucht dafür weder
                         // Toolchain noch Vision Pro. Bei allen anderen wie bisher nur, wenn allein dem Bauen etwas
@@ -358,12 +512,14 @@ struct GameDetail: View {
                             }
                             .controlSize(.large)
                             .disabled(downloadBlocked != nil)
+                            let size = game.status.bytesToDownload > 0 ? Installer.gigabytes(game.status.bytesToDownload)
+                                : game.status.filesToDownload == 1 ? L("One file", "Eine Datei") : L("\(game.status.filesToDownload) files", "\(game.status.filesToDownload) Dateien")
                             Text(downloadBlocked
                                  ?? (blocked == nil
-                                     ? L("\(Installer.gigabytes(game.status.bytesToDownload)) – fetches the files to this Mac; nothing is built or installed.",
-                                         "\(Installer.gigabytes(game.status.bytesToDownload)) – holt die Dateien auf diesen Mac; gebaut und installiert wird nichts.")
-                                     : L("\(Installer.gigabytes(game.status.bytesToDownload)) – this already works; building and installing follow later.",
-                                         "\(Installer.gigabytes(game.status.bytesToDownload)) – das geht schon jetzt; gebaut und installiert wird später.")))
+                                     ? L("\(size) – fetches the files to this Mac; nothing is built or installed.",
+                                         "\(size) – holt die Dateien auf diesen Mac; gebaut und installiert wird nichts.")
+                                     : L("\(size) – this already works; building and installing follow later.",
+                                         "\(size) – das geht schon jetzt; gebaut und installiert wird später.")))
                                 .font(.callout).foregroundStyle(.secondary)
                                 .multilineTextAlignment(.trailing).frame(maxWidth: 280, alignment: .trailing)
                         }
@@ -399,6 +555,8 @@ struct GameDetail: View {
                                 Text(L("Space used", "Belegter Platz")).foregroundStyle(.secondary).frame(width: 130, alignment: .leading)
                                 Text(Installer.gigabytes(game.storeBytes))
                                 Spacer()
+                                Button(L("Show in Finder", "Im Finder zeigen")) { model.showFiles(game) }
+                                    .controlSize(.small)
                                 Button(L("Remove from This Mac …", "Von diesem Mac entfernen …")) { confirmRemove = true }
                                     .controlSize(.small)
                                     .disabled(model.isBusy(game.id))
@@ -409,10 +567,22 @@ struct GameDetail: View {
                 }
 
                 GroupBox(L("On the Vision Pro", "Auf der Vision Pro")) {
-                    Text(deviceText).frame(maxWidth: .infinity, alignment: .leading).padding(6)
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(deviceText)
+                        if let signing = signingText {
+                            Label(signing.text, systemImage: signing.urgent ? "exclamationmark.triangle.fill" : "clock")
+                                .foregroundStyle(signing.urgent ? .orange : .secondary)
+                                .font(.callout)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading).padding(6)
                 }
 
+                if model.hasSaves(game), game.installed || model.saveSnapshots[game.id] != nil { SavesBox(game: game) }
+
                 if !languageFiles.isEmpty || game.recipe.addons != nil || !extras.isEmpty { optionalContent }
+
+                if game.recipe.servers != nil { ServerListBox(game: game) }
 
                 if game.installed { FeedbackBox(game: game) }
 
@@ -421,7 +591,11 @@ struct GameDetail: View {
                         Text(game.needsMetaAccount
                              ? L("Before anything is downloaded, Meta is asked whether you own this game. Without a purchase, nothing is downloaded.", "Vor dem Laden wird bei Meta geprüft, dass du dieses Spiel gekauft hast. Ohne Kauf wird nichts geladen.")
                              : L("This game does not come from the Meta Store. The game files come from your own purchase and are never downloaded.", "Dieses Spiel kommt nicht aus dem Meta-Store. Die Spieldateien stammen aus deinem eigenen Kauf und werden nie geladen."))
-                        OwnershipLabel(owned: model.owned(game), checking: model.checkingOwnership, compact: false)
+                        if game.needsMetaAccount {
+                            PurchaseCheck(game: game)
+                        } else {
+                            OwnershipLabel(owned: model.owned(game), checking: model.checkingOwnership, compact: false)
+                        }
                         if let app = game.recipe.store.appId, let page = URL(string: "https://www.meta.com/experiences/\(app)/") {
                             Link(L("View in the Meta Store", "Im Meta-Store ansehen"), destination: page)
                         }
@@ -447,6 +621,8 @@ struct GameDetail: View {
         // Erst wenn jemand die Seite eines ungetesteten Spiels öffnet, wird nachgeschlagen, woraus es besteht.
         // Sagt der Katalog erst danach, unter welchem Namen die Toolchain das Spiel kennt, wird noch einmal geprüft.
         .task(id: "\(game.id) \(game.catalog?.target ?? "")") { model.prepare(game) }
+        .task(id: game.id) { model.checkStoreVersions(only: game) }
+        .task(id: game.id) { model.recheckPurchaseIfStale(game) }
         .confirmationDialog(L("Remove the files of \(game.recipe.title) from this Mac?", "Die Dateien von \(game.recipe.title) von diesem Mac entfernen?"),
                             isPresented: $confirmRemove) {
             Button(L("Remove \(Installer.gigabytes(game.storeBytes))", "\(Installer.gigabytes(game.storeBytes)) entfernen"), role: .destructive) { model.removeFiles(game) }
@@ -511,9 +687,29 @@ struct GameDetail: View {
     private var actionTitle: String {
         switch game.status.onDevice {
         case .current: return L("Reinstall", "Neu installieren")
-        case .olderToolchain, .unstamped: return L("Update", "Aktualisieren")
+        case .olderToolchain, .olderGame, .unstamped: return L("Update", "Aktualisieren")
         case .notInstalled, .unknown: return L("Install", "Installieren")
         }
+    }
+
+    /// Bis wann sich die Installation öffnen lässt. Bei einem kostenlosen Team immer gezeigt (sieben Tage sind
+    /// kurz), bei einem bezahlten erst, wenn der Ablauf näher rückt.
+    private var signingText: (text: String, urgent: Bool)? {
+        guard game.installed, let record = SigningRecord.load(store: model.paths.store, recipe: game.recipe),
+              let expires = record.expires else { return nil }
+        let now = Date()
+        let urgent = record.remindFrom.map { now >= $0 } ?? false
+        guard record.free || urgent else { return nil }
+        let day = DateFormatter.localizedString(from: expires, dateStyle: .medium, timeStyle: .short)
+        if now >= expires {
+            return (L("The signature ran out on \(day): the game no longer opens. “Update” or “Install” signs it again; saved games and data are kept.",
+                      "Die Signatur ist am \(day) abgelaufen: Das Spiel lässt sich nicht mehr öffnen. „Aktualisieren“ oder „Installieren“ signiert es neu; Spielstände und Daten bleiben."), true)
+        }
+        return (record.free
+                ? L("Signed with a free Apple team: opens until \(day). Install it again before then to renew it; saved games and data are kept.",
+                    "Mit einem kostenlosen Apple-Team signiert: lässt sich bis \(day) öffnen. Installiere es vorher erneut, um es zu erneuern; Spielstände und Daten bleiben.")
+                : L("The signature runs out on \(day). Install the game again before then; saved games and data are kept.",
+                    "Die Signatur läuft am \(day) ab. Installiere das Spiel vorher erneut; Spielstände und Daten bleiben."), urgent)
     }
 
     private var deviceText: String {
@@ -522,6 +718,8 @@ struct GameDetail: View {
         case .notInstalled: return L("Not installed yet.", "Noch nicht installiert.")
         case .current: return L("Installed and up to date.", "Installiert und auf dem neuesten Stand.")
         case .olderToolchain: return L("Installed. The current toolchain produces a newer build – “Update” builds it; saved games and data are kept.", "Installiert. Mit der jetzigen Toolchain gibt es eine neuere Fassung – „Aktualisieren“ baut sie; Spielstände und Daten bleiben.")
+        case .olderGame(let stamp): return L("Installed in an older version of the game (\(stamp)). This app now has version \(game.recipe.versionName) – “Update” downloads what is new and installs it; saved games and data are kept.",
+                                             "Installiert in einer älteren Fassung des Spiels (\(stamp)). Dieses Programm hat jetzt Fassung \(game.recipe.versionName) – „Aktualisieren“ lädt, was neu ist, und installiert sie; Spielstände und Daten bleiben erhalten.")
         case .unstamped: return L("Installed, but as an older build that was not made by this app. “Update” replaces it; saved games and data are kept.", "Installiert, aber in einer älteren Fassung, die nicht von diesem Programm stammt. „Aktualisieren“ ersetzt sie; Spielstände und Daten bleiben.")
         }
     }

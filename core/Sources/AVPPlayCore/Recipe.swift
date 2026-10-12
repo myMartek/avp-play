@@ -19,6 +19,8 @@ public struct Recipe: Codable, Sendable, Identifiable {
     public var icon: IconSource?
     /// Ganze Verzeichnisbäume für Spiele, die kein APK sind (siehe `RecipeTree`).
     public var trees: [RecipeTree]?
+    /// Versteht das Spiel eine Liste eigener Server (Adressen, Admin-Zugang)? Dann steht hier, wohin sie gehört.
+    public var servers: ServerListSupport?
 
     public struct IconSource: Codable, Sendable, Equatable {
         /// Steam-App-ID: Hintergrund und Logo aus dem lokalen Bildspeicher des Steam-Clients des Nutzers.
@@ -28,6 +30,14 @@ public struct Recipe: Codable, Sendable, Identifiable {
     public struct StoreInfo: Codable, Sendable {
         /// Store-App-ID für Besitz- und Kaufabfrage. Fehlt sie, kann der Besitz nicht geprüft werden.
         public var appId: String?
+        /// Das Spiel bleibt bei der Fassung dieses Rezepts: eine neuere aus dem Store wird nicht angeboten.
+        /// Für Spiele, deren neuere Fassungen bekanntermaßen nicht laufen (Beat Saber).
+        public var pinned: Bool?
+
+        public init(appId: String?, pinned: Bool? = nil) {
+            self.appId = appId
+            self.pinned = pinned
+        }
     }
     public struct Toolchain: Codable, Sendable {
         public var target: String
@@ -200,12 +210,30 @@ extension Recipe {
             if let s = f.size, s < 0 { throw RecipeError.invalid(L("size of '\(f.name)'", "Größe von '\(f.name)'")) }
         }
         var roles = Set<RecipeTree.Role>()
+        var dataDestinations = Set<String>()
         for t in trees ?? [] {
             guard Recipe.isSafeName(t.name), names.insert(t.name).inserted else {
                 throw RecipeError.invalid(L("folder name '\(t.name)'", "Ordnername '\(t.name)'"))
             }
-            guard roles.insert(t.role).inserted else {
-                throw RecipeError.invalid(L("folder role '\(t.role.rawValue)' appears twice", "Ordnerrolle '\(t.role.rawValue)' kommt doppelt vor"))
+            if t.role == .data {
+                // Ein Datenordner braucht einen Ort auf dem Gerät, und zwar einen eigenen: zwei Bäume am selben Ort
+                // würden einander für unvollständig halten.
+                guard let d = t.dest, !d.isEmpty, Recipe.isSafeRelativePath(d), dataDestinations.insert(d).inserted else {
+                    throw RecipeError.invalid(L("destination folder of '\(t.name)'", "Zielordner von '\(t.name)'"))
+                }
+            } else {
+                // Die Rollen eines Linux-Spiels gibt es je einmal; wohin sie gehören, weiß die Toolchain.
+                guard roles.insert(t.role).inserted else {
+                    throw RecipeError.invalid(L("folder role '\(t.role.rawValue)' appears twice", "Ordnerrolle '\(t.role.rawValue)' kommt doppelt vor"))
+                }
+                guard t.dest == nil else {
+                    throw RecipeError.invalid(L("'\(t.name)': only a data folder has a destination", "'\(t.name)': einen Zielordner hat nur ein Datenordner"))
+                }
+            }
+            if let only = t.only {
+                guard !only.isEmpty, only.allSatisfy(Recipe.isSafeName), Set(only).count == only.count else {
+                    throw RecipeError.invalid(L("contents of '\(t.name)'", "Inhalt von '\(t.name)'"))
+                }
             }
             // Ohne Kenndatei wäre jeder beliebige Ordner „der richtige“.
             guard !t.markers.isEmpty else { throw RecipeError.invalid(L("'\(t.name)': no marker file", "'\(t.name)': keine Kenndatei")) }
@@ -234,6 +262,18 @@ extension Recipe {
         }
         if let app = store.appId, !(app.allSatisfy(\.isNumber) && !app.isEmpty) {
             throw RecipeError.invalid(L("store app ID", "Store-App-ID"))
+        }
+        if let servers {
+            guard Recipe.isSafeRelativePath(servers.dest), Recipe.isSafeName(servers.file),
+                  servers.defaultPort.map({ (1...65535).contains($0) }) ?? true else {
+                throw RecipeError.invalid(L("server list", "Serverliste"))
+            }
+            for server in servers.builtin ?? [] {
+                guard GameServerStore.normalize(server.address, defaultPort: servers.defaultPort ?? 27015) != nil,
+                      !server.name.isEmpty, GameServerStore.cleanName(server.name) == server.name else {
+                    throw RecipeError.invalid(L("built-in server '\(server.address)'", "eingebauter Server '\(server.address)'"))
+                }
+            }
         }
         if let steam = icon?.steamAppId, !(steam.allSatisfy(\.isNumber) && !steam.isEmpty) {
             throw RecipeError.invalid(L("Steam app ID", "Steam-App-ID"))
@@ -273,5 +313,23 @@ public struct RecipeStore: Sendable {
         let recipe = try JSONDecoder().decode(Recipe.self, from: Data(contentsOf: url))
         try recipe.validate()
         return recipe
+    }
+
+    /// Der Unterordner mit weiteren geprüften Fassungen: `versions/<Kennung>-<Versionscode>.json`.
+    public static let variantsFolder = "versions"
+
+    /// Weitere Fassungen, zu denen das Projekt ein eigenes Rezept führt – neben der einen im Ordner selbst, die
+    /// ohne Wahl gilt. Ein Rezept hier trägt die Kennung seines Spiels und heißt nach Kennung und Versionscode;
+    /// was dazu nicht passt oder sich nicht lesen lässt, zählt nicht. Die neueste Fassung zuerst.
+    public func loadVariants() -> [Recipe] {
+        let folder = directory.appendingPathComponent(RecipeStore.variantsFolder, isDirectory: true)
+        let urls = ((try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? [])
+            .filter { $0.pathExtension == "json" }
+        return urls.compactMap { url -> Recipe? in
+            guard let recipe = try? load(url: url),
+                  url.deletingPathExtension().lastPathComponent == "\(recipe.id)-\(recipe.versionCode)" else { return nil }
+            return recipe
+        }
+        .sorted { ($0.id, $1.versionCode) < ($1.id, $0.versionCode) }
     }
 }

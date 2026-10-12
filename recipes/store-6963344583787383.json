@@ -1,0 +1,123 @@
+{
+ "addons": {
+  "dest": "android-files",
+  "kind": "purchase-list"
+ },
+ "files": [
+  {
+   "dest": "",
+   "id": "27708672658827939",
+   "localName": "x6963344583787383.apk",
+   "name": "Maestro-Android-Shipping-arm64.apk",
+   "required": true,
+   "role": "apk",
+   "size": 57827525,
+   "sha256": "3ae008a42a4a16786b9fdce178caae04e168fbc6d667971d5a05f03b18dde2f0"
+  },
+  {
+   "dest": "@obb",
+   "id": "27708668848828320",
+   "name": "main.397.io.doublejack.maestro.obb",
+   "required": true,
+   "role": "main-obb",
+   "size": 1921381246,
+   "sha256": "c6ddb5b293807e84c98c9cb46ba0ee1d7017a72f2e30b4430d7a6da072652fee"
+  },
+  {
+   "dest": "android-files/Android/obb/io.doublejack.maestro",
+   "id": "27708671955494676",
+   "name": "pakchunk4-Android_ASTC.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 57783523,
+   "sha256": "d82f8490372515291e5d85c33c48ca0c7d6d52d180534587b2bd1c986cbe775d"
+  },
+  {
+   "dest": "android-files/Android/obb/io.doublejack.maestro",
+   "id": "27708671952161343",
+   "name": "pakchunk5-Android_ASTC.pak",
+   "required": true,
+   "role": "content-bundle"
+  },
+  {
+   "dest": "android-files/Android/obb/io.doublejack.maestro",
+   "id": "27708671948828010",
+   "name": "pakchunk3-Android_ASTC.pak",
+   "required": true,
+   "role": "content-bundle"
+  },
+  {
+   "dest": "android-files/Android/obb/io.doublejack.maestro",
+   "id": "27708671945494677",
+   "name": "pakchunk6-Android_ASTC.pak",
+   "required": true,
+   "role": "content-bundle"
+  },
+  {
+   "dest": "android-files/Android/obb/io.doublejack.maestro",
+   "id": "27708671942161344",
+   "name": "pakchunk1-Android_ASTC.pak",
+   "required": true,
+   "role": "content-bundle"
+  },
+  {
+   "dest": "android-files/Android/obb/io.doublejack.maestro",
+   "id": "27708671938828011",
+   "name": "pakchunk2-Android_ASTC.pak",
+   "required": true,
+   "role": "content-bundle"
+  },
+  {
+   "dest": "android-files/Android/obb/io.doublejack.maestro",
+   "id": "27708671935494678",
+   "name": "pakchunk8-Android_ASTC.pak",
+   "required": true,
+   "role": "content-bundle"
+  },
+  {
+   "dest": "android-files/Android/obb/io.doublejack.maestro",
+   "id": "27708671932161345",
+   "name": "pakchunk7-Android_ASTC.pak",
+   "required": true,
+   "role": "content-bundle"
+  },
+  {
+   "dest": "android-files/Android/obb/io.doublejack.maestro",
+   "id": "27708671925494679",
+   "name": "HelloWorld.txt",
+   "required": true,
+   "role": "content-bundle"
+  }
+ ],
+ "id": "store-6963344583787383",
+ "package": "io.doublejack.maestro",
+ "schema": 1,
+ "status": {
+  "playability": "verified",
+  "download": "listed",
+  "notes": [
+   {
+    "en": "Marked as verified by the project on 2026-10-11. File list as Meta's tool reports it for this build; 3 of 11 checksums recorded from a download.",
+    "de": "Vom Projekt am 2026-10-11 als geprüft markiert. Dateiliste, wie Metas Werkzeug sie für diesen Build nennt; 3 von 11 Prüfsummen aus einem Download erfasst."
+   },
+   {
+    "en": "Needs toolchain 319 or newer. Files of add-on content you have not bought are not delivered by Meta; the app skips them and the game runs without them.",
+    "de": "Braucht Toolchain 319 oder neuer. Dateien von Zusatzinhalten, die du nicht gekauft hast, liefert Meta nicht aus; die App überspringt sie, und das Spiel läuft ohne sie."
+   },
+   {
+    "en": "Add-on packs you bought are unlocked from the purchase list the store confirms. So far checked with one pack (La Crème de la Crème).",
+    "de": "Gekaufte Zusatzpakete werden über die vom Store bestätigte Kaufliste freigeschaltet. Bisher mit einem Paket geprüft (La Crème de la Crème)."
+   }
+  ]
+ },
+ "store": {
+  "appId": "6963344583787383"
+ },
+ "title": "Maestro",
+ "toolchain": {
+  "minCommit": "f9b0804",
+  "target": "x6963344583787383"
+ },
+ "versionCode": 397,
+ "versionName": "0.0.397"
+}

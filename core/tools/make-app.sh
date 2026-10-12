@@ -7,7 +7,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 ROOT="$(cd .. && pwd)"
-VERSION="${AVPPLAY_APP_VERSION:-1.0.15}"
+VERSION="${AVPPLAY_APP_VERSION:-1.1.8}"
 BUILD="$(git -C "$ROOT" rev-list --count HEAD 2>/dev/null || echo 1)"
 OUT="$ROOT/dist/AVP Play.app"
 
@@ -25,6 +25,11 @@ cp "$BIN" "$NEW/Contents/MacOS/AVPPlay"
 mkdir -p "$NEW/Contents/Helpers"
 cp ".build-app/release/avpplay" "$NEW/Contents/Helpers/avpplay"
 cp "$ROOT"/recipes/*.json "$NEW/Contents/Resources/recipes/"
+# Weitere geprüfte Fassungen einzelner Spiele (RecipeStore.loadVariants), soweit es welche gibt.
+if ls "$ROOT"/recipes/versions/*.json >/dev/null 2>&1; then
+  mkdir -p "$NEW/Contents/Resources/recipes/versions"
+  cp "$ROOT"/recipes/versions/*.json "$NEW/Contents/Resources/recipes/versions/"
+fi
 # Die Toolchain kommt mit: das neueste Paket aus dist/ samt Beschreibung (oder AVPPLAY_TOOLCHAIN_ARCHIVE).
 # Die App installiert es beim ersten Start – geprüft gegen die Beschreibung wie jedes andere Paket.
 # Ohne Archiv in dist/ scheitert das `ls` – unter `set -e` samt pipefail würde die Zuweisung das Skript stillschweigend

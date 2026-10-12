@@ -49,6 +49,24 @@ extension StagePlan {
     }
 }
 
+extension StagePlan {
+    /// Was von einem Datenordner noch aufs Gerät muss.
+    ///
+    /// Beim ersten Mal alles, was dort fehlt oder eine andere Größe hat – so setzt ein abgebrochener Lauf fort, und
+    /// eine halb übertragene Datei wird ersetzt. Liegt der Ordner einmal vollständig dort (`settled`), nur noch, was
+    /// fehlt: Ein Spiel schreibt in seine Daten (Einstellungen, der Name des Spielers), und was es geändert hat,
+    /// hat eine andere Größe als im Bestand – das zu ersetzen hieße, dem Spieler seine Einstellungen zu nehmen.
+    /// - Parameters:
+    ///   - local: der Baum im Bestand, relativer Pfad -> Größe
+    ///   - remote: was im Zielordner auf dem Gerät liegt, relativer Pfad -> Größe
+    public static func missing(ofTree local: [String: Int64], remote: [String: Int64], settled: Bool) -> [String: Int64] {
+        local.filter { path, size in
+            guard let there = remote[path] else { return true }
+            return !settled && there != size
+        }
+    }
+}
+
 /// Die kleinen Dateien, über die der Shim erfährt, was freigeschaltet ist. Sie entstehen auf dem Mac aus
 /// Metas Antworten; auf das Gerät gelangen nur sie, nie ein Token.
 public enum AddonFiles {

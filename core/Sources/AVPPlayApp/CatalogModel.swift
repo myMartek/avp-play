@@ -38,6 +38,7 @@ extension AppModel {
                 catalogProblem = "\(error)"
             }
         }
+        reportUsage()
     }
 
     /// Eigene und gemerkte Spiele stehen im Katalog irgendwo zwischen tausenden; nach ihnen wird gezielt gefragt,
@@ -49,8 +50,28 @@ extension AppModel {
         guard !missing.isEmpty else { return }
         askedOwn.formUnion(missing)
         Task {
-            if let found = try? await catalogClient.games(appIds: missing) { merge(found) }
+            // Kommt keine Antwort, gelten die Kennungen nicht als gefragt: der nächste Anlass fragt neu.
+            do { merge(try await catalogClient.games(appIds: missing)) } catch { askedOwn.subtract(missing) }
         }
+    }
+
+    /// Holt, was der Katalog über die Favoriten sagt, die noch nicht geladen sind, und wartet darauf – damit eine
+    /// Liste der Favoriten vollständig ist, auch wenn die Übersicht erst einen Teil des Katalogs geladen hat.
+    /// Sagt, wie viele danach noch fehlen (kein Netz, Katalog abgeschaltet, vom Katalog nicht mehr geführt).
+    @discardableResult
+    func loadAllFavourites() async -> Int {
+        func missing() -> [String] {
+            let loaded = Set(catalog.map(\.appId)).union(games.compactMap { $0.recipe.store.appId })
+            return favourites.compactMap(DraftRecipe.appId(of:)).filter { !loaded.contains($0) }.sorted()
+        }
+        let wanted = missing()
+        guard !wanted.isEmpty else { return 0 }
+        guard onlineCatalog else { return wanted.count }
+        if let found = try? await catalogClient.games(appIds: wanted) {
+            merge(found)
+            askedOwn.formUnion(wanted)
+        }
+        return missing().count
     }
 
     /// Sucht im Katalog. Der Dienst lernt dabei neue Spiele kennen; hier kommen sie als „ungetestet“ an.
@@ -77,7 +98,7 @@ extension AppModel {
     /// nächste Seite des ganzen Katalogs. Mit einem Filter, der nur auf diesem Mac entschieden wird, nicht: was
     /// installiert oder gemerkt ist, steht schon vollständig da.
     var canLoadMore: Bool {
-        guard onlineCatalog, !filterInstalled, !filterFavourites else { return false }
+        guard onlineCatalog, !filterInstalled, !filterFavourites, !filterDownloaded else { return false }
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard query.isEmpty else { return query == searchedQuery && searchMore }
         // Geprüftes und von Nutzern Bestätigtes steht im Katalog vorn. Ist einer dieser Filter gesetzt, lohnt
@@ -163,7 +184,13 @@ extension AppModel {
     /// Ergebnis liegt danach als Rezeptentwurf auf dem Mac. Beim ersten unerwarteten Ergebnis ist Schluss.
     func prepare(_ game: Game) {
         guard game.draft, let entry = game.catalog, !preparing.contains(game.id) else { return }
-        if game.prepared, game.recipe.versionCode == (entry.build?.versionCode ?? game.recipe.versionCode) {
+        // Hat der Nutzer eine bestimmte Fassung gewählt, wird die nachgeschlagen und nicht der neueste Build; sie
+        // bleibt, auch wenn der Store inzwischen einen neueren führt. Kennt die App den gewählten Build (noch) nicht,
+        // bleibt der Entwurf, wie er ist.
+        let chosenCode = latestChoices.versions[game.id]
+        let chosen = chosenCode.flatMap { code in (storeBuildLists[game.id] ?? []).first { $0.versionCode == code } }
+        if chosenCode != nil, chosen == nil, game.prepared { return }
+        if game.prepared, game.recipe.versionCode == (chosen?.versionCode ?? entry.build?.versionCode ?? game.recipe.versionCode) {
             // Fertig nachgeschlagen – es sei denn, der Entwurf baut noch mit dem allgemeinen Versuchs-Target und die
             // Toolchain kennt das Spiel inzwischen unter eigenem Namen: dann wird der Entwurf neu geschrieben.
             let named = entry.target.flatMap { $0.isEmpty || toolchain?.targetKind($0) == nil ? nil : $0 }
@@ -178,12 +205,13 @@ extension AppModel {
                                      "Melde dich zuerst unter „Einrichtung“ bei Meta an – dann kann die App prüfen, ob dir das Spiel gehört, und seine Dateien nachschlagen.")
             return
         }
-        guard let toolchain else {
-            prepareNote[game.id] = L("The toolchain is not installed yet (see “Setup”).", "Die Toolchain ist noch nicht installiert (siehe „Einrichtung“).")
-            return
-        }
+        // Die Toolchain braucht es zum Nachschlagen nicht: Wer nur laden will, hat sie vielleicht noch gar nicht (oder
+        // kein Xcode, ohne das sie nicht sagen kann, welche Spiele sie kennt). Der Entwurf nennt dann das allgemeine
+        // Versuchs-Target und noch keinen Mindeststand; beides wird nachgetragen, sobald gebaut wird.
+        let toolchain = toolchain
         preparing.insert(game.id)
-        prepareNote[game.id] = L("Looking up the newest build …", "Der neueste Build wird nachgeschlagen …")
+        prepareNote[game.id] = chosen.map { L("Looking up version \($0.version) …", "Fassung \($0.version) wird nachgeschlagen …") }
+            ?? L("Looking up the newest build …", "Der neueste Build wird nachgeschlagen …")
         let client = catalogClient
         let paths = paths
         let drafts = draftsDirectory
@@ -194,7 +222,7 @@ extension AppModel {
             var note: String?
             do {
                 let detail = try await client.game(appId: entry.appId)
-                guard let build = detail.build else {
+                guard let build = chosen ?? detail.build else {
                     throw Stop(L("No public build of this game is known yet.", "Zu diesem Spiel ist noch kein öffentlicher Build bekannt."))
                 }
                 await say(L("Asking Meta whether you own this game …", "Meta wird gefragt, ob dir das Spiel gehört …"))
@@ -202,10 +230,7 @@ extension AppModel {
                 let meta = MetaClient(token: token)
                 let user = try await meta.me()
                 let owned = try await meta.ownsApp(appId: entry.appId, userId: user)
-                let cache = OwnershipCache(store: paths.store)
-                var records = cache.load()
-                records[entry.appId] = OwnershipRecord(owned: owned, checked: Date())
-                try? cache.save(records)
+                let records = OwnershipCache(store: paths.store).record(appId: entry.appId, owned: owned)
                 await MainActor.run { self.ownership = records }
                 guard owned else {
                     throw Stop(L("This game is not in your Meta account. Nothing is looked up or downloaded.",
@@ -213,7 +238,7 @@ extension AppModel {
                 }
                 // Kennt die Toolchain das Spiel, gilt ihr Eintrag; sonst wird es mit dem allgemeinen Versuchs-Target
                 // gebaut, das sich nur nach der Engine richtet.
-                let named = detail.target.flatMap { $0.isEmpty || toolchain.targetKind($0) == nil ? nil : $0 }
+                let named = detail.target.flatMap { $0.isEmpty || toolchain?.targetKind($0) == nil ? nil : $0 }
                 let target = named ?? DraftRecipe.genericTarget(appId: entry.appId)
                 try MetaTool(url: tool).verify()
                 await say(L("Asking Meta's tool for the files of build \(build.version) …", "Metas Werkzeug wird nach den Dateien von Build \(build.version) gefragt …"))
@@ -221,7 +246,7 @@ extension AppModel {
                 try await Task.sleep(for: .seconds(5))
                 // Weitere Dateien hat nicht jedes Spiel; sagt das Werkzeug dazu nichts oder lehnt ab, bleibt es bei APK und OBB.
                 if let assets = try? MetaListing.list(.assets, buildId: build.buildId, tool: tool, token: token) { files += assets }
-                let recipe = try DraftRecipe.make(game: detail, build: build, files: files, target: target, minCommit: toolchain.commit())
+                let recipe = try DraftRecipe.make(game: detail, build: build, files: files, target: target, minCommit: toolchain?.commit() ?? "")
                 try FileManager.default.createDirectory(at: drafts, withIntermediateDirectories: true)
                 let encoder = JSONEncoder()
                 encoder.outputFormatting = [.sortedKeys, .prettyPrinted]
@@ -268,6 +293,39 @@ extension AppModel {
             } catch {
                 notice = "\(error)"
             }
+        }
+    }
+
+    // MARK: Zählung
+
+    /// Gezählt wird nur für ein Programmpaket (nicht beim Entwickeln), nur mit eingeschaltetem Katalog und nur,
+    /// solange es in den Einstellungen nicht abgestellt ist.
+    private var counting: Bool { onlineCatalog && usageCounts && Bundle.main.bundleIdentifier != nil && Snapshot.directory == nil }
+
+    /// Sagt dem Dienst höchstens einmal am Tag, dass diese Kopie in Gebrauch ist – ohne Kennung, siehe `UsagePing`.
+    /// Der Tag wird vor dem Senden gemerkt, damit zwei Anläufe kurz hintereinander nicht doppelt zählen, und
+    /// zurückgenommen, wenn die Meldung nicht ankommt.
+    func reportUsage() {
+        let key = "lastUsagePing"
+        let last = UserDefaults.standard.string(forKey: key)
+        let now = Date()
+        guard counting, let ping = UsagePing.due(last: last, now: now, appVersion: appVersion) else { return }
+        UserDefaults.standard.set(UsagePing.day(now), forKey: key)
+        let client = catalogClient
+        Task {
+            if (try? await client.send(ping)) == nil { UserDefaults.standard.set(last, forKey: key) }
+        }
+    }
+
+    /// Sagt dem Dienst, dass ein Spiel installiert wurde – für jedes Spiel ein einziges Mal, nur sein Name.
+    func reportInstall(_ recipe: Recipe) {
+        let key = "countedInstalls"
+        guard counting, let game = UsagePing.gameKey(appId: recipe.store.appId, recipe: recipe.id),
+              !(UserDefaults.standard.stringArray(forKey: key) ?? []).contains(game) else { return }
+        let client = catalogClient
+        Task {
+            guard (try? await client.countInstall(of: game)) != nil else { return }
+            UserDefaults.standard.set((UserDefaults.standard.stringArray(forKey: key) ?? []) + [game], forKey: key)
         }
     }
 }

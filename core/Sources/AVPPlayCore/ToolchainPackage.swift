@@ -207,6 +207,100 @@ public struct ToolchainPackager: Sendable {
         return removed
     }
 
+    /// Das Aufräumen von selbst: wie `prune`, aber nur, wenn gerade kein Prozess baut oder aufs Gerät kopiert –
+    /// die App, die Kommandozeile und der Hintergrunddienst bauen alle im Ordner einer Toolchain, und der darf
+    /// ihnen nicht unter den Händen verschwinden. Läuft etwas, passiert nichts (`nil`); der nächste Anlass holt
+    /// es nach. Dazu fallen die Reste eines abgebrochenen Auspackens weg (`.<Name>.new`), sobald sie älter als
+    /// eine Stunde sind.
+    ///
+    /// Mit `leftoversOlderThan` räumt es auch in der neuesten Toolchain auf: was ein Spiel beim Bauen dort
+    /// hinterlässt, fällt weg, wenn sein letzter Bau länger her ist (siehe `removeBuildLeftovers`).
+    @discardableResult
+    public func pruneWhenIdle(protecting commits: Set<String> = [], leftoversOlderThan age: TimeInterval? = nil,
+                              apkNames: [String: String] = [:], busyTargets: Set<String> = [],
+                              lock: URL = ProcessLock.installURL, now: Date = Date()) -> Cleared? {
+        guard let held = ProcessLock.acquire(lock) else { return nil }
+        defer { held.release() }
+        let toolchains = removeOlderAndUnpackingLeftovers(protecting: commits, now: now)
+        var games: [String] = []
+        if let age, let newest = installed().first {
+            games = ToolchainPackager.removeBuildLeftovers(in: newest.root, olderThan: age, apkNames: apkNames,
+                                                           skipping: busyTargets, now: now)
+        }
+        return Cleared(toolchains: toolchains, games: games)
+    }
+
+    /// Was ein Aufräumen entfernt hat: ältere Toolchains und die Spiele, deren Bau-Reste wegfielen (Target-Namen).
+    public struct Cleared: Sendable, Equatable {
+        public var toolchains: [ToolchainManifest]
+        public var games: [String]
+        public var isEmpty: Bool { toolchains.isEmpty && games.isEmpty }
+    }
+
+    /// Wann ein Spiel in diesem Toolchain-Ordner zuletzt gebaut wurde: Xcode schreibt bei jedem Bau die Datei
+    /// `info.plist` seines Zwischenordners neu; fehlt der, zählt der Stempel des entpackten Baums.
+    public static func lastBuilt(target: String, in root: URL) -> Date? {
+        let marks = [root.appendingPathComponent("visionos/build/dd-device-\(target)/info.plist"),
+                     root.appendingPathComponent("\(target)/.qi-prepared")]
+        return marks.compactMap { (try? $0.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate }.first
+    }
+
+    /// Entfernt, was Spiele beim Bauen im Ordner einer Toolchain hinterlassen, sobald ihr letzter Bau länger als
+    /// `age` her ist: Xcodes Zwischenstände, die übersetzten Bibliotheken, den entpackten Baum und die Kopie des
+    /// APK – zusammen leicht ein Gigabyte und mehr je Spiel. Nichts davon ist das Spiel selbst: Die App auf der
+    /// Vision Pro und die Downloads bleiben, und ein späterer Bau legt alles neu an (er dauert dann etwa eine
+    /// Minute länger). Spiele, deren Signatur wöchentlich erneuert wird, werden dabei jedes Mal neu gebaut und
+    /// behalten ihre Reste so von selbst.
+    ///
+    /// Ein Spiel wird nur angefasst, wenn sich sein letzter Bau datieren lässt und es nicht in `skipping` steht
+    /// (Aufträge, die warten oder laufen). Gibt die Target-Namen zurück.
+    @discardableResult
+    public static func removeBuildLeftovers(in root: URL, olderThan age: TimeInterval, apkNames: [String: String] = [:],
+                                            skipping: Set<String> = [], now: Date = Date()) -> [String] {
+        let fm = FileManager.default
+        let build = root.appendingPathComponent("visionos/build", isDirectory: true)
+        var targets = Set<String>()
+        for name in (try? fm.contentsOfDirectory(atPath: build.path)) ?? [] where name.hasPrefix("dd-device-") {
+            targets.insert(String(name.dropFirst("dd-device-".count)))
+        }
+        for name in (try? fm.contentsOfDirectory(atPath: root.path)) ?? []
+        where fm.fileExists(atPath: root.appendingPathComponent("\(name)/.qi-prepared").path) {
+            targets.insert(name)
+        }
+        var cleared: [String] = []
+        for target in targets.sorted() where Recipe.isSafeName(target) && !skipping.contains(target) {
+            // Der Zwischenordner des Baus mit eigenem Startfenster heißt wie der gewöhnliche mit Anhang; er gehört
+            // zum selben Spiel und nicht zu einem eigenen.
+            if target.hasSuffix("-launcher"), targets.contains(String(target.dropLast("-launcher".count))) { continue }
+            guard let built = lastBuilt(target: target, in: root), now.timeIntervalSince(built) > age else { continue }
+            var paths = ["visionos/build/dd-device-\(target)", "visionos/build/dd-device-\(target)-launcher",
+                         "visionos/build/dd-sim-\(target)", "visionos/build/guest/\(target)",
+                         "visionos/Frameworks/\(target)", "\(target).apk"]
+            // Der Ordner mit dem Namen des Targets nur, wenn er ein entpackter Baum ist (er trägt dann den Stempel
+            // der Vorbereitung): Ein Target, das wie ein Ordner der Toolchain selbst heißt, darf den nicht mitnehmen.
+            if fm.fileExists(atPath: root.appendingPathComponent("\(target)/.qi-prepared").path) { paths.append(target) }
+            if let apk = apkNames[target], Recipe.isSafeName(apk), apk.hasSuffix(".apk") { paths.append(apk) }
+            var any = false
+            for path in paths {
+                let url = root.appendingPathComponent(path)
+                guard fm.fileExists(atPath: url.path) else { continue }
+                if (try? fm.removeItem(at: url)) != nil { any = true }
+            }
+            if any { cleared.append(target) }
+        }
+        return cleared
+    }
+
+    private func removeOlderAndUnpackingLeftovers(protecting commits: Set<String>, now: Date) -> [ToolchainManifest] {
+        let fm = FileManager.default
+        for url in (try? fm.contentsOfDirectory(at: root, includingPropertiesForKeys: [.contentModificationDateKey])) ?? []
+        where url.lastPathComponent.hasPrefix(".") && url.pathExtension == "new" {
+            let changed = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate ?? now
+            if now.timeIntervalSince(changed) > 3600 { try? fm.removeItem(at: url) }
+        }
+        return (try? prune(keep: 1, protecting: commits)) ?? []
+    }
+
     static var encoder: JSONEncoder {
         let e = JSONEncoder()
         e.dateEncodingStrategy = .iso8601

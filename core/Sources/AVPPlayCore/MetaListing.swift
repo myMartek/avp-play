@@ -158,6 +158,21 @@ public enum DraftRecipe {
         dest == packageFolderPlaceholder || dest == packageFolder(package: "")
     }
 
+    /// Derselbe Entwurf für einen anderen Namen in der Toolchain oder einen anderen Mindeststand. Ein Entwurf, der
+    /// ohne Toolchain nachgeschlagen wurde (nur zum Laden), nennt noch keinen Mindeststand; er wird eingesetzt,
+    /// sobald gebaut wird – ohne Meta noch einmal zu fragen.
+    public static func retargeted(_ recipe: Recipe, target: String, minCommit: String) -> Recipe {
+        var result = recipe
+        let old = recipe.toolchain.target
+        result.toolchain = .init(target: target, minCommit: minCommit)
+        result.files = recipe.files.map { file in
+            var file = file
+            if file.role == "apk", file.localName == "\(old).apk" { file.localName = "\(target).apk" }
+            return file
+        }
+        return result
+    }
+
     /// - Parameter target: der Name des Spiels in der Toolchain – ein Eintrag ihrer Tabelle oder `genericTarget`.
     public static func make(game: CatalogGame, build: CatalogBuild, files: [ListedFile], target: String,
                             minCommit: String) throws -> Recipe {

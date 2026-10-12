@@ -17,4 +17,9 @@ public enum Hashing {
         }
         return hasher.finalize().map { String(format: "%02x", $0) }.joined()
     }
+
+    /// SHA-256 von Daten im Speicher als Hex-Text.
+    public static func sha256(of data: Data) -> String {
+        SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+    }
 }

@@ -4,9 +4,28 @@ import Foundation
 extension Toolchain {
     /// Das Präfix ohne eigene Vorgabe: der Benutzername am Mac und die feste Endung der Toolchain.
     /// `defaultBundleId(target:)` ist dieses Präfix mit angehängtem Target.
-    public static func defaultBundlePrefix(user: String = NSUserName()) -> String {
-        let scope = user.lowercased().filter { $0.isLetter || $0.isNumber || $0 == "-" }
-        return "\(scope.isEmpty ? "user" : scope).dev.klepton.target"
+    ///
+    /// Mit einem kostenlosen Team steht dessen Kennung mit im Präfix. Eine App-Kennung gehört genau einem Team:
+    /// Wer später die bezahlte Mitgliedschaft abschließt, bekommt ein anderes Team, und dem verweigert Apple
+    /// die Kennungen, die das kostenlose schon registriert hat. Bezahlte Teams behalten das bisherige Präfix –
+    /// sonst verlören bestehende Installationen ihre Daten.
+    public static func defaultBundlePrefix(user: String = NSUserName(), freeTeam: String? = nil) -> String {
+        let scope = bundleScope(user: user)
+        let team = (freeTeam ?? "").lowercased().filter { $0.isASCII && ($0.isLetter || $0.isNumber) }
+        return [scope, team, "dev.klepton.target"].filter { !$0.isEmpty }.joined(separator: ".")
+    }
+
+    /// Der Benutzername, wie er vorn in der Kennung steht – genau so, wie die Toolchain ihn bildet
+    /// (`visionos/targets.py`, `bundle_for`): jedes Zeichen außer ASCII-Buchstaben, Ziffern und `-` wird zu `-`,
+    /// Bindestriche an den Rändern fallen weg, alles klein; bleibt nichts übrig, steht kein Name davor.
+    ///
+    /// Die beiden Seiten müssen dasselbe ergeben: Die Toolchain installiert unter ihrer Kennung, und diese
+    /// Bibliothek sucht die App danach unter der hier. Bis 1.0.15 fielen hier Sonderzeichen ersatzlos weg – mit
+    /// einem Unterstrich im Benutzernamen (`marc_intosh` → hier `marcintosh`, dort `marc-intosh`) wurde gebaut
+    /// und installiert, die App dann „nicht gefunden“ und nie mit Daten versorgt (GitHub-Meldung 10).
+    public static func bundleScope(user: String = NSUserName()) -> String {
+        let mapped = user.map { c -> Character in c.isASCII && (c.isLetter || c.isNumber || c == "-") ? c : "-" }
+        return String(mapped).trimmingCharacters(in: CharacterSet(charactersIn: "-")).lowercased()
     }
 
     /// Die Kennung eines Targets unter einem Präfix; ohne Präfix die übliche.

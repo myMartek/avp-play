@@ -23,6 +23,21 @@ public struct ContentStore: Sendable {
         directory(for: recipe).appendingPathComponent(file.name)
     }
 
+    /// Dieselbe Datei – dem Namen nach – in den Ordnern anderer Fassungen desselben Spiels, die neueste zuerst.
+    /// Zwischen zwei Fassungen ändert sich meist nur ein Teil der Dateien; was gleich geblieben ist, liegt hier schon.
+    public func siblings(of file: RecipeFile, in recipe: Recipe) -> [URL] {
+        guard Recipe.isSafeName(file.name) else { return [] }
+        let prefix = "\(recipe.id)-"
+        let own = directory(for: recipe).lastPathComponent
+        let names = (try? FileManager.default.contentsOfDirectory(atPath: root.path)) ?? []
+        return names.compactMap { name -> (Int, URL)? in
+            guard name.hasPrefix(prefix), name != own, let code = Int(name.dropFirst(prefix.count)) else { return nil }
+            let url = root.appendingPathComponent(name, isDirectory: true).appendingPathComponent(file.name)
+            return (ContentStore.fileSize(url) ?? 0) > 0 ? (code, url) : nil
+        }
+        .sorted { $0.0 > $1.0 }.map(\.1)
+    }
+
     public func partialURL(for file: RecipeFile, in recipe: Recipe) -> URL {
         directory(for: recipe).appendingPathComponent(".\(file.name).part")
     }

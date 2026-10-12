@@ -1,0 +1,112 @@
+{
+ "files": [
+  {
+   "dest": "",
+   "id": "6359521990800735",
+   "localName": "x3484270071659289.apk",
+   "name": "Taco-Android-Shipping-arm64-es2.apk",
+   "required": true,
+   "role": "apk",
+   "size": 62390825,
+   "sha256": "848979f4959e17faa5b15c539c4296420ef05ede6830ae363b5025e5539553e9"
+  },
+  {
+   "dest": "@obb",
+   "id": "6359498177469783",
+   "name": "main.439699.com.ilmxlab.tales.obb",
+   "required": true,
+   "role": "main-obb",
+   "size": 3907489228,
+   "sha256": "0f31d034724c9013ab60baea138c424deba7d0e266194049ae2df307a4b5a0ec"
+  },
+  {
+   "dest": "android-files/Android/obb/com.ilmxlab.tales",
+   "id": "6359520560800878",
+   "name": "WwiseBanksS2BTaco-Android_ASTC.pak",
+   "required": true,
+   "role": "content-bundle"
+  },
+  {
+   "dest": "android-files/Android/obb/com.ilmxlab.tales",
+   "id": "6359519617467639",
+   "name": "WwiseBanksS2ATaco-Android_ASTC.pak",
+   "required": true,
+   "role": "content-bundle"
+  },
+  {
+   "dest": "android-files/Android/obb/com.ilmxlab.tales",
+   "id": "6359518127467788",
+   "name": "WwiseBanksS1Taco-Android_ASTC.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 584216521,
+   "sha256": "c9d5d360db9bc8cb728a706ac6c4d84a2f3dfa55fd86acea1f457e137b5b343a"
+  },
+  {
+   "dest": "android-files/Android/obb/com.ilmxlab.tales",
+   "id": "6359516647467936",
+   "name": "WwiseBanksCoreTaco-Android_ASTC.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 419457134,
+   "sha256": "d606210fb5149f9e8916c70d8c69e1a9278286d2af279a7e3bf26d46296435d6"
+  },
+  {
+   "dest": "android-files/Android/obb/com.ilmxlab.tales",
+   "id": "6359515250801409",
+   "name": "Tale2BTaco-Android_ASTC.pak",
+   "required": true,
+   "role": "content-bundle"
+  },
+  {
+   "dest": "android-files/Android/obb/com.ilmxlab.tales",
+   "id": "6359513454134922",
+   "name": "Season2BTaco-Android_ASTC.pak",
+   "required": true,
+   "role": "content-bundle"
+  },
+  {
+   "dest": "android-files/Android/obb/com.ilmxlab.tales",
+   "id": "6359509184135349",
+   "name": "Season2ATaco-Android_ASTC.pak",
+   "required": true,
+   "role": "content-bundle"
+  },
+  {
+   "dest": "android-files/Android/obb/com.ilmxlab.tales",
+   "id": "6359503547469246",
+   "name": "Season1Taco-Android_ASTC.pak",
+   "required": true,
+   "role": "content-bundle",
+   "size": 2114403882,
+   "sha256": "510dd3b893d96e397e07b2c2ac7a481f95ee1278de2288a1aa22bb200ab77314"
+  }
+ ],
+ "id": "store-3484270071659289",
+ "package": "com.ilmxlab.tales",
+ "schema": 1,
+ "status": {
+  "playability": "verified",
+  "download": "listed",
+  "notes": [
+   {
+    "en": "Marked as verified by the project on 2026-10-11. File list as Meta's tool reports it for this build; 5 of 10 checksums recorded from a download.",
+    "de": "Vom Projekt am 2026-10-11 als geprüft markiert. Dateiliste, wie Metas Werkzeug sie für diesen Build nennt; 5 von 10 Prüfsummen aus einem Download erfasst."
+   },
+   {
+    "en": "Runs with a fix a user sent in (fix 16) and with the project's own: the game's start asks Meta's platform who is signed in, what add-ons exist and which of its content files are installed, and waited in a black room without answers; its menu is a curved layer; its movies play (without sound). Tested by the project on an Apple Vision Pro on 2026-10-11. The paid second part (Last Call) was not tested.",
+    "de": "Läuft mit einem von einem Nutzer eingesandten Fix (Fix 16) und eigenen des Projekts: Der Start fragt Metas Plattform nach dem angemeldeten Nutzer, nach Zusatzinhalten und nach den installierten Inhaltsdateien und wartete ohne Antworten in einem schwarzen Raum; das Menü ist eine gebogene Bildfläche; die Filme laufen (ohne Ton). Vom Projekt am 2026-10-11 auf einer Apple Vision Pro getestet. Der kostenpflichtige zweite Teil (Last Call) wurde nicht getestet."
+   }
+  ]
+ },
+ "store": {
+  "appId": "3484270071659289"
+ },
+ "title": "Star Wars: Tales from the Galaxy's Edge",
+ "toolchain": {
+  "minCommit": "f18341a",
+  "target": "x3484270071659289"
+ },
+ "versionCode": 439699,
+ "versionName": "1.1.9+734762.cl.439699"
+}

@@ -1,0 +1,46 @@
+{
+ "files": [
+  {
+   "dest": "",
+   "id": "36963683389912170",
+   "localName": "x9685315748175636.apk",
+   "name": "BattleGlide-Android-Shipping-arm64.apk",
+   "required": true,
+   "role": "apk",
+   "size": 59309590,
+   "sha256": "f4bcd82221d6ec17f3ac24ef3f15febca9bd5b4ea36bfab6df94d45119e3a3f7"
+  },
+  {
+   "dest": "@obb",
+   "id": "36963678446579331",
+   "name": "main.69.com.GhostlyBirdGames.BattleGlide.obb",
+   "required": true,
+   "role": "main-obb",
+   "size": 1337257366,
+   "sha256": "d15be8f8f98ec518b48eb7ca91fa8d31424dde6bc6acecb22a41774b34b97798"
+  }
+ ],
+ "id": "store-9685315748175636",
+ "package": "com.GhostlyBirdGames.BattleGlide",
+ "schema": 1,
+ "status": {
+  "playability": "verified",
+  "download": "proven",
+  "notes": [
+   {
+    "en": "Marked as verified by the project on 2026-10-12. File list as Meta's tool reports it for this build; 2 of 2 checksums recorded from a download.",
+    "de": "Vom Projekt am 2026-10-12 als geprüft markiert. Dateiliste, wie Metas Werkzeug sie für diesen Build nennt; 2 von 2 Prüfsummen aus einem Download erfasst."
+   }
+  ]
+ },
+ "store": {
+  "appId": "9685315748175636"
+ },
+ "title": "BattleGlide",
+ "toolchain": {
+  "minCommit": "d3f5305",
+  "target": "x9685315748175636"
+ },
+ "versionCode": 69,
+ "versionName": "0.4.1 (BETA)"
+}

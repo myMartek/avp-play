@@ -12,7 +12,7 @@ struct SetupView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                Text(L("To put a game on the Vision Pro, this Mac needs four things: Xcode, the Vision Pro, an Apple developer team and the toolchain. The two accounts are only needed for their own games – Meta for games from the Meta Store, Steam for Doom 3 and Half-Life: Alyx. Green means: checked and fine. Downloading a game's files already works with its account alone; building and installing follow once the four things are in place.", "Damit ein Spiel auf die Vision Pro kommt, braucht dieser Mac vier Dinge: Xcode, die Vision Pro, ein Apple-Entwicklerteam und die Toolchain. Die beiden Konten braucht es nur für ihre eigenen Spiele – Meta für Spiele aus dem Meta-Store, Steam für Doom 3 und Half-Life: Alyx. Grün heißt: geprüft und in Ordnung. Die Dateien eines Spiels lassen sich schon mit dem Konto allein laden; gebaut und installiert wird, sobald die vier Dinge beisammen sind."))
+                Text(L("To put a game on the Vision Pro, this Mac needs four things: Xcode, the Vision Pro, an Apple developer team and the toolchain. The two accounts are only needed for their own games – Meta for games from the Meta Store, Steam for Doom 3, Counter-Strike and Half-Life: Alyx. Green means: checked and fine. Downloading a game's files already works with its account alone; building and installing follow once the four things are in place.", "Damit ein Spiel auf die Vision Pro kommt, braucht dieser Mac vier Dinge: Xcode, die Vision Pro, ein Apple-Entwicklerteam und die Toolchain. Die beiden Konten braucht es nur für ihre eigenen Spiele – Meta für Spiele aus dem Meta-Store, Steam für Doom 3, Counter-Strike und Half-Life: Alyx. Grün heißt: geprüft und in Ordnung. Die Dateien eines Spiels lassen sich schon mit dem Konto allein laden; gebaut und installiert wird, sobald die vier Dinge beisammen sind."))
                     .fixedSize(horizontal: false, vertical: true)
                     .foregroundStyle(.secondary)
 
@@ -24,7 +24,9 @@ struct SetupView: View {
                 }
 
                 CheckCard(title: "Vision Pro", state: model.device == nil ? (model.devices.count > 1 ? .warning : .missing) : (model.deviceProblem == nil ? .ok : .warning),
-                          detail: model.device.map { d in model.deviceProblem ?? L("\(d.name) with visionOS \(d.osVersion) is reachable.", "\(d.name) mit visionOS \(d.osVersion) ist erreichbar.") }
+                          detail: model.device.map { d in model.deviceProblem ?? L("\(d.name) with visionOS \(d.osVersion) is reachable", "\(d.name) mit visionOS \(d.osVersion) ist erreichbar")
+                              + (d.transport.map { L(" over \($0.text).", " über \($0.text).") } ?? ".")
+                              + (d.transport == .wifi ? L(" With a USB cable on the Developer Strap, copying games is much faster.", " Mit einem USB-Kabel am Developer Strap geht das Kopieren von Spielen deutlich schneller.") : "") }
                               ?? model.deviceProblem ?? L("Searching …", "Wird gesucht …")) {
                     if model.devices.count > 1 {
                         Picker(L("Use this one", "Dieses benutzen"), selection: Binding(
@@ -70,6 +72,7 @@ struct SetupView: View {
                             .fixedSize()
                         }
                     }
+                    if model.usesFreeTeam { FreeAccountLimits() }
                     if model.teamCandidates.isEmpty {
                         Text(L("Xcode does not know a team yet. Sign in with your Apple ID in Xcode under Settings › Accounts, then choose “Check Again” here.", "Xcode kennt noch kein Team. In Xcode unter Einstellungen › Accounts mit der Apple-ID anmelden und hier „Neu prüfen“ wählen."))
                             .font(.callout).foregroundStyle(.secondary)
@@ -132,9 +135,10 @@ struct SetupView: View {
         .sheet(isPresented: $showLogin) { LoginSheet().environmentObject(model) }
     }
 
+    /// Ein kostenloses Konto ist in Ordnung, aber nicht dasselbe wie ein bezahltes: Das Zeichen sagt es.
     private var teamState: CheckState {
         guard model.teamValid else { return .missing }
-        return model.team?.free == true ? .warning : .ok
+        return model.usesFreeTeam ? .warning : .ok
     }
 
     private var teamDetail: String {
@@ -143,7 +147,8 @@ struct SetupView: View {
         }
         if let team = model.team {
             return team.free
-                ? L("\(team.name) is a free team. The games do not run with it in this version: required entitlements are missing. You need the paid Apple Developer Program membership.", "\(team.name) ist ein kostenloses Team. Damit laufen die Spiele in dieser Fassung nicht: nötige Berechtigungen fehlen. Gebraucht wird die bezahlte Mitgliedschaft im Apple Developer Program.")
+                ? L("\(team.name) signs the apps – a free Apple account, not a paid developer membership. Everything works, within the limits listed below.",
+                    "\(team.name) signiert die Apps – ein kostenloses Apple-Konto, keine bezahlte Entwickler-Mitgliedschaft. Alles funktioniert, in den Grenzen, die unten stehen.")
                 : L("\(team.name) (\(team.id)) signs the apps.", "\(team.name) (\(team.id)) signiert die Apps.")
         }
         return L("Team \(model.teamId) signs the apps.", "Team \(model.teamId) signiert die Apps.")

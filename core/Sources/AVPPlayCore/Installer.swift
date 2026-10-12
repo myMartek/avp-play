@@ -9,6 +9,8 @@ public enum InstallError: Error, CustomStringConvertible, Equatable {
     case appNotInstalled(String)
     case badIcon(String)
     case appRunning(String)
+    /// Ein kostenloses Apple-Konto hat schon so viele Apps auf dem Gerät, wie Apple ihm erlaubt.
+    case freeTeamFull(String, installed: [String])
     /// Die App ist kein Programm, das die Toolchain starten könnte (für Androids Java-Laufzeit geschrieben).
     case notANativeApp(String)
     /// Das APK bringt nur Programmcode für einen anderen Prozessor mit (ein reines 32-Bit-Spiel).
@@ -43,6 +45,10 @@ public enum InstallError: Error, CustomStringConvertible, Equatable {
             let list = found.joined(separator: ", ")
             return L("\(title) cannot run on the Vision Pro. This build is a 32-bit game (it only contains code for \(list)); the Vision Pro's processor runs 64-bit code only, and this tool translates 64-bit Quest games. Nothing can be changed about that from here – only a 64-bit build from the developer would work. The files already downloaded can be removed on the game's page.",
                      "\(title) kann auf der Vision Pro nicht laufen. Dieser Build ist ein 32-Bit-Spiel (er enthält nur Code für \(list)); der Prozessor der Vision Pro führt ausschließlich 64-Bit-Code aus, und dieses Werkzeug übersetzt 64-Bit-Spiele der Quest. Daran lässt sich von hier aus nichts ändern – nur ein 64-Bit-Build des Entwicklers würde gehen. Die schon geladenen Dateien lassen sich auf der Seite des Spiels entfernen.")
+        case .freeTeamFull(let title, let installed):
+            let list = installed.joined(separator: ", ")
+            return L("\(title) was not installed: a free Apple account may have only \(AppleMessages.freeAppsPerDevice) apps on the Vision Pro at a time, and these are already there: \(list). Remove one on the headset (press and hold its icon, then “Remove App”), then choose “Resume”. A paid developer membership has no such limit. Before you remove a game, let AVP Play fetch its saved games (the game's page, “Saved Games”): they stay on this Mac and are put back when you install the game again.",
+                     "\(title) wurde nicht installiert: Ein kostenloses Apple-Konto darf nur \(AppleMessages.freeAppsPerDevice) Apps gleichzeitig auf der Vision Pro haben, und diese sind schon dort: \(list). Entferne eine auf dem Headset (Icon gedrückt halten, dann „App entfernen“) und wähle dann „Fortsetzen“. Eine bezahlte Entwickler-Mitgliedschaft hat diese Grenze nicht. Bevor du ein Spiel entfernst, lass AVP Play seine Spielstände holen (Seite des Spiels, „Spielstände“): Sie bleiben auf diesem Mac und werden zurückgespielt, wenn du das Spiel wieder installierst.")
         case .appRunning(let title):
             return L("\(title) is currently running on the Vision Pro. Installing would quit the game. Quit the game, then resume.",
                      "\(title) läuft gerade auf der Vision Pro. Eine Installation würde das Spiel beenden. Spiel beenden und dann fortsetzen.")
@@ -64,12 +70,19 @@ public struct InstallRequest: Codable, Sendable, Equatable {
     public var customIcon: String?
     public var storeArt = true
     /// Mindestabstand zwischen Abrufen bei Meta, in Sekunden.
-    public var interval: Double = 5
+    public var interval: Double = 0
     /// Auch installieren, wenn die App gerade läuft (sie wird dabei beendet). Ohne Angabe: nein.
     public var replaceRunning: Bool?
     /// Der Auftrag lädt nur. Was der Nutzer selbst bereitstellen muss, darf dann noch fehlen: es wird genannt,
     /// hält das Laden der übrigen Dateien aber nicht auf. Ohne Angabe: nein.
     public var downloadOnly: Bool?
+    /// Nur neu signieren: bauen und über die bestehende Installation legen. Gebraucht wird dann allein, woraus
+    /// gebaut wird (das APK, bei einem Linux-Spiel seine Ordner) – die großen Datendateien liegen schon auf dem
+    /// Gerät und dürfen auf dem Mac inzwischen fehlen. Ohne Angabe: nein.
+    public var resign: Bool?
+    /// Nach dem Kopieren die Spielstände vom Mac zurückspielen, wenn auf dem Gerät noch keine liegen (ein frisch
+    /// installiertes Spiel). Ohne Angabe: nein.
+    public var restoreSaves: Bool?
 
     public init(toolchain: String) { self.toolchain = toolchain }
 }
@@ -118,10 +131,13 @@ public struct InstallProgress: Sendable, Equatable {
     public var step: InstallStep
     public var done: Int64
     public var total: Int64
-    public init(step: InstallStep, done: Int64, total: Int64) {
+    /// Worüber kopiert wird (Kabel oder WLAN), soweit bekannt.
+    public var via: Device.Transport?
+    public init(step: InstallStep, done: Int64, total: Int64, via: Device.Transport? = nil) {
         self.step = step
         self.done = done
         self.total = total
+        self.via = via
     }
 }
 
@@ -150,10 +166,42 @@ public struct Installer: Sendable {
         switch step {
         case .account: try await checkAccount()
         case .fetch: try await fetch()
-        case .build: try await build()
-        case .stage: try stage()
+        case .build: try await exclusive { try await build() }
+        case .stage: try await exclusive { try stage() }
         case .unlock: try unlock()
         }
+    }
+
+    /// Bauen und aufs Gerät kopieren darf zur selben Zeit nur ein Programm: Alle bauen im selben Ordner der Toolchain
+    /// und sprechen dasselbe Gerät an – die App, die Kommandozeile und der Hintergrunddienst, der Signaturen erneuert.
+    func exclusive(_ body: () async throws -> Void) async throws {
+        var lock = ProcessLock.acquire(ProcessLock.installURL)
+        if lock == nil {
+            report(L("Another AVP Play process is building or copying right now – waiting for it to finish …",
+                     "Ein anderer AVP-Play-Prozess baut oder kopiert gerade – es wird gewartet, bis er fertig ist …"))
+            while lock == nil {
+                try await Task.sleep(for: .seconds(2))
+                lock = ProcessLock.acquire(ProcessLock.installURL)
+            }
+        }
+        defer { lock?.release() }
+        try await body()
+    }
+
+    /// Die Apps auf dem Gerät, die unter demselben Präfix installiert sind wie `bundle` – also mit demselben
+    /// Konto von diesem Programm. Daran wird die Grenze eines kostenlosen Kontos vorab geprüft.
+    public static func appsSharingPrefix(with bundle: String, in apps: [InstalledApp]) -> [InstalledApp] {
+        guard let dot = bundle.lastIndex(of: ".") else { return [] }
+        let prefix = String(bundle[...dot])
+        return apps.filter { $0.bundleIdentifier.hasPrefix(prefix) }
+    }
+
+    /// Stünde eine Installation mit einem kostenlosen Konto an Apples Grenze an? Dann die Namen der Apps, die
+    /// schon dort sind. Eine App, die selbst schon installiert ist, wird nur ersetzt und zählt nicht neu.
+    public static func freeTeamBlock(bundle: String, apps: [InstalledApp]) -> [String]? {
+        let mine = appsSharingPrefix(with: bundle, in: apps)
+        guard !mine.contains(where: { $0.bundleIdentifier == bundle }), mine.count >= AppleMessages.freeAppsPerDevice else { return nil }
+        return mine.map(\.name).sorted()
     }
 
     // MARK: Auswahl und Bestand
@@ -189,9 +237,31 @@ public struct Installer: Sendable {
         return local
     }
 
+    /// Woraus gebaut wird, muss da sein: das APK und die Ordner, die die Toolchain selbst liest.
+    func buildInputs() throws {
+        if let apk = recipe.files.first(where: { $0.role == "apk" }), ContentStore.fileSize(store.url(for: apk, in: recipe)) == nil {
+            throw InstallError.missingFiles(count: 1, examples: [apk.name], recipe: recipe.id)
+        }
+        let trees = TreeStore(store: store).missing(recipe: recipe).filter { $0.role != .data }
+        guard trees.isEmpty else { throw InstallError.missingTrees(trees.map(\.name), recipe: recipe.id) }
+    }
+
+    /// Unter welcher Kennung das Spiel installiert wird: die ausdrücklich genannte; sonst bei einem kostenlosen Team
+    /// die mit dessen eigenem Präfix (die übliche Kennung gehört womöglich schon einem bezahlten Team, und Apple
+    /// gäbe sie keinem zweiten); ohne Team – beim bloßen Kopieren – die der bestehenden Installation; sonst die übliche.
+    var resolvedBundleId: String {
+        let target = recipe.toolchain.target
+        if let given = request.bundleId { return given }
+        if let team = request.team {
+            return AppleTeams.isFree(team) ? Toolchain.bundleId(target: target, prefix: Toolchain.defaultBundlePrefix(freeTeam: team))
+                                           : Toolchain.defaultBundleId(target: target)
+        }
+        return SigningRecord.load(store: store, recipe: recipe)?.bundleId ?? Toolchain.defaultBundleId(target: target)
+    }
+
     func target() throws -> (device: Device, bundle: String, toolchain: Toolchain) {
         let device = try control.pick(udid: request.device)
-        let bundle = request.bundleId ?? Toolchain.defaultBundleId(target: recipe.toolchain.target)
+        let bundle = resolvedBundleId
         let toolchain = try Toolchain(root: URL(fileURLWithPath: request.toolchain))
         guard toolchain.satisfies(minCommit: recipe.toolchain.minCommit) else {
             throw ToolchainError.tooOld(have: toolchain.commit(), need: recipe.toolchain.minCommit)
@@ -271,8 +341,14 @@ public struct Installer: Sendable {
                 : L("Files: \(plan.count) needed, \(kept) in the library, nothing to download.", "Dateien: \(plan.count) gebraucht, \(kept) im Bestand, nichts zu laden."))
             return
         }
+        // Was dem Namen nach schon in einer anderen Fassung desselben Spiels liegt, wird nur geladen, wenn es sich
+        // geändert hat (Fetcher.adopt) – gesagt, bevor es losgeht, damit „129 zu laden“ nicht nach 13 GB klingt.
+        let elsewhere = todo.filter { $0.action == .download && $0.file.source == nil && $0.file.role != "apk"
+                                      && !store.siblings(of: $0.file, in: recipe).isEmpty }.count
         report(L("Files: \(plan.count) needed, \(kept) in the library, \(todo.count) to download.",
-                 "Dateien: \(plan.count) gebraucht, \(kept) im Bestand, \(todo.count) zu laden."))
+                 "Dateien: \(plan.count) gebraucht, \(kept) im Bestand, \(todo.count) zu laden.")
+               + (elsewhere > 0 ? L(" \(elsewhere) of them are in the library from another version of this game; each is taken from there if it is unchanged.",
+                                    " \(elsewhere) davon liegen aus einer anderen Fassung dieses Spiels im Bestand; jede wird von dort übernommen, wenn sie unverändert ist.") : ""))
 
         var client = MetaClient(token: "unbenutzt")       // ohne Meta-Dateien wird er nie benutzt
         if todo.contains(where: { $0.file.source == nil }) {
@@ -292,8 +368,10 @@ public struct Installer: Sendable {
             if ApkUnpacker.lacksArm64(found) { throw InstallError.wrongArchitecture(title, found.sorted()) }
         }
         let summary = try await fetcher.run(plan, recipe: recipe) { report("  " + $0) }
-        report(L("Downloaded: \(summary.downloaded) files, \(summary.kept) were already there.",
-                 "Geladen: \(summary.downloaded) Dateien, \(summary.kept) waren vorhanden."))
+        report(L("Downloaded: \(summary.downloaded) files, \(summary.kept) were already there"
+                 + (summary.adopted > 0 ? ", \(summary.adopted) unchanged ones taken from another version of the game." : "."),
+                 "Geladen: \(summary.downloaded) Dateien, \(summary.kept) waren vorhanden"
+                 + (summary.adopted > 0 ? ", \(summary.adopted) unveränderte aus einer anderen Fassung des Spiels übernommen." : ".")))
         if !summary.withheld.isEmpty {
             report(L("Without \(summary.withheld.count) add-on file(s) Meta doesn't deliver for this account: \(summary.withheld.joined(separator: ", ")). The game is installed without them. After buying the add-on, remove the game's files on its page and download again.",
                      "Ohne \(summary.withheld.count) Zusatzdatei(en), die Meta für dieses Konto nicht ausliefert: \(summary.withheld.joined(separator: ", ")). Das Spiel wird ohne sie installiert. Nach einem Kauf des Zusatzinhalts: die Dateien des Spiels auf seiner Seite entfernen und neu laden."))
@@ -304,7 +382,7 @@ public struct Installer: Sendable {
     /// Build vor dem Kopieren. Installieren über eine bestehende App erhält deren Daten.
     func build() async throws {
         guard let team = request.team else { throw InstallError.teamMissing }
-        _ = try localFiles()
+        if request.resign == true { try buildInputs() } else { _ = try localFiles() }
         let (device, bundle, toolchain) = try target()
         let commit = toolchain.commit()
         report(L("Device: \(device.name) (visionOS \(device.osVersion)); app: \(bundle); toolchain: \(commit)",
@@ -324,11 +402,37 @@ public struct Installer: Sendable {
            let running = try? control.runningExecutables(device: device), DeviceControl.isRunning(app, executables: running) {
             throw InstallError.appRunning(recipe.title)
         }
+        // Ein kostenloses Konto: Apples Grenze vorab prüfen, statt erst zu bauen und dann an ihr zu scheitern.
+        // (`AVPPLAY_NO_FREE_PRECHECK=1` lässt die Vorabprüfung aus – um zu sehen, was Apple selbst dazu sagt.)
+        if AppleTeams.isFree(team), ProcessInfo.processInfo.environment["AVPPLAY_NO_FREE_PRECHECK"] != "1",
+           let apps = try? control.apps(device: device),
+           let there = Installer.freeTeamBlock(bundle: bundle, apps: apps) {
+            throw InstallError.freeTeamFull(recipe.title, installed: there)
+        }
+        // Ein neuer Bau verlängert die Signatur nur, wenn Xcode dafür ein neues Profil holt (siehe `SigningProfiles`).
+        // Bei einem kostenlosen Team gilt das für jede Installation, sonst nur fürs Erneuern.
+        let free = AppleTeams.isFree(team)
+        if free || request.resign == true,
+           SigningProfiles.removeStale(team: team, bundleId: bundle, fresherThan: SigningProfiles.renewBelow(free: free)) > 0 {
+            report(L("Signing: a new profile is requested from Apple, so that the game opens for the full time again.",
+                     "Signatur: Bei Apple wird ein neues Profil angefordert, damit das Spiel wieder die volle Zeit gilt."))
+        }
         let log = store.directory(for: recipe).appendingPathComponent(".last-build.log")
         let started = Date()
-        try toolchain.buildAndInstall(recipe: recipe, team: team, device: device, bundleId: request.bundleId, log: log,
+        try toolchain.buildAndInstall(recipe: recipe, team: team, device: device, bundleId: bundle, log: log,
                                       extraEnvironment: TreeStore(store: store).toolchainEnvironment(recipe: recipe))
         report(String(format: L("Built and installed (%.0f s).", "Gebaut und installiert (%.0f s)."), Date().timeIntervalSince(started)))
+        // Womit signiert wurde und bis wann: Daran erinnert die App rechtzeitig vor dem Ablauf.
+        let record = SigningRecord(team: team, free: free, installed: Date(), expires: toolchain.signingExpiry(recipe: recipe),
+                                   bundleId: bundle)
+        record.save(store: store, recipe: recipe)
+        if free {
+            let until = record.expires.map { DateFormatter.localizedString(from: $0, dateStyle: .medium, timeStyle: .short) }
+            report(until.map { L("Signed with a free Apple team: the game opens until \($0). Install it again before then to renew it; its data stays.",
+                                 "Mit einem kostenlosen Apple-Team signiert: Das Spiel lässt sich bis \($0) öffnen. Installiere es vorher erneut, um es zu erneuern; seine Daten bleiben.") }
+                   ?? L("Signed with a free Apple team: the game opens for seven days. Install it again before then to renew it; its data stays.",
+                        "Mit einem kostenlosen Apple-Team signiert: Das Spiel lässt sich sieben Tage lang öffnen. Installiere es vorher erneut, um es zu erneuern; seine Daten bleiben."))
+        }
     }
 
     /// Icon bereitlegen und die Toolchain vorbereiten.
@@ -365,6 +469,18 @@ public struct Installer: Sendable {
     /// Ergänzend kopieren: nur was auf dem Gerät fehlt oder eine andere Größe hat.
     func stage() throws {
         let (device, bundle, toolchain) = try target()
+        // Worüber kopiert wird, entscheidet macOS: am Kabel über das Kabel, sonst über das WLAN. Gesagt wird es hier,
+        // weil es über Minuten oder Stunden entscheidet.
+        if let via = device.transport {
+            progress(InstallProgress(step: .stage, done: 0, total: 0, via: via))
+            switch via {
+            case .cable: report(L("Connection to the Vision Pro: USB cable.", "Verbindung zur Vision Pro: USB-Kabel."))
+            case .wifi:
+                report(L("Connection to the Vision Pro: Wi-Fi. With a USB cable on the Developer Strap, macOS copies over the cable instead, which is much faster for large games.",
+                         "Verbindung zur Vision Pro: WLAN. Mit einem USB-Kabel am Developer Strap kopiert macOS stattdessen über das Kabel – bei großen Spielen deutlich schneller."))
+            case .other(let raw): report(L("Connection to the Vision Pro: \(raw).", "Verbindung zur Vision Pro: \(raw)."))
+            }
+        }
         // Ein Entwurf lässt offen, wo die Haupt-Datendatei hingehört; jetzt, mit entpacktem APK, weiß es die Toolchain.
         var obb: String?
         var packageFolder: String?
@@ -409,14 +525,44 @@ public struct Installer: Sendable {
             report(L("Taken off the device: \(gone.file.title?.text ?? gone.file.name) (\(Installer.gigabytes(gone.size)) freed).",
                      "Vom Gerät genommen: \(gone.file.title?.text ?? gone.file.name) (\(Installer.gigabytes(gone.size)) frei)."))
         }
-        let items = StagePlan.plan(local: local, remote: remote)
+        var items = StagePlan.plan(local: local, remote: remote)
         let staged = local.filter { StagePlan.destination(for: $0.file) != nil }.count
-        let hasTrees = recipe.trees?.isEmpty == false
+        // Für die Zeile „… liegen dort schon“: die Dateien des Rezepts, ohne was unten noch dazukommt.
+        let recipeItems = items.count
+        // Die Liste der Shader-Kombinationen, wo die Toolchain für das Spiel eine mitbringt: Aus ihr und den eigenen
+        // Dateien des Spiels entsteht hier das Archiv, das die Brille vor dem Start übersetzt – damit ein Shader nicht
+        // erst in dem Moment übersetzt wird, in dem das Spiel ihn zum ersten Mal braucht, und das Bild dafür stehen
+        // bleibt. Scheitert das, wird trotzdem installiert; dann ist es wie bisher.
+        do {
+            if let list = try toolchain.pipelineList(recipe: recipe, gameFiles: store.directory(for: recipe)) {
+                var there: [String: Int64] = [:]
+                for f in (try? control.files(device: device, bundle: bundle, subdirectory: "Documents/klfz")) ?? [] where !f.isDirectory {
+                    there[f.relativePath] = f.size
+                }
+                let name = "\(recipe.toolchain.target).foz"
+                if let size = ContentStore.fileSize(list.archive), there[name] != size {
+                    items.append(StageItem(source: list.archive, destination: "Documents/klfz/\(name)", size: size))
+                    report(L("Shader list: \(list.summary). The Vision Pro compiles them before the game's next start – a few minutes once, with a progress bar.",
+                             "Shader-Liste: \(list.summary). Die Vision Pro übersetzt sie vor dem nächsten Start des Spiels – einmalig einige Minuten, mit Fortschrittsanzeige."))
+                }
+                // Die Beschreibung seines Grafikgeräts schreibt das Spiel bei jedem Start selbst (device-info.json).
+                // Vor dem allerersten Start gibt es die noch nicht; dafür kommt eine Ersatzbeschreibung mit, unter
+                // dem Namen, unter dem die Brille eine solche sucht – sonst könnte sie erst vor dem zweiten Start
+                // übersetzen.
+                if let info = list.deviceInfo, let size = ContentStore.fileSize(info), there["device-info.default.json"] != size {
+                    items.append(StageItem(source: info, destination: "Documents/klfz/device-info.default.json", size: size))
+                }
+            }
+        } catch {
+            report(L("The shader list was left out: \(error)", "Die Shader-Liste bleibt weg: \(error)"))
+        }
+        // Gemeint sind hier die Bäume eines Spiels, das kein APK ist; Datenordner eines APK-Spiels folgen weiter unten.
+        let hasTrees = !TreeStore.toolchainTrees(of: recipe).isEmpty
         if staged > 0 || !hasTrees {
             let total = Installer.gigabytes(items.map(\.size).reduce(0, +))
-            report(L("Data: \(staged) files belong on the device, \(staged - items.count) are already there, "
+            report(L("Data: \(staged) files belong on the device, \(staged - recipeItems) are already there, "
                      + "\(items.count) to copy (\(total)).",
-                     "Daten: \(staged) Dateien gehören aufs Gerät, \(staged - items.count) liegen dort schon, "
+                     "Daten: \(staged) Dateien gehören aufs Gerät, \(staged - recipeItems) liegen dort schon, "
                      + "\(items.count) zu kopieren (\(total))."))
         }
         let copyStart = Date()
@@ -424,7 +570,13 @@ public struct Installer: Sendable {
         var copied: Int64 = 0
         if copyTotal > 0 { progress(InstallProgress(step: .stage, done: 0, total: copyTotal)) }
         for (n, item) in items.enumerated() {
+            // Eine große Datei braucht über das WLAN Minuten. Damit der Balken dabei nicht stillsteht, wird das Gerät
+            // währenddessen gefragt, wie viel von ihr schon dort liegt.
+            let watching = StopFlag()
+            pollFileProgress(item, device: device, bundle: bundle, before: copied, total: copyTotal, until: watching)
+            defer { watching.stop() }
             try copyWithRetry(item, to: device, bundle: bundle)
+            watching.stop()
             copied += item.size
             progress(InstallProgress(step: .stage, done: copied, total: copyTotal))
             if items.count <= 20 || (n + 1) % 10 == 0 || n + 1 == items.count {
@@ -451,7 +603,7 @@ public struct Installer: Sendable {
             }
             let log = store.directory(for: recipe).appendingPathComponent(".last-sync.log")
             try? FileManager.default.removeItem(at: log)
-            try toolchain.syncTrees(recipe: recipe, environment: env, device: device, bundleId: request.bundleId, copy: false, log: log)
+            try toolchain.syncTrees(recipe: recipe, environment: env, device: device, bundleId: bundle, copy: false, log: log)
             let want = TreeStore.listing(of: mirror)
             let total = Installer.gigabytes(want.values.reduce(0, +))
             report(L("Game data: \(want.count) files (\(total)) belong on the device; "
@@ -464,7 +616,7 @@ public struct Installer: Sendable {
             let totalBytes = want.values.reduce(0, +)
             let polling = StopFlag()
             defer { polling.stop() }
-            pollTreeProgress(device: device, bundle: bundle, total: totalBytes, until: polling)
+            pollTreeProgress(device: device, bundle: bundle, subdirectory: Installer.treeDestination, total: totalBytes, until: polling)
             // Bei stundenlangen Übertragungen reißt die Verbindung gelegentlich ab (das Gerät schläft ein, ein Socket
             // schließt). Der Abgleich ist wiederholbar – was schon drüben ist, lässt devicectl aus –, also geht es
             // nach einer Pause weiter, statt den Auftrag anzuhalten. Nur Abbrüche der Übertragung werden wiederholt;
@@ -473,7 +625,7 @@ public struct Installer: Sendable {
             for attempt in 1...attempts {
                 let mark = ContentStore.fileSize(log) ?? 0
                 do {
-                    try toolchain.syncTrees(recipe: recipe, environment: env, device: device, bundleId: request.bundleId, copy: true, log: log)
+                    try toolchain.syncTrees(recipe: recipe, environment: env, device: device, bundleId: bundle, copy: true, log: log)
                     break
                 } catch {
                     guard attempt < attempts, Installer.isTransferDrop(Installer.text(of: log, from: mark)) else { throw error }
@@ -487,6 +639,15 @@ public struct Installer: Sendable {
             progress(InstallProgress(step: .stage, done: totalBytes, total: totalBytes))
             report(String(format: L("Game data synced (%.0f s).", "Spieldaten abgeglichen (%.0f s)."), Date().timeIntervalSince(started)))
         }
+
+        try stageDataTrees(device: device, bundle: bundle)
+
+        // Die eigenen Server des Nutzers, wenn das Spiel so eine Liste versteht.
+        if recipe.servers != nil, try GameServerStore().push(recipe: recipe, device: device, bundle: bundle, control: control) {
+            report(L("Server list copied to the game.", "Serverliste zum Spiel kopiert."))
+        }
+
+        if request.restoreSaves == true { restoreSaves(device: device, bundle: bundle) }
 
         // Assets aus dem APK: als Ordner, wenn Anzahl oder Gesamtgröße abweichen. Der entpackte Baum entsteht
         // beim Build; fehlt er (Kopieren ohne vorherigen Build mit dieser Toolchain), wird er hier angelegt.
@@ -521,24 +682,144 @@ public struct Installer: Sendable {
         }
     }
 
+    /// Spielt die zuletzt geholten Spielstände zurück, wenn das Spiel auf dem Gerät noch keine hat. Geht das nicht,
+    /// ist die Installation deshalb nicht gescheitert: Es wird gesagt, und der Knopf auf der Seite des Spiels bleibt.
+    func restoreSaves(device: Device, bundle: String) {
+        let sync = SaveSync(store: store)
+        guard let snapshot = sync.saves.snapshots(for: recipe).first else { return }
+        do {
+            let n = try sync.restore(snapshot, recipe: recipe, device: device, bundle: bundle, mode: .ifNoneThere)
+            if n > 0 {
+                let when = DateFormatter.localizedString(from: snapshot.taken, dateStyle: .medium, timeStyle: .short)
+                report(n == 1 ? L("Saved games: one file from \(when) put back on the device.", "Spielstände: eine Datei vom \(when) aufs Gerät zurückgespielt.")
+                              : L("Saved games: \(n) files from \(when) put back on the device.", "Spielstände: \(n) Dateien vom \(when) aufs Gerät zurückgespielt."))
+            }
+        } catch {
+            report(L("Saved games could not be put back (\(Redaction.redact("\(error)"))). The game's page offers it again.",
+                     "Die Spielstände ließen sich nicht zurückspielen (\(Redaction.redact("\(error)"))). Die Seite des Spiels bietet es erneut an."))
+        }
+    }
+
+    /// Datenordner eines APK-Spiels (Rolle `data`): Jeder gehört als Ganzes an seinen Ort unter `Documents/`.
+    ///
+    /// Übertragen wird in einem Zug, als Ordner – Datei für Datei bräuchte bei einigen tausend Dateien Stunden. Dafür
+    /// entsteht im Bestand ein Abbild aus Links, das nur enthält, was drüben fehlt; `devicectl` legt es über den
+    /// Zielordner, und was dort sonst liegt, bleibt. Ist alles drüben, kommt eine leere Kenndatei dazu, deren Name
+    /// die Fassung des Baums trägt: Von da an gilt der Ordner als vollständig, und es wird nur noch ergänzt, was fehlt.
+    func stageDataTrees(device: Device, bundle: String) throws {
+        let fm = FileManager.default
+        let treeStore = TreeStore(store: store)
+        for tree in TreeStore.dataTrees(of: recipe) {
+            guard let dest = tree.dest else { continue }
+            let directory = "Documents/\(dest)"
+            let source = treeStore.url(for: tree, in: recipe)
+            let local = TreeStore.listing(of: source)
+            guard !local.isEmpty else { throw InstallError.missingTrees([tree.name], recipe: recipe.id) }
+            var remote: [String: Int64] = [:]
+            for f in try control.files(device: device, bundle: bundle, subdirectory: directory, recursive: true) where !f.isDirectory {
+                remote[f.relativePath] = f.size
+            }
+            let stamp = tree.deviceStampName
+            let settled = remote[stamp] != nil
+            var needed = StagePlan.missing(ofTree: local, remote: remote, settled: settled)
+            // Die rekursive Liste des Geräts ist bei großen Bäumen nicht immer vollständig. Bevor in einem Ordner, der
+            // als vollständig gilt, etwas ersetzt wird, das womöglich nur in der Liste fehlt, wird dort einzeln nachgesehen.
+            if settled, !needed.isEmpty {
+                let parents = Set(needed.keys.map { ($0 as NSString).deletingLastPathComponent })
+                if parents.count <= 40 {
+                    for parent in parents {
+                        let sub = parent.isEmpty ? directory : "\(directory)/\(parent)"
+                        for f in try control.files(device: device, bundle: bundle, subdirectory: sub) where !f.isDirectory {
+                            needed[parent.isEmpty ? f.relativePath : "\(parent)/\(f.relativePath)"] = nil
+                        }
+                    }
+                }
+            }
+            let bytes = needed.values.reduce(0, +)
+            let total = Installer.gigabytes(local.values.reduce(0, +))
+            guard !needed.isEmpty else {
+                if !settled { try markSettled(tree, directory: directory, device: device, bundle: bundle) }
+                report(L("Game data “\(tree.name)”: \(local.count) files (\(total)) are already on the device.",
+                         "Spieldaten „\(tree.name)“: \(local.count) Dateien (\(total)) liegen schon auf dem Gerät."))
+                continue
+            }
+            report(L("Game data “\(tree.name)”: \(local.count) files (\(total)) belong on the device, \(needed.count) to copy (\(Installer.gigabytes(bytes))) …",
+                     "Spieldaten „\(tree.name)“: \(local.count) Dateien (\(total)) gehören aufs Gerät, \(needed.count) zu kopieren (\(Installer.gigabytes(bytes))) …"))
+
+            let mirror = store.directory(for: recipe).appendingPathComponent(".stage-\(tree.name)", isDirectory: true)
+            try? fm.removeItem(at: mirror)
+            defer { try? fm.removeItem(at: mirror) }
+            for path in needed.keys.sorted() {
+                let from = source.appendingPathComponent(path), to = mirror.appendingPathComponent(path)
+                try fm.createDirectory(at: to.deletingLastPathComponent(), withIntermediateDirectories: true)
+                // Ein Link kostet keinen Platz; wo er nicht geht, tut es eine Kopie (auf APFS ein Klon).
+                do { try fm.linkItem(at: from, to: to) } catch { try fm.copyItem(at: from, to: to) }
+            }
+            let started = Date()
+            let polling = StopFlag()
+            defer { polling.stop() }
+            progress(InstallProgress(step: .stage, done: 0, total: bytes))
+            pollTreeProgress(device: device, bundle: bundle, subdirectory: directory, total: bytes,
+                             baseline: remote.values.reduce(0, +), until: polling)
+            try copyWithRetry(StageItem(source: mirror, destination: directory, size: bytes), to: device, bundle: bundle)
+            polling.stop()
+            progress(InstallProgress(step: .stage, done: bytes, total: bytes))
+            if !settled { try markSettled(tree, directory: directory, device: device, bundle: bundle) }
+            report(String(format: L("Game data “\(tree.name)” copied (%.0f s).", "Spieldaten „\(tree.name)“ kopiert (%.0f s)."),
+                          Date().timeIntervalSince(started)))
+        }
+    }
+
+    /// Legt die Kenndatei in den Zielordner: Dieser Baum liegt in dieser Fassung vollständig auf dem Gerät.
+    func markSettled(_ tree: RecipeTree, directory: String, device: Device, bundle: String) throws {
+        let note = FileManager.default.temporaryDirectory.appendingPathComponent("avpplay-stamp-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: note) }
+        try Data("AVP Play: \(recipe.id) \(tree.name)\n".utf8).write(to: note)
+        try control.copy(note, to: device, bundle: bundle, destination: "\(directory)/\(tree.deviceStampName)")
+    }
+
     /// Wo die Toolchain die Ordnerbestände auf dem Gerät ablegt (siehe stage_sync.py: `<container>/Documents/lx`).
     static let treeDestination = "Documents/lx"
 
-    /// Fragt das Gerät während eines Ordnerabgleichs alle halbe Minute, wie viel unter `Documents/lx` liegt, und
-    /// meldet das als Fortschritt – bis `until` gesetzt ist. Eine Abfrage, die während der Übertragung scheitert,
+    /// Fragt das Gerät während eines Ordnerabgleichs alle halbe Minute, wie viel unter einem Ordner liegt (abzüglich
+    /// dessen, was dort schon vorher lag), und meldet das als Fortschritt – bis `until` gesetzt ist. Eine Abfrage, die während der Übertragung scheitert,
     /// wird übergangen; die nächste kommt ohnehin. Die rekursive Liste des Geräts kann bei großen Bäumen unvollständig
     /// sein; der Balken zeigt dann eher zu wenig als zu viel.
-    func pollTreeProgress(device: Device, bundle: String, total: Int64, every seconds: TimeInterval = 30, until stop: StopFlag) {
+    func pollTreeProgress(device: Device, bundle: String, subdirectory: String, total: Int64, baseline: Int64 = 0,
+                          every seconds: TimeInterval = 30, until stop: StopFlag) {
         guard total > 0 else { return }
         let control = self.control, progress = self.progress
         Thread.detachNewThread {
             Thread.sleep(forTimeInterval: 5)
             while !stop.isSet {
-                if let files = try? control.files(device: device, bundle: bundle, subdirectory: Installer.treeDestination, recursive: true) {
-                    let done = files.filter { !$0.isDirectory }.reduce(Int64(0)) { $0 + $1.size }
+                if let files = try? control.files(device: device, bundle: bundle, subdirectory: subdirectory, recursive: true) {
+                    let done = max(0, files.filter { !$0.isDirectory }.reduce(Int64(0)) { $0 + $1.size } - baseline)
                     if !stop.isSet { progress(InstallProgress(step: .stage, done: min(done, total), total: total)) }
                 }
                 for _ in 0..<Int(seconds * 2) where !stop.isSet { Thread.sleep(forTimeInterval: 0.5) }
+            }
+        }
+    }
+
+    /// Ab dieser Größe wird während des Kopierens einer einzelnen Datei nachgefragt, wie weit sie ist.
+    static let watchedFileSize: Int64 = 48 << 20
+
+    /// Fragt das Gerät während des Kopierens einer großen Datei alle paar Sekunden, wie groß sie dort schon ist, und
+    /// meldet das als Fortschritt – bis `until` gesetzt ist. Am Gerät gemessen (visionOS 27.2, 2026-10-11): die
+    /// Datei steht von Anfang an in der Liste und wächst mit. Eine Abfrage, die scheitert, wird übergangen.
+    func pollFileProgress(_ item: StageItem, device: Device, bundle: String, before: Int64, total: Int64,
+                          every seconds: TimeInterval = 2, until stop: StopFlag) {
+        guard item.size >= Installer.watchedFileSize, total > 0 else { return }
+        let control = self.control, progress = self.progress
+        let folder = (item.destination as NSString).deletingLastPathComponent, name = (item.destination as NSString).lastPathComponent
+        Thread.detachNewThread {
+            while !stop.isSet {
+                for _ in 0..<Int(seconds * 4) where !stop.isSet { Thread.sleep(forTimeInterval: 0.25) }
+                guard !stop.isSet, let files = try? control.files(device: device, bundle: bundle, subdirectory: folder),
+                      let there = files.first(where: { $0.relativePath == name && !$0.isDirectory })?.size else { continue }
+                // Nie ganz voll, solange die Datei nicht als fertig gemeldet ist – und nie rückwärts.
+                let part = min(there, item.size - 1)
+                if !stop.isSet, part > 0 { progress(InstallProgress(step: .stage, done: min(before + part, total), total: total)) }
             }
         }
     }

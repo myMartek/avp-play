@@ -15,6 +15,11 @@ struct JobsView: View {
             HSplitView {
                 List(model.jobs, selection: $model.selectedJob) { job in
                     JobRow(job: job).tag(job.id)
+                        .contextMenu {
+                            let phase = model.phase(of: job)
+                            Button(L("Take Off This List", "Aus dieser Liste nehmen")) { model.remove([job]) }
+                                .disabled(phase == .running || phase == .queued)
+                        }
                 }
                 .frame(minWidth: 250, idealWidth: 290, maxWidth: 360)
                 Group {
@@ -27,6 +32,7 @@ struct JobsView: View {
                 .frame(minWidth: 420, maxWidth: .infinity, maxHeight: .infinity)
             }
             .navigationTitle(L("Jobs", "Aufträge"))
+            .toolbar { ToolbarItem { ClearJobsMenu() } }
         }
     }
 }
@@ -134,7 +140,7 @@ struct JobDetail: View {
                             .fixedSize(horizontal: false, vertical: true)
                         HStack {
                             switch job.failureKind ?? .other {
-                            case .signIn, .setup:
+                            case .signIn, .setup, .apple:
                                 Button(L("Open Setup", "Einrichtung öffnen")) { model.section = .setup }
                             case .ownFiles, .notOwned:
                                 Button(L("Open Game Page", "Seite des Spiels öffnen")) {
@@ -186,9 +192,10 @@ struct JobDetail: View {
                 }
             }
             if phase == .running, job.current == .stage, let progress = model.copyProgress[job.id], progress.total > 0 {
-                // Das Gerät meldet nur ganze Dateien; bei wenigen großen Dateien steht der Balken dazwischen still.
+                // Bei einer großen Datei wird das Gerät währenddessen gefragt, wie viel von ihr schon dort liegt.
                 ProgressLine(done: progress.done, total: progress.total,
-                             verb: L("copied to the Vision Pro", "auf die Vision Pro kopiert")).id("stage-\(job.id)")
+                             verb: progress.via.map { L("copied to the Vision Pro over \($0.text)", "über \($0.text) auf die Vision Pro kopiert") }
+                                 ?? L("copied to the Vision Pro", "auf die Vision Pro kopiert")).id("stage-\(job.id)")
             }
 
             HStack {
@@ -232,6 +239,12 @@ struct JobDetail: View {
                      "Es fehlen Dateien, die du selbst bereitstellst. Die Seite des Spiels nennt sie und lässt dich den Ordner wählen.")
         case .setup:
             return L("Something in “Setup” is missing or has changed.", "In der „Einrichtung“ fehlt etwas oder hat sich geändert.")
+        case .apple:
+            return model.team?.free == true
+                ? L("This comes from Apple, not from the game: you are signing with a free Apple account, and it has limits. “Setup” lists them under “Apple Developer Team”.",
+                    "Das kommt von Apple, nicht vom Spiel: Du signierst mit einem kostenlosen Apple-Konto, und das hat Grenzen. Unter „Einrichtung“ stehen sie beim „Apple-Entwicklerteam“.")
+                : L("This comes from Apple, not from the game. The text above says what Apple wants; afterwards “Resume” continues.",
+                    "Das kommt von Apple, nicht vom Spiel. Der Text oben sagt, was Apple verlangt; danach geht es mit „Fortsetzen“ weiter.")
         case .unsupported:
             return L("There is nothing to resume: this app cannot run here. Games built on Unity or Unreal are the ones worth trying.",
                      "Hier gibt es nichts fortzusetzen: Diese App kann hier nicht laufen. Einen Versuch wert sind Spiele, die auf Unity oder Unreal gebaut sind.")

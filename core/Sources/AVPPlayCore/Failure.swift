@@ -21,6 +21,8 @@ public enum FailureKind: String, Codable, Sendable {
     case ownFiles
     /// Etwas an der Einrichtung fehlt (Team, Toolchain).
     case setup
+    /// Apple hat abgelehnt: eine Grenze des (kostenlosen) Kontos, eine fehlende Anmeldung oder Zustimmung.
+    case apple
     /// Die App kann grundsätzlich nicht laufen; es gibt nichts fortzusetzen und nichts zu beheben.
     case unsupported
     case other
@@ -34,6 +36,7 @@ public enum FailureKind: String, Codable, Sendable {
             case .userFilesNeeded, .missingTrees: return .ownFiles
             case .missingFiles: return .download
             case .teamMissing: return .setup
+            case .freeTeamFull: return .apple
             case .appNotInstalled: return .build
             case .badIcon: return .other
             case .notANativeApp, .wrongArchitecture: return .unsupported
@@ -46,9 +49,14 @@ public enum FailureKind: String, Codable, Sendable {
         case let e as ToolchainError:
             switch e {
             case .buildFailed: return .build
-            case .syncFailed: return .copy
+            case .syncFailed, .pipelineListFailed: return .copy
             case .installFailed: return .device
-            case .notAToolchain, .tooOld: return .setup
+            case .refused(let refusal, _, _):
+                switch refusal {
+                case .deviceLocked, .deviceFull: return .device
+                default: return .apple
+                }
+            case .notAToolchain, .tooOld, .signingBlocked: return .setup
             }
         case is FetchError, is URLError: return .download
         default: return .other

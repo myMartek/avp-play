@@ -1,0 +1,113 @@
+{
+ "files": [
+  {
+   "dest": "",
+   "id": "29723164320660662",
+   "localName": "x5767635983306831.apk",
+   "name": "BHM-Android-Shipping-arm64.apk",
+   "required": true,
+   "role": "apk",
+   "size": 62877074,
+   "sha256": "5c2cf18a212868e78b5e24ccc271705140d64ababeb607166d657653513732ba"
+  },
+  {
+   "dest": "@obb",
+   "id": "29723156607328100",
+   "name": "main.55911500.com.SDI.BHM.obb",
+   "required": true,
+   "role": "main-obb",
+   "size": 3739530992,
+   "sha256": "8b08b5e01ed03992fefb85429fa34e5fb884baf3428247e62138b661271e07e2"
+  },
+  {
+   "dest": "android-files/Android/obb/com.SDI.BHM",
+   "id": "29723150377328723",
+   "name": "overflow6.55911500.com.SDI.BHM.obb",
+   "required": true,
+   "role": "content-bundle",
+   "size": 3554370690,
+   "sha256": "d458cfaa315b88632f0cb25241e1e24aa482db5cf67755e93673c571bda66c83"
+  },
+  {
+   "dest": "android-files/Android/obb/com.SDI.BHM",
+   "id": "29723149547328806",
+   "name": "overflow1.55911500.com.SDI.BHM.obb",
+   "required": true,
+   "role": "content-bundle",
+   "size": 3510324121,
+   "sha256": "1978a9253f0660bfcc22968dfa9336009d5694a6432a36f317dc64b019cf4af7"
+  },
+  {
+   "dest": "android-files/Android/obb/com.SDI.BHM",
+   "id": "29723148117328949",
+   "name": "overflow4.55911500.com.SDI.BHM.obb",
+   "required": true,
+   "role": "content-bundle",
+   "size": 4212073663,
+   "sha256": "5ee793973f3fa746f818560b09bf9fa925f93759d5c131ef5d5150d6189e8032"
+  },
+  {
+   "dest": "android-files/Android/obb/com.SDI.BHM",
+   "id": "29723147153995712",
+   "name": "overflow2.55911500.com.SDI.BHM.obb",
+   "required": true,
+   "role": "content-bundle",
+   "size": 4047182568,
+   "sha256": "17e1ff75372e0f25e0b0777aaa06a13666211ca946601dd4126e78d7d4a5ece4"
+  },
+  {
+   "dest": "android-files/Android/obb/com.SDI.BHM",
+   "id": "29723147057329055",
+   "name": "patch.55911500.com.SDI.BHM.obb",
+   "required": true,
+   "role": "content-bundle",
+   "size": 3328346854,
+   "sha256": "7df7656dc89e4c3cd6b0ba5885065f27e4b96cff226b85944d59a52311fee17f"
+  },
+  {
+   "dest": "android-files/Android/obb/com.SDI.BHM",
+   "id": "29723145480662546",
+   "name": "overflow5.55911500.com.SDI.BHM.obb",
+   "required": true,
+   "role": "content-bundle",
+   "size": 2831596783,
+   "sha256": "dcdfd465098475484021a499c69c52f953719be30275f9aa98986e4446d79ad2"
+  },
+  {
+   "dest": "android-files/Android/obb/com.SDI.BHM",
+   "id": "29723144840662610",
+   "name": "overflow3.55911500.com.SDI.BHM.obb",
+   "required": true,
+   "role": "content-bundle",
+   "size": 2892480267,
+   "sha256": "28b59b30d8e1572decd375b01df9a632a19596ba874ebbcdb298505ddd6500a0"
+  }
+ ],
+ "id": "store-5767635983306831",
+ "package": "com.SDI.BHM",
+ "schema": 1,
+ "status": {
+  "playability": "verified",
+  "download": "proven",
+  "notes": [
+   {
+    "en": "Marked as verified by the project on 2026-10-11. File list as Meta's tool reports it for this build; 9 of 9 checksums recorded from a download.",
+    "de": "Vom Projekt am 2026-10-11 als geprüft markiert. Dateiliste, wie Metas Werkzeug sie für diesen Build nennt; 9 von 9 Prüfsummen aus einem Download erfasst."
+   },
+   {
+    "en": "Runs with fixes users sent in (fixes 20 and 21). At the first start the game builds its shaders behind its loading screen; that took several minutes on an Apple Vision Pro, so leave it standing. Later starts are quicker. Tested by the project on an Apple Vision Pro on 2026-10-11.",
+    "de": "Läuft mit von Nutzern eingesandten Fixes (Fix 20 und 21). Beim ersten Start baut das Spiel hinter seinem Ladebildschirm seine Shader; das dauerte auf einer Apple Vision Pro mehrere Minuten, also stehen lassen. Spätere Starts gehen schneller. Vom Projekt am 2026-10-11 auf einer Apple Vision Pro getestet."
+   }
+  ]
+ },
+ "store": {
+  "appId": "5767635983306831"
+ },
+ "title": "Skydance's BEHEMOTH",
+ "toolchain": {
+  "minCommit": "513392f",
+  "target": "x5767635983306831"
+ },
+ "versionCode": 55911500,
+ "versionName": "Shipping / 2025.06.10 / build 559115 - UE5-STAGE-NEW"
+}

@@ -7,12 +7,44 @@ public struct Device: Sendable, Equatable {
     public let reachable: Bool
     public let paired: Bool
     public let developerMode: Bool
+    /// Worüber der Mac das Headset gerade erreicht; `nil`, wenn `devicectl` dazu nichts sagt.
+    public var transport: Transport? = nil
+    /// Steht die Verbindung gerade? Ein gekoppeltes Headset ohne stehende Verbindung ist ansprechbar, aber vielleicht
+    /// im Ruhezustand: Wer es nur nebenbei fragen will, lässt es dann öfter in Ruhe.
+    public var connected = false
+
+    /// Der Weg zum Gerät. Apple wählt ihn selbst: Hängt das Headset am Kabel (Developer Strap), läuft alles darüber,
+    /// sonst über das WLAN. Vorgeben lässt er sich nicht – aber zeigen.
+    public enum Transport: Sendable, Equatable {
+        case cable, wifi
+        /// Etwas, das diese Fassung nicht kennt, im Wortlaut von `devicectl`.
+        case other(String)
+
+        init?(devicectl raw: String?) {
+            switch raw {
+            case nil, "": return nil
+            case "wired": self = .cable
+            case "localNetwork": self = .wifi
+            case let other?: self = .other(other)
+            }
+        }
+
+        public var text: String {
+            switch self {
+            case .cable: return L("USB cable", "USB-Kabel")
+            case .wifi: return L("Wi-Fi", "WLAN")
+            case .other(let raw): return raw
+            }
+        }
+    }
 }
 
 public struct RemoteFile: Sendable, Equatable {
     public let relativePath: String
     public let size: Int64
     public let isDirectory: Bool
+    /// Wann die Datei auf dem Gerät zuletzt geändert wurde, soweit das Gerät es sagt.
+    public var modified: Date? = nil
 }
 
 public struct InstalledApp: Sendable, Equatable {
@@ -57,7 +89,7 @@ public struct DeviceControl: Sendable {
             struct Result: Decodable { let devices: [Entry] }
             struct Entry: Decodable {
                 struct Hardware: Decodable { let platform: String?; let reality: String?; let udid: String? }
-                struct Connection: Decodable { let tunnelState: String?; let pairingState: String? }
+                struct Connection: Decodable { let tunnelState: String?; let pairingState: String?; let transportType: String? }
                 struct Properties: Decodable { let name: String?; let osVersionNumber: String?; let developerModeStatus: String? }
                 let hardwareProperties: Hardware?
                 let connectionProperties: Connection?
@@ -75,7 +107,9 @@ public struct DeviceControl: Sendable {
                           // beides ist ansprechbar, "unavailable" nicht.
                           reachable: tunnel == "connected" || tunnel == "disconnected",
                           paired: e.connectionProperties?.pairingState == "paired",
-                          developerMode: e.deviceProperties?.developerModeStatus == "enabled")
+                          developerMode: e.deviceProperties?.developerModeStatus == "enabled",
+                          transport: Device.Transport(devicectl: e.connectionProperties?.transportType),
+                          connected: tunnel == "connected")
         }
     }
 
@@ -83,7 +117,7 @@ public struct DeviceControl: Sendable {
         struct Root: Decodable {
             struct Result: Decodable { let files: [Entry] }
             struct Entry: Decodable {
-                struct Meta: Decodable { let size: Int64? }
+                struct Meta: Decodable { let size: Int64?; let lastModDate: String? }
                 struct Resources: Decodable { let isDirectory: Bool? }
                 let relativePath: String?
                 let name: String?
@@ -92,9 +126,12 @@ public struct DeviceControl: Sendable {
             }
             let result: Result
         }
+        let stamp = ISO8601DateFormatter()
+        stamp.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return try JSONDecoder().decode(Root.self, from: data).result.files.compactMap { e in
             guard let path = e.relativePath ?? e.name else { return nil }
-            return RemoteFile(relativePath: path, size: e.metadata?.size ?? 0, isDirectory: e.resources?.isDirectory ?? false)
+            return RemoteFile(relativePath: path, size: e.metadata?.size ?? 0, isDirectory: e.resources?.isDirectory ?? false,
+                              modified: e.metadata?.lastModDate.flatMap(stamp.date(from:)))
         }
     }
 
@@ -168,6 +205,13 @@ public struct DeviceControl: Sendable {
     public func copy(_ local: URL, to device: Device, bundle: String, destination: String) throws {
         _ = try run(["device", "copy", "to", "--device", device.udid, "--domain-type", "appDataContainer",
                      "--domain-identifier", bundle, "--source", local.path, "--destination", destination])
+    }
+
+    /// Holt eine Datei aus dem Datencontainer der App auf den Mac. Auf dem Gerät ändert das nichts.
+    public func copy(from device: Device, bundle: String, source: String, to local: URL) throws {
+        try FileManager.default.createDirectory(at: local.deletingLastPathComponent(), withIntermediateDirectories: true)
+        _ = try run(["device", "copy", "from", "--device", device.udid, "--domain-type", "appDataContainer",
+                     "--domain-identifier", bundle, "--source", source, "--destination", local.path])
     }
 
     private func json(_ args: [String]) throws -> Data {

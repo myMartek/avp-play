@@ -1,0 +1,127 @@
+{
+ "schema": 1,
+ "id": "csvr",
+ "title": "Counter-Strike",
+ "package": "com.lvonasek.csvr",
+ "versionName": "1.0.5",
+ "versionCode": 105,
+ "store": {},
+ "toolchain": {
+  "target": "cs1",
+  "minCommit": "e36dc96"
+ },
+ "files": [
+  {
+   "name": "CSVR-1.0.5.apk",
+   "role": "apk",
+   "id": "",
+   "size": 73827320,
+   "sha256": "631f2b09e025c15d820570735d2351de1caca545b64c6b5ea270542cd5e3cb0b",
+   "required": true,
+   "dest": "",
+   "localName": "cs1.apk",
+   "source": {
+    "kind": "url",
+    "url": "https://github.com/Team-Beef-Studios/CSVR/releases/download/v1.0.5/CSVR-1.0.5.apk",
+    "hint": {
+     "en": "Free port by Team Beef (CSVR 1.0.5).",
+     "de": "Freier Port von Team Beef (CSVR 1.0.5)."
+    }
+   }
+  }
+ ],
+ "trees": [
+  {
+   "name": "gamedata",
+   "role": "data",
+   "dest": "android-files/xash",
+   "only": [
+    "cstrike",
+    "valve"
+   ],
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The folders 'valve' and 'cstrike' of your own Counter-Strike 1.6 (Steam, app 10). With a Steam sign-in under Setup the app fetches them for you (about 0.8 GB). By hand: choose the folder that contains both, for example a 'Half-Life' folder from a Windows installation.",
+     "de": "Die Ordner 'valve' und 'cstrike' deines eigenen Counter-Strike 1.6 (Steam, App 10). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 0,8 GB). Von Hand: den Ordner wählen, der beide enthält, etwa einen 'Half-Life'-Ordner aus einer Windows-Installation."
+    },
+    "steam": {
+     "app": "10",
+     "depots": [
+      {
+       "id": "11",
+       "manifest": "3018093494972814332",
+       "bytes": 292340389
+      },
+      {
+       "id": "1",
+       "manifest": "2667117727132184734",
+       "bytes": 513399519
+      }
+     ]
+    }
+   },
+   "markers": [
+    {
+     "path": "cstrike/cstrike.wad",
+     "size": 2681364,
+     "sha256": "63bd011178c7563e38168de21bf6cd0d09c5e7c25f7936dea5f0c5200bfad267"
+    },
+    {
+     "path": "cstrike/maps/de_dust2.bsp",
+     "size": 2057288,
+     "sha256": "15945389528d113562ede0a2c80647ebfa799079ed1c05a25379bcf84e4e9286"
+    },
+    {
+     "path": "valve/halflife.wad",
+     "size": 37914096,
+     "sha256": "38ababf773463fdf6133005d13e543098fc42392b458057f239469b764691300"
+    }
+   ]
+  }
+ ],
+ "servers": {
+  "dest": "android-files/xash",
+  "file": "avpplay-servers.txt",
+  "defaultPort": 27015,
+  "builtin": [
+   {
+    "address": "152.53.113.187:27015",
+    "name": "InSpaze"
+   }
+  ]
+ },
+ "icon": {
+  "steamAppId": "10"
+ },
+ "status": {
+  "playability": "verified",
+  "download": "special",
+  "notes": [
+   {
+    "en": "Special app: not a Meta Store title. The APK is Team Beef's free CSVR; the game data comes from your own Steam purchase of Counter-Strike.",
+    "de": "Sonderapp: kein Titel aus dem Meta-Store. Das APK ist Team Beefs freies CSVR; die Spieldaten stammen aus dem eigenen Steam-Kauf von Counter-Strike."
+   },
+   {
+    "en": "Rounds against bots were played on the device (2026-10-11). Cross jumps, Circle ducks, the right stick up or down changes the weapon, the right grip reloads, the left trigger uses and buys.",
+    "de": "Runden gegen Bots am Gerät gespielt (2026-10-11). Kreuz springt, Kreis duckt, rechter Stick hoch oder runter wechselt die Waffe, rechter Griff lädt nach, linker Abzug benutzt und kauft."
+   },
+   {
+    "en": "The checksums of the marker files come from the Steam depots; other editions of the game may differ.",
+    "de": "Die Prüfsummen der Kenndateien stammen aus den Steam-Depots; andere Fassungen des Spiels können abweichen."
+   },
+   {
+    "en": "Needs the fork from e36dc96 on: frame pacing, the aim angle, the eye size, the smaller and lower HUD, and your own servers for this game.",
+    "de": "Braucht den Fork ab e36dc96: Bildtakt, Zielwinkel, Augenbildgröße, das kleinere, tiefere HUD und die eigenen Server für dieses Spiel."
+   },
+   {
+    "en": "Known: the weapon model occasionally showed stray triangles; the cause is not found yet.",
+    "de": "Bekannt: Am Waffenmodell waren gelegentlich einzelne Dreiecke zu sehen; die Ursache ist noch nicht gefunden."
+   },
+   {
+    "en": "Your own servers: the game's page keeps a list of addresses and, if you like, admin passwords. In the game they appear in the server list under Multiplayer › Internet games, and on a server with admin access the quick menu (press the left stick) controls bots, maps and settings as it does when you host.",
+    "de": "Eigene Server: Die Seite des Spiels führt eine Liste mit Adressen und auf Wunsch Admin-Passwörtern. Im Spiel stehen sie in der Serverliste unter Multiplayer › Internet games, und auf einem Server mit Admin-Zugang steuert das Schnellmenü (linken Stick drücken) Bots, Karten und Einstellungen wie beim eigenen Spiel."
+   }
+  ]
+ }
+}

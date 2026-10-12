@@ -14,12 +14,20 @@ struct Game: Identifiable {
     var catalog: CatalogGame?
     /// Kein mitgeliefertes Rezept, sondern ein Entwurf aus Katalog und Metas Werkzeug – oder erst ein Platzhalter.
     var draft = false
+    /// Gesetzt, wenn statt einer geprüften Fassung eine ungetestete aus dem Store gewählt ist: der Name der Fassung,
+    /// die ohne Wahl gilt.
+    var testedVersion: String?
+    /// Die Fassungen, zu denen das Projekt ein eigenes Rezept führt: zuerst die, die ohne Wahl gilt, dann weitere.
+    /// Leer bei einem Spiel ohne mitgeliefertes Rezept.
+    var verifiedVersions: [GameVersion] = []
     var id: String { recipe.id }
     /// Sind die Dateien des Spiels bekannt? Bei einem Platzhalter noch nicht.
     var prepared: Bool { !draft || !recipe.files.isEmpty }
     /// Wie weit dem Spiel zu trauen ist. Was der Katalog sagt, gilt – dort legt das Projekt fest oder zählen die
     /// Meldungen. Ohne Katalog (kein Netz, abgeschaltet, Sonderapp) gilt das mitgelieferte Rezept.
     var trust: Trust {
+        // Geprüft ist eine Fassung, nicht ein Name: die neuere aus dem Store hat das Projekt nicht gesehen.
+        if testedVersion != nil { return .untested }
         switch catalog?.status {
         case "verified": return .verified
         case "community": return .community
@@ -35,10 +43,12 @@ struct Game: Identifiable {
     var verified: Bool { trust == .verified }
     var installed: Bool {
         switch status.onDevice {
-        case .current, .olderToolchain, .unstamped: return true
+        case .current, .olderToolchain, .olderGame, .unstamped: return true
         case .notInstalled, .unknown: return false
         }
     }
+    /// Liegt alles, woraus das Spiel gebaut wird, vollständig auf diesem Mac?
+    var downloaded: Bool { prepared && status.filesRequired + status.treesRequired > 0 && status.stockComplete }
 }
 
 /// Vom Projekt geprüft, von Nutzern bestätigt, noch offen, oder von Nutzern als nicht lauffähig gemeldet.
@@ -55,6 +65,15 @@ struct GameOptions: Codable, Equatable {
     var optionalNames: [String] = []
     /// Gekaufte Zusatzinhalte laden und freischalten.
     var addons = true
+    /// Beim Installieren die Spielstände vom Mac zurückspielen, wenn das Spiel auf dem Gerät noch keine hat.
+    /// Wählbar und nicht fest, weil ältere gespeicherte Angaben den Eintrag nicht kennen; ohne Angabe: ja.
+    var restoreSaves: Bool?
+}
+
+/// Die in der Übersicht angehakten Spiele – ein eigener, kleiner Zustand (siehe `AppModel.picked`).
+@MainActor
+final class GameSelection: ObservableObject {
+    @Published var ids: Set<String> = []
 }
 
 enum AccountState: Equatable {
@@ -64,7 +83,8 @@ enum AccountState: Equatable {
 }
 
 enum AppSection: String, CaseIterable, Identifiable {
-    case games, jobs, data, setup
+    /// Die Einstellungen stehen als letzter Punkt in der Seitenleiste, nicht in einem eigenen Fenster.
+    case games, jobs, data, setup, settings
     var id: String { rawValue }
     var title: String {
         switch self {
@@ -72,6 +92,7 @@ enum AppSection: String, CaseIterable, Identifiable {
         case .jobs: return L("Jobs", "Aufträge")
         case .data: return L("Data", "Datenverwaltung")
         case .setup: return L("Setup", "Einrichtung")
+        case .settings: return L("Settings", "Einstellungen")
         }
     }
     var symbol: String {
@@ -80,6 +101,7 @@ enum AppSection: String, CaseIterable, Identifiable {
         case .jobs: return "list.bullet.clipboard"
         case .data: return "externaldrive"
         case .setup: return "checklist"
+        case .settings: return "gearshape"
         }
     }
 }
@@ -114,6 +136,9 @@ final class AppModel: ObservableObject {
     /// Metas letzte Antworten auf die Besitzfrage, je Store-App.
     @Published var ownership: [String: OwnershipRecord] = [:]
     @Published var checkingOwnership = false
+    /// Spiele, für die gerade einzeln bei Meta nachgefragt wird („Kauf prüfen“), und was dabei zuletzt zu sagen war.
+    @Published var checkingPurchase: Set<String> = []
+    @Published var purchaseNote: [String: String] = [:]
     /// Was zuletzt beim Einrichten von Metas Werkzeug herauskam – steht in der Karte „Meta-Konto“.
     @Published var toolNote: String?
     /// Der Dialog „Ein Problem melden“ ist offen; `reportJob` nennt den Auftrag, um den es geht.
@@ -162,8 +187,19 @@ final class AppModel: ObservableObject {
     @Published var favourites: Set<String> = Set(UserDefaults.standard.stringArray(forKey: "favourites") ?? [])
     @Published var sentFeedback: [String: String] = UserDefaults.standard.dictionary(forKey: "sentFeedback") as? [String: String] ?? [:]
     @AppStorage("onlineCatalog") var onlineCatalog = true
+    /// Dem Katalog sagen, dass die App in Gebrauch ist und welche Spiele installiert wurden – ohne Kennung.
+    @AppStorage("usageCounts") var usageCounts = true
     /// Titelbilder für Spiele, die noch nicht geladen sind, von deren öffentlicher Store-Seite holen.
     @AppStorage("storePictures") var storePictures = true
+    /// Der aktuelle Build geprüfter Store-Spiele, wie der Katalog ihn kennt (Kennung des Rezepts → Build).
+    @Published var storeBuilds: [String: CatalogBuild] = [:]
+    /// Alle Fassungen, die der Store zu einem Spiel des Kontos nennt, die neueste zuerst (Kennung des Rezepts →
+    /// Builds). Nur wo Meta selbst gefragt wurde; sonst kennt die App nur den einen Build des Katalogs.
+    @Published var storeBuildLists: [String: [CatalogBuild]] = [:]
+    /// Für welche Spiele die neueste Fassung aus dem Store statt der geprüften gewählt ist.
+    @Published var latestChoices = StoreUpdate.Choices.load()
+    /// Ältere Toolchains von selbst entfernen, sobald eine neuere installiert ist und nichts mehr mit ihnen baut.
+    @AppStorage("autoRemoveOldToolchains") var autoRemoveOldToolchains = true
     /// Besorgt diese Bilder: zwei Abrufe zugleich, mit Zwischenspeicher.
     let covers = CoverLoader()
     @AppStorage("filterFavourites") var filterFavourites = false
@@ -184,6 +220,8 @@ final class AppModel: ObservableObject {
     /// Die Filter der Übersicht; mehrere zugleich engen weiter ein.
     @AppStorage("filterVerified") var filterVerified = false
     @AppStorage("filterInstalled") var filterInstalled = false
+    /// Nur Spiele, deren Dateien vollständig auf dem Mac liegen, die aber nicht auf der Vision Pro sind.
+    @AppStorage("filterDownloaded") var filterDownloaded = false
     private var routed = false
     @AppStorage("teamId") var teamId = ""
     /// Die Sprache, in der das Programm gerade spricht. Ansichten hängen daran und bauen sich beim Wechsel neu.
@@ -206,6 +244,35 @@ final class AppModel: ObservableObject {
     let storeMoveStop = StopFlags()
     private var runningTask: Task<Void, Never>?
     private var stopRequested: Set<String> = []
+    /// Die in der Übersicht angehakten Spiele, und ob gerade ein Sammelauftrag für sie vorbereitet wird.
+    /// Nicht `@Published`: Hinge die Auswahl am Zustand der ganzen Oberfläche, würde jeder Haken die Übersicht neu
+    /// filtern, sortieren und jede schon gezeichnete Karte samt Bild neu aufbauen – bei vielen geladenen Spielen
+    /// spürbar träge. So hören nur die Haken, die Rahmen und die Leiste auf sie.
+    let picked = GameSelection()
+    var selection: Set<String> {
+        get { picked.ids }
+        set { picked.ids = newValue }
+    }
+    @Published var bulkBusy = false
+    /// Der Hintergrunddienst, der ablaufende Signaturen erneuert: ob er eingetragen sein soll, in welchem Abstand
+    /// er prüft, und was der letzte Lauf ergab.
+    @AppStorage("renewInBackground") var renewInBackground = false
+    @AppStorage("renewIntervalHours") var renewIntervalHours = BackgroundService.defaultInterval
+    @Published var renewalReport: RenewalReport? = RenewalReport.load()
+    @Published var renewalNote: String?
+    @Published var renewing = false
+    /// Spielstände: ob sie von selbst von der Vision Pro geholt werden, wann zuletzt alle Spiele dran waren, der
+    /// neueste Stand je Spiel (nach Kennung des Rezepts), für welche Spiele gerade geholt oder zurückgespielt wird
+    /// und was dabei zuletzt herauskam.
+    @AppStorage("syncSaves") var syncSaves = true
+    @AppStorage("lastSaveRound") var lastSaveRound: Double = 0
+    @Published var saveSnapshots: [String: SaveSnapshot] = [:]
+    @Published var savesBusy: Set<String> = []
+    @Published var savesNote: [String: String] = [:]
+    /// Welche Spiele bei der letzten Nachfrage auf dem Headset liefen – endet eines, werden seine Spielstände geholt.
+    var runningGames: Set<String> = []
+    var saveWatch: Task<Void, Never>?
+    var saveTicks = 0
 
     init() {
         applyLanguage()
@@ -222,12 +289,16 @@ final class AppModel: ObservableObject {
     }
 
     /// Die Spiele, die zu den gesetzten Filtern passen.
-    var shownGames: [Game] {
+    var shownGames: [Game] { visible(allGames) }
+
+    /// Aus einer Menge von Spielen die, die zu den gesetzten Filtern passen, in der Reihenfolge der Übersicht.
+    func visible(_ games: [Game]) -> [Game] {
         let words = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        return allGames.filter { game in
+        return games.filter { game in
             // „Geprüft“ und „Von Nutzern bestätigt“ ergänzen einander; alle anderen Filter engen weiter ein.
             ((!filterVerified && !filterCommunity) || (filterVerified && game.trust == .verified) || (filterCommunity && game.trust == .community))
                 && (!filterInstalled || game.installed)
+                && (!filterDownloaded || (game.downloaded && !game.installed))
                 && (!filterFavourites || isFavourite(game))
                 && (words.isEmpty || game.recipe.title.lowercased().contains(words) || game.recipe.package.lowercased().contains(words))
         }.sorted { a, b in
@@ -256,7 +327,6 @@ final class AppModel: ObservableObject {
         guard !due.isEmpty else { return }
         checkingOwnership = true
         Task.detached {
-            var records = known
             let gate = RequestGate()
             do {
                 let client = MetaClient(token: try TokenStore().read())
@@ -265,14 +335,63 @@ final class AppModel: ObservableObject {
                     try await gate.waitForTurn()
                     let owned = try await client.ownsApp(appId: app, userId: user)
                     await gate.requestFinished()
-                    records[app] = OwnershipRecord(owned: owned, checked: Date())
-                    try? cache.save(records)
-                    let now = records
+                    let now = cache.record(appId: app, owned: owned)
                     await MainActor.run { self.ownership = now }
                 }
             } catch {}
             await MainActor.run { self.checkingOwnership = false }
         }
+    }
+
+    /// „Kauf prüfen“: fragt Meta jetzt für dieses eine Spiel, ob das Konto es besitzt – dieselbe dokumentierte
+    /// Abfrage wie im täglichen Durchgang, nach `/me`, und trägt die Antwort ein. Für jemanden, der ein Spiel
+    /// gerade gekauft hat und es hier noch als „nicht in deinem Meta-Konto“ sieht.
+    func checkPurchase(_ game: Game, quiet: Bool = false) {
+        guard let app = game.recipe.store.appId, !checkingPurchase.contains(game.id) else { return }
+        if let why = storeBlocker { purchaseNote[game.id] = why; return }
+        guard account == .signedIn else {
+            purchaseNote[game.id] = L("Sign in to Meta under “Setup” first.", "Melde dich zuerst unter „Einrichtung“ bei Meta an.")
+            return
+        }
+        checkingPurchase.insert(game.id)
+        purchaseNote[game.id] = nil
+        let cache = OwnershipCache(store: paths.store)
+        let id = game.id
+        Task.detached {
+            var note: String?
+            var owned: Bool?
+            do {
+                let client = MetaClient(token: try TokenStore().read())
+                let user = try await client.me()
+                let answer = try await client.ownsApp(appId: app, userId: user)
+                owned = answer
+                let now = cache.record(appId: app, owned: answer)
+                await MainActor.run { self.ownership = now }
+                // Ungefragt (beim Öffnen der Seite) wird ein weiteres „Nein“ nicht eigens erläutert.
+                if !answer, !quiet {
+                    note = L("Meta says this game is not in the account you are signed in with. A new purchase can take a few minutes to show up; a game bought with another Meta account needs that account under “Setup”.",
+                             "Meta sagt, dass dieses Spiel nicht zu dem Konto gehört, mit dem du angemeldet bist. Ein neuer Kauf kann ein paar Minuten brauchen, bis er sichtbar ist; ein Spiel, das mit einem anderen Meta-Konto gekauft wurde, braucht dieses Konto unter „Einrichtung“.")
+                }
+            } catch {
+                if !quiet { note = L("Meta could not be asked: \(Redaction.redact("\(error)"))", "Meta ließ sich nicht fragen: \(Redaction.redact("\(error)"))") }
+            }
+            let final = note
+            let bought = owned == true
+            await MainActor.run {
+                self.checkingPurchase.remove(id)
+                self.purchaseNote[id] = final
+                // Ein ungetestetes Spiel, das nun doch zum Konto gehört: gleich nachschlagen, woraus es besteht.
+                if bought, let game = self.allGames.first(where: { $0.id == id }), game.draft, !game.prepared { self.prepare(game) }
+            }
+        }
+    }
+
+    /// Beim Öffnen der Seite eines Spiels: Ein „Nein“, das älter als zehn Minuten ist, wird noch einmal erfragt.
+    /// Nicht bei einem ungetesteten Spiel, das noch nachgeschlagen wird – dort stellt `prepare` dieselbe Frage.
+    func recheckPurchaseIfStale(_ game: Game) {
+        guard let app = game.recipe.store.appId, let record = ownership[app], !record.owned,
+              Date().timeIntervalSince(record.checked) > 600, account == .signedIn, !(game.draft && !game.prepared) else { return }
+        checkPurchase(game, quiet: true)
     }
 
     // MARK: Auswahl je Spiel
@@ -376,7 +495,9 @@ final class AppModel: ObservableObject {
     }
 
     /// Das Präfix, unter dem die Spiele installiert werden: das gewählte, sonst der Standard.
-    var bundlePrefix: String { customBundlePrefix.isEmpty ? Toolchain.defaultBundlePrefix() : customBundlePrefix }
+    var bundlePrefix: String {
+        customBundlePrefix.isEmpty ? Toolchain.defaultBundlePrefix(freeTeam: team?.free == true ? teamId : nil) : customBundlePrefix
+    }
 
     var teamValid: Bool { teamId.range(of: "^[A-Z0-9]{10}$", options: .regularExpression) != nil }
     /// Das gewählte Team, soweit Xcode es kennt.
@@ -398,13 +519,16 @@ final class AppModel: ObservableObject {
             return L("This game is not in your Meta account, so nothing is downloaded.",
                      "Dieses Spiel gehört nicht zu deinem Meta-Konto. Es wird nichts geladen.")
         }
+        if let why = freeAccountBlocker(for: game) { return why }
         if !game.status.userProvidedMissing.isEmpty { return L("Files that you provide yourself are missing (see below).", "Es fehlen Dateien, die du selbst bereitstellst (siehe unten).") }
         if let extra = missingExtras(for: game).first {
             let name = extra.title?.text ?? extra.name
             return L("“\(name)” is ticked but not on this Mac yet (see “Optional Content”).",
                      "„\(name)“ ist angehakt, liegt aber noch nicht auf diesem Mac (siehe „Wählbare Inhalte“).")
         }
-        if let t = toolchain, !t.satisfies(minCommit: game.recipe.toolchain.minCommit) {
+        // Ein Entwurf, der ohne Toolchain nachgeschlagen wurde, nennt noch keinen Mindeststand; der wird beim Anlegen
+        // des Auftrags eingesetzt.
+        if let t = toolchain, !game.recipe.toolchain.minCommit.isEmpty, !t.satisfies(minCommit: game.recipe.toolchain.minCommit) {
             return L("This game needs a newer toolchain than the one installed.", "Dieses Spiel braucht eine neuere Toolchain als die installierte.")
         }
         if isBusy(game.id) { return L("A job for this game is already running.", "Für dieses Spiel läuft schon ein Auftrag.") }
@@ -445,6 +569,7 @@ final class AppModel: ObservableObject {
         toolchainRevision = s.toolchainRevision
         games = s.games
         loadOwnCatalogEntries()
+        checkStoreVersions()
         loadProblem = s.loadProblem
         device = s.device
         devices = s.devices
@@ -458,6 +583,7 @@ final class AppModel: ObservableObject {
         // Genau ein bezahltes Team: das ist es. Sonst entscheidet der Nutzer.
         let paid = s.teamCandidates.filter { !$0.free }
         if teamId.isEmpty, paid.count == 1 { teamId = paid[0].id }
+        saveSnapshots = s.saves
         reloadJobs()
         ownership = OwnershipCache(store: paths.store).load()
         checkOwnership()
@@ -620,7 +746,10 @@ final class AppModel: ObservableObject {
         let paths = paths
         Task.detached {
             guard let bundled = Paths.manifest(beside: archive) else { return }
-            if let installed = paths.packager.installed().first?.manifest, installed.version >= bundled.version { return }
+            if let installed = paths.packager.installed().first?.manifest, installed.version >= bundled.version {
+                await MainActor.run { self.removeOlderToolchainsAutomatically() }
+                return
+            }
             let text: String
             do {
                 let t = try paths.packager.install(archive: archive)
@@ -632,6 +761,50 @@ final class AppModel: ObservableObject {
             await MainActor.run {
                 self.notice = text
                 self.refresh()
+                self.removeOlderToolchainsAutomatically()
+            }
+        }
+    }
+
+    /// Räumt ältere Toolchains weg, ohne dass jemand darum bitten muss: nach dem Start, nach dem Installieren einer
+    /// neueren und nach jedem Auftrag. In der neuesten fällt dabei weg, was Spiele beim Bauen hinterlassen haben,
+    /// deren letzter Bau über eine Woche her ist. Eine Toolchain wächst mit jedem gebauten Spiel um Gigabytes, und gebaut wird
+    /// immer mit der neuesten – die älteren braucht nur noch ein Auftrag, der gerade wartet oder läuft. Baut oder
+    /// kopiert gerade irgendein AVP-Play-Prozess (auch der Hintergrunddienst), passiert nichts; der nächste Anlass
+    /// holt es nach.
+    nonisolated static let buildLeftoverAge: TimeInterval = 7 * 24 * 3600
+
+    func removeOlderToolchainsAutomatically() {
+        guard autoRemoveOldToolchains, runningJob == nil else { return }
+        let paths = paths
+        let active = jobs.filter { $0.state == .waiting || $0.state == .running }
+        let open = Set(active.map(\.toolchainCommit)), busy = Set(active.map(\.recipe.toolchain.target))
+        // Die Kopie des APK heißt nicht bei jedem Spiel wie sein Target; den Namen kennt das Rezept.
+        var apkNames: [String: String] = [:]
+        for recipe in games.map(\.recipe) + jobs.map(\.recipe) {
+            if let name = recipe.files.first(where: { $0.role == "apk" })?.localName { apkNames[recipe.toolchain.target] = name }
+        }
+        Task.detached(priority: .utility) {
+            guard let cleared = paths.packager.pruneWhenIdle(protecting: open, leftoversOlderThan: AppModel.buildLeftoverAge,
+                                                             apkNames: apkNames, busyTargets: busy),
+                  !cleared.isEmpty else { return }
+            var parts: [String] = []
+            if !cleared.toolchains.isEmpty {
+                let names = cleared.toolchains.map { String($0.version) }.joined(separator: ", ")
+                parts.append(cleared.toolchains.count == 1
+                    ? L("an older toolchain (version \(names))", "eine ältere Toolchain (Version \(names))")
+                    : L("\(cleared.toolchains.count) older toolchains (versions \(names))", "\(cleared.toolchains.count) ältere Toolchains (Versionen \(names))"))
+            }
+            if !cleared.games.isEmpty {
+                parts.append(cleared.games.count == 1
+                    ? L("the build leftovers of one game built more than a week ago", "die Bau-Reste eines Spiels, das vor über einer Woche gebaut wurde")
+                    : L("the build leftovers of \(cleared.games.count) games built more than a week ago", "die Bau-Reste von \(cleared.games.count) Spielen, die vor über einer Woche gebaut wurden"))
+            }
+            let what = parts.joined(separator: L(" and ", " und "))
+            await MainActor.run {
+                self.notice = L("Tidied up: \(what) removed from this Mac. Nothing on the Vision Pro or among the downloads was touched.",
+                                "Aufgeräumt: \(what) von diesem Mac entfernt. Vision Pro und Downloads sind unberührt.")
+                self.scanStorage()
             }
         }
     }
@@ -682,8 +855,9 @@ final class AppModel: ObservableObject {
         return nil
     }
 
-    /// Ob es für das Spiel etwas gibt, das das Programm selbst laden kann und das noch fehlt.
-    func hasDownloads(_ game: Game) -> Bool { game.status.bytesToDownload > 0 }
+    /// Ob es für das Spiel etwas gibt, das das Programm selbst laden kann und das noch fehlt. Gezählt werden die
+    /// Dateien, nicht ihre Größe: bei einem nachgeschlagenen Spiel aus dem Meta-Store kennt die vorab niemand.
+    func hasDownloads(_ game: Game) -> Bool { game.status.filesToDownload > 0 || game.status.bytesToDownload > 0 }
 
     /// Lädt die Dateien des Spiels, ohne es zu bauen oder zu installieren.
     func download(_ game: Game) {
@@ -741,11 +915,21 @@ final class AppModel: ObservableObject {
         enqueue(game, steps: InstallStep.contentSync)
     }
 
-    private func enqueue(_ game: Game, steps: [InstallStep], addons: Bool? = nil) {
+    /// - Parameter show: zur Seite „Aufträge“ wechseln und den neuen Auftrag zeigen. Ein Sammelauftrag tut das
+    ///   einmal am Ende, nicht für jedes Spiel.
+    func enqueue(_ game: Game, steps: [InstallStep], addons: Bool? = nil, show: Bool = true) {
         // Nur wer baut oder aufs Gerät kopiert, braucht die Toolchain.
         let downloadOnly = steps == InstallStep.download
         let toolchain = toolchain
         guard toolchain != nil || downloadOnly else { return }
+        // Ein Entwurf, der ohne Toolchain nachgeschlagen wurde: Jetzt, wo gebaut wird, steht fest, mit welchem Stand.
+        var recipe = game.recipe
+        if game.draft, recipe.toolchain.minCommit.isEmpty, !downloadOnly, let toolchain {
+            recipe = DraftRecipe.retargeted(recipe, target: recipe.toolchain.target, minCommit: toolchain.commit())
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.sortedKeys, .prettyPrinted]
+            try? encoder.encode(recipe).write(to: draftsDirectory.appendingPathComponent("\(recipe.id).json"), options: .atomic)
+        }
         var request = InstallRequest(toolchain: toolchain?.root.path ?? "")
         if downloadOnly { request.downloadOnly = true }
         request.team = teamId
@@ -754,15 +938,21 @@ final class AppModel: ObservableObject {
         request.locales = chosen.locales
         request.optionalNames = chosen.optionalNames
         request.addons = addons ?? chosen.addons
-        if !customBundlePrefix.isEmpty { request.bundleId = "\(customBundlePrefix).\(game.recipe.toolchain.target)" }
+        // Nur eine Installation spielt Spielstände zurück; ein Abgleich von Inhalten rührt sie nicht an.
+        if steps.contains(.build) { request.restoreSaves = chosen.restoreSaves ?? true }
+        // Ein eigenes Präfix oder das eines kostenlosen Teams: dann steht die Kennung im Auftrag.
+        let prefix = bundlePrefix
+        if prefix != Toolchain.defaultBundlePrefix() { request.bundleId = "\(prefix).\(game.recipe.toolchain.target)" }
         do {
             // Eingefroren wird der Stand, mit dem der Auftrag beginnt.
-            let job = Job(recipe: game.recipe, request: request, steps: steps, toolchainCommit: toolchain?.commit() ?? "")
+            let job = Job(recipe: recipe, request: request, steps: steps, toolchainCommit: toolchain?.commit() ?? "")
             try paths.jobs.save(job)
             queued.append(job.id)
             reloadJobs()
-            selectedJob = job.id
-            section = .jobs
+            if show {
+                selectedJob = job.id
+                section = .jobs
+            }
             pump()
         } catch {
             notice = "\(error)"
@@ -773,7 +963,7 @@ final class AppModel: ObservableObject {
     var updatable: [Game] {
         games.filter { game in
             switch game.status.onDevice {
-            case .olderToolchain, .unstamped: return blocker(for: game) == nil
+            case .olderToolchain, .olderGame, .unstamped: return blocker(for: game) == nil
             case .current, .notInstalled, .unknown: return false
             }
         }
@@ -867,7 +1057,12 @@ final class AppModel: ObservableObject {
         }
         runningTask = Task.detached {
             let installer = Installer(recipe: job.recipe, request: job.request, store: paths.store,
-                                      progress: { p in Task { @MainActor in self.copyProgress[id] = p } },
+                                      progress: { p in Task { @MainActor in
+                                          // Die Verbindungsart kommt einmal am Anfang; die Meldungen danach tragen sie nicht.
+                                          var p = p
+                                          if p.via == nil { p.via = self.copyProgress[id]?.via }
+                                          self.copyProgress[id] = p
+                                      } },
                                       report: { feed.yield("    " + $0) })
             let now = (try? Toolchain(root: URL(fileURLWithPath: job.request.toolchain)).commit()) ?? "unbekannt"
             do {
@@ -899,9 +1094,14 @@ final class AppModel: ObservableObject {
         runningTask = nil
         runningJob = nil
         copyProgress[id] = nil
-        if !cancelled, let job = try? paths.jobs.load(id) { notify(job) }
+        if !cancelled, let job = try? paths.jobs.load(id) {
+            notify(job)
+            if job.state == .finished, !job.isDownloadOnly, !job.isAddonSync { reportInstall(job.recipe) }
+        }
+        reportUsage()
         refresh()
         pump()
+        removeOlderToolchainsAutomatically()
         if runningJob == nil, let token = awake {
             ProcessInfo.processInfo.endActivity(token)
             awake = nil
@@ -942,6 +1142,8 @@ struct Paths: Sendable {
     let store: ContentStore
     let jobs: JobStore
     let packager: ToolchainPackager
+    /// Die Spielstände: neben dem Ordner für Downloads, wenn einer gewählt ist, sonst bei den Daten des Programms.
+    var saves: SaveStore { SaveStore(root: SaveStore.root(forStore: store.root)) }
 
     init() {
         let env = ProcessInfo.processInfo.environment

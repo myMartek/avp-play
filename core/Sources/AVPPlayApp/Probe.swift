@@ -20,15 +20,12 @@ enum Probe {
         var freeBytes: Int64?
         var apps: [InstalledApp]?
         var toolchainRevision: Int?
+        /// Der neueste Stand der Spielstände je Spiel, soweit einer auf dem Mac liegt.
+        var saves: [String: SaveSnapshot] = [:]
     }
 
     /// Ein Entwicklerteam, wie Xcode es kennt.
-    struct Team: Identifiable, Hashable, Sendable {
-        let id: String
-        let name: String
-        /// Kostenloses „Personal Team“: Apps laufen nur sieben Tage, und nötige Berechtigungen fehlen.
-        let free: Bool
-    }
+    typealias Team = AppleTeam
 
     static func run(paths: Paths, bundlePrefix: String, preferredDevice: String? = nil) -> Snapshot {
         var s = Snapshot()
@@ -68,12 +65,24 @@ enum Probe {
         s.toolchainRevision = toolchain?.appRevision()
         if let recipes = paths.recipes {
             do {
-                func game(_ r: Recipe, draft: Bool) -> Game {
-                    Game(recipe: r,
+                // Weitere Fassungen, zu denen das Projekt ein eigenes Rezept führt (recipes/versions).
+                let variants = RecipeStore(directory: recipes).loadVariants()
+                func game(_ r: Recipe, draft: Bool, tested: Recipe? = nil) -> Game {
+                    // Geprüft ist die Fassung ohne Wahl und jede weitere mit eigenem Rezept; alles andere ist eine
+                    // ungetestete aus dem Store, und dann nennt das Spiel die, die ohne Wahl gilt.
+                    let own = tested.map { t in variants.filter { $0.id == t.id && $0.versionCode != t.versionCode } } ?? []
+                    let verified = tested.map { $0.versionCode == r.versionCode } ?? true || own.contains { $0.versionCode == r.versionCode }
+                    var g = Game(recipe: r,
                          status: GameStatus.of(recipe: r, store: paths.store, apps: apps, toolchainVersion: toolchain?.appRevision(),
                                                 bundlePrefix: bundlePrefix),
                          cover: StartHero.choose(recipe: r, store: paths.store).flatMap { NSImage(data: $0.image) },
-                         storeBytes: directorySize(paths.store.directory(for: r)), draft: draft)
+                         storeBytes: directorySize(paths.store.directory(for: r)), draft: draft,
+                         testedVersion: verified ? nil : tested?.versionName)
+                    if let tested {
+                        g.verifiedVersions = [GameVersion(versionCode: tested.versionCode, versionName: tested.versionName, kind: .verified, isDefault: true)]
+                            + own.map { GameVersion(versionCode: $0.versionCode, versionName: $0.versionName, kind: .verified, isDefault: false) }
+                    }
+                    return g
                 }
                 let bundled = try RecipeStore(directory: recipes).loadAll()
                 // Entwürfe für ungetestete Spiele, die schon nachgeschlagen wurden. Ein mitgeliefertes Rezept für
@@ -81,8 +90,18 @@ enum Probe {
                 let shipped = Set(bundled.compactMap { $0.store.appId })
                 let drafts = ((try? RecipeStore(directory: DataLocation.base.appendingPathComponent("drafts", isDirectory: true)).loadAll()) ?? [])
                     .filter { r in r.id.hasPrefix("store-") && !(r.store.appId.map(shipped.contains) ?? true) }
-                s.games = (bundled.map { game($0, draft: false) } + drafts.map { game($0, draft: true) })
+                // Wo der Nutzer die neueste Fassung aus dem Store gewählt hat, gilt deren Rezept statt des geprüften.
+                let active = StoreUpdate.resolve(bundled, variants: variants,
+                                                 drafts: DataLocation.base.appendingPathComponent("drafts", isDirectory: true))
+                s.games = (zip(active, bundled).map { game($0, draft: false, tested: $1) } + drafts.map { game($0, draft: true) })
                     .sorted { $0.recipe.title.localizedCaseInsensitiveCompare($1.recipe.title) == .orderedAscending }
+                let saved = paths.saves
+                // Stände aus der Zeit, als sie immer bei den Daten des Programms lagen, ziehen neben den gewählten Ordner.
+                if StoreLocation.isAvailable(paths.store.root) {
+                    SaveStore.move(from: SaveStore.root(forStore: StoreLocation.standard()), to: saved.root)
+                }
+                for g in s.games { if let newest = saved.snapshots(for: g.recipe).first { s.saves[g.id] = newest } }
+                StoreIndex.write(root: paths.store.root, entries: indexEntries(games: s.games, root: paths.store.root))
             } catch {
                 s.loadProblem = L("The list of games could not be read: \(error)", "Die Spieleliste konnte nicht gelesen werden: \(error)")
             }
@@ -114,6 +133,24 @@ enum Probe {
         return s
     }
 
+    /// Was im Verzeichnis des Ordners für Downloads steht: jeder Ordner dort mit dem Spiel, zu dem er gehört.
+    static func indexEntries(games: [Game], root: URL) -> [StoreIndex.Entry] {
+        let fm = FileManager.default
+        let folders = ((try? fm.contentsOfDirectory(at: root, includingPropertiesForKeys: [.isDirectoryKey])) ?? [])
+            .filter { !$0.lastPathComponent.hasPrefix(".") && (try? $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true }
+        return folders.map { url in
+            let name = url.lastPathComponent
+            if let game = games.first(where: { "\($0.recipe.id)-\($0.recipe.versionCode)" == name }) {
+                return StoreIndex.Entry(folder: name, title: game.recipe.title, detail: L("Version \(game.recipe.versionName)", "Version \(game.recipe.versionName)"), bytes: game.storeBytes)
+            }
+            let size = directorySize(url)
+            if let game = games.first(where: { name.hasPrefix($0.recipe.id + "-") }) {
+                return StoreIndex.Entry(folder: name, title: game.recipe.title, detail: L("an earlier version, no longer needed", "eine frühere Fassung, wird nicht mehr gebraucht"), bytes: size)
+            }
+            return StoreIndex.Entry(folder: name, title: name, detail: L("not used by any game in the list", "von keinem Spiel der Liste gebraucht"), bytes: size)
+        }
+    }
+
     /// Belegter Platz eines Ordners; Verweise werden nicht verfolgt.
     static func directorySize(_ url: URL) -> Int64 {
         let keys: Set<URLResourceKey> = [.isRegularFileKey, .totalFileAllocatedSizeKey]
@@ -138,19 +175,8 @@ enum Probe {
     /// ist. Gelesen wird nur diese Liste aus Xcodes Einstellungen, keine Kontodaten. Kennt Xcode keine Teams,
     /// bleiben die Kennungen aus den Entwicklerzertifikaten – ein Vorschlag, keine Prüfung.
     static func teams() -> [Team] {
-        var found: [Team] = []
-        let exported = capture(["/usr/bin/defaults", "export", "com.apple.dt.Xcode", "-"]).out
-        if let plist = try? PropertyListSerialization.propertyList(from: Data(exported.utf8), format: nil) as? [String: Any],
-           let byAccount = plist["IDEProvisioningTeamByIdentifier"] as? [String: Any] {
-            for case let list as [[String: Any]] in byAccount.values {
-                for entry in list {
-                    guard let id = entry["teamID"] as? String, !found.contains(where: { $0.id == id }) else { continue }
-                    found.append(Team(id: id, name: entry["teamName"] as? String ?? id,
-                                      free: (entry["isFreeProvisioningTeam"] as? Bool) ?? false))
-                }
-            }
-        }
-        if !found.isEmpty { return found.sorted { !$0.free && $1.free } }
+        let found = AppleTeams.known()
+        if !found.isEmpty { return found }
         return certificateTeams().map { Team(id: $0, name: L("Team \($0)", "Team \($0)"), free: false) }
     }
 

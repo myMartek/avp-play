@@ -40,15 +40,32 @@ final class RecipeTests: XCTestCase {
         let dir = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
             .deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("recipes")
         let all = try RecipeStore(directory: dir).loadAll()
-        // Die sieben Referenzspiele sind da; dazu kommen Rezepte, die aus einem geprüften Entwurf entstanden sind.
-        // Die tragen die Kennung des Entwurfs (`store-<App-Kennung>`), damit schon Geladenes weiter gilt.
+        // Die Referenzspiele und Sonderapps sind da; dazu kommen Rezepte, die aus einem geprüften Entwurf entstanden
+        // sind. Die tragen die Kennung des Entwurfs (`store-<App-Kennung>`), damit schon Geladenes weiter gilt.
         let ids = Set(all.map(\.id))
-        XCTAssertTrue(ids.isSuperset(of: ["alyx", "batman", "beatsaber140", "doom3quest", "moss", "walkabout", "wrath2"]))
-        for recipe in all where !["alyx", "batman", "beatsaber140", "doom3quest", "moss", "walkabout", "wrath2"].contains(recipe.id) {
+        let byHand: Set<String> = ["alyx", "batman", "beatsaber140", "csvr", "doom3quest", "moss", "walkabout", "wrath2"]
+        XCTAssertTrue(ids.isSuperset(of: byHand))
+        for recipe in all where !byHand.contains(recipe.id) {
             XCTAssertEqual(recipe.id, recipe.store.appId.map(DraftRecipe.identifier(appId:)), "\(recipe.id)")
             XCTAssertEqual(recipe.status.playability, "verified", "\(recipe.id)")
             XCTAssertFalse(recipe.files.isEmpty, "\(recipe.id)")
         }
+        // Counter-Strike: ein frei ladbares APK mit Prüfsumme, und die Daten des Originalspiels als ein Ordner aus dem
+        // Steam-Konto des Nutzers – nur 'cstrike' und 'valve', an dem Ort, an dem die Engine sie sucht.
+        let cs = try XCTUnwrap(all.first { $0.id == "csvr" })
+        XCTAssertEqual(cs.files.map(\.role), ["apk"])
+        XCTAssertEqual(cs.files[0].source?.kind, .url)
+        XCTAssertNotNil(cs.files[0].sha256)
+        let data = try XCTUnwrap(TreeStore.dataTrees(of: cs).first)
+        XCTAssertEqual(TreeStore.dataTrees(of: cs).count, 1)
+        XCTAssertTrue(TreeStore.toolchainTrees(of: cs).isEmpty)
+        XCTAssertEqual(data.dest, "android-files/xash")
+        XCTAssertEqual(data.only.map(Set.init), ["cstrike", "valve"])
+        XCTAssertEqual(data.source.kind, .user)
+        XCTAssertEqual(data.source.steam?.app, "10")
+        XCTAssertEqual(data.source.steam?.depots.map(\.id), ["11", "1"])
+        XCTAssertTrue(data.markers.allSatisfy { m in data.only!.contains { m.path.hasPrefix($0 + "/") } })
+
         // Half-Life: Alyx bietet die deutsche Sprachausgabe als wählbare Datei an: nie Pflicht, aus dem Steam-Konto
         // des Nutzers in einer festgelegten Fassung, und am Ziel das Archiv des Sprachordners, den das Spiel einbindet.
         let alyx = try XCTUnwrap(all.first { $0.id == "alyx" })
@@ -68,7 +85,29 @@ final class RecipeTests: XCTestCase {
         XCTAssertTrue(wrath.files.filter(\.required).allSatisfy { $0.sha256 != nil && $0.size != nil })
         let bs = try XCTUnwrap(all.first { $0.id == "beatsaber140" })
         XCTAssertEqual(bs.addons?.kind, .deliveredAssets)
-        XCTAssertEqual(bs.addons?.items?.count, 248)
+        XCTAssertEqual(bs.addons?.items?.count, 280)
+        // Beat Saber folgt seit 1.45 dem Store wie die anderen: nichts hält es bei seiner Fassung.
+        XCTAssertNil(bs.store.pinned)
+        XCTAssertEqual(bs.versionCode, 3148)
+        XCTAssertTrue(bs.files.allSatisfy { $0.sha256 != nil && $0.size != nil })
+        // …und die Fassung davor bleibt als weitere geprüfte wählbar: dasselbe Spiel, derselbe Eintrag der Toolchain.
+        let variants = RecipeStore(directory: dir).loadVariants()
+        let old = try XCTUnwrap(variants.first { $0.id == "beatsaber140" })
+        XCTAssertEqual(old.versionCode, 1716)
+        XCTAssertEqual(old.toolchain.target, bs.toolchain.target)
+        XCTAssertEqual(old.store.appId, bs.store.appId)
+        XCTAssertNil(old.store.pinned)
+        XCTAssertEqual(old.status.playability, "verified")
+        XCTAssertEqual(old.addons?.items?.count, 248)
+        // Walkabout war vor 6.8 mit 6.7 geprüft; auch die bleibt als geprüfte Fassung wählbar.
+        let golf = try XCTUnwrap(all.first { $0.id == "walkabout" })
+        let golfOld = try XCTUnwrap(variants.first { $0.id == "walkabout" })
+        XCTAssertEqual(golfOld.versionCode, 60366)
+        XCTAssertEqual(golfOld.versionName, "6.7")
+        XCTAssertEqual(golfOld.toolchain.target, golf.toolchain.target)
+        XCTAssertEqual(golfOld.status.playability, "verified")
+        XCTAssertTrue(variants.allSatisfy { v in all.contains { $0.id == v.id && $0.versionCode != v.versionCode } },
+                      "jede weitere Fassung gehört zu einem Spiel des Ordners und ist eine andere als dessen")
     }
 }
 
@@ -364,7 +403,7 @@ final class StageTests: XCTestCase {
     func testDeviceJsonParsing() throws {
         let devices = #"{"result":{"devices":[{"hardwareProperties":{"platform":"visionOS","reality":"physical","udid":"U1"},"connectionProperties":{"tunnelState":"connected","pairingState":"paired"},"deviceProperties":{"name":"VP","osVersionNumber":"27.2","developerModeStatus":"enabled"}},{"hardwareProperties":{"platform":"visionOS","reality":"simulated","udid":"S1"}},{"hardwareProperties":{"platform":"iOS","reality":"physical","udid":"I1"}}]}}"#
         XCTAssertEqual(try DeviceControl.parseDevices(Data(devices.utf8)),
-                       [Device(udid: "U1", name: "VP", osVersion: "27.2", reachable: true, paired: true, developerMode: true)])
+                       [Device(udid: "U1", name: "VP", osVersion: "27.2", reachable: true, paired: true, developerMode: true, connected: true)])
         let files = #"{"result":{"files":[{"metadata":{"size":8964688},"name":"a","relativePath":"a","resources":{"isDirectory":false}},{"metadata":{"size":96},"relativePath":"dir","resources":{"isDirectory":true}}]}}"#
         XCTAssertEqual(try DeviceControl.parseFiles(Data(files.utf8)),
                        [RemoteFile(relativePath: "a", size: 8964688, isDirectory: false), RemoteFile(relativePath: "dir", size: 96, isDirectory: true)])
@@ -630,6 +669,96 @@ final class TreeTests: XCTestCase {
         XCTAssertEqual(store.toolchainEnvironment(recipe: r), ["KL_LX_GAME": target.path])
         // die Quelle bleibt unberührt
         XCTAssertEqual(try String(contentsOf: right.appendingPathComponent("bin/app"), encoding: .utf8), "abc")
+    }
+
+    /// Ein Datenordner (die Spieldaten für einen freien Port) hat einen Ort auf dem Gerät; die Rollen eines
+    /// Linux-Spiels haben keinen und kommen je einmal vor.
+    func testADataFolderNeedsADestinationOfItsOwn() throws {
+        let sha = String(repeating: "a", count: 64)
+        func data(_ name: String, dest: String?, only: [String]? = nil) -> RecipeTree {
+            var t = tree(name, role: .data, markers: [.init(path: "valve/halflife.wad", size: nil, sha256: sha)])
+            t.dest = dest
+            t.only = only
+            return t
+        }
+        try recipe(trees: [data("a", dest: "android-files/xash", only: ["valve", "cstrike"])]).validate()
+        try recipe(trees: [data("a", dest: "android-files/a"), data("b", dest: "android-files/b")]).validate()
+        for bad in [nil, "", "../x", "/etc", "a//b"] {
+            XCTAssertThrowsError(try recipe(trees: [data("a", dest: bad)]).validate(), bad ?? "nil")
+        }
+        XCTAssertThrowsError(try recipe(trees: [data("a", dest: "x"), data("b", dest: "x")]).validate())
+        for bad in [[], ["a/b"], [".."], ["valve", "valve"]] {
+            XCTAssertThrowsError(try recipe(trees: [data("a", dest: "x", only: bad)]).validate(), "\(bad)")
+        }
+        var game = tree(markers: [.init(path: "bin/app", size: nil, sha256: sha)])
+        game.dest = "lx"
+        XCTAssertThrowsError(try recipe(trees: [game]).validate())
+        // Die Toolchain erfährt von einem Datenordner nichts: zum Bauen braucht sie ihn nicht.
+        let r = recipe(trees: [data("a", dest: "android-files/xash")])
+        XCTAssertTrue(TreeStore(store: ContentStore(root: try scratch())).toolchainEnvironment(recipe: r).isEmpty)
+        XCTAssertEqual(TreeStore.dataTrees(of: r).map(\.name), ["a"])
+        XCTAssertTrue(TreeStore.toolchainTrees(of: r).isEmpty)
+    }
+
+    /// Zeigt der Nutzer auf seinen ganzen Spielordner, kommt nur mit, was zum Baum gehört.
+    func testOnlyWhatBelongsToTheTreeIsTaken() throws {
+        let dir = try scratch()
+        let fm = FileManager.default
+        let install = dir.appendingPathComponent("Half-Life")
+        for sub in ["valve", "cstrike/maps", "anderes_spiel"] { try fm.createDirectory(at: install.appendingPathComponent(sub), withIntermediateDirectories: true) }
+        try Data("wad".utf8).write(to: install.appendingPathComponent("valve/halflife.wad"))
+        try Data("karte".utf8).write(to: install.appendingPathComponent("cstrike/maps/a.bsp"))
+        try Data("fremd".utf8).write(to: install.appendingPathComponent("anderes_spiel/x.bin"))
+        try Data("programm".utf8).write(to: install.appendingPathComponent("hl.exe"))
+        var t = tree("gamedata", role: .data, markers: [.init(path: "valve/halflife.wad", size: 3, sha256: try Hashing.sha256(of: install.appendingPathComponent("valve/halflife.wad")))])
+        t.dest = "android-files/xash"
+        t.only = ["valve", "cstrike"]
+        let r = recipe(trees: [t])
+        let store = TreeStore(store: ContentStore(root: dir.appendingPathComponent("bestand")))
+        XCTAssertEqual(try store.adopt(recipe: r, from: [install]).adopted, ["gamedata"])
+        XCTAssertEqual(TreeStore.listing(of: store.url(for: t, in: r)), ["valve/halflife.wad": 3, "cstrike/maps/a.bsp": 5])
+
+        // Dasselbe beim Zusammensetzen aus Schichten (Steam-Depots).
+        let depotA = dir.appendingPathComponent("depot_a"), depotB = dir.appendingPathComponent("depot_b")
+        for sub in ["depot_a/cstrike", "depot_a/platform", "depot_b/valve", "depot_b/bin"] { try fm.createDirectory(at: dir.appendingPathComponent(sub), withIntermediateDirectories: true) }
+        try Data("cs".utf8).write(to: depotA.appendingPathComponent("cstrike/liblist.gam"))
+        try Data("nein".utf8).write(to: depotA.appendingPathComponent("platform/x"))
+        try Data("wad".utf8).write(to: depotB.appendingPathComponent("valve/halflife.wad"))
+        try Data("nein".utf8).write(to: depotB.appendingPathComponent("bin/y"))
+        try Data("nein".utf8).write(to: depotB.appendingPathComponent("hl.exe"))
+        let fresh = TreeStore(store: ContentStore(root: dir.appendingPathComponent("bestand2")))
+        XCTAssertTrue(try fresh.assemble(t, in: r, from: [depotA, depotB]))
+        XCTAssertEqual(TreeStore.listing(of: fresh.url(for: t, in: r)), ["cstrike/liblist.gam": 2, "valve/halflife.wad": 3])
+    }
+
+    /// Beim ersten Mal geht hinüber, was fehlt oder halb ankam; danach nur noch, was fehlt – was das Spiel in seinen
+    /// Daten geändert hat (seine Einstellungen), bleibt.
+    func testASettledDataFolderIsOnlyCompleted() {
+        let local: [String: Int64] = ["valve/halflife.wad": 100, "cstrike/config.cfg": 10, "cstrike/maps/a.bsp": 50]
+        let remote: [String: Int64] = ["valve/halflife.wad": 100, "cstrike/config.cfg": 37, "cstrike/.fontcache/a.bmp": 9]
+        XCTAssertEqual(StagePlan.missing(ofTree: local, remote: [:], settled: false), local)
+        XCTAssertEqual(StagePlan.missing(ofTree: local, remote: remote, settled: false), ["cstrike/config.cfg": 10, "cstrike/maps/a.bsp": 50])
+        XCTAssertEqual(StagePlan.missing(ofTree: local, remote: remote, settled: true), ["cstrike/maps/a.bsp": 50])
+        XCTAssertTrue(StagePlan.missing(ofTree: local, remote: local, settled: false).isEmpty)
+    }
+
+    /// Die Kenndatei auf dem Gerät heißt nach der Fassung des Baums: eine andere Fassung, ein anderer Name.
+    func testTheDeviceStampFollowsTheMarkers() throws {
+        let a = String(repeating: "a", count: 64), b = String(repeating: "b", count: 64)
+        let one = tree(markers: [.init(path: "x", size: 1, sha256: a), .init(path: "y", size: nil, sha256: b)])
+        let same = tree("other", markers: [.init(path: "y", size: 7, sha256: b.uppercased()), .init(path: "x", size: nil, sha256: a)])
+        let newer = tree(markers: [.init(path: "x", size: 1, sha256: b), .init(path: "y", size: nil, sha256: b)])
+        XCTAssertEqual(one.deviceStampName, same.deviceStampName)
+        // Der Name darf sich mit keiner Fassung dieses Programms ändern: Ein Gerät, dessen Ordner als vollständig
+        // gilt, sähe sonst wie neu aus, und die Einstellungen des Spielers würden ersetzt.
+        XCTAssertEqual(one.deviceStampName, ".avpplay-c48fe6b4bf27b529")
+        let shipped = try RecipeStore(directory: URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("recipes")).load(id: "csvr")
+        XCTAssertEqual(shipped.trees?.first?.deviceStampName, ".avpplay-8b42b32f44916b25")
+        XCTAssertNotEqual(one.deviceStampName, newer.deviceStampName)
+        XCTAssertTrue(one.deviceStampName.hasPrefix(".avpplay-"))
+        XCTAssertEqual(one.deviceStampName.count, 25)
+        XCTAssertTrue(Recipe.isSafeRelativePath(one.deviceStampName))
     }
 }
 
@@ -1296,6 +1425,35 @@ final class FailureKindTests: XCTestCase {
     }
 }
 
+final class PipelineListTests: XCTestCase {
+    /// Ohne Liste in der Toolchain gibt es nichts zu bauen; mit Liste, aber ohne Werkzeug, ebenso wenig.
+    func testAToolchainWithoutAListHasNone() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("qi-pl-\(UUID().uuidString)", isDirectory: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: dir) }
+        try FileManager.default.createDirectory(at: dir.appendingPathComponent("visionos/pipelines"), withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: dir.appendingPathComponent("tools"), withIntermediateDirectories: true)
+        try "#!/bin/sh\n".write(to: dir.appendingPathComponent("visionos/run.sh"), atomically: true, encoding: .utf8)
+        let toolchain = try Toolchain(root: dir)
+        let recipe = try RecipeStore(directory: URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("recipes")).load(id: "walkabout")
+        XCTAssertNil(toolchain.pipelineRecipe(recipe: recipe))
+        XCTAssertNil(try toolchain.pipelineList(recipe: recipe, gameFiles: dir))
+        try Data("list".utf8).write(to: dir.appendingPathComponent("visionos/pipelines/walkabout.pipelines"))
+        XCTAssertNil(toolchain.pipelineRecipe(recipe: recipe), "ohne das Werkzeug nützt die Liste nichts")
+        try Data().write(to: dir.appendingPathComponent("tools/unity_pipelines.py"))
+        XCTAssertEqual(toolchain.pipelineRecipe(recipe: recipe)?.lastPathComponent, "walkabout.pipelines")
+    }
+
+    /// Je Stand der Liste ein Archiv: Eine geänderte Liste bekommt einen anderen Namen und wird neu gebaut.
+    func testTheArchiveIsNamedAfterTheListsContent() {
+        let a = Toolchain.pipelineArchiveName(target: "walkabout", recipeData: Data("one".utf8))
+        let b = Toolchain.pipelineArchiveName(target: "walkabout", recipeData: Data("two".utf8))
+        XCTAssertNotEqual(a, b)
+        XCTAssertEqual(a, Toolchain.pipelineArchiveName(target: "walkabout", recipeData: Data("one".utf8)))
+        XCTAssertTrue(a.hasPrefix("walkabout-") && a.hasSuffix(".foz") && a.count == "walkabout-".count + 16 + 4)
+    }
+}
+
 final class OwnershipCacheTests: XCTestCase {
     func testAnswersAreKeptAndGoStaleAfterADay() throws {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("qi-own-\(UUID().uuidString)", isDirectory: true)
@@ -1310,6 +1468,16 @@ final class OwnershipCacheTests: XCTestCase {
         XCTAssertFalse(OwnershipCache.needsCheck(cache.load()["1"], now: now.addingTimeInterval(3600)))
         XCTAssertTrue(OwnershipCache.needsCheck(cache.load()["1"], now: now.addingTimeInterval(25 * 3600)))
         XCTAssertTrue(OwnershipCache.needsCheck(cache.load()["1"], now: now.addingTimeInterval(-60)), "eine Antwort aus der Zukunft gilt nicht")
+        // Ein „Nein“ gilt eine Stunde, nicht einen Tag: das Spiel kann inzwischen gekauft sein.
+        XCTAssertFalse(OwnershipCache.needsCheck(cache.load()["2"], now: now.addingTimeInterval(1800)))
+        XCTAssertTrue(OwnershipCache.needsCheck(cache.load()["2"], now: now.addingTimeInterval(3700)))
+        XCTAssertFalse(OwnershipCache.needsCheck(cache.load()["1"], now: now.addingTimeInterval(3700)))
+        // Eine einzelne Antwort ersetzt nur ihren Eintrag und lässt die übrigen stehen.
+        let later = now.addingTimeInterval(120)
+        let merged = cache.record(appId: "2", owned: true, checked: later)
+        XCTAssertEqual(merged["2"], .init(owned: true, checked: later))
+        XCTAssertEqual(cache.load()["1"], .init(owned: true, checked: now))
+        XCTAssertEqual(cache.load()["2"]?.owned, true)
         cache.clear()
         XCTAssertEqual(cache.load(), [:])
     }
@@ -1317,8 +1485,11 @@ final class OwnershipCacheTests: XCTestCase {
 
 final class BundleNamingTests: XCTestCase {
     func testPrefixAndIdentifier() {
-        XCTAssertEqual(Toolchain.defaultBundlePrefix(user: "Anna Maria"), "annamaria.dev.klepton.target")
-        XCTAssertEqual(Toolchain.defaultBundlePrefix(user: "…"), "user.dev.klepton.target")
+        // As the toolchain forms it (visionos/targets.py): what is not a letter, digit or hyphen becomes a hyphen;
+        // a name of which nothing is left stands for no name. Until 1.0.15 such characters were dropped here, and
+        // the two sides disagreed about where the app was (issue 10).
+        XCTAssertEqual(Toolchain.defaultBundlePrefix(user: "Anna Maria"), "anna-maria.dev.klepton.target")
+        XCTAssertEqual(Toolchain.defaultBundlePrefix(user: "…"), "dev.klepton.target")
         XCTAssertEqual(Toolchain.bundleId(target: "moss", prefix: nil), Toolchain.defaultBundleId(target: "moss"))
         XCTAssertEqual(Toolchain.bundleId(target: "moss", prefix: ""), Toolchain.defaultBundleId(target: "moss"))
         XCTAssertEqual(Toolchain.bundleId(target: "moss", prefix: "com.example.games"), "com.example.games.moss")
@@ -1469,6 +1640,90 @@ final class ToolchainPackageTests: XCTestCase {
         XCTAssertEqual(packager.installed().map { $0.manifest?.version }, [4, 2])
         XCTAssertEqual(try packager.prune(keep: 0).count, 1, "das neueste bleibt immer")
         XCTAssertEqual(packager.installed().map { $0.manifest?.version }, [4])
+    }
+
+    func testAutomaticPruneWaitsForARunningBuildAndClearsUnpackingLeftovers() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("qi-autoprune-\(UUID().uuidString)", isDirectory: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: root) }
+        let fm = FileManager.default
+        let packager = ToolchainPackager(root: root.appendingPathComponent("toolchains"))
+        let lock = root.appendingPathComponent(".install.lock")
+        func plant(_ version: Int, _ commit: String) throws {
+            let m = ToolchainManifest(format: 1, version: version, commit: commit, ancestors: [commit], created: Date())
+            let dir = packager.directory(for: m)
+            try fm.createDirectory(at: dir.appendingPathComponent("visionos"), withIntermediateDirectories: true)
+            try "#!/bin/sh\n".write(to: dir.appendingPathComponent("visionos/run.sh"), atomically: true, encoding: .utf8)
+            try ToolchainPackager.encoder.encode(m).write(to: dir.appendingPathComponent("toolchain.json"))
+        }
+        try plant(1, "aaaaaaa"); try plant(2, "bbbbbbb"); try plant(3, "ccccccc")
+        let stale = packager.root.appendingPathComponent(".1-aaaaaaa.new"), fresh = packager.root.appendingPathComponent(".4-ddddddd.new")
+        try fm.createDirectory(at: stale, withIntermediateDirectories: true)
+        try fm.createDirectory(at: fresh, withIntermediateDirectories: true)
+        let now = Date().addingTimeInterval(2 * 3600)
+        try fm.setAttributes([.modificationDate: now.addingTimeInterval(-60)], ofItemAtPath: fresh.path)
+
+        // Solange ein Prozess baut oder kopiert, bleibt alles stehen.
+        let building = try XCTUnwrap(ProcessLock.acquire(lock))
+        XCTAssertNil(packager.pruneWhenIdle(lock: lock, now: now))
+        XCTAssertEqual(packager.installed().count, 3)
+        XCTAssertTrue(fm.fileExists(atPath: stale.path))
+        building.release()
+
+        // Danach: die neueste bleibt, die eines wartenden Auftrags auch; der alte Rest vom Auspacken fällt weg,
+        // einer, an dem vielleicht gerade ausgepackt wird, nicht.
+        XCTAssertEqual(packager.pruneWhenIdle(protecting: ["bbbbbbb"], lock: lock, now: now)?.toolchains.map(\.version), [1])
+        XCTAssertEqual(packager.installed().map { $0.manifest?.version }, [3, 2])
+        XCTAssertFalse(fm.fileExists(atPath: stale.path))
+        XCTAssertTrue(fm.fileExists(atPath: fresh.path))
+        XCTAssertFalse(ProcessLock.isHeld(lock), "die Sperre ist wieder frei")
+    }
+
+    func testBuildLeftoversGoAfterAWeekAndNothingElseDoes() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("qi-leftovers-\(UUID().uuidString)", isDirectory: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: root) }
+        let fm = FileManager.default
+        let now = Date(), day: TimeInterval = 24 * 3600
+        func put(_ path: String, age: TimeInterval = 0) throws {
+            let url = root.appendingPathComponent(path)
+            try fm.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try "x".write(to: url, atomically: true, encoding: .utf8)
+            try fm.setAttributes([.modificationDate: now.addingTimeInterval(-age)], ofItemAtPath: url.path)
+        }
+        func built(_ target: String, apk: String? = nil, daysAgo: Double) throws {
+            try put("visionos/build/dd-device-\(target)/info.plist", age: daysAgo * day)
+            try put("visionos/build/dd-device-\(target)/Build/Products/a.o")
+            try put("visionos/build/guest/\(target)/lib.dylib")
+            try put("visionos/Frameworks/\(target)/lib.dylib")
+            try put("\(target)/.qi-prepared", age: daysAgo * day)
+            try put("\(target)/assets/data.bin")
+            try put(apk ?? "\(target).apk")
+        }
+        try built("old", daysAgo: 9)
+        try built("oddname", apk: "odd-1.0.apk", daysAgo: 30)
+        try built("fresh", daysAgo: 2)
+        try built("waiting", daysAgo: 20)
+        // Die Toolchain selbst, und ein Target, das heißt wie einer ihrer Ordner, aber nie von der App vorbereitet wurde.
+        try put("runtime/kl_jni.c"); try put("visionos/run.sh"); try put("toolchain.json")
+        try put("visionos/build/dd-device-runtime/info.plist", age: 40 * day)
+        try put("visionos/Frameworks/MoltenVK.xcframework/Info.plist", age: 400 * day)
+        // Ohne datierbaren Bau bleibt ein Baum stehen.
+        try put("undated/assets/data.bin", age: 90 * day)
+
+        let cleared = ToolchainPackager.removeBuildLeftovers(in: root, olderThan: 7 * day, apkNames: ["oddname": "odd-1.0.apk"],
+                                                             skipping: ["waiting"], now: now)
+        XCTAssertEqual(cleared, ["oddname", "old", "runtime"])
+        func exists(_ path: String) -> Bool { fm.fileExists(atPath: root.appendingPathComponent(path).path) }
+        for gone in ["old", "old.apk", "visionos/build/dd-device-old", "visionos/build/guest/old", "visionos/Frameworks/old",
+                     "oddname", "odd-1.0.apk", "visionos/build/dd-device-oddname", "visionos/build/dd-device-runtime"] {
+            XCTAssertFalse(exists(gone), gone)
+        }
+        for kept in ["fresh/assets/data.bin", "fresh.apk", "visionos/build/dd-device-fresh/info.plist", "visionos/Frameworks/fresh/lib.dylib",
+                     "waiting/assets/data.bin", "waiting.apk", "visionos/build/dd-device-waiting/info.plist",
+                     "runtime/kl_jni.c", "visionos/run.sh", "toolchain.json", "visionos/Frameworks/MoltenVK.xcframework/Info.plist",
+                     "undated/assets/data.bin"] {
+            XCTAssertTrue(exists(kept), kept)
+        }
+        XCTAssertEqual(ToolchainPackager.removeBuildLeftovers(in: root, olderThan: 7 * day, now: now), ["waiting"], "sobald der Auftrag durch ist")
     }
 
     func testTamperedArchiveAndDirtyCheckoutAreRefused() throws {

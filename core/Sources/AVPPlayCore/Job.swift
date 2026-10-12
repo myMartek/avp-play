@@ -99,6 +99,14 @@ public struct JobStore: Sendable {
         return job
     }
 
+    /// Nimmt einen Auftrag aus der Liste: seine Datei und sein Verlauf verschwinden. Geladene Dateien, Gebautes und
+    /// alles auf dem Gerät bleiben, wie sie sind.
+    public func remove(_ id: String) {
+        guard Recipe.isSafeName(id) else { return }
+        try? FileManager.default.removeItem(at: url(id))
+        try? FileManager.default.removeItem(at: directory.appendingPathComponent("\(id).log"))
+    }
+
     /// Alle Aufträge, neueste zuerst. Unlesbare Dateien werden übergangen.
     public func all() -> [Job] {
         let urls = (try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)) ?? []

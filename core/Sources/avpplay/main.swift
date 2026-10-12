@@ -93,6 +93,7 @@ avpplay – command line for the AVP Play core library
   avpplay steam setup|login <name>|logout      Valve's SteamCMD: fetch it, sign in to Steam (you type the password into Valve's tool), sign out
   avpplay steam fetch <id> --steam-account <name> [--with <file name>]   get the files a recipe needs from your own Steam purchase
   avpplay purchases <id>                       confirmed in-game purchases and the add-on content that goes with them
+           --skus              also name each purchase as the store names it
   avpplay plan <id>   [selection]              show what would be downloaded (no request to the download site)
   avpplay fetch <id>  [selection]              download missing files and check them
   avpplay verify <id>                          check the files you have against the recipe's checksums
@@ -108,6 +109,13 @@ avpplay – command line for the AVP Play core library
   avpplay stage <id>                           only copy missing data and add-on content (no build)
   avpplay windows stage --from <folder> --manifest <path> --bundle-id <id> --owned [--device UDID]
                                                transfer user-owned local x64/D3D11 Windows game files
+
+  avpplay renew [--dry-run] [--force <id>]     sign installed games again whose signature runs out soon (what the background service does)
+  avpplay saves [<id> …] [--saves <folder>]    fetch the saved games of installed games from the Vision Pro to this Mac (nothing changes on the device)
+  avpplay saves <id> --restore                 put the newest copy back on the Vision Pro, replacing what is there (which is fetched first)
+  avpplay servers <id> [add <address> [--name <name>] [--admin-stdin] | remove <address> | push]
+                                               your own game servers for a game that understands such a list; the admin
+                                               password is read from standard input and kept in the keychain
   avpplay job start <id> --team <team ID>      job: check, download, build, install, copy, unlock
   avpplay job resume <job>                     resume an interrupted or stopped job
   avpplay job show|cancel <job>                show progress / cancel            avpplay jobs   all jobs
@@ -125,7 +133,7 @@ Selection: --locale de-DE      also include a language variant (can be repeated)
            --addons            also include purchased add-on content (asks for the list of purchases)
 General:   --account <name>    keychain entry (default: default)
            --store <folder>    where the files are kept   --recipes <folder>
-           --interval <s>      minimum pause between requests (default: 5)
+           --interval <s>      minimum pause between requests (default: none)
 """, """
 avpplay – Kommandozeile zur Kern-Bibliothek von AVP Play
 
@@ -138,6 +146,7 @@ avpplay – Kommandozeile zur Kern-Bibliothek von AVP Play
   avpplay steam setup|login <Name>|logout      Valves SteamCMD: holen, bei Steam anmelden (das Passwort tippst du in Valves Werkzeug), abmelden
   avpplay steam fetch <id> --steam-account <Name> [--with <Dateiname>]   die Dateien eines Rezepts aus dem eigenen Steam-Kauf holen
   avpplay purchases <id>                       bestätigte Käufe im Spiel und zugehörige Zusatzinhalte
+           --skus              jeden Kauf auch so nennen, wie der Store ihn nennt
   avpplay plan <id>   [Auswahl]                zeigen, was geladen würde (keine Abfrage an die Download-Seite)
   avpplay fetch <id>  [Auswahl]                fehlende Dateien laden und prüfen
   avpplay verify <id>                          vorhandene Dateien gegen die Prüfsummen des Rezepts prüfen
@@ -153,6 +162,13 @@ avpplay – Kommandozeile zur Kern-Bibliothek von AVP Play
   avpplay stage <id>                           nur Daten und Zusatzinhalte ergänzend kopieren (ohne Build)
   avpplay windows stage --from <Ordner> --manifest <Pfad> --bundle-id <ID> --owned [--device UDID]
                                                selbst bereitgestellte x64/D3D11-Windows-Spieldateien übertragen
+
+  avpplay renew [--dry-run] [--force <id>]     installierte Spiele neu signieren, deren Signatur bald abläuft (was der Hintergrunddienst tut)
+  avpplay saves [<id> …] [--saves <Ordner>]    Spielstände installierter Spiele von der Vision Pro auf den Mac holen (auf dem Gerät ändert sich nichts)
+  avpplay saves <id> --restore                 den neuesten Stand auf die Vision Pro zurückspielen; ersetzt, was dort liegt (das wird vorher geholt)
+  avpplay servers <id> [add <Adresse> [--name <Name>] [--admin-stdin] | remove <Adresse> | push]
+                                               eigene Spielserver für ein Spiel, das so eine Liste versteht; das Admin-Passwort
+                                               wird von der Standardeingabe gelesen und im Schlüsselbund abgelegt
   avpplay job start <id> --team <Team-ID>      Auftrag: prüfen, laden, bauen, installieren, kopieren, freischalten
   avpplay job resume <Auftrag>                 unterbrochenen oder angehaltenen Auftrag fortsetzen
   avpplay job show|cancel <Auftrag>            Stand zeigen / abbrechen          avpplay jobs   alle Aufträge
@@ -160,6 +176,7 @@ avpplay – Kommandozeile zur Kern-Bibliothek von AVP Play
              --icon <Bilddatei>      eigenes App-Icon hinterlegen (hat Vorrang vor allem anderen)
              --no-store-art          kein Titelbild von der Store-Seite holen (dann Icon aus dem APK)
              --replace-running       auch installieren, wenn das Spiel gerade läuft (es wird dabei beendet)
+             --restore-saves         nach dem Kopieren die Spielstände vom Mac zurückspielen, wenn das Spiel auf dem Gerät noch keine hat
              --addons-only           job start: nur gekaufte Zusatzinhalte eines installierten Spiels abgleichen (kein Bau, kein --team)
              --download-only         job start: nur die Dateien laden (braucht weder Xcode noch Toolchain, --team oder Gerät)
              --build-only            job start: prüfen, laden, bauen und die App installieren, aber die Spieldaten noch nicht kopieren
@@ -170,12 +187,12 @@ Auswahl:   --locale de-DE      Sprachvariante dazunehmen (mehrfach möglich)
            --addons            gekaufte Zusatzinhalte dazunehmen (fragt die Kaufliste ab)
 Allgemein: --account <Name>    Eintrag im Schlüsselbund (Standard: default)
            --store <Ordner>    Ablage der Dateien      --recipes <Ordner>
-           --interval <s>      Mindestabstand zwischen Abrufen (Standard: 5)
+           --interval <s>      Mindestabstand zwischen Abrufen (Standard: keiner)
 """)
 }
 
-let valued: Set<String> = ["account", "steam-account", "store", "recipes", "locale", "with", "only", "interval", "from", "manifest", "to",
-                           "team", "device", "bundle-id", "toolchain", "icon", "tool", "jobs", "toolchains"]
+let valued: Set<String> = ["account", "steam-account", "store", "recipes", "locale", "with", "only", "interval", "from", "manifest", "to", "force", "name",
+                           "team", "device", "bundle-id", "toolchain", "icon", "tool", "jobs", "toolchains", "saves"]
 let o = Options(Array(CommandLine.arguments.dropFirst()), valued: valued)
 guard let command = o.positional.first else { print(usage()); exit(0) }
 
@@ -212,8 +229,26 @@ func installRequest(_ o: Options) -> InstallRequest {
     request.customIcon = o.value("icon").map { URL(fileURLWithPath: $0).standardizedFileURL.path }
     request.storeArt = !o.flags.contains("no-store-art")
     if o.flags.contains("replace-running") { request.replaceRunning = true }
-    request.interval = Double(o.value("interval") ?? "") ?? 5
+    if o.flags.contains("restore-saves") { request.restoreSaves = true }
+    request.interval = Double(o.value("interval") ?? "") ?? 0
     return request
+}
+
+/// Sagt beim Kopieren aufs Gerät, wie weit es ist – höchstens einmal je Sekunde, und nur, wenn sich etwas getan hat.
+final class CopyProgressPrinter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var last = Date.distantPast
+    private var shown: Int64 = -1
+    private var via: Device.Transport?
+
+    func show(_ p: InstallProgress) {
+        lock.lock(); defer { lock.unlock() }
+        if let v = p.via { via = v }
+        guard p.total > 0, p.done != shown, p.done == p.total || Date().timeIntervalSince(last) >= 1 else { return }
+        (last, shown) = (Date(), p.done)
+        let over = via.map { L(" over \($0.text)", " über \($0.text)") } ?? ""
+        print(L("    \(p.done / 1_000_000) of \(p.total / 1_000_000) MB copied\(over)", "    \(p.done / 1_000_000) von \(p.total / 1_000_000) MB kopiert\(over)"))
+    }
 }
 
 func describe(_ j: Job) -> String {
@@ -364,6 +399,37 @@ case "owns":
     }
     catch { fail("\(error)") }
 
+case "content-identity":
+    // Was die Auslieferung über eine Datei sagt, ohne sie zu laden (MetaClient.identity) – zum Nachsehen.
+    guard o.positional.count > 1, CatalogGame.isIdentifier(o.positional[1]) else { fail(L("A file ID is missing.", "Datei-Kennung fehlt.")) }
+    let (client, _) = await signedIn(o)
+    do {
+        let i = try await client.identity(id: o.positional[1])
+        print("length \(i.length.map(String.init) ?? "-"), md5 \(i.md5 ?? "-"), etag \(i.etag ?? "-")")
+        print("headers: \(i.headerNames.joined(separator: ", "))")
+        if let to = o.value("to") {
+            let out = try await client.download(id: o.positional[1], to: URL(fileURLWithPath: to))
+            print("downloaded \(out.bytesReceived) bytes")
+        }
+    } catch { fail("\(error)") }
+
+case "store-version":
+    // Welche Fassung der Store für ein Spiel des Kontos gerade führt (MetaClient.latestBuild).
+    let r = recipe(o)
+    guard let app = r.store.appId else { fail("\(MetaError.missingAppId)") }
+    let (client, user) = await signedIn(o)
+    do {
+        guard try await client.ownsApp(appId: app, userId: user) else {
+            fail(L("\(r.title): not owned – nothing is asked.", "\(r.title): nicht im Besitz – es wird nichts gefragt."))
+        }
+        if let build = try await client.latestBuild(appId: app) {
+            print(L("\(r.title): the store has version \(build.version) (build number \(build.versionCode)); the recipe is for \(r.versionName) (\(r.versionCode)).",
+                    "\(r.title): der Store führt Fassung \(build.version) (Build-Nummer \(build.versionCode)); das Rezept gilt für \(r.versionName) (\(r.versionCode))."))
+        } else {
+            print(L("\(r.title): Meta's answer names no current build.", "\(r.title): Metas Antwort nennt keinen aktuellen Build."))
+        }
+    } catch { fail("\(error)") }
+
 case "purchases":
     let r = recipe(o)
     guard let app = r.store.appId else { fail("\(MetaError.missingAppId)") }
@@ -371,6 +437,7 @@ case "purchases":
     do {
         let skus = try await client.purchases(appId: app)
         print(L("\(r.title): confirmed purchases: \(skus.count).", "\(r.title): \(skus.count) bestätigte Käufe."))
+        if o.flags.contains("skus") { for sku in skus { print("  \(sku)") } }
         if let items = r.addons?.items {
             let owned = items.filter { skus.contains($0.sku) }
             print(L("Of these, add-on files matched in the recipe: \(owned.count).",
@@ -449,7 +516,7 @@ case "plan", "fetch":
         print(L("Note: the recipe has no store app ID; ownership is not checked beforehand.",
                 "Hinweis: Im Rezept fehlt die Store-App-ID; der Besitz wird nicht vorab geprüft."))
     }
-    let interval = Double(o.value("interval") ?? "") ?? 5
+    let interval = Double(o.value("interval") ?? "") ?? 0
     // Ohne Meta-Dateien wird der Client nie benutzt; er bekommt dann auch keinen Token.
     let fetcher = Fetcher(client: client ?? MetaClient(token: "unbenutzt"), store: store, gate: RequestGate(minInterval: .seconds(interval)))
     do {
@@ -578,7 +645,8 @@ case "devices":
             print(L("\(d.name)  visionOS \(d.osVersion)  \(d.udid)  \(d.paired ? "paired" : "not paired"), "
                     + "\(d.reachable ? "reachable" : "not reachable"), Developer Mode \(d.developerMode ? "on" : "off")",
                     "\(d.name)  visionOS \(d.osVersion)  \(d.udid)  \(d.paired ? "gekoppelt" : "nicht gekoppelt"), "
-                    + "\(d.reachable ? "erreichbar" : "nicht erreichbar"), Entwicklermodus \(d.developerMode ? "an" : "aus")"))
+                    + "\(d.reachable ? "erreichbar" : "nicht erreichbar"), Entwicklermodus \(d.developerMode ? "an" : "aus")")
+                  + (d.transport.map { L(", connected over \($0.text)", ", verbunden über \($0.text)") } ?? ""))
         }
     } catch { fail("\(error)") }
 
@@ -615,7 +683,8 @@ case "install", "stage":
     if command == "install", o.value("team") == nil {
         fail(L("For 'install', give the Apple Team ID with --team.", "Für 'install' die Apple-Team-ID mit --team angeben."))
     }
-    let installer = Installer(recipe: r, request: installRequest(o), store: contentStore(o)) { print($0) }
+    let copying = CopyProgressPrinter()
+    let installer = Installer(recipe: r, request: installRequest(o), store: contentStore(o), progress: { copying.show($0) }) { print($0) }
     do {
         for step in (command == "install" ? [.account, .build, .stage, .unlock] : [.account, .stage, .unlock]) as [InstallStep] {
             try await installer.perform(step)
@@ -631,6 +700,96 @@ case "toolchains":
         print(L("Version \(m.version) (\(m.commit)), created \(ISO8601DateFormatter().string(from: m.created))  \(t.root.path)",
                 "Version \(m.version) (\(m.commit)), erstellt \(ISO8601DateFormatter().string(from: m.created))  \(t.root.path)"))
     }
+
+case "servers":
+    let r = recipe(o)
+    let servers = GameServerStore()
+    do {
+        guard r.servers != nil else { throw GameServerError.notSupported(r.title) }
+        switch o.positional.count > 2 ? o.positional[2] : "list" {
+        case "add":
+            guard o.positional.count > 3 else { fail(L("Give the server's address.", "Die Adresse des Servers angeben.")) }
+            let server = try servers.add(address: o.positional[3], name: o.value("name") ?? "", recipe: r)
+            if o.flags.contains("admin-stdin") {
+                guard let line = readLine(strippingNewline: true), !line.isEmpty else { throw GameServerError.badPassword }
+                try servers.setAdminPassword(line, address: server.address, recipe: r)
+            }
+            print(L("\(server.name) (\(server.address)) is in the list.", "\(server.name) (\(server.address)) steht in der Liste."))
+        case "remove":
+            guard o.positional.count > 3, let support = r.servers,
+                  let address = GameServerStore.normalize(o.positional[3], defaultPort: support.defaultPort ?? 27015) else {
+                fail(L("Give the server's address.", "Die Adresse des Servers angeben."))
+            }
+            try servers.remove(address: address, recipe: r)
+            print(L("\(address) has been removed.", "\(address) wurde entfernt."))
+        case "push":
+            let device = try DeviceControl().pick(udid: o.value("device"))
+            let bundle = o.value("bundle-id") ?? SigningRecord.load(store: contentStore(o), recipe: r)?.bundleId
+                ?? Toolchain.defaultBundleId(target: r.toolchain.target)
+            print(try servers.push(recipe: r, device: device, bundle: bundle)
+                ? L("The list is in the game's data on the Vision Pro; it applies from the next start of the game.",
+                    "Die Liste liegt bei den Daten des Spiels auf der Vision Pro; sie gilt ab dem nächsten Start des Spiels.")
+                : L("Nothing to copy: the list is empty and there is none on the Vision Pro.", "Nichts zu kopieren: Die Liste ist leer, und auf der Vision Pro liegt keine."))
+        default:
+            let list = servers.all(recipe: r)
+            let fixed = Set(GameServerStore.builtin(recipe: r).map(\.address))
+            if list.isEmpty { print(L("No servers yet.", "Noch keine Server.")) }
+            for server in list {
+                let admin = servers.hasAdminPassword(address: server.address, recipe: r)
+                print("\(server.address)  \(server.name)  \(admin ? L("admin access stored", "Admin-Zugang hinterlegt") : L("no admin access", "kein Admin-Zugang"))"
+                      + (fixed.contains(server.address) ? L("  (built in)", "  (eingebaut)") : ""))
+            }
+        }
+    } catch { fail("\(error)") }
+
+case "renew":
+    let chosen = (o.value("toolchain") ?? ProcessInfo.processInfo.environment["AVPPLAY_TOOLCHAIN"]).flatMap { try? Toolchain(root: URL(fileURLWithPath: $0)) }
+    let dry = o.flags.contains("dry-run")
+    let report = await Renewal.run(recipes: Renewal.recipes(bundled: recipesDirectory(o), drafts: DataLocation.base.appendingPathComponent("drafts", isDirectory: true)),
+                                   store: contentStore(o), toolchain: chosen ?? toolchainPackager(o).installed().first,
+                                   preferredDevice: o.value("device"), dryRun: dry, force: Set(o.values["force"] ?? []), log: { print($0) })
+    if !dry { report.save() }
+    print(report.outcomes.isEmpty
+        ? L("Nothing is due (\(report.known) installation(s) with a known date).", "Nichts fällig (\(report.known) Installation(en) mit bekanntem Datum).")
+        : L("\(report.outcomes.count) due: \(report.outcomes.filter { $0.result == .renewed }.count) renewed, \(report.outcomes.filter { $0.result == .failed }.count) failed, the rest not tried.",
+            "\(report.outcomes.count) fällig: \(report.outcomes.filter { $0.result == .renewed }.count) erneuert, \(report.outcomes.filter { $0.result == .failed }.count) gescheitert, der Rest nicht versucht."))
+
+case "saves":
+    // Holt Spielstände – aller installierten Spiele oder der genannten. Was die Oberfläche von selbst tut.
+    let known = Renewal.recipes(bundled: recipesDirectory(o), drafts: DataLocation.base.appendingPathComponent("drafts", isDirectory: true))
+    let named = Set(o.positional.dropFirst())
+    let wanted = named.isEmpty ? known : known.filter { named.contains($0.id) }
+    guard !wanted.isEmpty else { fail(L("No recipe by that name.", "Kein Rezept mit diesem Namen.")) }
+    let saves = o.value("saves").map { SaveStore(root: URL(fileURLWithPath: $0)) } ?? SaveStore(root: SaveStore.root(forStore: contentStore(o).root))
+    if o.flags.contains("restore") {
+        // Den neuesten Stand eines Spiels aufs Gerät zurückspielen und ersetzen, was dort liegt. Was dort liegt, wird
+        // vorher geholt; läuft das Spiel, passiert nichts.
+        guard wanted.count == 1, !named.isEmpty, let r = wanted.first else { fail(L("--restore takes exactly one game.", "--restore braucht genau ein Spiel.")) }
+        do {
+            let control = DeviceControl()
+            let device = try control.pick(udid: o.value("device"))
+            let apps = try control.apps(device: device)
+            guard let bundle = o.value("bundle-id") ?? SaveSync.installedBundle(recipe: r, store: contentStore(o), prefix: nil, apps: apps),
+                  let app = apps.first(where: { $0.bundleIdentifier == bundle }) else { fail("\(InstallError.appNotInstalled(r.title))") }
+            guard !DeviceControl.isRunning(app, executables: try control.runningExecutables(device: device)) else { fail("\(InstallError.appRunning(r.title))") }
+            guard let snapshot = saves.snapshots(for: r).first else { fail("\(SaveError.nothingSaved(r.title))") }
+            let sync = SaveSync(saves: saves, store: contentStore(o))
+            _ = try sync.fetch(recipe: r, device: device, bundle: bundle)
+            let n = try sync.restore(snapshot, recipe: r, device: device, bundle: bundle, mode: .overwrite)
+            print(L("\(r.title): \(n) file(s) from \(snapshot.id) put back on the Vision Pro (\(bundle)).",
+                    "\(r.title): \(n) Datei(en) vom \(snapshot.id) auf die Vision Pro zurückgespielt (\(bundle))."))
+        } catch { fail("\(error)") }
+        exit(0)
+    }
+    guard let results = SaveRound.run(recipes: wanted, store: contentStore(o), saves: saves, preferredDevice: o.value("device"),
+                                      prefix: o.value("bundle-id").map { ($0 as NSString).deletingPathExtension }) else {
+        fail("\(DeviceError.noDevice)")
+    }
+    for r in results {
+        let where_ = r.snapshot.map { "  " + saves.directory(for: wanted.first { $0.id == r.recipe }!).appendingPathComponent($0.id).path } ?? ""
+        print("\(r.title): \(r.detail)\(r.kind == .saved ? where_ : "")")
+    }
+    if results.isEmpty { print(L("None of these games is on the Vision Pro.", "Keines dieser Spiele ist auf der Vision Pro.")) }
 
 case "toolchain":
     guard o.positional.count >= 2 else {
@@ -699,6 +858,8 @@ case "status":
             case .current(let stamp): geraet = L("installed, \(stamp)", "installiert, \(stamp)")
             case .olderToolchain(let stamp):
                 geraet = L("installed, \(stamp) – built with an older toolchain", "installiert, \(stamp) – mit älterer Toolchain gebaut")
+            case .olderGame(let stamp):
+                geraet = L("installed, \(stamp) – an older version of the game", "installiert, \(stamp) – eine ältere Fassung des Spiels")
             case .unstamped(let stamp):
                 geraet = L("installed, \(stamp) – without this tool's stamp", "installiert, \(stamp) – ohne Stempel dieses Werkzeugs")
             }

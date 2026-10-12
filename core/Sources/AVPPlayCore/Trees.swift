@@ -11,13 +11,18 @@ public struct RecipeTree: Codable, Sendable, Hashable {
         case sysroot
         /// Die Brücke von OpenVR nach OpenXR.
         case xrizer
+        /// Spieldaten, die ein Spiel aus einem APK als ganzen Ordner erwartet – etwa die Daten des Originalspiels
+        /// für einen freien Port. Der Ordner liegt auf dem Gerät unter `Documents/<dest>`; die Toolchain braucht
+        /// ihn zum Bauen nicht.
+        case data
 
-        /// Unter diesem Namen erfährt die Toolchain, wo der Baum liegt.
-        var toolchainVariable: String {
+        /// Unter diesem Namen erfährt die Toolchain, wo der Baum liegt; `nil`, wenn sie ihn nicht braucht.
+        var toolchainVariable: String? {
             switch self {
             case .game: return "KL_LX_GAME"
             case .sysroot: return "KL_LX_SYSROOT"
             case .xrizer: return "KL_LX_XRIZER"
+            case .data: return nil
             }
         }
     }
@@ -35,6 +40,22 @@ public struct RecipeTree: Codable, Sendable, Hashable {
     public var source: FileSource
     /// Dateien, an denen der richtige Baum in der richtigen Version erkannt wird.
     public var markers: [Marker]
+    /// Nur für die Rolle `data`: der Zielordner unterhalb von `Documents/` im Datencontainer der App.
+    public var dest: String?
+    /// Was auf der obersten Ebene zum Baum gehört. Fehlt die Angabe, ist es alles. Ein Ordner, den der Nutzer
+    /// selbst angibt, enthält oft mehr als das Spiel braucht (andere Spiele derselben Engine, Programme für
+    /// einen anderen Rechner); das bleibt dann, wo es ist.
+    public var only: [String]?
+
+    /// Gehört ein Eintrag der obersten Ebene zum Baum?
+    func includes(topLevel name: String) -> Bool { only.map { $0.contains(name) } ?? true }
+
+    /// Woran das Gerät erkennt, dass genau dieser Baum schon vollständig dort liegt: ein Name, der sich aus den
+    /// Kenndateien ergibt. Ändert sich die Fassung, ändert sich der Name.
+    public var deviceStampName: String {
+        let text = markers.map { "\($0.path):\($0.sha256.lowercased())" }.sorted().joined(separator: "\n")
+        return ".avpplay-" + Hashing.sha256(of: Data(text.utf8)).prefix(16)
+    }
 }
 
 /// Ordnerbestände im lokalen Bestand: prüfen und übernehmen.
@@ -71,7 +92,9 @@ public struct TreeStore: Sendable {
     /// Wo die Toolchain die Bäume findet.
     public func toolchainEnvironment(recipe: Recipe) -> [String: String] {
         var env: [String: String] = [:]
-        for tree in recipe.trees ?? [] { env[tree.role.toolchainVariable] = url(for: tree, in: recipe).path }
+        for tree in recipe.trees ?? [] {
+            if let variable = tree.role.toolchainVariable { env[variable] = url(for: tree, in: recipe).path }
+        }
         return env
     }
 
@@ -91,13 +114,29 @@ public struct TreeStore: Sendable {
             // Erst vollständig daneben anlegen, dann umbenennen: ein abgebrochener Lauf hinterlässt keinen halben Baum.
             let fresh = store.directory(for: recipe).appendingPathComponent(".\(tree.name).new", isDirectory: true)
             try? fm.removeItem(at: fresh)
-            try fm.copyItem(at: source, to: fresh)
+            try TreeStore.copy(tree, from: source, to: fresh)
             try? fm.removeItem(at: target)
             try fm.moveItem(at: fresh, to: target)
             result.adopted.append(tree.name)
         }
         return result
     }
+
+    /// Kopiert einen Baum (auf APFS als Klon): ganz, oder – mit `only` – nur das, was auf der obersten Ebene dazugehört.
+    static func copy(_ tree: RecipeTree, from source: URL, to target: URL) throws {
+        let fm = FileManager.default
+        guard tree.only != nil else { try fm.copyItem(at: source, to: target); return }
+        try fm.createDirectory(at: target, withIntermediateDirectories: true)
+        for name in try fm.contentsOfDirectory(atPath: source.path).sorted() where tree.includes(topLevel: name) {
+            try fm.copyItem(at: source.appendingPathComponent(name), to: target.appendingPathComponent(name))
+        }
+    }
+
+    /// Bäume mit Spieldaten, die als Ordner aufs Gerät gehören.
+    public static func dataTrees(of recipe: Recipe) -> [RecipeTree] { (recipe.trees ?? []).filter { $0.role == .data } }
+
+    /// Bäume, die die Toolchain selbst liest und aufs Gerät bringt (ein Spiel, das kein APK ist).
+    public static func toolchainTrees(of recipe: Recipe) -> [RecipeTree] { (recipe.trees ?? []).filter { $0.role != .data } }
 
     /// Bäume, die fehlen und die das Programm selbst holen kann: aus einem Archiv unter einer freien Adresse.
     public func fetchable(recipe: Recipe) -> [RecipeTree] {

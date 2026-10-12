@@ -244,6 +244,9 @@ extension AppModel {
                 do {
                     try StoreLocation.set(target)
                     paths = Paths()
+                    // Die Spielstände liegen neben dem Ordner für Downloads und ziehen mit ihm um.
+                    let (from, to) = (SaveStore.root(forStore: old), SaveStore.root(forStore: target))
+                    await Task.detached { _ = SaveStore.move(from: from, to: to) }.value
                     storeMoveNote = result.skipped.isEmpty
                         ? L("Done. Downloads are now kept in \(target.path).", "Fertig. Downloads liegen jetzt in \(target.path).")
                         : L("Done. Downloads are now kept in \(target.path). Already present there and therefore left at the old place: \(result.skipped.joined(separator: ", ")).",

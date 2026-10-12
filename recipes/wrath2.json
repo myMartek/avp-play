@@ -777,6 +777,7 @@
    "required": false,
    "size": 422035004,
    "sha256": "2a7a3ee456dba19619380cddbbc2ad866059762925d951edb6bb006cb5a7d290",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2",
    "locale": "ko"
   },
   {
@@ -786,6 +787,7 @@
    "required": false,
    "size": 426294524,
    "sha256": "0a83c40421a0f6879fa6a82621bbbc58752d91730712fffcf3d9895a74944752",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2",
    "locale": "zh"
   },
   {
@@ -795,6 +797,7 @@
    "required": false,
    "size": 463348284,
    "sha256": "d027a02dce974b4acbcf7003213da699d5877b2396e7885551df3932fac23675",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2",
    "locale": "ja"
   },
   {
@@ -804,6 +807,7 @@
    "required": false,
    "size": 452032732,
    "sha256": "b8f56283b7ba2b85dc4df51f79c60061e04624867bc3503e4edac94136a3eb6c",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2",
    "locale": "it"
   },
   {
@@ -813,6 +817,7 @@
    "required": false,
    "size": 498866364,
    "sha256": "8568c731f251ed57a316e6ead48ad70d88b1b9ced74e4ce4aa3e93c51c4e3cdf",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2",
    "locale": "de"
   },
   {
@@ -822,6 +827,7 @@
    "required": false,
    "size": 500523740,
    "sha256": "2a2c277d0f094b6a5f61e5c4e6e3b37af6c46464337c4a9f4dba97e875c6d0da",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2",
    "locale": "fr"
   },
   {
@@ -831,6 +837,7 @@
    "required": false,
    "size": 494834908,
    "sha256": "11294a495b413a1fa5007940849b80f8c39c25f9f3844bf2fb98372d622c4b33",
+   "dest": "android-files/Android/obb/com.Sanzaru.Wrath2",
    "locale": "es"
   }
  ],

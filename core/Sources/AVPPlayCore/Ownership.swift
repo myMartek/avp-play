@@ -35,8 +35,24 @@ public struct OwnershipCache: Sendable {
     public func clear() { try? FileManager.default.removeItem(at: url) }
 
     /// Ist eine neue Abfrage fällig? Ja, wenn es keine Antwort gibt oder sie älter als `maxAge` ist.
-    public static func needsCheck(_ record: OwnershipRecord?, now: Date = Date(), maxAge: TimeInterval = 24 * 3600) -> Bool {
+    ///
+    /// Ein „Nein“ gilt kürzer als ein „Ja“ (`maxAgeNotOwned`): Ein Spiel, das dem Konto gehört, gehört ihm morgen
+    /// noch; eines, das ihm nicht gehört, ist vielleicht gerade gekauft worden. Mit einem Tag für beide stand ein
+    /// frisch gekauftes Spiel bis zu 24 Stunden als „nicht in deinem Meta-Konto“ da, und Abmelden war der einzige
+    /// Weg, die Antwort loszuwerden (Meldungen von Nutzern, 2026-10-12).
+    public static func needsCheck(_ record: OwnershipRecord?, now: Date = Date(), maxAge: TimeInterval = 24 * 3600,
+                                  maxAgeNotOwned: TimeInterval = 3600) -> Bool {
         guard let record else { return true }
-        return now.timeIntervalSince(record.checked) > maxAge || record.checked > now
+        return now.timeIntervalSince(record.checked) > (record.owned ? maxAge : min(maxAge, maxAgeNotOwned)) || record.checked > now
+    }
+
+    /// Trägt eine einzelne Antwort ein, auf dem Stand, der gerade auf der Platte liegt – zwei Abfragen, die
+    /// nebeneinander laufen (der tägliche Durchgang und eine einzelne Nachfrage), überschreiben einander so nicht.
+    @discardableResult
+    public func record(appId: String, owned: Bool, checked: Date = Date()) -> [String: OwnershipRecord] {
+        var records = load()
+        records[appId] = OwnershipRecord(owned: owned, checked: checked)
+        try? save(records)
+        return records
     }
 }

@@ -22,6 +22,17 @@ struct DataView: View {
 
                 GroupBox(L("Downloaded Games", "Heruntergeladene Spiele")) {
                     VStack(alignment: .leading, spacing: 0) {
+                        HStack {
+                            Text(L("Which folder belongs to which game is also written in “\(StoreIndex.fileName)” in the downloads folder.",
+                                   "Welcher Ordner zu welchem Spiel gehört, steht auch in „\(StoreIndex.fileName)“ im Ordner für Downloads."))
+                                .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                            Spacer()
+                            Button(L("Export Game List …", "Spieleliste exportieren …")) { model.exportGameList() }.controlSize(.small)
+                                .help(L("A text file with your downloaded games, the games in your Meta account and your favourites – to pass on, for example to the project.",
+                                        "Eine Textdatei mit deinen geladenen Spielen, den Spielen in deinem Meta-Konto und deinen Favoriten – zum Weitergeben, etwa an das Projekt."))
+                        }
+                        .padding(6)
+                        Divider()
                         if let storage = model.storage {
                             if storage.games.isEmpty {
                                 Text(storage.available ? L("Nothing has been downloaded yet.", "Noch ist nichts heruntergeladen.")

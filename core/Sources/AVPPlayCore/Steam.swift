@@ -474,10 +474,12 @@ extension TreeStore {
         try fm.createDirectory(at: store.directory(for: recipe), withIntermediateDirectories: true)
         let fresh = store.directory(for: recipe).appendingPathComponent(".\(tree.name).new", isDirectory: true)
         try? fm.removeItem(at: fresh)
-        try fm.copyItem(at: first, to: fresh)
+        try TreeStore.copy(tree, from: first, to: fresh)
         for layer in layers.dropFirst() {
             guard let walker = fm.enumerator(atPath: layer.path) else { continue }
             for case let relative as String in walker {
+                // Was auf der obersten Ebene nicht zum Baum gehört, bleibt samt allem darunter draußen.
+                if !relative.contains("/"), !tree.includes(topLevel: relative) { walker.skipDescendants(); continue }
                 let target = fresh.appendingPathComponent(relative)
                 if fm.fileExists(atPath: target.path) { continue }
                 let source = layer.appendingPathComponent(relative)

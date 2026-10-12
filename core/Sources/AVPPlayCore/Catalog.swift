@@ -71,6 +71,53 @@ public struct CatalogFeedback: Codable, Sendable, Equatable {
     }
 }
 
+/// Die Meldung „diese Kopie ist heute in Gebrauch“. Sie trägt keine Kennung: Die App merkt sich nur den Tag ihrer
+/// letzten Meldung und sagt, ob diese die erste überhaupt, die erste in dieser Woche und die erste in diesem
+/// Monat ist. Daraus zählt der Dienst Nutzer pro Tag, Woche und Monat, ohne eine Kopie wiedererkennen zu können.
+public struct UsagePing: Codable, Sendable, Equatable {
+    public var appVersion: String
+    public var first: Bool
+    public var week: Bool
+    public var month: Bool
+
+    /// Tage, Wochen (ab Montag) und Monate in Weltzeit – so zählt auch der Dienst.
+    static let calendar: Calendar = {
+        var c = Calendar(identifier: .iso8601)
+        c.timeZone = TimeZone(identifier: "UTC")!
+        return c
+    }()
+
+    /// Der Tag als „2026-10-11“.
+    public static func day(_ date: Date) -> String {
+        let d = calendar.dateComponents([.year, .month, .day], from: date)
+        return String(format: "%04d-%02d-%02d", d.year ?? 0, d.month ?? 0, d.day ?? 0)
+    }
+
+    static func date(ofDay day: String) -> Date? {
+        let parts = day.split(separator: "-").compactMap { Int($0) }
+        guard parts.count == 3 else { return nil }
+        return calendar.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2]))
+    }
+
+    /// Die fällige Meldung – oder `nil`, wenn heute schon gemeldet wurde. `last` ist der Tag der letzten Meldung,
+    /// `nil` oder Unlesbares heißt: noch nie.
+    public static func due(last: String?, now: Date, appVersion: String) -> UsagePing? {
+        guard let before = last.flatMap(date(ofDay:)) else { return UsagePing(appVersion: appVersion, first: true, week: true, month: true) }
+        if calendar.isDate(before, inSameDayAs: now) { return nil }
+        return UsagePing(appVersion: appVersion, first: false,
+                         week: !calendar.isDate(before, equalTo: now, toGranularity: .weekOfYear),
+                         month: !calendar.isDate(before, equalTo: now, toGranularity: .month))
+    }
+
+    /// Unter welchem Namen der Dienst ein Spiel zählt: die Store-Kennung, oder für Spiele von anderswo der Name
+    /// ihres Rezepts. `nil`, wenn es keinen gibt, den der Dienst annähme.
+    public static func gameKey(appId: String?, recipe: String) -> String? {
+        if let appId { return CatalogGame.isIdentifier(appId) ? appId : nil }
+        let plain = recipe.allSatisfy { $0.isASCII && ($0.isLowercase || $0.isNumber || $0 == "-") }
+        return (2...32).contains(recipe.count) && plain && recipe.first?.isLetter == true ? recipe : nil
+    }
+}
+
 public enum CatalogError: Error, CustomStringConvertible, Equatable {
     case unreachable(String)
     case refused(Int)
@@ -88,8 +135,9 @@ public enum CatalogError: Error, CustomStringConvertible, Equatable {
     }
 }
 
-/// Spricht mit dem Katalogdienst des Projekts. Dorthin gehen nur Suchbegriffe, App-Kennungen und Rückmeldungen;
-/// nie der Meta-Token, nie etwas über das Konto oder das Gerät.
+/// Spricht mit dem Katalogdienst des Projekts. Dorthin gehen nur Suchbegriffe, App-Kennungen, Rückmeldungen und –
+/// wenn nicht abgestellt – die beiden Zählmeldungen ohne Kennung; nie der Meta-Token, nie etwas über das Konto
+/// oder das Gerät.
 public struct CatalogClient: Sendable {
     public static let defaultBase = URL(string: "https://avpplay.martek.de")!
     public let base: URL
@@ -140,11 +188,24 @@ public struct CatalogClient: Sendable {
         return try await fetchPage(items)
     }
 
-    /// Genau diese Spiele (höchstens 100) – für das, was schon auf dem Mac liegt oder gemerkt ist.
+    /// So viele Kennungen nimmt der Dienst in einer Anfrage an.
+    public static let idsPerRequest = 100
+
+    /// Teilt Kennungen in Anfragen auf, die der Dienst annimmt; was keine Kennung ist, fällt weg.
+    static func batches(of appIds: [String], size: Int = idsPerRequest) -> [[String]] {
+        let ids = appIds.filter(CatalogGame.isIdentifier)
+        return stride(from: 0, to: ids.count, by: max(1, size)).map { Array(ids[$0..<min($0 + size, ids.count)]) }
+    }
+
+    /// Genau diese Spiele – für das, was schon auf dem Mac liegt oder gemerkt ist. Der Dienst nimmt höchstens 100
+    /// Kennungen auf einmal; bei mehr wird in mehreren Anfragen gefragt. Bis 1.1.0 fiel alles nach den ersten 100
+    /// weg: Wer viele Favoriten hatte, sah unter dem Filter „Favoriten“ nur einen Teil davon.
     public func games(appIds: [String]) async throws -> [CatalogGame] {
-        let ids = appIds.filter(CatalogGame.isIdentifier).prefix(100)
-        guard !ids.isEmpty else { return [] }
-        return try await fetchPage([URLQueryItem(name: "ids", value: ids.joined(separator: ","))]).games
+        var found: [CatalogGame] = []
+        for ids in CatalogClient.batches(of: appIds) {
+            found += try await fetchPage([URLQueryItem(name: "ids", value: ids.joined(separator: ","))]).games
+        }
+        return found
     }
 
     private func fetchPage(_ items: [URLQueryItem]) async throws -> Page {
@@ -163,11 +224,19 @@ public struct CatalogClient: Sendable {
         return game
     }
 
-    public func send(_ feedback: CatalogFeedback) async throws {
-        var r = request("api/v1/feedback")
+    private func post<Body: Encodable>(_ path: String, _ body: Body) async throws {
+        var r = request(path)
         r.httpMethod = "POST"
         r.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        r.httpBody = try JSONEncoder().encode(feedback)
+        r.httpBody = try JSONEncoder().encode(body)
         _ = try await send(r, expecting: 202)
     }
+
+    public func send(_ feedback: CatalogFeedback) async throws { try await post("api/v1/feedback", feedback) }
+
+    /// „Diese Kopie ist heute in Gebrauch“ – höchstens einmal am Tag, siehe `UsagePing`.
+    public func send(_ ping: UsagePing) async throws { try await post("api/v1/ping", ping) }
+
+    /// „Dieses Spiel wurde installiert“ – einmal pro Spiel; `game` kommt aus `UsagePing.gameKey`.
+    public func countInstall(of game: String) async throws { try await post("api/v1/installs", ["appId": game]) }
 }

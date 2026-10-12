@@ -1,0 +1,59 @@
+{
+ "files": [
+  {
+   "dest": "",
+   "id": "5793258947445071",
+   "localName": "x2637179839719680.apk",
+   "name": "VR4-Android-Shipping-arm64.apk",
+   "required": true,
+   "role": "apk",
+   "size": 56831952,
+   "sha256": "9738e3f7637efce22010a792878246f0138e4e914acb29c4371f3a5c1329d1e1"
+  },
+  {
+   "dest": "android-files/Android/obb/com.Armature.VR4",
+   "id": "5793253277445638",
+   "name": "patch.203.com.Armature.VR4.obb",
+   "required": true,
+   "role": "content-bundle",
+   "size": 4233911336,
+   "sha256": "9dfc82ce570c4ddc8f09bae391ecb569ecee050c3ce165dab7a33795dfa5bbcf"
+  },
+  {
+   "dest": "android-files/Android/obb/com.Armature.VR4",
+   "id": "5793247094112923",
+   "name": "main.203.com.Armature.VR4.obb",
+   "required": true,
+   "role": "content-bundle",
+   "size": 4278854071,
+   "sha256": "424c182036e5aa09f858471fabde1221bbb943d2a27820ced99083e19ebc99dd"
+  }
+ ],
+ "id": "store-2637179839719680",
+ "package": "com.Armature.VR4",
+ "schema": 1,
+ "status": {
+  "playability": "verified",
+  "download": "proven",
+  "notes": [
+   {
+    "en": "Marked as verified by the project on 2026-10-11. 3 files, all with checksums recorded from a download. Meta's tool lists four more files for this build that the game does not use (an unstripped copy of the engine library for crash reports, 2.7 GB, and three Windows batch files); they are left out.",
+    "de": "Vom Projekt am 2026-10-11 als geprüft markiert. 3 Dateien, alle mit Prüfsummen aus einem Download. Metas Werkzeug nennt für diesen Build vier weitere Dateien, die das Spiel nicht benutzt (eine ungekürzte Kopie der Engine-Bibliothek für Absturzberichte, 2,7 GB, und drei Windows-Stapeldateien); sie sind weggelassen."
+   },
+   {
+    "en": "Runs with a fix a user sent in (fix 18): the game's engine (Unreal 4.25) is recognised from the game itself. Tested by the project on an Apple Vision Pro on 2026-10-11.",
+    "de": "Läuft mit einem von einem Nutzer eingesandten Fix (Fix 18): Die Engine des Spiels (Unreal 4.25) wird am Spiel selbst erkannt. Vom Projekt am 2026-10-11 auf einer Apple Vision Pro getestet."
+   }
+  ]
+ },
+ "store": {
+  "appId": "2637179839719680"
+ },
+ "title": "Resident Evil 4",
+ "toolchain": {
+  "minCommit": "fbbf5b0",
+  "target": "x2637179839719680"
+ },
+ "versionCode": 203,
+ "versionName": "2.3"
+}

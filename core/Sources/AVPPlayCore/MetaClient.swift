@@ -63,6 +63,58 @@ public struct MetaClient: Sendable {
         return try decode(Answer.self, from: data).success
     }
 
+    /// Der Build, den der Store für diese App gerade führt – für ein Spiel, das dem Konto gehört.
+    ///
+    /// Anders als die übrigen Abfragen hier steht diese in keiner Dokumentation für Entwickler: Es ist ein Feld
+    /// des App-Eintrags, das Metas eigene Programme lesen. Der Nutzer hat ihr am 2026-10-11 zugestimmt, weil die
+    /// öffentliche Versionsdatenbank Wochen zurückliegen kann (Walkabout 6.8 war im Store, dort noch nicht). Sie
+    /// liest nur, nennt nichts als Kennung, Namen und Nummer eines Builds, und eine Antwort, die anders aussieht
+    /// als erwartet, ist `nil` – „unbekannt“ –, kein Anlass für weitere Versuche.
+    /// Die hinterlegte Abfrage „aktuelle Fassung einer App“ in Metas Abfragesprache, unter der Nummer, unter der
+    /// sie auch die öffentliche Bibliothek OculusGraphQLApiLib (ComputerElite, `CurrentVersionOfApp`) stellt.
+    static let currentVersionQuery = "1586217024733717"
+
+    public func latestBuild(appId: String) async throws -> CatalogBuild? {
+        try await builds(appId: appId).first
+    }
+
+    /// Alle Fassungen, die Metas Antwort auf dieselbe Abfrage nennt, die neueste zuerst – für die Wahl der
+    /// Fassung. Es ist dieselbe eine Anfrage wie für `latestBuild`; gelesen werden dieselben drei Angaben je Build.
+    public func builds(appId: String) async throws -> [CatalogBuild] {
+        guard CatalogGame.isIdentifier(appId) else { return [] }
+        // Der Token geht wie überall im Kopf der Anfrage mit, nie in der Adresse und nicht im Rumpf.
+        let data = try await graph(path: "/graphql", form: ["doc_id": MetaClient.currentVersionQuery, "variables": "{\"id\":\"\(appId)\"}"])
+        return MetaClient.builds(inAnswer: data)
+    }
+
+    /// Liest aus Metas Antwort den Build mit der höchsten Nummer: `data.node.supportedBinaries.edges[].node` mit
+    /// `id`, `version`, `versionCode`. Alles andere an der Antwort bleibt ungelesen.
+    static func newestBuild(inAnswer data: Data) -> CatalogBuild? { builds(inAnswer: data).first }
+
+    /// Alle brauchbaren Builds der Antwort, je Versionsnummer einer, die höchste Nummer zuerst.
+    static func builds(inAnswer data: Data) -> [CatalogBuild] {
+        struct Answer: Decodable {
+            struct Binary: Decodable {
+                let id: String?
+                let version: String?
+                let versionCode: Int?
+            }
+            struct Edge: Decodable { let node: Binary? }
+            struct Binaries: Decodable { let edges: [Edge]? }
+            struct Node: Decodable { let supportedBinaries: Binaries? }
+            struct Payload: Decodable { let node: Node? }
+            let data: Payload?
+        }
+        guard let edges = (try? JSONDecoder().decode(Answer.self, from: data))?.data?.node?.supportedBinaries?.edges else { return [] }
+        let builds = edges.compactMap { edge -> CatalogBuild? in
+            guard let b = edge.node, let id = b.id, CatalogGame.isIdentifier(id), let code = b.versionCode, code > 0 else { return nil }
+            let build = CatalogBuild(buildId: id, version: String((b.version ?? "\(code)").prefix(60)), versionCode: code, fileName: nil)
+            return build.isSane ? build : nil
+        }
+        var seen = Set<Int>()
+        return builds.sorted { $0.versionCode > $1.versionCode }.filter { seen.insert($0.versionCode).inserted }
+    }
+
     /// Die vom Store bestätigten Käufe innerhalb einer App (SKUs). Abgelaufene Käufe zählen nicht.
     public func purchases(appId: String, now: Date = Date()) async throws -> [String] {
         struct Page: Decodable {
@@ -141,6 +193,59 @@ public struct MetaClient: Sendable {
         } onCancel: {
             task.cancel()
         }
+    }
+
+    // MARK: Was eine Datei ist, ohne sie zu laden
+
+    /// Was der Store über eine Datei sagt, bevor ihr Inhalt kommt: ihre Länge und – wenn die Auslieferung eine
+    /// nennt – eine Prüfsumme ihres Inhalts. Eine Anfrage nach dem ersten Byte; mehr wird nicht gelesen.
+    public struct ContentIdentity: Sendable, Equatable {
+        public var length: Int64?
+        public var md5: String?
+        public var etag: String?
+        /// Die Namen aller Kopfzeilen der Antwort (ohne Werte) – um zu sehen, was die Auslieferung überhaupt nennt.
+        public var headerNames: [String]
+    }
+
+    public func identity(id: String) async throws -> ContentIdentity {
+        precondition(!id.isEmpty && id.allSatisfy(\.isNumber), L("The file ID must be numeric", "Datei-ID muss numerisch sein"))
+        var parts = URLComponents()
+        parts.scheme = "https"
+        parts.host = MetaClient.downloadHost
+        parts.path = "/binaries/download/"
+        parts.queryItems = [URLQueryItem(name: "id", value: id)]
+        var request = MetaClient.request(parts.url!, token: token)
+        request.timeoutInterval = 60
+        request.setValue("bytes=0-0", forHTTPHeaderField: "Range")
+        let delegate = IdentityDelegate(authorizedHost: MetaClient.downloadHost)
+        let session = URLSession(configuration: MetaClient.configuration(), delegate: delegate, delegateQueue: nil)
+        defer { session.invalidateAndCancel() }
+        return try await withCheckedThrowingContinuation { (c: CheckedContinuation<ContentIdentity, Error>) in
+            delegate.continuation = c
+            session.dataTask(with: request).resume()
+        }
+    }
+
+    /// Der Anfang einer Datei und ihre ganze Länge, in einer Anfrage: um zu sehen, ob sie dieselbe ist wie eine,
+    /// die schon da liegt, ohne sie zu laden.
+    public func head(id: String, bytes: Int) async throws -> (total: Int64?, data: Data) {
+        precondition(!id.isEmpty && id.allSatisfy(\.isNumber), L("The file ID must be numeric", "Datei-ID muss numerisch sein"))
+        var parts = URLComponents()
+        parts.scheme = "https"
+        parts.host = MetaClient.downloadHost
+        parts.path = "/binaries/download/"
+        parts.queryItems = [URLQueryItem(name: "id", value: id)]
+        var request = MetaClient.request(parts.url!, token: token)
+        request.timeoutInterval = 60
+        request.setValue("bytes=0-\(max(bytes, 1) - 1)", forHTTPHeaderField: "Range")
+        let delegate = IdentityDelegate(authorizedHost: MetaClient.downloadHost, collect: max(bytes, 1))
+        let session = URLSession(configuration: MetaClient.configuration(), delegate: delegate, delegateQueue: nil)
+        defer { session.invalidateAndCancel() }
+        let identity = try await withCheckedThrowingContinuation { (c: CheckedContinuation<ContentIdentity, Error>) in
+            delegate.continuation = c
+            session.dataTask(with: request).resume()
+        }
+        return (identity.length, delegate.body)
     }
 
     // MARK: Hilfen
@@ -291,6 +396,77 @@ final class DownloadDelegate: NSObject, URLSessionDataDelegate, @unchecked Senda
         if authorizedHost == nil || next.url?.host != authorizedHost || next.url?.scheme != "https" {
             next.setValue(nil, forHTTPHeaderField: "Authorization")
         }
+        completionHandler(next)
+    }
+}
+
+/// Liest die Kopfzeilen einer Antwort der Auslieferung und bricht ab, bevor Inhalt fließt.
+private final class IdentityDelegate: NSObject, URLSessionDataDelegate, @unchecked Sendable {
+    var continuation: CheckedContinuation<MetaClient.ContentIdentity, Error>?
+    let authorizedHost: String
+    /// Wie viele Bytes des Inhalts mitgelesen werden (0: keine – die Antwort wird nach den Kopfzeilen beendet).
+    let collect: Int
+    private(set) var body = Data()
+    private var pending: MetaClient.ContentIdentity?
+    init(authorizedHost: String, collect: Int = 0) {
+        self.authorizedHost = authorizedHost
+        self.collect = collect
+    }
+
+    private func finish(_ result: Result<MetaClient.ContentIdentity, Error>) {
+        guard let c = continuation else { return }
+        continuation = nil
+        c.resume(with: result)
+    }
+
+    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse,
+                    completionHandler: @escaping (URLSession.ResponseDisposition) -> Void) {
+        guard let http = response as? HTTPURLResponse else {
+            completionHandler(.cancel)
+            return finish(.failure(MetaError.unexpected(status: 0)))
+        }
+        completionHandler(collect > 0 && (http.statusCode == 200 || http.statusCode == 206) ? .allow : .cancel)
+        switch http.statusCode {
+        case 200, 206:
+            func header(_ name: String) -> String? {
+                http.value(forHTTPHeaderField: name).map { $0.trimmingCharacters(in: CharacterSet(charactersIn: "\" ")) }
+            }
+            let length = DownloadDelegate.totalSize(contentRange: http.value(forHTTPHeaderField: "Content-Range"))
+                ?? (http.statusCode == 200 && http.expectedContentLength > 0 ? http.expectedContentLength : nil)
+            let identity = MetaClient.ContentIdentity(length: length, md5: header("x-fb-content-md5") ?? header("Content-MD5"),
+                                                      etag: header("ETag"),
+                                                      headerNames: http.allHeaderFields.keys.compactMap { $0 as? String }.sorted())
+            if collect > 0 { pending = identity } else { finish(.success(identity)) }
+        case 401, 403, 404: finish(.failure(MetaError.denied(status: http.statusCode)))
+        default: finish(.failure(MetaError.unexpected(status: http.statusCode)))
+        }
+    }
+
+    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
+        guard collect > 0 else { return }
+        body.append(data.prefix(max(0, collect - body.count)))
+        // Eine Auslieferung, die den Bereich übergeht und die ganze Datei schickt: nach dem Verlangten ist Schluss.
+        if body.count >= collect, let identity = pending {
+            pending = nil
+            dataTask.cancel()
+            finish(.success(identity))
+        }
+    }
+
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        if let error, (error as NSError).code != NSURLErrorCancelled {
+            return finish(.failure(MetaError.transport(Redaction.redact(error.localizedDescription))))
+        }
+        if let identity = pending {
+            pending = nil
+            finish(.success(identity))
+        }
+    }
+
+    func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
+                    newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
+        var next = request
+        if next.url?.host != authorizedHost || next.url?.scheme != "https" { next.setValue(nil, forHTTPHeaderField: "Authorization") }
         completionHandler(next)
     }
 }

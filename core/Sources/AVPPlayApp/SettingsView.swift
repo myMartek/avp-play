@@ -14,7 +14,8 @@ enum LanguageChoice: String, CaseIterable, Identifiable {
     }
 }
 
-/// Die Einstellungen des Programms (⌘,): Sprache und, für Leute die es brauchen, die Kennung der Apps.
+/// Die Einstellungen des Programms (⌘,), als letzte Seite des Hauptfensters: Sprache, Katalog, Downloads, das
+/// Erneuern der Signaturen und, für Leute die es brauchen, die Kennung der Apps.
 struct SettingsView: View {
     @EnvironmentObject var model: AppModel
     @State private var prefixDraft = ""
@@ -28,31 +29,6 @@ struct SettingsView: View {
                 Text(L("Menus that macOS provides itself switch the next time you open the app.",
                        "Menüs, die macOS selbst stellt, wechseln beim nächsten Öffnen des Programms."))
                     .font(.callout).foregroundStyle(.secondary)
-            }
-
-            Section(L("Online catalogue", "Online-Katalog")) {
-                Toggle(L("Show more games from the online catalogue and allow feedback", "Weitere Spiele aus dem Online-Katalog zeigen und Rückmeldungen erlauben"),
-                       isOn: Binding(get: { model.onlineCatalog }, set: { model.onlineCatalog = $0; model.loadCatalog() }))
-                Text(L("The catalogue is a small service of this project (avpplay.martek.de). The app sends it what you search for and the identifiers of games you open; a report you choose to send contains the game, its build and your answer. It never receives your Meta sign-in or anything about your account or device.",
-                       "Der Katalog ist ein kleiner Dienst dieses Projekts (avpplay.martek.de). Die App schickt ihm, wonach du suchst, und die Kennungen der Spiele, die du öffnest; eine Rückmeldung, die du abschickst, enthält das Spiel, seinen Build und deine Antwort. Deine Meta-Anmeldung oder etwas über dein Konto oder Gerät bekommt er nie."))
-                    .font(.callout).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            Section(L("Pictures", "Bilder")) {
-                Toggle(L("Load pictures of games from the Meta Store", "Bilder der Spiele aus dem Meta-Store laden"), isOn: $model.storePictures)
-                Text(L("For games whose files are not on this Mac yet, the app fetches the picture from the game's public page in the Meta Store (meta.com) – only for games you are looking at, without your Meta sign-in, and keeps a small copy in a cache that the Data page can empty. Without this, such games show a coloured tile with their name.",
-                       "Für Spiele, deren Dateien noch nicht auf diesem Mac liegen, holt die App das Bild von der öffentlichen Seite des Spiels im Meta-Store (meta.com) – nur für Spiele, die du gerade siehst, ohne deine Meta-Anmeldung, und hält eine kleine Kopie in einem Zwischenspeicher, den die Datenverwaltung leeren kann. Ohne das zeigen solche Spiele eine farbige Fläche mit ihrem Namen."))
-                    .font(.callout).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            Section(L("Downloads", "Downloads")) {
-                StoreLocationBox()
-                Text(L("Downloaded games are kept here – easily tens of gigabytes each. You can choose a folder on another disk, for example an external one; the games already downloaded move there. While that disk is not connected, nothing is downloaded or installed. Under “Data” in the main window you see what is stored and can remove it.",
-                       "Hier liegen die heruntergeladenen Spiele – schnell zweistellige Gigabyte pro Spiel. Du kannst einen Ordner auf einer anderen Platte wählen, etwa einer externen; die schon geladenen Spiele ziehen dorthin um. Solange diese Platte nicht angeschlossen ist, wird nichts geladen oder installiert. Unter „Datenverwaltung“ im Hauptfenster siehst du, was gespeichert ist, und kannst es entfernen."))
-                    .font(.callout).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
             }
 
             Section(L("Updates", "Aktualisierung")) {
@@ -99,6 +75,68 @@ struct SettingsView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
+            RenewalSettings()
+
+            Section(L("Online catalogue", "Online-Katalog")) {
+                Toggle(L("Show more games from the online catalogue and allow feedback", "Weitere Spiele aus dem Online-Katalog zeigen und Rückmeldungen erlauben"),
+                       isOn: Binding(get: { model.onlineCatalog }, set: { model.onlineCatalog = $0; model.loadCatalog() }))
+                Text(L("The catalogue is a small service of this project (avpplay.martek.de). The app sends it what you search for and the identifiers of games you open; a report you choose to send contains the game, its build and your answer. It never receives your Meta sign-in or anything about your account or device.",
+                       "Der Katalog ist ein kleiner Dienst dieses Projekts (avpplay.martek.de). Die App schickt ihm, wonach du suchst, und die Kennungen der Spiele, die du öffnest; eine Rückmeldung, die du abschickst, enthält das Spiel, seinen Build und deine Antwort. Deine Meta-Anmeldung oder etwas über dein Konto oder Gerät bekommt er nie."))
+                    .font(.callout).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Toggle(L("Let the project count how many people use AVP Play and which games they install", "Das Projekt zählen lassen, wie viele Leute AVP Play nutzen und welche Spiele sie installieren"),
+                       isOn: Binding(get: { model.usageCounts }, set: { model.usageCounts = $0 }))
+                    .disabled(!model.onlineCatalog)
+                Text(L("Once a day the app tells the catalogue that it is in use, with its version number, and once per game that you have installed it. Neither message carries an identifier of you, this Mac or your Vision Pro, and the service keeps nothing but totals per day.",
+                       "Einmal am Tag sagt die App dem Katalog, dass sie in Gebrauch ist, mit ihrer Versionsnummer, und einmal pro Spiel, dass du es installiert hast. Keine der beiden Meldungen trägt eine Kennung von dir, diesem Mac oder deiner Vision Pro, und der Dienst behält nichts als Summen pro Tag."))
+                    .font(.callout).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Section(L("Saved Games", "Spielstände")) {
+                Toggle(L("Fetch saved games from the Vision Pro to this Mac by itself", "Spielstände von selbst von der Vision Pro auf diesen Mac holen"),
+                       isOn: Binding(get: { model.syncSaves }, set: { model.syncSaves = $0 }))
+                Text(L("While AVP Play is open, it asks the Vision Pro every few minutes which game is running. After you quit a game, and every few hours for all installed games, it copies what the game has saved to this Mac – a new copy each time something has changed. With the background service for signatures turned on, this also happens while AVP Play is closed. Nothing leaves this Mac: the copies are kept in “\(SaveStore.folderName)” next to the downloads folder if you have chosen one, otherwise with the app's data. If a game is installed again and has no saved games on the headset, the last copy is put back; each game's page has the switch for that, and the buttons to fetch and to put back by hand. Games that run as Linux programs (Half-Life: Alyx) are not covered yet.",
+                       "Solange AVP Play offen ist, fragt es die Vision Pro alle paar Minuten, welches Spiel läuft. Nachdem du ein Spiel beendet hast, und alle paar Stunden für alle installierten Spiele, kopiert es auf diesen Mac, was das Spiel gespeichert hat – jedes Mal eine neue Kopie, wenn sich etwas geändert hat. Ist der Hintergrunddienst für Signaturen eingeschaltet, passiert das auch, während AVP Play geschlossen ist. Nichts verlässt diesen Mac: Die Kopien liegen in „\(SaveStore.folderName)“ neben dem Ordner für Downloads, wenn du einen gewählt hast, sonst bei den Daten der App. Wird ein Spiel neu installiert und hat auf dem Headset keine Spielstände, wird die letzte Kopie zurückgespielt; die Seite jedes Spiels hat den Schalter dafür und die Knöpfe zum Holen und Zurückspielen von Hand. Spiele, die als Linux-Programm laufen (Half-Life: Alyx), sind noch nicht dabei."))
+                    .font(.callout).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack {
+                    Button(L("Fetch Now", "Jetzt holen")) { model.fetchAllSaves() }.disabled(!model.savesBusy.isEmpty || model.device == nil)
+                    Button(L("Show in Finder", "Im Finder zeigen")) {
+                        let folder = model.paths.saves.root
+                        if model.storeBlocker == nil { try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true) }
+                        NSWorkspace.shared.activateFileViewerSelecting([folder])
+                    }
+                    .disabled(model.storeBlocker != nil)
+                    if !model.savesBusy.isEmpty { ProgressView().controlSize(.small) }
+                }
+            }
+
+            Section(L("Pictures", "Bilder")) {
+                Toggle(L("Load pictures of games from the Meta Store", "Bilder der Spiele aus dem Meta-Store laden"), isOn: $model.storePictures)
+                Text(L("For games whose files are not on this Mac yet, the app fetches the picture from the game's public page in the Meta Store (meta.com) – only for games you are looking at, without your Meta sign-in, and keeps a small copy in a cache that the Data page can empty. Without this, such games show a coloured tile with their name.",
+                       "Für Spiele, deren Dateien noch nicht auf diesem Mac liegen, holt die App das Bild von der öffentlichen Seite des Spiels im Meta-Store (meta.com) – nur für Spiele, die du gerade siehst, ohne deine Meta-Anmeldung, und hält eine kleine Kopie in einem Zwischenspeicher, den die Datenverwaltung leeren kann. Ohne das zeigen solche Spiele eine farbige Fläche mit ihrem Namen."))
+                    .font(.callout).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Section(L("Downloads", "Downloads")) {
+                StoreLocationBox()
+                Text(L("Downloaded games are kept here – easily tens of gigabytes each. You can choose a folder on another disk, for example an external one; the games already downloaded move there. While that disk is not connected, nothing is downloaded or installed. Under “Data” in the main window you see what is stored and can remove it.",
+                       "Hier liegen die heruntergeladenen Spiele – schnell zweistellige Gigabyte pro Spiel. Du kannst einen Ordner auf einer anderen Platte wählen, etwa einer externen; die schon geladenen Spiele ziehen dorthin um. Solange diese Platte nicht angeschlossen ist, wird nichts geladen oder installiert. Unter „Datenverwaltung“ im Hauptfenster siehst du, was gespeichert ist, und kannst es entfernen."))
+                    .font(.callout).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Section(L("Toolchains", "Toolchains")) {
+                Toggle(L("Remove toolchain data that is no longer needed automatically", "Nicht mehr gebrauchte Toolchain-Daten automatisch entfernen"),
+                       isOn: $model.autoRemoveOldToolchains)
+                Text(L("A toolchain is what turns a game into an app for the Vision Pro, and it grows by gigabytes with every game it builds. Games are always built with the newest one. Once a newer toolchain is installed, the older ones and everything they built are removed from this Mac. In the newest one, what a game left behind when it was built is removed once that build is more than a week old; building it again later then takes about a minute longer. Nothing is removed while a job is running, and nothing on the Vision Pro or among your downloads is touched.",
+                       "Eine Toolchain macht aus einem Spiel eine App für die Vision Pro und wächst mit jedem Spiel, das sie baut, um Gigabytes. Gebaut wird immer mit der neuesten. Sobald eine neuere installiert ist, werden die älteren samt allem, was sie gebaut haben, von diesem Mac entfernt. In der neuesten fällt weg, was ein Spiel beim Bauen hinterlassen hat, sobald dieser Bau über eine Woche her ist; ein späterer Neubau dauert dann etwa eine Minute länger. Nichts wird entfernt, während ein Auftrag läuft, und weder die Vision Pro noch deine Downloads werden angefasst."))
+                    .font(.callout).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
             Section(L("Advanced", "Erweitert")) {
                 LabeledContent(L("App identifier prefix", "Präfix der App-Kennung")) {
                     TextField("", text: $prefixDraft, prompt: Text(Toolchain.defaultBundlePrefix()))
@@ -132,9 +170,13 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 560)
-        .fixedSize(horizontal: false, vertical: true)
-        .onAppear { prefixDraft = model.customBundlePrefix }
+        .frame(maxWidth: 760)
+        .frame(maxWidth: .infinity)
+        .navigationTitle(L("Settings", "Einstellungen"))
+        .onAppear {
+            prefixDraft = model.customBundlePrefix
+            model.renewalReport = RenewalReport.load()
+        }
     }
 
     private func applyPrefix() {
