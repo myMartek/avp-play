@@ -19,10 +19,14 @@ public enum WindowsGameManifestError: Error, LocalizedError, Sendable, Equatable
 
     public var errorDescription: String? {
         switch self {
-        case .invalidExecutableRelativePath: "The executable must be a safe relative Windows path inside the selected game folder."
-        case .unsupportedSchemaVersion(let version): "Windows game manifest schema " + String(version) + " is unsupported."
-        case .invalidIdentity: "The game ID and title must be nonempty, bounded text without embedded NUL bytes."
-        case .invalidLaunchConfiguration: "Launch arguments or environment variables exceed runtime limits or include a reserved/invalid value."
+        case .invalidExecutableRelativePath:
+            L("The executable must be a safe relative Windows path inside the selected game folder.", "Die Programmdatei muss über einen sicheren relativen Windows-Pfad im ausgewählten Spielordner erreichbar sein.")
+        case .unsupportedSchemaVersion(let version):
+            L("Windows game manifest schema \(version) is unsupported.", "Die Version \(version) des Windows-Spielmanifests wird nicht unterstützt.")
+        case .invalidIdentity:
+            L("The game ID and title must be nonempty, bounded text without embedded NUL bytes.", "Spiel-ID und Titel müssen ausgefüllte, begrenzte Texte ohne eingebettete Nullzeichen sein.")
+        case .invalidLaunchConfiguration:
+            L("Launch arguments or environment variables exceed runtime limits or include a reserved/invalid value.", "Startargumente oder Umgebungsvariablen überschreiten die Laufzeitlimits oder enthalten einen reservierten beziehungsweise ungültigen Wert.")
         }
     }
 }

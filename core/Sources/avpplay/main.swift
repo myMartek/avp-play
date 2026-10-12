@@ -108,7 +108,7 @@ avpplay – command line for the AVP Play core library
   avpplay install <id> --team <team ID>        build, install, copy missing data, unlock add-on content
   avpplay stage <id>                           only copy missing data and add-on content (no build)
   avpplay windows stage --from <folder> --manifest <path> --bundle-id <id> --owned [--device UDID]
-                                               transfer user-owned local x64/D3D11 Windows game files
+                                               transfer user-owned local x64 Windows game files (D3D11 or D3D12)
 
   avpplay renew [--dry-run] [--force <id>]     sign installed games again whose signature runs out soon (what the background service does)
   avpplay saves [<id> …] [--saves <folder>]    fetch the saved games of installed games from the Vision Pro to this Mac (nothing changes on the device)
@@ -161,7 +161,7 @@ avpplay – Kommandozeile zur Kern-Bibliothek von AVP Play
   avpplay install <id> --team <Team-ID>        bauen, installieren, Daten ergänzend kopieren, Zusatzinhalte freischalten
   avpplay stage <id>                           nur Daten und Zusatzinhalte ergänzend kopieren (ohne Build)
   avpplay windows stage --from <Ordner> --manifest <Pfad> --bundle-id <ID> --owned [--device UDID]
-                                               selbst bereitgestellte x64/D3D11-Windows-Spieldateien übertragen
+                                               selbst bereitgestellte x64-Windows-Spieldateien übertragen (D3D11 oder D3D12)
 
   avpplay renew [--dry-run] [--force <id>]     installierte Spiele neu signieren, deren Signatur bald abläuft (was der Hintergrunddienst tut)
   avpplay saves [<id> …] [--saves <Ordner>]    Spielstände installierter Spiele von der Vision Pro auf den Mac holen (auf dem Gerät ändert sich nichts)
@@ -658,23 +658,26 @@ case "windows":
           let manifest = o.value("manifest"), o.values["manifest"]?.count == 1,
           let bundle = o.value("bundle-id"), o.values["bundle-id"]?.count == 1,
           o.values["device"] == nil || o.values["device"]?.count == 1 else {
-        fail("Usage: avpplay windows stage --from <folder> --manifest <path> --bundle-id <id> --owned [--device UDID]")
+        fail(L("Usage: avpplay windows stage --from <folder> --manifest <path> --bundle-id <id> --owned [--device UDID]",
+                "Aufruf: avpplay windows stage --from <Ordner> --manifest <Pfad> --bundle-id <ID> --owned [--device UDID]"))
     }
     do {
         let summary = try WindowsGameTransfer().stage(
             from: URL(fileURLWithPath: from), manifest: URL(fileURLWithPath: manifest),
             bundleID: bundle, deviceUDID: o.value("device"), owned: true,
             progress: { progress in
-                let label = progress.phase == .hashing ? "hashed source" : "transferred"
+                let label = progress.phase == .hashing ? L("hashed source", "Quelle geprüft") : L("transferred", "übertragen")
                 let percent = 100 * Double(progress.completedBytes) / Double(max(progress.totalBytes, 1))
-                let line = String(format: "  %@ %d/%d files  %.1f%%  %@", label,
+                let line = String(format: L("  %@ %d/%d files  %.1f%%  %@", "  %@ %d/%d Dateien  %.1f%%  %@"), label,
                                   progress.completedFiles, progress.totalFiles, percent, progress.currentFile)
                 FileHandle.standardError.write(Data(line.utf8) + Data([10]))
             },
             report: { print($0) }
         )
-        print("Transfer complete: \(summary.copiedFiles) copied, \(summary.resumedFiles) resumed, "
-              + "\(summary.totalFiles) game files (\(gigabytes(summary.totalBytes))); \(summary.destination).")
+        print(L("Transfer complete: \(summary.copiedFiles) copied, \(summary.resumedFiles) resumed, "
+                + "\(summary.totalFiles) game files (\(gigabytes(summary.totalBytes))); \(summary.destination).",
+                "Übertragung abgeschlossen: \(summary.copiedFiles) kopiert, \(summary.resumedFiles) fortgesetzt, "
+                + "\(summary.totalFiles) Spieldateien (\(gigabytes(summary.totalBytes))); \(summary.destination)."))
     } catch { fail("\(error)") }
 
 case "install", "stage":

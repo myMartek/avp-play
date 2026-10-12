@@ -4,6 +4,7 @@ import argparse
 import json
 from pathlib import Path
 import subprocess
+from verify_source_checkout import verify_source_checkout
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -29,6 +30,7 @@ def main():
         git("checkout", "--detach", source["revision"], directory=destination)
         if source["recursive"]:
             git("submodule", "update", "--init", "--recursive", directory=destination)
+        verify_source_checkout(destination, source["revision"])
 
 if __name__ == "__main__":
     main()

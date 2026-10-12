@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import Darwin
+import WindowsVRCore
 
 /// Requests Madeira's debugger protocol in the currently running host process.
 /// A debugger attachment is only a prerequisite; native FEX initialization must
@@ -12,10 +13,10 @@ final class JITCoordinator {
 
         var errorDescription: String? {
             switch self {
-            case .helperUnavailable: return "Install and configure StikDebug for visionOS before starting a Windows game."
-            case .scriptMissing: return "The Madeira JIT protocol script is missing from this app."
-            case .invalidRequest: return "The app could not create its debugger request."
-            case .attachmentTimedOut: return "The debugger did not attach. Check StikDebug's remote pairing and local VPN configuration."
+            case .helperUnavailable: return L("Install and configure StikDebug for visionOS before starting a Windows game.", "Installiere und konfiguriere StikDebug für visionOS, bevor du ein Windows-Spiel startest.")
+            case .scriptMissing: return L("The Madeira JIT protocol script is missing from this app.", "Das Madeira-JIT-Protokollskript fehlt in dieser App.")
+            case .invalidRequest: return L("The app could not create its debugger request.", "Die App konnte die Debugger-Anfrage nicht erstellen.")
+            case .attachmentTimedOut: return L("The debugger did not attach. Check StikDebug's remote pairing and local VPN configuration.", "Der Debugger wurde nicht angehängt. Prüfe die Kopplung mit StikDebug und die lokale VPN-Konfiguration.")
             }
         }
     }

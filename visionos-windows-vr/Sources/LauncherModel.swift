@@ -23,7 +23,7 @@ final class LauncherModel {
     private(set) var isStopping = false
     private(set) var stopRequested = false
     private(set) var requiresRestart = false
-    private(set) var runtimeStatus = "No runtime session"
+    private(set) var runtimeStatus = L("No runtime session", "Keine Laufzeitsitzung")
     private(set) var launchError: String?
     private(set) var library: [WindowsVRLibraryEntry] = []
     private(set) var selectedLibraryEntryID: String?
@@ -33,7 +33,7 @@ final class LauncherModel {
     private(set) var transferredGames: [TransferredWindowsVRGame] = []
     private(set) var transferImportError: String?
     var renderScaleDraft: Float = 1
-    var profileNameDraft = "Default"
+    var profileNameDraft = L("Default", "Standard")
     var launchArgumentsText = "[]"
     var isShowingImportError = false
     private(set) var importError: String?
@@ -65,28 +65,28 @@ final class LauncherModel {
     }
 
     var launchUnavailableReason: String? {
-        guard let manifest else { return "Import a Windows VR manifest and select a game folder." }
-        guard gameDirectory != nil else { return "Select the folder containing the game before launching." }
+        guard let manifest else { return L("Import a Windows VR manifest and select a game folder.", "Importiere ein Windows-VR-Manifest und wähle einen Spielordner aus.") }
+        guard gameDirectory != nil else { return L("Select the folder containing the game before launching.", "Wähle vor dem Start den Ordner mit dem Spiel aus.") }
         if manifest.backend != .windowsWineFEX {
-            return "This app packages the x64 Wine/FEX runtime only. A native ARM64/ARM64EC Windows VR package is not embedded."
+            return L("This app packages the x64 Wine/FEX runtime only. A native ARM64/ARM64EC Windows VR package is not embedded.", "Diese App enthält nur die x64-Wine/FEX-Laufzeit. Ein natives ARM64/ARM64EC-Windows-VR-Paket ist nicht eingebettet.")
         }
         if manifest.graphics == .vulkan {
-            return "Vulkan is not implemented by this runtime adapter. The request is blocked; no graphics fallback will be selected."
+            return L("Vulkan is not implemented by this runtime adapter. The request is blocked; no graphics fallback will be selected.", "Vulkan wird von diesem Laufzeitadapter nicht unterstützt. Die Anfrage wird blockiert; es wird kein Grafikmodus als Ersatz gewählt.")
         }
         if !runtime.isAvailable {
-            return "The signed WindowsRuntimePlugin.framework is unavailable. Launch is blocked; no placeholder backend will run."
+            return L("The signed WindowsRuntimePlugin.framework is unavailable. Launch is blocked; no placeholder backend will run.", "Das signierte WindowsRuntimePlugin.framework ist nicht verfügbar. Der Start wird blockiert; es wird kein Platzhalter-Backend ausgeführt.")
         }
         if !runtime.supportsGraphics(manifest.graphics) {
-            return "The app does not contain the matching experimental DXMT D3D12 runtime package. D3D11 is not substituted for a D3D12 request."
+            return L("The app does not contain the matching experimental DXMT D3D12 runtime package. D3D11 is not substituted for a D3D12 request.", "Das passende experimentelle DXMT-D3D12-Laufzeitpaket ist nicht in der App enthalten. Eine D3D12-Anfrage wird nicht durch D3D11 ersetzt.")
         }
         if requiresRestart {
-            return "This process has consumed its single runtime session. Restart the app before another launch."
+            return L("This process has consumed its single runtime session. Restart the app before another launch.", "Dieser Prozess hat seine einzige Laufzeitsitzung verwendet. Starte die App neu, bevor du ein weiteres Spiel startest.")
         }
         if isLaunching || hasAcceptedLaunch || isStopping {
-            return "A runtime session is active or changing state."
+            return L("A runtime session is active or changing state.", "Eine Laufzeitsitzung ist aktiv oder ändert gerade ihren Zustand.")
         }
         if draftArguments.count > 64 || draftArguments.contains(where: { $0.contains("\0") }) {
-            return "The profile arguments exceed the plugin limit or contain an invalid NUL character."
+            return L("The profile arguments exceed the plugin limit or contain an invalid NUL character.", "Die Profilargumente überschreiten das Plugin-Limit oder enthalten ein ungültiges Nullzeichen.")
         }
         return nil
     }
@@ -105,11 +105,11 @@ final class LauncherModel {
     }
 
     var sessionStatus: String {
-        if isStopping { return "Stopping" }
-        if isLaunching { return "Starting" }
+        if isStopping { return L("Stopping", "Wird beendet") }
+        if isLaunching { return L("Starting", "Wird gestartet") }
         if hasAcceptedLaunch { return runtimeStatus }
         if requiresRestart { return runtimeStatus }
-        return "Not running"
+        return L("Not running", "Nicht gestartet")
     }
 
     func importManifest(_ result: Result<[URL], Error>) {
@@ -131,7 +131,7 @@ final class LauncherModel {
             selectedLibraryEntryID = nil
             selectedProfileID = nil
             renderScaleDraft = 1
-            profileNameDraft = "Default"
+            profileNameDraft = L("Default", "Standard")
             launchError = nil
         } catch {
             guard !isCancellation(error) else { return }
@@ -202,12 +202,12 @@ final class LauncherModel {
                           try executable.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile == true else { continue }
                     transferredGames.append(.init(id: folder.path, manifest: decoded, directory: folder))
                 } catch {
-                    transferImportError = "Some transferred manifests could not be imported: " + error.localizedDescription
+                    transferImportError = L("Some transferred manifests could not be imported: \(error.localizedDescription)", "Einige übertragene Manifeste konnten nicht importiert werden: \(error.localizedDescription)")
                 }
             }
             transferredGames.sort { $0.manifest.title.localizedCaseInsensitiveCompare($1.manifest.title) == .orderedAscending }
         } catch {
-            transferImportError = "Transferred games could not be listed: " + error.localizedDescription
+            transferImportError = L("Transferred games could not be listed: \(error.localizedDescription)", "Die übertragenen Spiele konnten nicht aufgelistet werden: \(error.localizedDescription)")
         }
     }
 
@@ -220,11 +220,11 @@ final class LauncherModel {
         gameDirectory = game.directory
         gameFolderName = game.directory.lastPathComponent
         manifest = game.manifest
-        manifestName = "manifest.json — Mac transfer"
+        manifestName = L("manifest.json — Mac transfer", "manifest.json — Mac-Übertragung")
         selectedLibraryEntryID = nil
         selectedProfileID = nil
         renderScaleDraft = 1
-        profileNameDraft = "Default"
+        profileNameDraft = L("Default", "Standard")
         launchArgumentsText = Self.argumentText(game.manifest.launchArguments)
         launchError = nil
     }
@@ -243,7 +243,7 @@ final class LauncherModel {
         }
         let bookmark = try WindowsVRLibraryStore.makeFolderBookmark(for: gameDirectory)
         let defaultProfile = try WindowsVRLaunchProfile(
-            name: "Default",
+            name: L("Default", "Standard"),
             backend: manifest.backend,
             graphics: manifest.graphics,
             launchArguments: draftArguments,
@@ -273,7 +273,7 @@ final class LauncherModel {
             selectedProfileID = defaultProfile.id
         }
         try persist(updated)
-        profileNameDraft = selectedProfileName ?? "Default"
+        profileNameDraft = selectedProfileName ?? L("Default", "Standard")
     }
 
     func selectLibraryEntry(id: String) throws {
@@ -300,7 +300,7 @@ final class LauncherModel {
             gameDirectory = resolved.url
             gameFolderName = resolved.url.lastPathComponent
             selectedLibraryEntryID = id
-            manifestName = "\(entry.manifest.title) — library"
+            manifestName = L("\(entry.manifest.title) — library", "\(entry.manifest.title) — Bibliothek")
             manifest = entry.manifest
             let profile = entry.selectedProfile
             selectedProfileID = profile?.id
@@ -311,7 +311,7 @@ final class LauncherModel {
                 launchArgumentsText = Self.argumentText(profile.launchArguments)
             } else {
                 renderScaleDraft = 1
-                profileNameDraft = "Default"
+                profileNameDraft = L("Default", "Standard")
                 launchArgumentsText = Self.argumentText(entry.manifest.launchArguments)
             }
             launchError = nil
@@ -404,7 +404,7 @@ final class LauncherModel {
         } else {
             manifest = updated[index].manifest
             renderScaleDraft = 1
-            profileNameDraft = "Default"
+            profileNameDraft = L("Default", "Standard")
             launchArgumentsText = Self.argumentText(updated[index].manifest.launchArguments)
         }
     }
@@ -425,7 +425,7 @@ final class LauncherModel {
             gameFolderName = nil
             launchArgumentsText = "[]"
             renderScaleDraft = 1
-            profileNameDraft = "Default"
+            profileNameDraft = L("Default", "Standard")
         }
     }
 
@@ -450,7 +450,7 @@ final class LauncherModel {
             // WindowsVRCore emits only the unchanged v1 plugin JSON request.
             try await runtime.launch(manifest: launchManifest, gameDirectory: gameDirectory)
             hasAcceptedLaunch = true
-            runtimeStatus = "Launch accepted; game readiness unknown"
+            runtimeStatus = L("Launch accepted; game readiness unknown", "Start wurde angenommen; Spielbereitschaft unbekannt")
             beginStatusMonitoring()
             if !immersiveSpaceIsOpen || immersiveSpaceClosedDuringLaunch {
                 try await runtime.stop()
@@ -459,7 +459,7 @@ final class LauncherModel {
                 statusMonitor?.cancel()
                 statusMonitor = nil
                 releaseGameDirectoryAccess()
-                runtimeStatus = "Runtime stopped; restart the app before another launch"
+                runtimeStatus = L("Runtime stopped; restart the app before another launch", "Laufzeit beendet; starte die App neu, bevor du ein weiteres Spiel startest")
             }
         } catch {
             if immersiveSpaceClosedDuringLaunch && hasAcceptedLaunch { requiresRestart = true }
@@ -467,7 +467,7 @@ final class LauncherModel {
                 recordStopFailure(error, becauseImmersiveClosed: immersiveSpaceClosedDuringLaunch)
             } else {
                 let detail = runtime.nativeStatus().lastError
-                launchError = "The game could not be launched: " + (detail?.isEmpty == false ? detail! : error.localizedDescription)
+                launchError = L("The game could not be launched: \(detail?.isEmpty == false ? detail! : error.localizedDescription)", "Das Spiel konnte nicht gestartet werden: \(detail?.isEmpty == false ? detail! : error.localizedDescription)")
             }
         }
     }
@@ -510,7 +510,7 @@ final class LauncherModel {
             try await runtime.stop()
             hasAcceptedLaunch = false
             requiresRestart = true
-            runtimeStatus = "Runtime stopped; restart the app before another launch"
+            runtimeStatus = L("Runtime stopped; restart the app before another launch", "Laufzeit beendet; starte die App neu, bevor du ein weiteres Spiel startest")
             statusMonitor?.cancel()
             statusMonitor = nil
             releaseGameDirectoryAccess()
@@ -529,7 +529,7 @@ final class LauncherModel {
             try await runtime.stop()
             hasAcceptedLaunch = false
             requiresRestart = true
-            runtimeStatus = "Runtime stopped; restart the app before another launch"
+            runtimeStatus = L("Runtime stopped; restart the app before another launch", "Laufzeit beendet; starte die App neu, bevor du ein weiteres Spiel startest")
             statusMonitor?.cancel()
             statusMonitor = nil
             releaseGameDirectoryAccess()
@@ -706,32 +706,32 @@ final class LauncherModel {
     private func refreshRuntimeStatus() {
         let snapshot = runtime.nativeStatus()
         switch snapshot.state {
-        case 0: runtimeStatus = "Launch accepted; runtime is idle"
-        case 1: runtimeStatus = "Runtime preparing"
-        case 2: runtimeStatus = "Wine services starting"
-        case 3: runtimeStatus = "Guest process launching"
-        case 4: runtimeStatus = "Wine process active; game readiness and rendering unknown"
+        case 0: runtimeStatus = L("Launch accepted; runtime is idle", "Start wurde angenommen; Laufzeit ist im Leerlauf")
+        case 1: runtimeStatus = L("Runtime preparing", "Laufzeit wird vorbereitet")
+        case 2: runtimeStatus = L("Wine services starting", "Wine-Dienste werden gestartet")
+        case 3: runtimeStatus = L("Guest process launching", "Gastprozess wird gestartet")
+        case 4: runtimeStatus = L("Wine process active; game readiness and rendering unknown", "Wine-Prozess aktiv; Spielbereitschaft und Rendering unbekannt")
         case 5:
             stopRequested = true
-            runtimeStatus = "Exit requested; waiting for the guest and Wine process"
+            runtimeStatus = L("Exit requested; waiting for the guest and Wine process", "Beenden angefordert; warte auf Gast- und Wine-Prozess")
         case 6:
             stopRequested = false
-            runtimeStatus = "Runtime stopped; restart the app before another launch"
+            runtimeStatus = L("Runtime stopped; restart the app before another launch", "Laufzeit beendet; starte die App neu, bevor du ein weiteres Spiel startest")
             hasAcceptedLaunch = false
             requiresRestart = true
             statusMonitor?.cancel()
             releaseGameDirectoryAccess()
         case 7:
             stopRequested = false
-            runtimeStatus = "Runtime failed; restart the app before another launch"
+            runtimeStatus = L("Runtime failed; restart the app before another launch", "Laufzeitfehler; starte die App neu, bevor du ein weiteres Spiel startest")
             hasAcceptedLaunch = false
             requiresRestart = true
             statusMonitor?.cancel()
             releaseGameDirectoryAccess()
             if let error = snapshot.lastError, !error.isEmpty {
-                launchError = "The runtime reported a failure: \(error)"
+                launchError = L("The runtime reported a failure: \(error)", "Die Laufzeit meldet einen Fehler: \(error)")
             }
-        default: runtimeStatus = "Runtime status unavailable"
+        default: runtimeStatus = L("Runtime status unavailable", "Laufzeitstatus nicht verfügbar")
         }
     }
 
@@ -757,9 +757,9 @@ final class LauncherModel {
     private func recordStopFailure(_ error: Error, becauseImmersiveClosed: Bool) {
         if case WindowsRuntimeError.stopPending = error {
             stopRequested = true
-            runtimeStatus = "Exit requested; waiting for the guest and Wine process"
+            runtimeStatus = L("Exit requested; waiting for the guest and Wine process", "Beenden angefordert; warte auf Gast- und Wine-Prozess")
             launchError = becauseImmersiveClosed
-                ? "The immersive renderer closed. Cooperative exit was requested; the runtime still owns the session until Wine exits."
+                ? L("The immersive renderer closed. Cooperative exit was requested; the runtime still owns the session until Wine exits.", "Der immersive Renderer wurde geschlossen. Das geordnete Beenden wurde angefordert; die Laufzeit behält die Sitzung bis zum Ende von Wine.")
                 : nil
             // Keep both access and monitoring until native stopped/failed status.
             return
@@ -770,12 +770,12 @@ final class LauncherModel {
     private func stopFailureMessage(_ error: Error, becauseImmersiveClosed: Bool) -> String {
         if case WindowsRuntimeError.pluginRejectedRequest(let status) = error,
            status == 16 || status == -16 {
-            return "The runtime is busy (EBUSY) and could not stop the guest. Let the guest exit naturally or restart the app; the session remains marked active."
+            return L("The runtime is busy (EBUSY) and could not stop the guest. Let the guest exit naturally or restart the app; the session remains marked active.", "Die Laufzeit ist ausgelastet (EBUSY) und konnte den Gast nicht beenden. Warte, bis der Gast selbst beendet wird, oder starte die App neu; die Sitzung bleibt als aktiv markiert.")
         }
         if becauseImmersiveClosed {
-            return "The immersive renderer closed, but the runtime could not confirm a stop. Restart the app before another launch. \(error.localizedDescription)"
+            return L("The immersive renderer closed, but the runtime could not confirm a stop. Restart the app before another launch. \(error.localizedDescription)", "Der immersive Renderer wurde geschlossen, aber die Laufzeit konnte das Beenden nicht bestätigen. Starte die App neu, bevor du ein weiteres Spiel startest. \(error.localizedDescription)")
         }
-        return "The runtime could not confirm that the session stopped. The session remains marked active. \(error.localizedDescription)"
+        return L("The runtime could not confirm that the session stopped. The session remains marked active. \(error.localizedDescription)", "Die Laufzeit konnte das Beenden der Sitzung nicht bestätigen. Die Sitzung bleibt als aktiv markiert. \(error.localizedDescription)")
     }
 
     private func showImportError(_ error: Error) {
@@ -793,7 +793,7 @@ final class LauncherModel {
 private enum LauncherFailure: LocalizedError {
     case runtimePluginMissing
     var errorDescription: String? {
-        "The signed WindowsRuntimePlugin.framework is not embedded in this app, so no launch request was sent."
+        L("The signed WindowsRuntimePlugin.framework is not embedded in this app, so no launch request was sent.", "Das signierte WindowsRuntimePlugin.framework ist nicht in dieser App eingebettet. Es wurde keine Startanfrage gesendet.")
     }
 }
 
@@ -804,9 +804,9 @@ private enum LaunchPreparationFailure: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .immersiveSpaceClosed:
-            "The immersive renderer closed before the launch request was sent."
+            L("The immersive renderer closed before the launch request was sent.", "Der immersive Renderer wurde geschlossen, bevor die Startanfrage gesendet wurde.")
         case .rendererTimedOut:
-            "The immersive renderer did not bind Metal, publish stereo targets, and provide a fresh tracked head pose within 12 seconds. No launch request was sent."
+            L("The immersive renderer did not bind Metal, publish stereo targets, and provide a fresh tracked head pose within 12 seconds. No launch request was sent.", "Der immersive Renderer hat innerhalb von 12 Sekunden weder Metal gebunden und Stereo-Ziele veröffentlicht noch eine aktuelle getrackte Kopfpose bereitgestellt. Es wurde keine Startanfrage gesendet.")
         }
     }
 }
@@ -818,9 +818,9 @@ private enum ImportFailure: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .manifestAccessDenied:
-            "The app could not get permission to read the selected manifest."
+            L("The app could not get permission to read the selected manifest.", "Die App konnte keine Leseberechtigung für das ausgewählte Manifest erhalten.")
         case .folderAccessDenied:
-            "The app could not get permission to read the selected game folder."
+            L("The app could not get permission to read the selected game folder.", "Die App konnte keine Leseberechtigung für den ausgewählten Spielordner erhalten.")
         }
     }
 }

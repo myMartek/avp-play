@@ -3,21 +3,33 @@
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path, PurePosixPath
 import tarfile
+import tempfile
+
+
+def sha256_file(path):
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def sanitize(source, output, receipt):
     if source.is_symlink() or not source.is_file():
         raise SystemExit("Source snapshot must be a regular archive.")
-    if output.exists() or receipt.exists():
+    if output.exists() or output.is_symlink() or receipt.exists() or receipt.is_symlink():
         raise SystemExit("Choose fresh portable archive and receipt paths.")
     output.parent.mkdir(parents=True, exist_ok=True)
     removed = []
     removed_metadata = []
     folders = {"Desktop", "Documents", "Downloads", "Music", "Pictures", "Videos"}
+    created_output = False
     try:
         with output.open("xb") as destination:
+            created_output = True
             with tarfile.open(source, "r:gz") as original, tarfile.open(fileobj=destination, mode="w:gz", format=tarfile.USTAR_FORMAT) as portable:
                 for member in original:
                     path = PurePosixPath(member.name)
@@ -40,8 +52,8 @@ def sanitize(source, output, receipt):
                         continue
                     if not (member.isfile() or member.isdir()):
                         raise SystemExit("Special file in source prefix snapshot.")
-                    # Recreate only format-required long-path PAX fields;
-                    # discard host-specific xattrs, ACLs, and ownership names.
+                    # USTAR is required by the native extractor; discard
+                    # host-specific PAX fields, xattrs, ACLs, and ownership.
                     member.pax_headers = {}
                     member.mtime = int(member.mtime)
                     member.uname = member.gname = ""
@@ -56,14 +68,25 @@ def sanitize(source, output, receipt):
             "schemaVersion": 1,
             "operation": "remove-host-links-without-dereferencing",
             "archiveFormat": "ustar",
-            "sourceArchiveSha256": hashlib.sha256(source.read_bytes()).hexdigest(),
-            "portableArchiveSha256": hashlib.sha256(output.read_bytes()).hexdigest(),
+            "sourceArchiveSha256": sha256_file(source),
+            "portableArchiveSha256": sha256_file(output),
             "removedLinkNames": removed,
             "removedHostMetadataNames": removed_metadata,
         }
-        receipt.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+        receipt.parent.mkdir(parents=True, exist_ok=True)
+        fd, temporary = tempfile.mkstemp(prefix=".prefix-receipt-", dir=receipt.parent)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as stream:
+                json.dump(payload, stream, indent=2, sort_keys=True)
+                stream.write("\n")
+            # Publish a complete receipt without overwriting a racing writer
+            # or following a link created since the initial path check.
+            os.link(temporary, receipt)
+        finally:
+            Path(temporary).unlink(missing_ok=True)
     except BaseException:
-        output.unlink(missing_ok=True)
+        if created_output:
+            output.unlink(missing_ok=True)
         raise
 
 

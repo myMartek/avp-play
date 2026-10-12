@@ -13,21 +13,21 @@ public enum WindowsVRLibraryError: Error, LocalizedError, Sendable {
     public var errorDescription: String? {
         switch self {
         case .corruptLibrary:
-            "The local Windows VR library could not be decoded. The saved file was left untouched."
+            L("The local Windows VR library could not be decoded. The saved file was left untouched.", "Die lokale Windows-VR-Bibliothek konnte nicht gelesen werden. Die gespeicherte Datei blieb unverändert.")
         case .unsupportedLibraryVersion(let version):
-            "The local Windows VR library uses unsupported schema version \(version)."
+            L("The local Windows VR library uses unsupported schema version \(version).", "Die lokale Windows-VR-Bibliothek verwendet die nicht unterstützte Schemaversion \(version).")
         case .invalidBookmark:
-            "The saved game folder permission is no longer valid. Select the folder again to restore access."
+            L("The saved game folder permission is no longer valid. Select the folder again to restore access.", "Die gespeicherte Berechtigung für den Spielordner ist nicht mehr gültig. Wähle den Ordner erneut aus, um den Zugriff wiederherzustellen.")
         case .noActiveGame:
-            "Import a manifest and select its game folder before saving it to the library."
+            L("Import a manifest and select its game folder before saving it to the library.", "Importiere ein Manifest und wähle den zugehörigen Spielordner aus, bevor du das Spiel in der Bibliothek speicherst.")
         case .noSavedGame:
-            "Save this game to the local library before saving profiles."
+            L("Save this game to the local library before saving profiles.", "Speichere dieses Spiel zuerst in der lokalen Bibliothek, bevor du Profile speicherst.")
         case .noSelectedProfile:
-            "Select a saved profile first."
+            L("Select a saved profile first.", "Wähle zuerst ein gespeichertes Profil aus.")
         case .invalidProfileName:
-            "A profile name must contain between 1 and 80 characters."
+            L("A profile name must contain between 1 and 80 characters.", "Ein Profilname muss zwischen 1 und 80 Zeichen lang sein.")
         case .invalidProfileArguments:
-            "A profile may contain at most 64 launch arguments, and arguments cannot contain NUL characters."
+            L("A profile may contain at most 64 launch arguments, and arguments cannot contain NUL characters.", "Ein Profil darf höchstens 64 Startargumente enthalten. Argumente dürfen keine Nullzeichen enthalten.")
         }
     }
 }

@@ -76,16 +76,16 @@ def validate_prefix_archive(template):
         fail("Wine prefix template is empty; supply an explicit clean Wine prefix archive.")
     try:
         with tarfile.open(template, "r:gz") as archive:
-            members = archive.getmembers()
-            if not members:
-                fail("Wine prefix template is empty; supply an explicit clean Wine prefix archive.")
-            if len(members) > MAX_ARCHIVE_MEMBERS:
-                fail("Wine prefix template has too many archive members.")
+            member_count = 0
             total_size = 0
             seen = {}
             files = set()
             directories = set()
-            for member in members:
+            member_sizes = {}
+            for member in archive:
+                member_count += 1
+                if member_count > MAX_ARCHIVE_MEMBERS:
+                    fail("Wine prefix template has too many archive members.")
                 key = portable_member_name(member.name.rstrip("/") if member.isdir() else member.name)
                 if key in seen:
                     fail(f"Wine prefix template contains duplicate/case-colliding paths: {member.name}")
@@ -102,11 +102,14 @@ def validate_prefix_archive(template):
                     if member.size < 0 or member.size > MAX_ARCHIVE_FILE:
                         fail(f"Wine prefix template contains an oversized file: {member.name}")
                     total_size += member.size
+                    if total_size > MAX_ARCHIVE_UNPACKED:
+                        fail("Wine prefix template exceeds the maximum uncompressed size.")
                     files.add(key)
+                    member_sizes[key] = member.size
                 else:
                     directories.add(key)
-            if total_size > MAX_ARCHIVE_UNPACKED:
-                fail("Wine prefix template exceeds the maximum uncompressed size.")
+            if not member_count:
+                fail("Wine prefix template is empty; supply an explicit clean Wine prefix archive.")
             for key in files:
                 for index in range(1, len(key)):
                     if key[:index] in files:
@@ -116,7 +119,6 @@ def validate_prefix_archive(template):
             for base in layouts:
                 required_files = {base + ("system.reg",), base + ("user.reg",)}
                 required_dirs = {base + ("drive_c", "windows", "system32")}
-                member_sizes = {portable_member_name(member.name): member.size for member in members if member.isfile()}
                 if (required_files.issubset(files) and required_dirs.issubset(directories)
                         and all(member_sizes.get(required, 0) > 0 for required in required_files)):
                     valid_layout = True

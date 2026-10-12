@@ -14,5 +14,6 @@ let package = Package(
     ],
     targets: [
         .target(name: "WindowsVRCore"),
+        .testTarget(name: "WindowsVRCoreTests", dependencies: ["WindowsVRCore"]),
     ]
 )

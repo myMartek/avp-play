@@ -9,13 +9,14 @@ public enum WindowsVRFrameContractError: Error, LocalizedError, Sendable, Equata
     public var errorDescription: String? {
         switch self {
         case .invalidEyeSize(let eye):
-            return "The \(eye.rawValue) eye frame size must be positive."
+            let germanEye = eye == .left ? "linke" : "rechte"
+            return L("The \(eye.rawValue) eye frame size must be positive.", "Die Bildgröße für das \(germanEye) Auge muss größer als null sein.")
         case .incorrectEyeAssignment:
-            return "Frame metadata must assign left and right eye data to the matching eyes."
+            return L("Frame metadata must assign left and right eye data to the matching eyes.", "Die Bilddaten für das linke und rechte Auge müssen jeweils dem richtigen Auge zugeordnet sein.")
         case .invalidDepthMetadata:
-            return "Depth metadata must use finite, positive near and far distances with far greater than near."
+            return L("Depth metadata must use finite, positive near and far distances with far greater than near.", "Die Tiefendaten müssen endliche positive Nah- und Fernwerte enthalten, wobei der Fernwert größer als der Nahwert ist.")
         case .invalidMotionMetadata:
-            return "Motion metadata must use a finite, positive frame interval."
+            return L("Motion metadata must use a finite, positive frame interval.", "Die Bewegungsdaten müssen ein endliches, positives Zeitintervall zwischen den Bildern enthalten.")
         }
     }
 }

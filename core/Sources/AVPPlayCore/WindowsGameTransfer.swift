@@ -42,53 +42,15 @@ public struct WindowsGameTransfer: Sendable {
                       deviceUDID: String? = nil, owned: Bool,
                       progress: @Sendable (WindowsGameTransferProgress) -> Void = { _ in },
                       report: @Sendable (String) -> Void = { _ in }) throws -> WindowsGameTransferSummary {
-        guard owned else { throw WindowsGameTransferError.ownershipAttestationRequired }
-        guard Self.isSafeBundleID(bundleID) else { throw WindowsGameTransferError.invalidBundleID }
-
+        let preflight = try Self.validateLocalInputs(source: source, manifestURL: manifestURL,
+                                                     bundleID: bundleID, owned: owned)
         let fm = FileManager.default
-        let rootAttributes = try fm.attributesOfItem(atPath: source.path)
-        guard (rootAttributes[.type] as? FileAttributeType) == .typeDirectory else {
-            throw WindowsGameTransferError.invalidSourceFolder
-        }
-        let canonicalRoot = source.standardizedFileURL.resolvingSymlinksInPath().standardizedFileURL
-        let manifestAttributes = try fm.attributesOfItem(atPath: manifestURL.path)
-        guard (manifestAttributes[.type] as? FileAttributeType) == .typeRegular,
-              let manifestSize = (manifestAttributes[.size] as? NSNumber)?.int64Value,
-              manifestSize <= WindowsGameTransferManifest.maximumBytes else {
-            throw WindowsGameTransferError.invalidManifestFile
-        }
-        let canonicalManifest = manifestURL.standardizedFileURL.resolvingSymlinksInPath().standardizedFileURL
-        let manifestData = try Data(contentsOf: manifestURL, options: [.mappedIfSafe])
-        guard manifestData.count <= WindowsGameTransferManifest.maximumBytes else {
-            throw WindowsGameTransferError.invalidManifestFile
-        }
-        let manifest: WindowsGameTransferManifest
-        do {
-            manifest = try JSONDecoder().decode(WindowsGameTransferManifest.self, from: manifestData)
-        } catch {
-            throw WindowsGameTransferError.invalidManifest("JSON/schema decode failed: \(error.localizedDescription)")
-        }
-        try manifest.validate()
-        let manifestDigest = Self.sha256(manifestData)
-
-        var sourceFiles = try enumerateFiles(root: canonicalRoot)
-        sourceFiles.removeAll { $0.url.standardizedFileURL.resolvingSymlinksInPath().standardizedFileURL == canonicalManifest }
-        guard !sourceFiles.contains(where: { $0.relativePath.caseInsensitiveCompare("manifest.json") == .orderedSame }) else {
-            throw WindowsGameTransferError.reservedManifestPath
-        }
-        let executablePath = try Self.safeRelativePath(manifest.executableRelativePath)
-        guard let executable = sourceFiles.first(where: {
-            $0.relativePath.caseInsensitiveCompare(executablePath) == .orderedSame
-        }) else {
-            throw WindowsGameTransferError.executableMissing(manifest.executableRelativePath)
-        }
-        try Self.requireX64PE(at: try validatedSourceFile(executable.relativePath, root: canonicalRoot))
-
-        let totalBytes = try sourceFiles.reduce(Int64(0)) { partial, file in
-            let (sum, overflow) = partial.addingReportingOverflow(file.size)
-            guard !overflow else { throw WindowsGameTransferError.sourceTooLarge }
-            return sum
-        }
+        let canonicalRoot = preflight.canonicalRoot
+        let canonicalManifest = preflight.canonicalManifest
+        let manifest = preflight.manifest
+        let manifestDigest = preflight.manifestDigest
+        let sourceFiles = preflight.sourceFiles
+        let totalBytes = preflight.totalBytes
         let gameRoot = "Documents/WindowsVR/Games/\(manifest.id)"
         let control = DeviceControl()
         let device = try control.pick(udid: deviceUDID)
@@ -107,14 +69,16 @@ public struct WindowsGameTransfer: Sendable {
         let identity = WindowsGameTransferJournal.Identity(deviceUDID: device.udid, bundleID: bundleID,
                                                            sourcePath: canonicalRoot.path)
         let journalURL = try WindowsGameTransferJournal.url(for: identity)
-        report("Source: \(canonicalRoot.path) (user attestation: owned); \(sourceFiles.count) files, \(totalBytes) bytes.")
-        report("Destination game library: \(device.name):\(gameRoot) in app \(bundleID).")
+        report(L("Source: \(canonicalRoot.path) (user attestation: owned); \(sourceFiles.count) files, \(totalBytes) bytes.",
+                 "Quelle: \(canonicalRoot.path) (Bestätigung: selbst besessen); \(sourceFiles.count) Dateien, \(totalBytes) Bytes."))
+        report(L("Destination game library: \(device.name):\(gameRoot) in app \(bundleID).",
+                 "Ziel-Spielebibliothek: \(device.name):\(gameRoot) in App \(bundleID)."))
 
         var prepared: [WindowsGameTransferFile] = []
         prepared.reserveCapacity(sourceFiles.count)
         var hashedBytes: Int64 = 0
         for (index, file) in sourceFiles.enumerated() {
-            let safeURL = try validatedSourceFile(file.relativePath, root: canonicalRoot)
+            let safeURL = try Self.validatedSourceFile(file.relativePath, root: canonicalRoot)
             let digest = try Self.sha256(of: safeURL)
             let currentAttributes = try fm.attributesOfItem(atPath: safeURL.path)
             guard (currentAttributes[.type] as? FileAttributeType) == .typeRegular,
@@ -151,7 +115,7 @@ public struct WindowsGameTransfer: Sendable {
             let relative = raw.hasPrefix(transferRoot + "/") ? String(raw.dropFirst(transferRoot.count + 1)) : raw
             remoteSizes[relative] = remote.size
         }
-        report("Immutable transfer generation: " + transferRoot)
+        report(L("Immutable transfer generation: \(transferRoot)", "Unveränderlicher Übertragungssatz: \(transferRoot)"))
         var copiedCount = 0
         var resumedCount = 0
         var completedBytes: Int64 = 0
@@ -165,11 +129,11 @@ public struct WindowsGameTransfer: Sendable {
                                                      completedBytes: completedBytes, totalBytes: totalBytes))
                 continue
             }
-            let currentDigest = try Self.sha256(of: validatedSourceFile(file.relativePath, root: canonicalRoot))
+            let currentDigest = try Self.sha256(of: Self.validatedSourceFile(file.relativePath, root: canonicalRoot))
             guard currentDigest == file.sha256 else { throw WindowsGameTransferError.sourceChanged(file.relativePath) }
             try control.copy(file.url, to: device, bundle: bundleID,
                              destination: "\(transferRoot)/\(file.relativePath)")
-            let digestAfterCopy = try Self.sha256(of: validatedSourceFile(file.relativePath, root: canonicalRoot))
+            let digestAfterCopy = try Self.sha256(of: Self.validatedSourceFile(file.relativePath, root: canonicalRoot))
             guard digestAfterCopy == file.sha256 else { throw WindowsGameTransferError.sourceChanged(file.relativePath) }
             journal.completedFiles[file.relativePath] = WindowsGameTransferJournal.CompletedFile(size: file.size,
                                                                                                  sha256: file.sha256)
@@ -187,16 +151,74 @@ public struct WindowsGameTransfer: Sendable {
                          destination: "\(transferRoot)/manifest.json")
         let manifestDigestAfterCopy = try Self.sha256(of: canonicalManifest)
         guard manifestDigestAfterCopy == manifestDigest else { throw WindowsGameTransferError.manifestChanged }
-        journal.manifestCopy = WindowsGameTransferJournal.CompletedFile(size: Int64(manifestData.count),
+        journal.manifestCopy = WindowsGameTransferJournal.CompletedFile(size: preflight.manifestBytes,
                                                                          sha256: manifestDigest)
         try journal.save(to: journalURL)
-        report("Manifest copied last as the completion marker (SHA-256 \(manifestDigest)).")
+        report(L("Manifest copied last as the completion marker (SHA-256 \(manifestDigest)).",
+                 "Manifest zuletzt als Abschlussmarkierung kopiert (SHA-256 \(manifestDigest))."))
         return WindowsGameTransferSummary(copiedFiles: copiedCount, resumedFiles: resumedCount,
                                           totalFiles: prepared.count, totalBytes: totalBytes,
                                           destination: transferRoot)
     }
 
-    private func enumerateFiles(root: URL) throws -> [WindowsGameTransferFile] {
+    /// Performs every local validation before `DeviceControl` is consulted.
+    /// Kept internal so regression tests can exercise the boundary without a paired device.
+    static func validateLocalInputs(source: URL, manifestURL: URL, bundleID: String,
+                                    owned: Bool) throws -> WindowsGameTransferPreflight {
+        guard owned else { throw WindowsGameTransferError.ownershipAttestationRequired }
+        guard Self.isSafeBundleID(bundleID) else { throw WindowsGameTransferError.invalidBundleID }
+
+        let fm = FileManager.default
+        let rootAttributes = try fm.attributesOfItem(atPath: source.path)
+        guard (rootAttributes[.type] as? FileAttributeType) == .typeDirectory else {
+            throw WindowsGameTransferError.invalidSourceFolder
+        }
+        let canonicalRoot = source.standardizedFileURL.resolvingSymlinksInPath().standardizedFileURL
+        let manifestAttributes = try fm.attributesOfItem(atPath: manifestURL.path)
+        guard (manifestAttributes[.type] as? FileAttributeType) == .typeRegular,
+              let manifestSize = (manifestAttributes[.size] as? NSNumber)?.int64Value,
+              manifestSize <= WindowsGameTransferManifest.maximumBytes else {
+            throw WindowsGameTransferError.invalidManifestFile
+        }
+        let canonicalManifest = manifestURL.standardizedFileURL.resolvingSymlinksInPath().standardizedFileURL
+        let manifestData = try Data(contentsOf: manifestURL, options: [.mappedIfSafe])
+        guard manifestData.count <= WindowsGameTransferManifest.maximumBytes else {
+            throw WindowsGameTransferError.invalidManifestFile
+        }
+        let manifest: WindowsGameTransferManifest
+        do {
+            manifest = try JSONDecoder().decode(WindowsGameTransferManifest.self, from: manifestData)
+        } catch {
+            throw WindowsGameTransferError.invalidManifest(L("JSON/schema decode failed: \(error.localizedDescription)",
+                                                             "JSON-/Schema-Decodierung fehlgeschlagen: \(error.localizedDescription)"))
+        }
+        try manifest.validate()
+        let manifestDigest = Self.sha256(manifestData)
+
+        var sourceFiles = try Self.enumerateFiles(root: canonicalRoot)
+        sourceFiles.removeAll { $0.url.standardizedFileURL.resolvingSymlinksInPath().standardizedFileURL == canonicalManifest }
+        guard !sourceFiles.contains(where: { $0.relativePath.caseInsensitiveCompare("manifest.json") == .orderedSame }) else {
+            throw WindowsGameTransferError.reservedManifestPath
+        }
+        let executablePath = try Self.safeRelativePath(manifest.executableRelativePath)
+        guard let executable = sourceFiles.first(where: {
+            $0.relativePath.caseInsensitiveCompare(executablePath) == .orderedSame
+        }) else {
+            throw WindowsGameTransferError.executableMissing(manifest.executableRelativePath)
+        }
+        try Self.requireX64PE(at: Self.validatedSourceFile(executable.relativePath, root: canonicalRoot))
+
+        let totalBytes = try sourceFiles.reduce(Int64(0)) { partial, file in
+            let (sum, overflow) = partial.addingReportingOverflow(file.size)
+            guard !overflow else { throw WindowsGameTransferError.sourceTooLarge }
+            return sum
+        }
+        return WindowsGameTransferPreflight(canonicalRoot: canonicalRoot, canonicalManifest: canonicalManifest,
+            manifest: manifest, manifestDigest: manifestDigest, manifestBytes: Int64(manifestData.count),
+            sourceFiles: sourceFiles, totalBytes: totalBytes)
+    }
+
+    private static func enumerateFiles(root: URL) throws -> [WindowsGameTransferFile] {
         let fm = FileManager.default
         var files: [WindowsGameTransferFile] = []
         var portablePaths = Set<String>()
@@ -238,7 +260,7 @@ public struct WindowsGameTransfer: Sendable {
         return files.sorted { $0.relativePath < $1.relativePath }
     }
 
-    private func validatedSourceFile(_ relativePath: String, root: URL) throws -> URL {
+    private static func validatedSourceFile(_ relativePath: String, root: URL) throws -> URL {
         let safePath = try Self.safeRelativePath(relativePath)
         var current = root
         for component in safePath.split(separator: "/") {
@@ -294,7 +316,7 @@ public struct WindowsGameTransfer: Sendable {
         for component in components {
             let upperBaseName = component.split(separator: ".", maxSplits: 1, omittingEmptySubsequences: false)
                 .first.map(String.init)?.uppercased() ?? ""
-            let reservedNames: Set<String> = ["CON", "PRN", "AUX", "NUL"]
+            let reservedNames = Set(["CON", "PRN", "AUX", "NUL"])
                 .union((1...9).map { "COM\($0)" }).union((1...9).map { "LPT\($0)" })
             guard !component.isEmpty, component != ".", component != "..",
                   !component.contains(":"), !component.contains("\\"),
@@ -308,7 +330,7 @@ public struct WindowsGameTransfer: Sendable {
         return components.joined(separator: "/")
     }
 
-    private static func isSafeBundleID(_ value: String) -> Bool {
+    static func isSafeBundleID(_ value: String) -> Bool {
         let parts = value.split(separator: ".", omittingEmptySubsequences: false)
         return value.utf8.count <= 255 && parts.count >= 2 && parts.allSatisfy { part in
             !part.isEmpty && part.unicodeScalars.allSatisfy {
@@ -333,14 +355,14 @@ public struct WindowsGameTransfer: Sendable {
     }
 }
 
-private struct WindowsGameTransferFile {
+struct WindowsGameTransferFile {
     let relativePath: String
     let url: URL
     let size: Int64
     let sha256: String
 }
 
-private struct WindowsGameTransferManifest: Decodable {
+struct WindowsGameTransferManifest: Decodable {
     enum Backend: String, Decodable { case windowsWineFEX }
     enum Graphics: String, Decodable { case direct3D11, direct3D12 }
 
@@ -365,13 +387,15 @@ private struct WindowsGameTransferManifest: Decodable {
             throw WindowsGameTransferError.invalidGameID
         }
         guard !title.isEmpty, title.utf8.count <= 512, !title.contains("\0") else {
-            throw WindowsGameTransferError.invalidManifest("title is empty or too long")
+            throw WindowsGameTransferError.invalidManifest(L("title is empty or too long", "title ist leer oder zu lang"))
         }
         guard executableRelativePath.utf8.count <= 350 else {
-            throw WindowsGameTransferError.invalidManifest("the executable path exceeds the native launch profile buffer")
+            throw WindowsGameTransferError.invalidManifest(L("the executable path exceeds the native launch profile buffer",
+                                                              "der Programmpfad überschreitet den Puffer des nativen Startprofils"))
         }
         guard launchArguments.count <= 64, launchArguments.allSatisfy({ $0.utf8.count <= 4096 && !$0.contains("\0") }) else {
-            throw WindowsGameTransferError.invalidManifest("launchArguments must contain at most 64 short, NUL-free strings")
+            throw WindowsGameTransferError.invalidManifest(L("launchArguments must contain at most 64 short, NUL-free strings",
+                                                              "launchArguments darf höchstens 64 kurze Zeichenketten ohne NUL-Zeichen enthalten"))
         }
         if let environment {
             let reserved: Set<String> = ["HOME", "WINEPREFIX", "WINESERVERSOCKET", "VR_OVERRIDE", "XR_RUNTIME_JSON", "WINEDLLPATH", "WVR_REQUIRE_COMPOSITOR_DEVICE", "WVR_GRAPHICS_API", "WINEDLLOVERRIDES"]
@@ -382,7 +406,8 @@ private struct WindowsGameTransferManifest: Decodable {
                   }),
                   environment.allSatisfy({ $0.key.utf8.count <= 256 && $0.value.utf8.count <= 4096
                                            && !$0.key.contains("\0") && !$0.value.contains("\0") }) else {
-                throw WindowsGameTransferError.invalidManifest("environment is too large or contains NUL characters")
+                throw WindowsGameTransferError.invalidManifest(L("environment is too large or contains NUL characters",
+                                                                  "environment ist zu groß oder enthält NUL-Zeichen"))
             }
         }
     }
@@ -454,7 +479,7 @@ private struct WindowsGameTransferJournal: Codable {
     }
 }
 
-private enum WindowsGameTransferError: Error, LocalizedError {
+enum WindowsGameTransferError: Error, LocalizedError, Equatable {
     case ownershipAttestationRequired
     case invalidBundleID
     case invalidSourceFolder
@@ -484,31 +509,42 @@ private enum WindowsGameTransferError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .ownershipAttestationRequired:
-            "Windows staging requires the explicit --owned attestation. Files are not acquired and DRM is not bypassed."
-        case .invalidBundleID: "The --bundle-id value is not a safe bundle identifier."
-        case .invalidSourceFolder: "The --from path is not a regular folder."
-        case .invalidManifestFile: "The manifest is not a small regular JSON file (maximum 1 MiB)."
-        case .invalidManifest(let reason): "The Windows game manifest is invalid: \(reason)."
-        case .unsupportedSchema(let version): "Windows game manifest schema \(version) is unsupported; schema 1 is required."
-        case .invalidGameID: "The manifest id must be a safe single path component using letters, numbers, dot, underscore or hyphen."
-        case .unsafePath(let path): "Unsafe Windows game path: \(path)."
-        case .sourceEscapesRoot(let path): "The source path resolves outside the selected game folder: \(path)."
-        case .symbolicLink(let path): "Symbolic links are not transferred: \(path)."
-        case .unsupportedSourceEntry(let path): "Unsupported or unreadable source entry: \(path)."
-        case .tooManyFiles: "The game folder exceeds the 100,000-file transfer limit."
-        case .sourceTooLarge: "The total source size exceeds the supported byte-count range."
-        case .sourceChanged(let path): "A source file changed during transfer; it was not recorded as completed: \(path)."
-        case .executableMissing(let path): "The manifest executable is not a regular file in the selected source folder: \(path)."
-        case .unsupportedExecutableArchitecture: "The manifest executable is not a PE x64 (AMD64) executable; only x64 game files are supported."
-        case .caseInsensitivePathCollision(let path): "The game folder contains a Windows-case-insensitive path collision near: \(path)."
-        case .reservedManifestPath: "The source already contains a different root manifest.json; the completion marker cannot safely replace it."
-        case .appNotInstalled(let bundle): "The target app \(bundle) is not installed on the selected device."
-        case .appLocationUnknown(let bundle): "The installed target app \(bundle) has no known container URL; refusing to stage while running status is uncertain."
-        case .appRunning(let bundle): "The target app \(bundle) is running. Quit it before transferring game files."
-        case .manifestChanged: "The manifest changed during transfer; it was not recorded as the completion marker."
-        case .journalUnavailable: "The local Application Support directory is unavailable for the transfer journal."
-        case .corruptJournal(let path): "The transfer journal is unreadable or unsupported: \(path). Remove it only if you intend to restart the transfer."
-        case .journalWriteFailed(let reason): "Could not persist the local transfer journal: \(reason)."
+            L("Windows staging requires the explicit --owned attestation. Files are not acquired and DRM is not bypassed.",
+              "Für die Windows-Übertragung ist die ausdrückliche Bestätigung --owned nötig. Dateien werden weder beschafft noch wird DRM umgangen.")
+        case .invalidBundleID: L("The --bundle-id value is not a safe bundle identifier.", "--bundle-id ist keine sichere Bundle-Kennung.")
+        case .invalidSourceFolder: L("The --from path is not a regular folder.", "Der Pfad von --from ist kein gültiger Ordner.")
+        case .invalidManifestFile: L("The manifest is not a small regular JSON file (maximum 1 MiB).", "Das Manifest ist keine kleine reguläre JSON-Datei (höchstens 1 MiB).")
+        case .invalidManifest(let reason): L("The Windows game manifest is invalid: \(reason).", "Das Windows-Spielmanifest ist ungültig: \(reason).")
+        case .unsupportedSchema(let version): L("Windows game manifest schema \(version) is unsupported; schema 1 is required.", "Das Windows-Spielmanifest-Schema \(version) wird nicht unterstützt; erforderlich ist Schema 1.")
+        case .invalidGameID: L("The manifest id must be a safe single path component using letters, numbers, dot, underscore or hyphen.", "Die Manifest-ID muss ein sicherer einzelner Pfadteil aus Buchstaben, Zahlen, Punkt, Unterstrich oder Bindestrich sein.")
+        case .unsafePath(let path): L("Unsafe Windows game path: \(path).", "Unsicherer Windows-Spielpfad: \(path).")
+        case .sourceEscapesRoot(let path): L("The source path resolves outside the selected game folder: \(path).", "Der Quellpfad verweist außerhalb des ausgewählten Spielordners: \(path).")
+        case .symbolicLink(let path): L("Symbolic links are not transferred: \(path).", "Symbolische Links werden nicht übertragen: \(path).")
+        case .unsupportedSourceEntry(let path): L("Unsupported or unreadable source entry: \(path).", "Nicht unterstützter oder unlesbarer Quelleintrag: \(path).")
+        case .tooManyFiles: L("The game folder exceeds the 100,000-file transfer limit.", "Der Spielordner überschreitet das Übertragungslimit von 100.000 Dateien.")
+        case .sourceTooLarge: L("The total source size exceeds the supported byte-count range.", "Die Gesamtgröße der Quelle überschreitet den unterstützten Wertebereich.")
+        case .sourceChanged(let path): L("A source file changed during transfer; it was not recorded as completed: \(path).", "Eine Quelldatei wurde während der Übertragung geändert und nicht als abgeschlossen gespeichert: \(path).")
+        case .executableMissing(let path): L("The manifest executable is not a regular file in the selected source folder: \(path).", "Die Manifest-Programmdatei ist keine reguläre Datei im ausgewählten Quellordner: \(path).")
+        case .unsupportedExecutableArchitecture: L("The manifest executable is not a PE x64 (AMD64) executable; only x64 game files are supported.", "Die Manifest-Programmdatei ist keine PE-x64-Datei (AMD64); unterstützt werden nur x64-Spieldateien.")
+        case .caseInsensitivePathCollision(let path): L("The game folder contains a Windows-case-insensitive path collision near: \(path).", "Im Spielordner kollidieren Pfade ohne Beachtung der Groß-/Kleinschreibung bei Windows: \(path).")
+        case .reservedManifestPath: L("The source already contains a different root manifest.json; the completion marker cannot safely replace it.", "Die Quelle enthält bereits eine andere manifest.json im Stammordner; die Abschlussmarkierung kann sie nicht sicher ersetzen.")
+        case .appNotInstalled(let bundle): L("The target app \(bundle) is not installed on the selected device.", "Die Ziel-App \(bundle) ist auf dem ausgewählten Gerät nicht installiert.")
+        case .appLocationUnknown(let bundle): L("The installed target app \(bundle) has no known container URL; refusing to stage while running status is uncertain.", "Für die installierte Ziel-App \(bundle) ist kein Containerpfad bekannt; die Übertragung wird bei unklarem Laufstatus abgebrochen.")
+        case .appRunning(let bundle): L("The target app \(bundle) is running. Quit it before transferring game files.", "Die Ziel-App \(bundle) läuft. Beende sie vor der Übertragung der Spieldateien.")
+        case .manifestChanged: L("The manifest changed during transfer; it was not recorded as the completion marker.", "Das Manifest wurde während der Übertragung geändert und nicht als Abschlussmarkierung gespeichert.")
+        case .journalUnavailable: L("The local Application Support directory is unavailable for the transfer journal.", "Der lokale Ordner „Application Support“ für das Übertragungsprotokoll ist nicht verfügbar.")
+        case .corruptJournal(let path): L("The transfer journal is unreadable or unsupported: \(path). Remove it only if you intend to restart the transfer.", "Das Übertragungsprotokoll ist unlesbar oder wird nicht unterstützt: \(path). Entferne es nur, wenn du die Übertragung neu starten willst.")
+        case .journalWriteFailed(let reason): L("Could not persist the local transfer journal: \(reason).", "Das lokale Übertragungsprotokoll konnte nicht gespeichert werden: \(reason).")
         }
     }
+}
+
+struct WindowsGameTransferPreflight {
+    let canonicalRoot: URL
+    let canonicalManifest: URL
+    let manifest: WindowsGameTransferManifest
+    let manifestDigest: String
+    let manifestBytes: Int64
+    let sourceFiles: [WindowsGameTransferFile]
+    let totalBytes: Int64
 }

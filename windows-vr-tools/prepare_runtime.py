@@ -12,6 +12,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import tempfile
+from verify_source_checkout import verify_source_checkout
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -56,6 +57,7 @@ def project_patch_hashes():
         "windows-vr-openxr/src/WindowsVROpenXR.cpp",
         "windows-vr-openxr/CMakeLists.txt",
         "windows-vr-tools/prepare_runtime.py",
+        "windows-vr-tools/verify_source_checkout.py",
         "windows-vr-tools/prepare_wine_native.sh",
         "windows-runtime-plugin/d3d12/0001-embedded-dxmt-dispatch.patch",
     )
@@ -84,6 +86,7 @@ def main():
     actual = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=source, text=True).strip()
     if actual != expected:
         raise SystemExit("Madeira source revision does not match the lock file.")
+    verify_source_checkout(source, expected)
     if output.exists():
         provenance_path = output / "AVPPLAY_SOURCE_PROVENANCE.json"
         try:

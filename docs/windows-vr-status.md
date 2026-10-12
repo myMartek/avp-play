@@ -1,5 +1,37 @@
 # Windows VR implementation status
 
+## Launch-free review (2026-10-12)
+
+The implementation is an experimental contribution seeking further development
+and Vision Pro testing by someone with a paid Apple Developer account. No Windows
+VR game, signed headset installation, JIT session, controller session, or
+performance benchmark has been tested on a headset. The checks below are offline
+regressions and compilation, not game/runtime validation.
+
+The PR branch incorporates upstream `main` through `9b654ca` (AVP Play 1.1.8).
+It follows `CONTRIBUTING.md` with English/German `L()` strings and regression tests.
+Local transfer validation is separated from device operations so its ownership,
+path, manifest, and architecture checks can be exercised without a headset.
+
+- Mac core: 160 tests, two skipped, zero failures; the two Keychain mutation
+  tests were excluded separately.
+- Windows VR contracts and localization: nine tests, zero failures.
+- Python packaging/source-pin regressions: fifteen tests, zero failures, using
+  synthetic PE headers, archives, and local Git repositories.
+- Python parsing, shell syntax, and whitespace checks passed.
+- The complete bilingual visionOS app builds unsigned using the previously
+  compiled native/guest libraries. This pass did not rebuild or execute Wine/FEX.
+- The original `core/tools/make-app.sh` release build also passes; its local
+  ad-hoc-signed Mac app was packaged without a Klepton toolchain archive.
+
+Source preparation now rejects local changes and mismatched/uninitialized
+recursive submodules. Prefix limits are enforced while iterating headers;
+sanitizer hashes stream and receipt publication does not overwrite another
+writer's file. Older prepared source receipts intentionally fail reuse when the
+preparation inputs change; rebuild them rather than rewriting their hashes.
+
+The dated build record below describes the earlier local assembly.
+
 ## Current build checkpoint (2026-10-11)
 
 The complete unsigned Windows VR app built successfully with Xcode 27 for

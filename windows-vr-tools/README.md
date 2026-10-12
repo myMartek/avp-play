@@ -1,5 +1,15 @@
 # Pinned source acquisition and visionOS preparation
 
+## Offline regression checks
+
+Run `python3 -m unittest discover -s windows-vr-tools/tests -v` for archive limits,
+portable snapshot/receipt handling, synthetic PE architecture metadata, and clean
+source-pin checks. These tests use temporary fixtures and local Git repositories;
+they do not launch Wine, an app, a game, or a device. Swift contract tests run with
+`swift test --package-path windows-vr`; the Mac core uses the project's usual
+`cd core && swift test` command. See [the status](../docs/windows-vr-status.md) for
+the scope and limits of the latest checks.
+
 The lock records the Madeira dependency tree, Valve OpenVR headers, and ALVR
 tracking reference used by the local Windows VR integration. `fetch_sources.py`
 only downloads source. `prepare_runtime.py` creates an independent `runtime-source`

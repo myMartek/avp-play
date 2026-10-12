@@ -210,6 +210,10 @@ source together with prebuilt ANGLE and MoltenVK libraries and their licence tex
 
 ## Experimental local Windows VR
 
+**No Windows VR game or headset runtime has been tested.** This is an experimental
+contribution, built in the hope that someone with a paid Apple Developer account
+and a Vision Pro can develop it further and test it on the headset.
+
 The separate Windows VR research app has source implementations for a visionOS
 launcher/compositor, a Madeira Wine/FEX adapter, a D3D11 guest OpenXR runtime,
 and OpenComposite packaging. An [experimental DXMT D3D12 source path](docs/windows-vr-d3d12.md)
@@ -220,7 +224,8 @@ runtime** and does not change the existing Quest or Linux ARM64 installer.
 
 See [the implementation status](docs/windows-vr-status.md),
 [engineering plan](docs/windows-vr-plan.md), and
-[source integration guide](docs/windows-vr-integration.md). An unsigned visionOS 27 app and validated runtime package have built locally.
+[source integration guide](docs/windows-vr-integration.md). An unsigned visionOS 27
+app and validated runtime package have built locally.
 Signing, JIT/device compatibility, and game execution remain delivery gates;
 source code is not evidence of performance or game compatibility.
 

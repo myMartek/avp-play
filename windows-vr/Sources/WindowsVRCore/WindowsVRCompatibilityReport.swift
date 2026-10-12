@@ -100,7 +100,7 @@ public struct WindowsVRUnmeasuredMetric: Codable, Sendable, Equatable, Identifia
 
     public init(id: String, unit: String, reason: String) {
         self.id = id
-        self.value = "unknown / not measured"
+        self.value = L("unknown / not measured", "unbekannt / nicht gemessen")
         self.unit = unit
         self.reason = reason
     }
@@ -148,20 +148,23 @@ public struct WindowsVRCompatibilityReport: Codable, Sendable, Equatable {
         self.compositorCounters = compositorCounters
         self.capabilities = capabilities
         self.unmeasuredMetrics = [
-            .init(id: "simulationRate", unit: "frames/second", reason: "No guest simulation telemetry is connected."),
-            .init(id: "newlyRenderedStereoFrames", unit: "frames/second", reason: "The plugin ABI exposes no game-rendered-frame callback."),
-            .init(id: "interpolatedFrames", unit: "frames/second", reason: "Frame generation is unavailable."),
-            .init(id: "compositorPresentationRate", unit: "frames/second", reason: "Queue counters do not measure display presentation rate."),
-            .init(id: "cpuFrameTime", unit: "milliseconds", reason: "No guest CPU timing instrumentation is connected."),
-            .init(id: "gpuFrameTime", unit: "milliseconds", reason: "No per-game GPU timing instrumentation is connected."),
-            .init(id: "missedDeadlines", unit: "count", reason: "No compositor deadline telemetry is exposed by the current ABI."),
-            .init(id: "inputToDisplayLatency", unit: "milliseconds", reason: "No end-to-end input latency measurement is connected."),
-            .init(id: "memoryUse", unit: "bytes", reason: "No per-session memory telemetry is connected."),
-            .init(id: "startupCompilation", unit: "seconds", reason: "No repeatable startup-compilation measurement was collected."),
-            .init(id: "sustainedThermalBehavior", unit: "observation", reason: "No sustained gameplay session was measured."),
-            .init(id: "nativePerformanceComparison", unit: "comparison", reason: "No equivalent native build and matched-scene baseline is available.")
+            .init(id: "simulationRate", unit: "frames/second", reason: L("No guest simulation telemetry is connected.", "Es sind keine Telemetriedaten zur Simulation im Gast verbunden.")),
+            .init(id: "newlyRenderedStereoFrames", unit: "frames/second", reason: L("The plugin ABI exposes no game-rendered-frame callback.", "Die Plugin-ABI stellt keinen Rückruf für vom Spiel gerenderte Bilder bereit.")),
+            .init(id: "interpolatedFrames", unit: "frames/second", reason: L("Frame generation is unavailable.", "Die Bildgenerierung ist nicht verfügbar.")),
+            .init(id: "compositorPresentationRate", unit: "frames/second", reason: L("Queue counters do not measure display presentation rate.", "Die Warteschlangenzähler messen nicht die Bildwiederholrate der Anzeige.")),
+            .init(id: "cpuFrameTime", unit: "milliseconds", reason: L("No guest CPU timing instrumentation is connected.", "Es ist keine Zeitmessung für die CPU des Gasts verbunden.")),
+            .init(id: "gpuFrameTime", unit: "milliseconds", reason: L("No per-game GPU timing instrumentation is connected.", "Es ist keine GPU-Zeitmessung pro Spiel verbunden.")),
+            .init(id: "missedDeadlines", unit: "count", reason: L("No compositor deadline telemetry is exposed by the current ABI.", "Die aktuelle ABI stellt keine Telemetriedaten zu verpassten Compositor-Fristen bereit.")),
+            .init(id: "inputToDisplayLatency", unit: "milliseconds", reason: L("No end-to-end input latency measurement is connected.", "Es ist keine durchgängige Messung der Eingabe-bis-Anzeige-Latenz verbunden.")),
+            .init(id: "memoryUse", unit: "bytes", reason: L("No per-session memory telemetry is connected.", "Es sind keine sitzungsbezogenen Speichernutzungsdaten verbunden.")),
+            .init(id: "startupCompilation", unit: "seconds", reason: L("No repeatable startup-compilation measurement was collected.", "Es wurde keine reproduzierbare Messung der Startkompilierung erfasst.")),
+            .init(id: "sustainedThermalBehavior", unit: "observation", reason: L("No sustained gameplay session was measured.", "Es wurde keine längere Spielsitzung gemessen.")),
+            .init(id: "nativePerformanceComparison", unit: "comparison", reason: L("No equivalent native build and matched-scene baseline is available.", "Es gibt keinen gleichwertigen nativen Build mit einer passenden Szenen-Baseline zum Vergleich."))
         ]
-        self.interpretation = "Launch acceptance and Wine process status do not establish game readiness, VR rendering, compatibility, or performance. Compositor counters are advisory queue diagnostics only."
+        self.interpretation = L(
+            "Launch acceptance and Wine process status do not establish game readiness, VR rendering, compatibility, or performance. Compositor counters are advisory queue diagnostics only.",
+            "Die Annahme des Starts und der Wine-Prozessstatus belegen weder die Spielbereitschaft noch VR-Rendering, Kompatibilität oder Leistung. Compositor-Zähler dienen nur als unverbindliche Diagnose der Warteschlange."
+        )
     }
 
     public func encodedJSON() throws -> Data {
