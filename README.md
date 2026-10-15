@@ -127,8 +127,8 @@ account or device. *Favourites Not Downloaded* is also the quick way to see what
 fetch to this Mac.
 
 **Mixed reality.** The overview's *Mixed Reality* filter shows the games whose mixed-reality mode works with AVP
-Play – your own room around the game. At the moment these are TRIANGLE STRATEGY, Demeo and Richie's Plank
-Experience.
+Play – your own room around the game. At the moment these are TRIANGLE STRATEGY, Demeo, Richie's Plank
+Experience and LES MILLS BODYCOMBAT.
 
 **Updates.** Once a day the app asks GitHub whether a newer release exists and offers to install it. It replaces
 itself only with a version that is signed by the same developer and notarised by Apple. You can turn the check
@@ -163,11 +163,12 @@ recipes in [`recipes/`](recipes) are:
 | Red Matter 2 | Meta Store | about 9 GB; changes its picture's resolution with the load |
 | Tetris Effect: Connected | Meta Store | about 2.2 GB; drawn at the display's own resolution (a setting in the game's start window) |
 | Pistol Whip | Meta Store | about 1.6 GB; runs with fixes users sent in |
+| LES MILLS BODYCOMBAT | Meta Store | about 9.3 GB; its mixed-reality mode works – your room shows around you; the trainer videos play with their sound, smoothest with the display at 120 Hz (at 100 Hz they are shown at 50 pictures a second); from toolchain 537 |
 | Counter-Strike (Team Beef's CSVR) | free port + your own Counter-Strike files | the game data is fetched from your Steam account; your own servers can be listed per game |
 | Doom 3 (Doom3Quest) | free port + your own Doom 3 files | `pak000`–`pak008.pk4` from your copy of Doom 3 – fetched from your Steam account, or from a folder you choose |
 | Half-Life: Alyx | your own Steam copy (Linux build) | the game (about 73 GB) is fetched from your Steam account; the app downloads Steam Linux Runtime (from Valve) and xrizer (from this repository) itself; a German fan voice-over from the game's Steam Workshop is an optional tick, and the game's start window on the Vision Pro switches between English and German; from toolchain 478 the eyes of characters no longer flash in solid colours, and on the Vision Pro with the M5 the presets *Balanced* (the default) and *Sharp* in the game's start window draw the largest picture with detailed textures at an even half of the display rate (50 pictures a second), *Balanced* with strong foveated rendering and without bloom and ambient occlusion – found by play on one headset; how warm it gets over a long session is not measured yet. Frame cadence, effects and texture memory are settings under *Custom*, a frame-rate readout can be switched on, and a copy installed earlier keeps a custom set as it was. On the first Vision Pro (M2) the two presets are the same with the picture one size smaller; nobody has run them there yet |
 
-These twenty-two are marked **Verified**: the project has tested them on a Vision Pro. The app also lists every other
+These twenty-three are marked **Verified**: the project has tested them on a Vision Pro. The app also lists every other
 Quest title from the Meta Store – some 17,000, loaded page by page as you scroll. What you see on each is a label:
 
 | Label | Meaning |
@@ -190,7 +191,7 @@ while fixing the game, shown as "(modified)". The game then stays on that toolch
 one, when the game is updated and when its signature is renewed. The app removes older toolchains by itself to
 save disk space; one that is chosen for a game stays, and a switch in Settings turns the tidying off.
 
-All twenty-two were installed with this app on the author's headset. "Community Verified" means exactly what it
+All twenty-three were installed with this app on the author's headset. "Community Verified" means exactly what it
 says: reports from users, not a guarantee. A recipe is tied to one build of a game; other builds need
 their own recipe.
 
