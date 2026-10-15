@@ -72,6 +72,12 @@ struct Game: Identifiable {
     var downloaded: Bool { prepared && status.filesRequired + status.treesRequired > 0 && status.stockComplete }
 }
 
+/// Die letzten Zeilen eines Verlaufs (höchstens `AppModel.logLinesKept` und ein Schub) und wie viele es insgesamt sind.
+struct LogTail: Equatable {
+    var lines: [String] = []
+    var total = 0
+}
+
 /// Vom Projekt geprüft, von Nutzern bestätigt, noch offen, oder von Nutzern als nicht lauffähig gemeldet.
 enum Trust: Int { case verified, community, untested, incompatible }
 
@@ -153,7 +159,9 @@ final class AppModel: ObservableObject {
     @Published var selectedJob: String?
     @Published var runningJob: String?
     @Published var queued: [String] = []
-    @Published var logs: [String: [String]] = [:]
+    @Published var logs: [String: LogTail] = [:]
+    /// Die offenen Verlaufsdateien laufender Aufträge.
+    private var logHandles: [String: FileHandle] = [:]
     @Published var notice: String?
     @Published var teamCandidates: [Probe.Team] = []
     /// Metas letzte Antworten auf die Besitzfrage, je Store-App.
@@ -1315,22 +1323,48 @@ final class AppModel: ObservableObject {
         }
     }
 
-    func log(for id: String) -> [String] {
-        if let lines = logs[id] { return lines }
+    /// Wie viele Zeilen eines Verlaufs im Speicher bleiben. Gezeigt werden ohnehin nur die letzten (siehe
+    /// `LogView`); vollständig steht er in der Datei.
+    static let logLinesKept = 1000
+
+    func log(for id: String) -> [String] { logTail(for: id).lines }
+
+    /// Das Ende des Verlaufs eines Auftrags und wie viele Zeilen er insgesamt hat.
+    func logTail(for id: String) -> LogTail {
+        if let tail = logs[id] { return tail }
         let text = (try? String(contentsOf: paths.logURL(job: id), encoding: .utf8)) ?? ""
-        return text.split(separator: "\n").map(String.init)
+        let lines = text.split(separator: "\n")
+        return LogTail(lines: lines.suffix(AppModel.logLinesKept).map(String.init), total: lines.count)
     }
 
     private func append(_ id: String, _ line: String) {
         let clean = Redaction.redact(line)
-        logs[id, default: log(for: id)].append(clean)
-        if let handle = try? FileHandle(forWritingTo: paths.logURL(job: id)) {
-            defer { try? handle.close() }
-            _ = try? handle.seekToEnd()
-            try? handle.write(contentsOf: Data((clean + "\n").utf8))
-        } else {
-            try? Data((clean + "\n").utf8).write(to: paths.logURL(job: id))
+        var tail = logTail(for: id)
+        tail.lines.append(clean)
+        tail.total += 1
+        // In Schüben kürzen, nicht bei jeder Zeile.
+        if tail.lines.count > AppModel.logLinesKept + 200 { tail.lines.removeFirst(tail.lines.count - AppModel.logLinesKept) }
+        logs[id] = tail
+        // Die Datei bleibt offen, solange der Auftrag läuft (siehe `closeLog`).
+        if logHandles[id] == nil {
+            let url = paths.logURL(job: id)
+            if !FileManager.default.fileExists(atPath: url.path) { FileManager.default.createFile(atPath: url.path, contents: nil) }
+            if let handle = try? FileHandle(forWritingTo: url) {
+                _ = try? handle.seekToEnd()
+                logHandles[id] = handle
+            }
         }
+        try? logHandles[id]?.write(contentsOf: Data((clean + "\n").utf8))
+    }
+
+    private func closeLog(_ id: String) {
+        try? logHandles.removeValue(forKey: id)?.close()
+    }
+
+    /// Nach einer Zeile, die einen neuen Schritt meldet: nur diesen Auftrag neu lesen, nicht alle.
+    private func reloadJob(_ id: String) {
+        guard let fresh = try? paths.jobs.load(id), let i = jobs.firstIndex(where: { $0.id == id }) else { return reloadJobs() }
+        if jobs[i] != fresh { jobs[i] = fresh }
     }
 
     /// Es läuft immer nur ein Auftrag: alle bauen im selben Toolchain-Ordner und sprechen dasselbe Gerät an.
@@ -1350,7 +1384,7 @@ final class AppModel: ObservableObject {
         let reader = Task { @MainActor in
             for await line in lines {
                 self.append(id, line)
-                if line.hasPrefix("[") { self.reloadJobs() }
+                if line.hasPrefix("[") { self.reloadJob(id) }
             }
         }
         let metaTool = Probe.metaToolURL
@@ -1391,6 +1425,7 @@ final class AppModel: ObservableObject {
     private func finished(_ id: String) {
         let cancelled = stopRequested.remove(id) != nil
         if cancelled { _ = try? JobRunner(store: paths.jobs).cancel(id) }
+        closeLog(id)
         runningTask = nil
         runningJob = nil
         copyProgress[id] = nil

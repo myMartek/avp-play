@@ -242,7 +242,7 @@ struct JobDetail: View {
                 }
                 .controlSize(.small)
             }
-            LogView(lines: model.log(for: job.id))
+            LogView(log: model.logTail(for: job.id))
         }
         .padding(20)
     }
@@ -349,22 +349,33 @@ struct ProgressLine: View {
     }
 }
 
+/// Die letzten Zeilen des Verlaufs, jede für sich: Ein einziger großer Text würde bei jeder neuen Zeile ganz neu
+/// gesetzt; so legt die Liste nur an, was in Sicht ist.
 struct LogView: View {
-    let lines: [String]
+    let log: LogTail
 
     var body: some View {
+        let shown = log.lines.suffix(800)
+        // Die Nummer einer Zeile im ganzen Verlauf – sie bleibt, wenn vorn Zeilen herausfallen.
+        let first = log.total - shown.count
         ScrollViewReader { proxy in
             ScrollView {
-                Text(lines.isEmpty ? L("Nothing yet.", "Noch nichts.") : lines.suffix(800).joined(separator: "\n"))
-                    .font(.system(.callout, design: .monospaced))
-                    .textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(10)
-                    .id("end")
+                LazyVStack(alignment: .leading, spacing: 0) {
+                    if shown.isEmpty {
+                        Text(L("Nothing yet.", "Noch nichts."))
+                    }
+                    ForEach(first..<log.total, id: \.self) { number in
+                        Text(shown[shown.startIndex + number - first])
+                    }
+                }
+                .font(.system(.callout, design: .monospaced))
+                .textSelection(.enabled)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(10)
             }
             .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 8))
-            .onChange(of: lines.count) { proxy.scrollTo("end", anchor: .bottom) }
-            .onAppear { proxy.scrollTo("end", anchor: .bottom) }
+            .onChange(of: log.total) { proxy.scrollTo(log.total - 1, anchor: .bottom) }
+            .onAppear { proxy.scrollTo(log.total - 1, anchor: .bottom) }
         }
     }
 }
