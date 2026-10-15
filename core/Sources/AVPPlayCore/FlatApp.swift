@@ -19,14 +19,22 @@ public enum FlatApp {
     }
 
     /// Angaben im Manifest, die nur eine VR-App macht: die Startkategorie der Quest bzw. von OpenXR, der
-    /// Focus-Aware-Eintrag, das Kopf-Tracking als Gerätemerkmal, OpenXR-Berechtigungen, Gear VR.
+    /// Focus-Aware-Eintrag, OpenXR-Berechtigungen, Gear VR.
     static let manifestMarkers = [
         "com.oculus.intent.category.VR",
         "org.khronos.openxr",
         "com.oculus.vr.focusaware",
-        "android.hardware.vr.headtracking",
         "com.samsung.android.vr.application.mode",
     ]
+
+    /// Das Kopf-Tracking als Gerätemerkmal zählt nur, wenn die App es verlangt. Auch 2D-Apps nennen es – Spotify
+    /// (eine Web-App von Meta, `com.oculus.pwa.*`) mit `required="false"`; jedes bekannte Spiel außer Bigscreen
+    /// verlangt es, und Bigscreen trägt die übrigen Zeichen. Ohne Angabe gilt es als verlangt (Androids Vorgabe).
+    static let headTracking = "android.hardware.vr.headtracking"
+
+    static func requiresHeadTracking(_ manifest: String) -> Bool {
+        manifest.split(separator: "\n").contains { $0.contains(headTracking) && !$0.contains("required=\"false\"") }
+    }
 
     /// Teile von Bibliotheksnamen (klein geschrieben), die zu VR-Laufzeiten oder Spiel-Engines gehören:
     /// `libopenxr_loader`, `libOVRPlugin`, `libovrplatformloader`, `libvrapi`, `libOculusXRPlugin`, `libUnityOpenXR`,
@@ -37,7 +45,7 @@ public enum FlatApp {
     /// Das Urteil aus dem Manifest als Text (`nil`: nicht lesbar) und den Eintragsnamen des Archivs.
     public static func verdict(manifest: String?, entries: [String]) -> Verdict {
         guard let manifest, manifest.contains("<manifest") else { return .unknown }
-        if manifestMarkers.contains(where: { manifest.contains($0) }) { return .immersive }
+        if manifestMarkers.contains(where: { manifest.contains($0) }) || requiresHeadTracking(manifest) { return .immersive }
         let libraries = entries.filter { $0.hasPrefix("lib/") && $0.hasSuffix(".so") }
             .map { ($0.split(separator: "/").last.map(String.init) ?? "").lowercased() }
         if libraries.contains(where: { name in libraryMarkers.contains { name.contains($0) } }) { return .immersive }
