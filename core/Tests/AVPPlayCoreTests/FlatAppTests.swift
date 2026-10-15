@@ -33,6 +33,60 @@ final class FlatAppTests: XCTestCase {
         XCTAssertEqual(FlatApp.verdict(manifest: manifest(launcher), entries: entries), .flat)
     }
 
+    /// Das echte APK von Spotify (store-7250002038460582, Version 1.0, Code 2), so wie `AXML.decode` es liefert, ohne
+    /// die Liste der Icons: eine Web-App von Meta ohne Aktivität und ohne native Bibliothek, die das Kopf-Tracking
+    /// nennt, aber nicht verlangt.
+    func testSpotifyIsFlat() {
+        let spotify = """
+            <?xml version="1.0" encoding="utf-8" standalone="no"?>
+            <manifest xmlns:android="http://schemas.android.com/apk/res/android" android:versionCode="2" android:versionName="1.0" android:compileSdkVersion="23" android:compileSdkVersionCodename="6.0-2438415" package="com.spotify.horizon">
+                <uses-sdk android:minSdkVersion="29" android:targetSdkVersion="32">
+                </uses-sdk>
+                <uses-feature android:name="android.hardware.vr.headtracking" android:required="false" android:version="1">
+                </uses-feature>
+                <uses-feature android:name="oculus.software.handtracking" android:required="false">
+                </uses-feature>
+                <uses-permission android:name="com.oculus.permission.HAND_TRACKING">
+                </uses-permission>
+                <application android:label="Spotify" android:debuggable="false" android:allowBackup="false" android:supportsRtl="true" android:extractNativeLibs="false">
+                    <meta-data android:name="web_manifest_url" android:value="https://open.spotify.com/?utm_source=pwa_install">
+                    </meta-data>
+                    <meta-data android:name="com.oculus.pwa.START_URL" android:value="https://open.spotify.com/?utm_source=pwa_install">
+                    </meta-data>
+                    <meta-data android:name="com.oculus.pwa.NAME" android:value="Spotify">
+                    </meta-data>
+                    <meta-data android:name="com.oculus.vrshell.supports_free_resizing" android:value="true" maxSizeX="1280" maxSizeY="1000" minSizeX="400" minSizeY="400">
+                    </meta-data>
+                    <meta-data android:name="com.oculus.dependency.required_os_version_name" android:value="66.0.0.0">
+                    </meta-data>
+                    <meta-data android:name="com.oculus.pwa.DISPLAY" android:value="standalone">
+                    </meta-data>
+                </application>
+            </manifest>
+            """
+        let entries = ["res/mipmap-anydpi-v26/ic_launcher.xml", "res/drawable-xxxhdpi/abc_ic_star_black_16dp.png", "AndroidManifest.xml",
+                       "classes.dex", "META-INF/HORIZON.SF", "META-INF/HORIZON.RSA", "META-INF/MANIFEST.MF"]
+        XCTAssertEqual(FlatApp.verdict(manifest: spotify, entries: entries), .flat)
+        // Verlangte die App das Kopf-Tracking, wäre sie im Zweifel ein Spiel.
+        let required = spotify.replacingOccurrences(of: #"headtracking" android:required="false""#, with: #"headtracking" android:required="true""#)
+        XCTAssertEqual(FlatApp.verdict(manifest: required, entries: entries), .immersive)
+    }
+
+    func testHeadTrackingWithoutARequiredAttributeCountsAsRequired() {
+        let m = manifest(launcher, #"<uses-feature android:name="android.hardware.vr.headtracking" android:version="1">"#)
+        XCTAssertEqual(FlatApp.verdict(manifest: m, entries: ["classes.dex"]), .immersive)
+    }
+
+    /// Bigscreen nennt das Kopf-Tracking ebenfalls als nicht verlangt – und bleibt ein Spiel, an seinen übrigen
+    /// Angaben und an seinen Bibliotheken.
+    func testOptionalHeadTrackingAloneDoesNotMakeAGameButOtherSignalsStillDo() {
+        let optional = #"<uses-feature android:name="android.hardware.vr.headtracking" android:required="false" android:version="1">"#
+        XCTAssertEqual(FlatApp.verdict(manifest: manifest(launcher, optional), entries: ["classes.dex"]), .flat)
+        XCTAssertEqual(FlatApp.verdict(manifest: manifest(launcher, optional, #"<meta-data android:name="com.oculus.vr.focusaware" android:value="true">"#),
+                                       entries: ["classes.dex"]), .immersive)
+        XCTAssertEqual(FlatApp.verdict(manifest: manifest(launcher, optional), entries: ["lib/arm64-v8a/libunity.so"]), .immersive)
+    }
+
     func testAPureJavaAppWithoutVRMarkersIsFlat() {
         XCTAssertEqual(FlatApp.verdict(manifest: manifest(launcher), entries: ["AndroidManifest.xml", "classes.dex"]), .flat)
     }
