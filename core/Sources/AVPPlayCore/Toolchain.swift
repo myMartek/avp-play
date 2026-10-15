@@ -56,9 +56,9 @@ public struct Toolchain: Sendable {
     }
 
     /// Die Beschreibung eines installierten Pakets; `nil` bei einem Arbeitsverzeichnis des Forks.
+    /// Gelesen wird die Datei nur, wenn sie sich seit dem letzten Mal geändert hat (siehe `ManifestCache`).
     public var manifest: ToolchainManifest? {
-        guard let data = try? Data(contentsOf: root.appendingPathComponent("toolchain.json")) else { return nil }
-        return try? ToolchainPackager.decoder.decode(ToolchainManifest.self, from: data)
+        ManifestCache.shared.manifest(at: root.appendingPathComponent("toolchain.json"))
     }
 
     /// Eine bearbeitete Arbeitskopie (siehe `ToolchainManifest.modified`)?
@@ -482,5 +482,33 @@ public struct Toolchain: Sendable {
         guard (try? p.run()) != nil else { return -1 }
         p.waitUntilExit()
         return p.terminationStatus
+    }
+}
+
+/// Die gelesenen `toolchain.json` aller Toolchains dieses Prozesses. Die Oberfläche fragt bei jedem Neuzeichnen
+/// nach Nummer und Commit; gelesen und dekodiert wird nur, wenn sich die Datei geändert hat (Änderungszeit,
+/// Größe oder Inode) oder sie neu ist. Fehlt sie, gibt es nichts zu merken.
+final class ManifestCache: @unchecked Sendable {
+    static let shared = ManifestCache()
+
+    private struct Stamp: Equatable {
+        var seconds: Int, nanoseconds: Int, size: Int64, inode: UInt64
+    }
+    private var entries: [String: (stamp: Stamp, manifest: ToolchainManifest?)] = [:]
+    private let lock = NSLock()
+
+    func manifest(at url: URL) -> ToolchainManifest? {
+        let path = url.path
+        var info = stat()
+        guard stat(path, &info) == 0 else {
+            lock.withLock { _ = entries.removeValue(forKey: path) }
+            return nil
+        }
+        let stamp = Stamp(seconds: Int(info.st_mtimespec.tv_sec), nanoseconds: Int(info.st_mtimespec.tv_nsec),
+                          size: Int64(info.st_size), inode: UInt64(info.st_ino))
+        if let known = lock.withLock({ entries[path] }), known.stamp == stamp { return known.manifest }
+        let manifest = (try? Data(contentsOf: url)).flatMap { try? ToolchainPackager.decoder.decode(ToolchainManifest.self, from: $0) }
+        lock.withLock { entries[path] = (stamp, manifest) }
+        return manifest
     }
 }

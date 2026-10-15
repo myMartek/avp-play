@@ -1,5 +1,6 @@
 import AppKit
 import AVPPlayCore
+import Combine
 import SwiftUI
 import UserNotifications
 
@@ -327,10 +328,24 @@ final class AppModel: ObservableObject {
     var saveWatch: Task<Void, Never>?
     var saveTicks = 0
 
+    /// Was aus dem übrigen Zustand folgt und teuer zu bestimmen ist, gemerkt bis zur nächsten Änderung: Jede
+    /// Änderung an einer veröffentlichten Eigenschaft (auch an einer Einstellung) verwirft es, dieselbe, die die
+    /// Oberfläche neu zeichnen lässt. Nicht `@Published` – das Merken selbst ist keine Änderung.
+    struct Derived {
+        /// Doppelt optional: außen „noch nicht bestimmt“, innen „keine Toolchain“.
+        var toolchain: Toolchain??
+        var updatable: [Game]?
+    }
+    var derived = Derived()
+    private var derivedReset: AnyCancellable?
+
     init() {
         applyLanguage()
         if let data = UserDefaults.standard.data(forKey: "gameOptions"),
            let saved = try? JSONDecoder().decode([String: GameOptions].self, from: data) { options = saved }
+        derivedReset = objectWillChange.sink { [weak self] _ in
+            MainActor.assumeIsolated { self?.derived = Derived() }
+        }
     }
 
     // MARK: Besitz
@@ -741,7 +756,14 @@ final class AppModel: ObservableObject {
     var teamValid: Bool { teamId.range(of: "^[A-Z0-9]{10}$", options: .regularExpression) != nil }
     /// Das gewählte Team, soweit Xcode es kennt.
     var team: Probe.Team? { teamCandidates.first { $0.id == teamId } }
-    var toolchain: Toolchain? { paths.toolchain() }
+    /// Gemerkt bis zur nächsten Änderung am Zustand (siehe `derived`): Die Übersicht fragt bei jedem Neuzeichnen
+    /// danach, und jedes Mal den Ordner der Toolchains zu lesen kostet.
+    var toolchain: Toolchain? {
+        if let known = derived.toolchain { return known }
+        let fresh = paths.toolchain()
+        derived.toolchain = .some(fresh)
+        return fresh
+    }
 
     /// Was einer Installation im Weg steht, als Satz mit der nächsten Handlung – oder `nil`.
     func blocker(for game: Game) -> String? {
@@ -1226,8 +1248,10 @@ final class AppModel: ObservableObject {
     }
 
     /// Spiele, für die es eine neuere Fassung gibt und denen nichts im Weg steht.
+    /// Gemerkt bis zur nächsten Änderung am Zustand (siehe `derived`).
     var updatable: [Game] {
-        games.filter { game in
+        if let known = derived.updatable { return known }
+        let fresh = games.filter { game in
             // Ein Bau aus einer bearbeiteten Arbeitskopie, die für das Spiel nicht gewählt ist, wird nicht im
             // Sammelauftrag ersetzt: Das entscheidet der Nutzer auf der Seite des Spiels.
             if game.status.builtWith?.modified == true, toolchainChoices.games[game.id] == nil { return false }
@@ -1236,6 +1260,8 @@ final class AppModel: ObservableObject {
             case .current, .notInstalled, .unknown, .otherSource: return false
             }
         }
+        derived.updatable = fresh
+        return fresh
     }
 
     /// Legt für jedes aktualisierbare Spiel einen Auftrag an; sie laufen nacheinander.

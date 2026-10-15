@@ -198,10 +198,14 @@ public struct ToolchainPackager: Sendable {
     /// Installierte Pakete, neueste zuerst.
     public func installed() -> [Toolchain] {
         let urls = (try? FileManager.default.contentsOfDirectory(at: root, includingPropertiesForKeys: nil)) ?? []
+        // Die Nummer einmal je Paket lesen, nicht bei jedem Vergleich des Sortierens.
         return urls.filter { !$0.lastPathComponent.hasPrefix(".") }
-            .compactMap { try? Toolchain(root: $0) }
-            .filter { $0.manifest != nil }
-            .sorted { ($0.manifest?.version ?? 0) > ($1.manifest?.version ?? 0) }
+            .compactMap { url -> (toolchain: Toolchain, version: Int)? in
+                guard let t = try? Toolchain(root: url), let m = t.manifest else { return nil }
+                return (t, m.version)
+            }
+            .sorted { $0.version > $1.version }
+            .map(\.toolchain)
     }
 
     /// Liegt dieser Ordner unter den installierten Paketen?

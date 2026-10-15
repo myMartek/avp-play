@@ -53,6 +53,23 @@ final class ToolchainChoiceTests: XCTestCase {
         XCTAssertEqual(accepted.numberOfMatches(in: stamp, range: NSRange(stamp.startIndex..., in: stamp)), 1)
     }
 
+    /// Die Beschreibung wird gemerkt, aber neu gelesen, sobald sich die Datei ändert oder verschwindet.
+    func testManifestIsReadAgainAfterTheFileChanges() throws {
+        let dir = temp()
+        let toolchain = try plant(manifest(2), at: dir.appendingPathComponent("t"))
+        XCTAssertEqual(toolchain.manifest?.version, 2)
+        XCTAssertEqual(toolchain.manifest?.version, 2)
+        let file = dir.appendingPathComponent("t/toolchain.json")
+        // An Ort und Stelle überschrieben, nicht atomar: dieselbe Datei, anderer Inhalt.
+        try ToolchainPackager.encoder.encode(manifest(3, modified: true)).write(to: file)
+        XCTAssertEqual(toolchain.manifest?.version, 3)
+        XCTAssertTrue(toolchain.isModified)
+        try FileManager.default.removeItem(at: file)
+        XCTAssertNil(toolchain.manifest)
+        try ToolchainPackager.encoder.encode(manifest(1)).write(to: file)
+        XCTAssertEqual(toolchain.manifest?.version, 1)
+    }
+
     func testModifiedMarkIsReadAndWrittenAndOlderDescriptionsStillLoad() throws {
         let dir = temp()
         let packager = ToolchainPackager(root: dir.appendingPathComponent("toolchains"))
