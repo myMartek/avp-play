@@ -64,8 +64,8 @@ final class SigningStoreTests: XCTestCase {
         let bundle = "com.example.games.demo"
         var newer = SigningRecord(team: "A1B2C3D4E5", free: false, installed: now, expires: now.addingTimeInterval(86_400), bundleId: bundle)
         newer.renewalNote = "kept"
-        newer.write(to: try XCTUnwrap(SigningRecord.url(store: store, recipe: recipe, bundleId: bundle)))
-        SigningRecord(team: "A1B2C3D4E5", free: false, installed: now.addingTimeInterval(-86_400), expires: now, bundleId: bundle)
+        try newer.write(to: try XCTUnwrap(SigningRecord.url(store: store, recipe: recipe, bundleId: bundle)))
+        try SigningRecord(team: "A1B2C3D4E5", free: false, installed: now.addingTimeInterval(-86_400), expires: now, bundleId: bundle)
             .write(to: SigningRecord.url(store: store, recipe: recipe))
         _ = SigningRecord.load(store: store, recipe: recipe)
         XCTAssertEqual(SigningRecord.load(store: store, recipe: recipe, bundleId: bundle)?.renewalNote, "kept")
@@ -75,7 +75,8 @@ final class SigningStoreTests: XCTestCase {
     func testTestCopyDoesNotReplaceTheLiveRecord() throws {
         let live = SigningRecord(team: "A1B2C3D4E5", free: false, installed: now, expires: now.addingTimeInterval(365 * 86_400),
                                  bundleId: "com.example.games.demo")
-        live.save(store: store, recipe: recipe)
+        // Wie eine Installation aus der App: ausdrücklich die eigentliche (die Kennung ist nicht die übliche).
+        live.save(store: store, recipe: recipe, live: true)
         var test = SigningRecord(team: "A1B2C3D4E5", free: false, installed: now.addingTimeInterval(60), expires: now.addingTimeInterval(7 * 86_400),
                                  bundleId: "com.example.test.demo")
         test.displaySuffix = " (Test)"
@@ -112,6 +113,77 @@ final class SigningStoreTests: XCTestCase {
         record.save(store: store, recipe: recipe, live: false)
         XCTAssertNil(SigningRecord.load(store: store, recipe: recipe))
         XCTAssertEqual(SigningRecord.load(store: store, recipe: recipe, bundleId: "com.example.games.demo"), record)
+    }
+
+    /// Gibt es noch keinen Eintrag der eigentlichen Installation, wird eine Testkopie unter eigener Kennung es nicht –
+    /// eine Installation unter der üblichen Kennung (auch ausdrücklich genannt) dagegen schon.
+    func testTestCopyDoesNotBecomeLiveWithoutLiveRecord() throws {
+        let usual = Toolchain.defaultBundleId(target: "demo")
+        let test = SigningRecord(team: "A1B2C3D4E5", free: false, installed: now, expires: now, bundleId: "\(usual)-test")
+        test.save(store: store, recipe: recipe)
+        XCTAssertNil(SigningRecord.load(store: store, recipe: recipe))
+        XCTAssertEqual(SigningRecord.load(store: store, recipe: recipe, bundleId: "\(usual)-test"), test)
+
+        let real = SigningRecord(team: "A1B2C3D4E5", free: false, installed: now.addingTimeInterval(60), expires: now, bundleId: usual)
+        real.save(store: store, recipe: recipe)
+        XCTAssertEqual(SigningRecord.load(store: store, recipe: recipe), real)
+
+        // Ein kostenloses Team: üblich ist die Kennung mit seinem eigenen Präfix.
+        let free = SigningRecord(team: "Z9Y8X7W6V5", free: true, installed: now, expires: now)
+        let freeUsual = free.resolvedBundleId(target: "demo")
+        var freeExplicit = free
+        freeExplicit.bundleId = freeUsual
+        XCTAssertTrue(freeExplicit.isLive(current: nil, target: "demo"))
+        freeExplicit.bundleId = "\(freeUsual)-test"
+        XCTAssertFalse(freeExplicit.isLive(current: nil, target: "demo"))
+        // Erneuern und Installationen aus der App sagen es ausdrücklich: dann gilt es immer.
+        freeExplicit.save(store: store, recipe: recipe, live: true)
+        XCTAssertEqual(SigningRecord.load(store: store, recipe: recipe), freeExplicit)
+    }
+
+    /// Hat eine ältere Fassung dieses Programms nur `.signing.json` fortgeschrieben, ist der Eintrag unter der Kennung
+    /// veraltet: Es gilt der jüngere, und die Kopie wird aufgefrischt.
+    func testNewerLegacyRecordWinsAndRefreshesTheCopy() throws {
+        let bundle = "com.example.games.demo"
+        var old = SigningRecord(team: "A1B2C3D4E5", free: false, installed: now, expires: now, bundleId: bundle)
+        old.renewalNote = "stale"
+        let ownURL = try XCTUnwrap(SigningRecord.url(store: store, recipe: recipe, bundleId: bundle))
+        try old.write(to: ownURL)
+        let legacy = SigningRecord(team: "A1B2C3D4E5", free: false, installed: now.addingTimeInterval(86_400),
+                                   expires: now.addingTimeInterval(7 * 86_400), bundleId: bundle)
+        try legacy.write(to: SigningRecord.url(store: store, recipe: recipe))
+
+        XCTAssertEqual(SigningRecord.load(store: store, recipe: recipe, bundleId: bundle), legacy)
+        XCTAssertEqual(SigningRecord.read(ownURL), legacy)
+        // Ist der Eintrag unter der Kennung der jüngere, bleibt er.
+        var newer = legacy
+        newer.installed = now.addingTimeInterval(2 * 86_400)
+        try newer.write(to: ownURL)
+        XCTAssertEqual(SigningRecord.load(store: store, recipe: recipe, bundleId: bundle), newer)
+        XCTAssertEqual(SigningRecord.read(ownURL), newer)
+        // Auch das Laden ohne Kennung frischt die Kopie nur auf, wenn sie älter ist.
+        _ = SigningRecord.load(store: store, recipe: recipe)
+        XCTAssertEqual(SigningRecord.read(ownURL), newer)
+    }
+
+    /// Lässt sich ein Eintrag nicht schreiben, geht der Grund an `note`, statt verschluckt zu werden.
+    func testWriteFailuresAreReported() throws {
+        let bundle = "com.example.games.demo"
+        // Wo der Ordner `.signing` liegen müsste, liegt eine Datei: Weder die Migration noch `save` können schreiben.
+        try Data().write(to: store.directory(for: recipe).appendingPathComponent(".signing"))
+        var notes: [String] = []
+        let before = SigningRecord.note
+        SigningRecord.note = { notes.append($0) }
+        defer { SigningRecord.note = before }
+
+        try SigningRecord(team: "A1B2C3D4E5", free: false, installed: now, expires: now, bundleId: bundle)
+            .write(to: SigningRecord.url(store: store, recipe: recipe))
+        XCTAssertNotNil(SigningRecord.load(store: store, recipe: recipe))
+        XCTAssertEqual(notes.count, 1)
+        XCTAssertTrue(notes.first?.contains("\(bundle).json") == true, notes.first ?? "")
+
+        SigningRecord(team: "A1B2C3D4E5", free: false, installed: now, expires: now, bundleId: bundle).save(store: store, recipe: recipe)
+        XCTAssertEqual(notes.count, 2)
     }
 
     func testDisplayOverrideEnvironment() {

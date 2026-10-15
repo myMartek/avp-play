@@ -107,8 +107,8 @@ public struct InstallRequest: Codable, Sendable, Equatable {
     /// Ein Zusatz zum Namen der App, etwa „ (Test)“ (`KLEPTON_DISPLAY_SUFFIX`). Ohne Angabe: keiner.
     public var displaySuffix: String?
     /// Ob die Signatur dieser Installation als die der eigentlichen gilt (`SigningRecord.save(live:)`). Ohne Angabe:
-    /// ja, außer eine ausdrücklich genannte Kennung weicht von der der bisherigen eigentlichen Installation ab –
-    /// eine Testkopie neben dem Spiel.
+    /// ja, außer eine ausdrücklich genannte Kennung weicht von der der bisherigen eigentlichen Installation ab – oder,
+    /// gibt es noch keine, von der üblichen Kennung des Teams. Das ist eine Testkopie neben dem Spiel.
     public var live: Bool?
 
     public init(toolchain: String) { self.toolchain = toolchain }
@@ -522,7 +522,8 @@ public struct Installer: Sendable {
                                    bundleId: bundle)
         record.displayName = request.displayName
         record.displaySuffix = request.displaySuffix
-        // Ohne ausdrückliche Kennung ist es immer die eigentliche Installation; mit einer entscheidet `save`.
+        // Ohne ausdrückliche Kennung ist es immer die eigentliche Installation; mit einer entscheidet `save`
+        // (`SigningRecord.isLive`): Eine Testkopie wird es auch dann nicht, wenn das Spiel noch keinen Eintrag hat.
         record.save(store: store, recipe: recipe, live: request.live ?? (request.bundleId == nil ? true : nil))
         if free {
             let until = record.expires.map { DateFormatter.localizedString(from: $0, dateStyle: .medium, timeStyle: .short) }
