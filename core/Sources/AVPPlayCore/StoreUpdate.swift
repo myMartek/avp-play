@@ -100,6 +100,8 @@ public enum StoreUpdate {
         recipe.versionName = build.version
         recipe.versionCode = build.versionCode
         recipe.files = list
+        // The asset-file list names IDs and exact sizes of the tested build; the new build's are not known.
+        recipe.assetFiles = nil
         if delivered {
             var ids: [String: String] = [:]
             for file in files where file.kind == "ASSET" && ids[file.name] == nil { ids[file.name] = file.id }

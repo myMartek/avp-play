@@ -24,6 +24,9 @@ public struct Recipe: Codable, Sendable, Identifiable {
     /// Hat das Spiel einen Mixed-Reality-Modus, der hier funktioniert (der eigene Raum ist zu sehen)? Die
     /// Übersicht kann danach filtern. Fehlt die Angabe, gilt sie als nein.
     public var mixedReality: Bool?
+    /// Asset packs that lie on the device as files of their own, for the list the toolchain's runtime reads
+    /// (`AssetFilesList`). Without it, no list is written and an existing one is left alone.
+    public var assetFiles: [AssetFileEntry]?
 
     public struct IconSource: Codable, Sendable, Equatable {
         /// Steam-App-ID: Hintergrund und Logo aus dem lokalen Bildspeicher des Steam-Clients des Nutzers.
@@ -315,6 +318,7 @@ extension Recipe {
         if let steam = icon?.steamAppId, !(steam.allSatisfy(\.isNumber) && !steam.isEmpty) {
             throw RecipeError.invalid(L("Steam app ID", "Steam-App-ID"))
         }
+        if let assetFiles { try AssetFilesList.validate(assetFiles, recipe: self) }
     }
 
     static func isSafeName(_ s: String) -> Bool {

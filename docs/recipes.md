@@ -27,6 +27,7 @@ Recipes never contain game content, credentials or account data – only identif
   "trees": [ … ],                     // optional, for games that are folders rather than an APK
   "icon": { "steamAppId": "9050" },   // optional: take the icon from the local Steam library
   "mixedReality": true,               // optional: the game's mixed-reality mode works (the overview's filter)
+  "assetFiles": [ … ],                // optional: asset packs the runtime reports as installed, see below
   "status": { "playability": "reported", "download": "proven", "notes": [ … ] }
 }
 ```
@@ -89,6 +90,50 @@ Two patterns exist, because games handle purchases inside the game differently:
 | `delivered-assets` | Each purchase is a separate file that Meta only delivers to buyers. `items` maps each store SKU to its file (`sku`, `name`, `id`, optional `size`, `sha256`, `group`); the app downloads the files of confirmed purchases only. | Beat Saber |
 
 `dest` is where the list or the files go on the headset.
+
+## Asset-file list
+
+Some games ask the platform which of their asset packs are installed, and only use a pack it reports. Marvel's
+Deadpool VR does this for its `.lang` voice packs: they can be on disk, but unless they are reported, every
+language except the default stays greyed out. `assetFiles` names those packs:
+
+```jsonc
+"assetFiles": [
+  { "id": "26412782438311256", "file": "de.lang", "size": 3256791074, "tag": "de" },
+  { "id": "26412784368311063", "file": "es-mx.lang", "size": 3247674165, "tag": "es-MX", "meta": "1.0.40.356975.Quest" }
+]
+```
+
+| Field | Meaning |
+|---|---|
+| `id` | The store's asset ID of the pack. Digits only, above 0, at most 64 bits. |
+| `file` | The pack's file, relative to the game's OBB folder on the device (`android-files/Android/obb/<package>`). |
+| `size` | Its exact size in bytes. The runtime reports the pack as installed only when the file has exactly this size. |
+| `tag` | Optional: the language tag (`[A-Za-z0-9_-]`, up to 31 characters). Without it, the file name up to its first dot. |
+| `meta` | Optional: the store's metadata of the pack (`[A-Za-z0-9._+-]`, up to 63 characters). Without it, the recipe's `versionName`. |
+
+On every install and update (the step that copies the data to the device, which also runs when add-ons or
+optional content are synced), AVP Play writes `Documents/android-files/klepton-asset-files.txt` into the game's
+data container. The file has one line per entry, after a comment line naming AVP Play as its writer:
+
+```
+# Written by AVP Play from the game's recipe on every install and update. Do not edit.
+# store-3240283705987790 versionCode 8742
+asset 26412782438311256 de.lang 3256791074 de meta=1.0.40.356975.Quest
+```
+
+The toolchain's runtime reads it (myMartek/Klepton #25). The list is written to a temporary file and renamed
+before it is copied, so a half-written list never goes to the device.
+
+A recipe is rejected when it is loaded if the list breaks the rules the runtime applies: more than 32 entries,
+an empty list, a duplicate `id` or `file`, a `file` that is absolute or has empty, `.` or `..` components,
+blanks or backslashes, a `size` of 0 or less, a non-numeric `id`, or a `tag` or `meta` outside the characters
+above. If the recipe lists the same ID as one of its `files`, both sizes must agree.
+
+**A game without `assetFiles` gets no list, and an existing one on the device is left alone.** AVP Play cannot
+tell whether it wrote such a file itself, so it neither replaces nor empties it. The same holds for a newer store
+build the project has not tested: its recipe is derived from the tested one, but its asset IDs and exact sizes
+are not known, so it has no `assetFiles`.
 
 ## Folder trees
 

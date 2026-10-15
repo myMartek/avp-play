@@ -816,6 +816,10 @@ public struct Installer: Sendable {
             report(L("Server list copied to the game.", "Serverliste zum Spiel kopiert."))
         }
 
+        // The asset-file list for the runtime, rewritten on every install and update. Without `assetFiles` in the
+        // recipe nothing is written and an existing list stays as it is.
+        try writeAssetFiles { try control.copy($0, to: device, bundle: bundle, destination: $1) }
+
         if request.restoreSaves == true { restoreSaves(device: device, bundle: bundle) }
 
         // Assets aus dem APK: als Ordner, wenn Anzahl oder Gesamtgröße abweichen. Der entpackte Baum entsteht
@@ -849,6 +853,14 @@ public struct Installer: Sendable {
         } else {
             report(L("Assets: \(localCount) files are already on the device.", "Assets: \(localCount) Dateien liegen schon auf dem Gerät."))
         }
+    }
+
+    /// Writes `AssetFilesList` for the recipe through `copy` (local file, destination in the container). Part of the
+    /// stage step, which every install and update runs.
+    func writeAssetFiles(copy: (URL, String) throws -> Void) throws {
+        guard let count = try AssetFilesList.write(recipe: recipe, copy: copy) else { return }
+        report(L("Asset files: list with \(count) entries written for the game.",
+                 "Asset-Dateien: Liste mit \(count) Einträgen für das Spiel geschrieben."))
     }
 
     /// Spielt die zuletzt geholten Spielstände zurück, wenn das Spiel auf dem Gerät noch keine hat. Geht das nicht,
