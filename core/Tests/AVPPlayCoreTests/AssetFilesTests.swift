@@ -120,27 +120,50 @@ final class AssetFilesTests: XCTestCase {
 
     // MARK: Writing
 
-    /// What a stage step would hand to devicectl: the destination and the file's text at that moment.
+    /// What a stage step would hand to devicectl: the destination and the file's text at that moment. Doubles as the
+    /// game's container on the device, whose files it keeps by path.
     private final class Copies: @unchecked Sendable {
         var made: [(name: String, destination: String, text: String)] = []
         var sources: [URL] = []
+        var device: [String: Data] = [:]
+        var unreadable = false
+        var unwritable = false
+        var fetched: [String] = []
         func copy(_ url: URL, _ destination: String) throws {
+            if unwritable { throw DeviceError.tool("copy refused") }
             sources.append(url)
-            made.append((url.lastPathComponent, destination, try String(contentsOf: url, encoding: .utf8)))
+            let data = try Data(contentsOf: url)
+            made.append((url.lastPathComponent, destination, String(decoding: data, as: UTF8.self)))
+            device[destination] = data
+        }
+        var container: AssetFilesList.Container {
+            AssetFilesList.Container(
+                size: { self.device[$0].map { Int64($0.count) } },
+                fetch: { path, local in
+                    self.fetched.append(path)
+                    guard !self.unreadable, let data = self.device[path] else { throw DeviceError.tool("cannot read") }
+                    try data.write(to: local)
+                },
+                put: copy)
         }
     }
 
-    private func installer(_ recipe: Recipe) -> Installer {
+    /// The installer's messages, for what it says about a list it found.
+    private final class Messages: @unchecked Sendable {
+        var lines: [String] = []
+    }
+
+    private func installer(_ recipe: Recipe, messages: Messages = Messages()) -> Installer {
         Installer(recipe: recipe, request: InstallRequest(toolchain: "/nonexistent"),
-                  store: ContentStore(root: FileManager.default.temporaryDirectory)) { _ in }
+                  store: ContentStore(root: FileManager.default.temporaryDirectory)) { messages.lines.append($0) }
     }
 
     func testTitlesWithoutAssetFilesGetNoList() throws {
         let copies = Copies()
         XCTAssertNil(AssetFilesList.contents(for: demo(nil)))
         XCTAssertNil(try AssetFilesList.write(recipe: demo(nil), copy: copies.copy))
-        try installer(demo(nil)).writeAssetFiles(copy: copies.copy)
-        XCTAssertTrue(copies.made.isEmpty, "nothing is written, so an existing list on the device stays untouched")
+        try installer(demo(nil)).writeAssetFiles(in: copies.container)
+        XCTAssertTrue(copies.made.isEmpty, "nothing is written, and with no list on the device nothing is touched")
         // Every shipped recipe except the ones that name packs stays without a list.
         for recipe in try RecipeStore(directory: recipes).loadAll() where recipe.assetFiles == nil {
             XCTAssertNil(AssetFilesList.contents(for: recipe), recipe.id)
@@ -169,7 +192,7 @@ final class AssetFilesTests: XCTestCase {
         // Install: the shipped recipe.
         let tested = try deadpool()
         let installCopies = Copies()
-        try installer(tested).writeAssetFiles(copy: installCopies.copy)
+        try installer(tested).writeAssetFiles(in: installCopies.container)
         XCTAssertEqual(installCopies.made.map(\.destination), [AssetFilesList.destination])
         XCTAssertEqual(installCopies.made.first?.text, deadpoolList)
 
@@ -182,7 +205,7 @@ final class AssetFilesTests: XCTestCase {
                                          choices: .init(versions: [tested.id: 9000]))
         XCTAssertEqual(chosen.first?.versionCode, 9000)
         let updateCopies = Copies()
-        try installer(try XCTUnwrap(chosen.first)).writeAssetFiles(copy: updateCopies.copy)
+        try installer(try XCTUnwrap(chosen.first)).writeAssetFiles(in: updateCopies.container)
         XCTAssertEqual(updateCopies.made.map(\.destination), [AssetFilesList.destination])
         let text = try XCTUnwrap(updateCopies.made.first?.text)
         XCTAssertTrue(text.contains("# store-3240283705987790 versionCode 9000\n"), text)
@@ -200,5 +223,101 @@ final class AssetFilesTests: XCTestCase {
         let draft = try StoreUpdate.make(tested: tested, build: build, files: files)
         XCTAssertNil(draft.assetFiles)
         XCTAssertNil(AssetFilesList.contents(for: draft))
+    }
+
+    // MARK: A list left over on the device
+
+    func testTheHeaderCarriesTheOwnerMark() {
+        XCTAssertTrue(AssetFilesList.header.hasPrefix(AssetFilesList.ownerMark))
+        XCTAssertTrue(AssetFilesList.isOwn(Data(deadpoolList.utf8)))
+        XCTAssertTrue(AssetFilesList.isOwn(Data("# Written by AVP Play, older wording\r\nasset 1 a.lang 5\n".utf8)))
+        XCTAssertFalse(AssetFilesList.isOwn(Data("asset 1 a.lang 5\n# Written by AVP Play\n".utf8)), "only the first line counts")
+        XCTAssertFalse(AssetFilesList.isOwn(Data(" # Written by AVP Play\n".utf8)))
+        XCTAssertFalse(AssetFilesList.isOwn(Data()))
+    }
+
+    func testOurOwnListIsEmptiedWhenTheRecipeHasNone() throws {
+        // Deadpool VR was installed from the tested recipe; the update goes to an untested store build without a list.
+        let copies = Copies()
+        try installer(try deadpool()).writeAssetFiles(in: copies.container)
+        XCTAssertEqual(copies.device[AssetFilesList.destination].map { String(decoding: $0, as: UTF8.self) }, deadpoolList)
+
+        let build = CatalogBuild(buildId: "30000000000000001", version: "1.0.41.400000.Quest", versionCode: 9000, fileName: nil)
+        let files = [ListedFile(name: "PILO-Android-Shipping-arm64.apk", id: "30000000000000002", kind: "APK", sizeText: "90MB")]
+        let draft = try StoreUpdate.make(tested: try deadpool(), build: build, files: files)
+        XCTAssertNil(draft.assetFiles)
+        let messages = Messages()
+        try installer(draft, messages: messages).writeAssetFiles(in: copies.container)
+        XCTAssertEqual(copies.device[AssetFilesList.destination], Data(), "replaced by an empty file")
+        XCTAssertEqual(copies.made.last?.name, AssetFilesList.fileName, "under the list's own name")
+        XCTAssertEqual(copies.made.last?.destination, AssetFilesList.destination)
+        XCTAssertEqual(messages.lines.count, 1, "\(messages.lines)")
+        XCTAssertTrue(messages.lines.first?.contains(AssetFilesList.fileName) == true, "\(messages.lines)")
+        for url in copies.sources {
+            XCTAssertFalse(FileManager.default.fileExists(atPath: url.deletingLastPathComponent().path), "temporary file removed")
+        }
+
+        // Once emptied there is nothing left to do: no second copy, no second message.
+        let made = copies.made.count
+        try installer(draft, messages: messages).writeAssetFiles(in: copies.container)
+        XCTAssertEqual(copies.made.count, made)
+        XCTAssertEqual(messages.lines.count, 1)
+        XCTAssertEqual(try AssetFilesList.clearOwn(in: copies.container), .none)
+    }
+
+    func testAForeignListIsLeftAlone() throws {
+        for text in ["asset 1 a.lang 5 meta=x\n", "# written by hand\nasset 1 a.lang 5\n", "\n# Written by AVP Play\n"] {
+            let copies = Copies()
+            copies.device[AssetFilesList.destination] = Data(text.utf8)
+            let messages = Messages()
+            try installer(demo(nil), messages: messages).writeAssetFiles(in: copies.container)
+            XCTAssertTrue(copies.made.isEmpty, text)
+            XCTAssertEqual(copies.device[AssetFilesList.destination], Data(text.utf8), text)
+            XCTAssertEqual(copies.fetched, [AssetFilesList.destination], "read, not changed")
+            XCTAssertEqual(messages.lines.count, 1, "\(messages.lines)")
+            XCTAssertEqual(try AssetFilesList.clearOwn(in: copies.container), .foreign)
+        }
+    }
+
+    func testAListThatCannotBeReadIsLeftAlone() throws {
+        let copies = Copies()
+        copies.device[AssetFilesList.destination] = Data(deadpoolList.utf8)
+        copies.unreadable = true
+        let messages = Messages()
+        try installer(demo(nil), messages: messages).writeAssetFiles(in: copies.container)
+        XCTAssertTrue(copies.made.isEmpty)
+        XCTAssertEqual(copies.device[AssetFilesList.destination], Data(deadpoolList.utf8))
+        XCTAssertEqual(messages.lines.count, 1, "\(messages.lines)")
+        XCTAssertEqual(try AssetFilesList.clearOwn(in: copies.container), .unreadable)
+
+        // A listing that fails says nothing about the file either: it stays, unread.
+        let unlisted = AssetFilesList.Container(size: { _ in throw DeviceError.tool("no listing") },
+                                                fetch: { _, _ in XCTFail("not read") },
+                                                put: { _, _ in XCTFail("not written") })
+        XCTAssertEqual(try AssetFilesList.clearOwn(in: unlisted), .none)
+    }
+
+    func testAFailedEmptyingDoesNotStopTheStep() throws {
+        let copies = Copies()
+        copies.device[AssetFilesList.destination] = Data(deadpoolList.utf8)
+        copies.unwritable = true
+        let messages = Messages()
+        XCTAssertNoThrow(try installer(demo(nil), messages: messages).writeAssetFiles(in: copies.container))
+        XCTAssertEqual(copies.device[AssetFilesList.destination], Data(deadpoolList.utf8))
+        XCTAssertEqual(messages.lines.count, 1, "\(messages.lines)")
+        XCTAssertThrowsError(try AssetFilesList.clearOwn(in: copies.container))
+    }
+
+    func testTitlesWithAssetFilesStillRewriteTheList() throws {
+        // Whatever lies there – a foreign list, an older one of ours, an emptied one – a recipe with a list replaces
+        // it, without reading it first.
+        for old in ["asset 9 x.lang 1\n", "\(AssetFilesList.header)\n# store-3240283705987790 versionCode 1\n", ""] {
+            let copies = Copies()
+            copies.device[AssetFilesList.destination] = Data(old.utf8)
+            try installer(try deadpool()).writeAssetFiles(in: copies.container)
+            XCTAssertEqual(copies.device[AssetFilesList.destination].map { String(decoding: $0, as: UTF8.self) }, deadpoolList, old)
+            XCTAssertTrue(copies.fetched.isEmpty, old)
+            XCTAssertEqual(copies.made.count, 1, old)
+        }
     }
 }

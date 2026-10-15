@@ -130,10 +130,24 @@ an empty list, a duplicate `id` or `file`, a `file` that is absolute or has empt
 blanks or backslashes, a `size` of 0 or less, a non-numeric `id`, or a `tag` or `meta` outside the characters
 above. If the recipe lists the same ID as one of its `files`, both sizes must agree.
 
-**A game without `assetFiles` gets no list, and an existing one on the device is left alone.** AVP Play cannot
-tell whether it wrote such a file itself, so it neither replaces nor empties it. The same holds for a newer store
-build the project has not tested: its recipe is derived from the tested one, but its asset IDs and exact sizes
-are not known, so it has no `assetFiles`.
+**A game without `assetFiles` gets no list.** That includes a newer store build the project has not tested: its
+recipe is derived from the tested one, but its asset IDs and exact sizes are not known, so it has no `assetFiles`.
+A list already on the device from an earlier install is handled by who wrote it:
+
+- **Written by AVP Play** (its first line begins with `# Written by AVP Play`): emptied, so the runtime no longer
+  reports packs whose IDs and sizes belong to another build. devicectl can copy into the game's container but not
+  delete there, so the list is replaced by an empty file, the same way withdrawn content is taken off the device.
+  The runtime then still finds a list, with no entries, and reports no asset file as installed. Once empty, the
+  file is left alone on later installs.
+- **Anything else** (no such header, or the first line is something else): left as it is. Someone put it there on
+  purpose, and it is not AVP Play's to change.
+- **Cannot be read** (the folder cannot be listed, or copying the file to the Mac fails): left as it is, since
+  nothing shows it is ours.
+
+Only the header line is checked; AVP Play copies the file to the Mac to read it, which changes nothing on the
+device. The install log says when a list was emptied, left alone as foreign, or could not be read. Failing to
+empty a list is reported too, but does not stop the install. A recipe with `assetFiles` always writes its list,
+whatever was there before.
 
 ## Folder trees
 

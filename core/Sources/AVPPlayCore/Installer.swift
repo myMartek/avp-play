@@ -817,8 +817,15 @@ public struct Installer: Sendable {
         }
 
         // The asset-file list for the runtime, rewritten on every install and update. Without `assetFiles` in the
-        // recipe nothing is written and an existing list stays as it is.
-        try writeAssetFiles { try control.copy($0, to: device, bundle: bundle, destination: $1) }
+        // recipe, a list AVP Play wrote earlier is emptied and any other file there stays as it is.
+        let folder = (AssetFilesList.destination as NSString).deletingLastPathComponent
+        try writeAssetFiles(in: AssetFilesList.Container(
+            size: { path in
+                try control.files(device: device, bundle: bundle, subdirectory: folder)
+                    .first { !$0.isDirectory && "\(folder)/\($0.relativePath)" == path }?.size
+            },
+            fetch: { try control.copy(from: device, bundle: bundle, source: $0, to: $1) },
+            put: { try control.copy($0, to: device, bundle: bundle, destination: $1) }))
 
         if request.restoreSaves == true { restoreSaves(device: device, bundle: bundle) }
 
@@ -855,12 +862,35 @@ public struct Installer: Sendable {
         }
     }
 
-    /// Writes `AssetFilesList` for the recipe through `copy` (local file, destination in the container). Part of the
-    /// stage step, which every install and update runs.
-    func writeAssetFiles(copy: (URL, String) throws -> Void) throws {
-        guard let count = try AssetFilesList.write(recipe: recipe, copy: copy) else { return }
-        report(L("Asset files: list with \(count) entries written for the game.",
-                 "Asset-Dateien: Liste mit \(count) Einträgen für das Spiel geschrieben."))
+    /// Writes `AssetFilesList` for the recipe into the game's container. Part of the stage step, which every install
+    /// and update runs. A recipe without `assetFiles` writes nothing; a list AVP Play left there for an earlier recipe
+    /// is emptied instead (`AssetFilesList.clearOwn`). Only a failed write of the recipe's own list stops the step:
+    /// a leftover that cannot be read or emptied is said and left as it is.
+    func writeAssetFiles(in container: AssetFilesList.Container) throws {
+        if let count = try AssetFilesList.write(recipe: recipe, copy: container.put) {
+            report(L("Asset files: list with \(count) entries written for the game.",
+                     "Asset-Dateien: Liste mit \(count) Einträgen für das Spiel geschrieben."))
+            return
+        }
+        let name = AssetFilesList.fileName
+        do {
+            switch try AssetFilesList.clearOwn(in: container) {
+            case .none:
+                break
+            case .cleared:
+                report(L("Asset files: this version of the game has no list, so the one AVP Play wrote earlier (\(name)) was emptied.",
+                         "Asset-Dateien: Diese Fassung des Spiels hat keine Liste, daher wurde die früher von AVP Play geschriebene (\(name)) geleert."))
+            case .foreign:
+                report(L("Asset files: \(name) on the device was not written by AVP Play and is left as it is.",
+                         "Asset-Dateien: \(name) auf dem Gerät stammt nicht von AVP Play und bleibt, wie es ist."))
+            case .unreadable:
+                report(L("Asset files: \(name) on the device could not be read and is left as it is.",
+                         "Asset-Dateien: \(name) auf dem Gerät ließ sich nicht lesen und bleibt, wie es ist."))
+            }
+        } catch {
+            report(L("Asset files: the old list \(name) could not be emptied and stays as it is (\(error.localizedDescription)).",
+                     "Asset-Dateien: Die alte Liste \(name) ließ sich nicht leeren und bleibt, wie sie ist (\(error.localizedDescription))."))
+        }
     }
 
     /// Spielt die zuletzt geholten Spielstände zurück, wenn das Spiel auf dem Gerät noch keine hat. Geht das nicht,
