@@ -166,15 +166,14 @@ final class FlatAppTests: XCTestCase {
     }
 
     /// Gegen echte APKs: `AVPPLAY_GAME_APKS=<Ordner>` (etwa der Ordner einer installierten Toolchain) – sonst
-    /// übersprungen. Kein einziges darf als 2D-App gelten. Unlesbares (`.unknown`, etwa die SourceVR-APKs) gilt als Spiel
-    /// und ist hier erlaubt.
+    /// übersprungen. Kein einziges darf als 2D-App gelten.
     func testNoRealGameApkIsFlat() throws {
         guard let path = ProcessInfo.processInfo.environment["AVPPLAY_GAME_APKS"] else { throw XCTSkip("AVPPLAY_GAME_APKS not set") }
         let apks = (FileManager.default.enumerator(at: URL(fileURLWithPath: path), includingPropertiesForKeys: nil)?
             .compactMap { $0 as? URL } ?? []).filter { $0.pathExtension == "apk" }
         XCTAssertFalse(apks.isEmpty)
         for apk in apks {
-            XCTAssertNotEqual(FlatApp.verdict(apk: apk), .flat, apk.lastPathComponent)
+            XCTAssertEqual(FlatApp.verdict(apk: apk), .immersive, apk.lastPathComponent)
         }
     }
 
