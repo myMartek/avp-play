@@ -116,6 +116,9 @@ public struct InstallRequest: Codable, Sendable, Equatable {
     /// Die Auflösung in Prozent, mit der das Spiel beginnt, wenn `metalFX` eingeschaltet ist
     /// (`MetalFXResolution`). Ohne Angabe: die des Targets.
     public var resolution: Int?
+    /// Die XR-Vorhersage (`Toolchain.xrPredictionSwitch`) in diesem Bau von Anfang an einschalten – die Option
+    /// „XR prediction“ auf der Seite des Spiels. Ohne Angabe: nein, das Spiel bekommt die Kopfpose ohne Vorhersage.
+    public var xrPrediction: Bool?
 
     public init(toolchain: String) { self.toolchain = toolchain }
 }
@@ -536,10 +539,22 @@ public struct Installer: Sendable {
                            "MetalFX: Diese Toolchain kann die Auflösung noch nicht vorbelegen; das Spiel beginnt mit seiner üblichen."))
             }
         }
+        // Die XR-Vorhersage: aus, außer die Seite des Spiels schaltet sie ein. Eine ältere Toolchain sagt immer voraus.
+        let xrPrediction = request.xrPrediction == true
+        if !toolchain.supportsXRPrediction {
+            if xrPrediction {
+                report(L("XR prediction: this toolchain always predicts the head pose; the game is built as usual.",
+                         "XR-Vorhersage: Diese Toolchain sagt die Kopfpose immer voraus; das Spiel wird wie üblich gebaut."))
+            }
+        } else if xrPrediction {
+            report(L("XR prediction: on from the start in this build (in the game under Settings › Advanced › Test).",
+                     "XR-Vorhersage: In diesem Bau von Anfang an eingeschaltet (im Spiel unter Einstellungen › Erweitert › Test)."))
+        }
         try toolchain.buildAndInstall(recipe: recipe, team: team, device: device, bundleId: bundle, log: log,
                                       extraEnvironment: TreeStore(store: store).toolchainEnvironment(recipe: recipe),
                                       experimental: experimental, metalFX: metalFX,
                                       resolution: metalFX ? request.resolution : nil,
+                                      xrPrediction: xrPrediction,
                                       displayName: request.displayName, displaySuffix: request.displaySuffix)
         report(String(format: L("Built and installed (%.0f s).", "Gebaut und installiert (%.0f s)."), Date().timeIntervalSince(started)))
         // Womit signiert wurde und bis wann: Daran erinnert die App rechtzeitig vor dem Ablauf.

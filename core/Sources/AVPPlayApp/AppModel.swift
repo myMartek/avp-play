@@ -95,6 +95,9 @@ struct GameOptions: Codable, Equatable {
     /// Beim Installieren die Spielstände vom Mac zurückspielen, wenn das Spiel auf dem Gerät noch keine hat.
     /// Wählbar und nicht fest, weil ältere gespeicherte Angaben den Eintrag nicht kennen; ohne Angabe: ja.
     var restoreSaves: Bool?
+    /// Test: die XR-Vorhersage in diesem Spiel von Anfang an einschalten (`Toolchain.xrPredictionSwitch`). Ohne
+    /// Angabe: aus – das Spiel bekommt die Kopfpose ohne Vorhersage.
+    var xrPrediction: Bool?
 }
 
 /// Die in der Übersicht angehakten Spiele – ein eigener, kleiner Zustand (siehe `AppModel.picked`).
@@ -288,6 +291,8 @@ final class AppModel: ObservableObject {
     var experimentalExpected: Bool? { didSet { invalidateDerived() } }
     /// Dasselbe für das MetalFX-Hochskalieren.
     var metalFXExpected: Bool? { didSet { invalidateDerived() } }
+    /// Ob die neueste Toolchain die XR-Vorhersage als Option kennt; `nil` ohne Toolchain.
+    @Published var xrPredictionSupported: Bool?
     /// Wie weit das Kopieren aufs Gerät im laufenden Auftrag ist.
     @Published var copyProgress: [String: InstallProgress] = [:]
     /// Eine neuere veröffentlichte Fassung, falls es eine gibt.
@@ -907,6 +912,7 @@ final class AppModel: ObservableObject {
         toolchainRevision = s.toolchainRevision
         experimentalExpected = s.experimentalExpected
         metalFXExpected = s.metalFXExpected
+        if xrPredictionSupported != s.xrPredictionSupported { xrPredictionSupported = s.xrPredictionSupported }
         toolchainChoices = s.toolchainChoices
         games = s.games
         loadOwnCatalogEntries()
@@ -1302,6 +1308,8 @@ final class AppModel: ObservableObject {
             request.metalFX = true
             request.resolution = metalFXResolution
         }
+        // Die Test-Option des Spiels gilt für jeden Bau – nicht nur für Testkopien.
+        if steps.contains(.build), chosen.xrPrediction == true { request.xrPrediction = true }
         // Ein eigenes Präfix oder das eines kostenlosen Teams: dann steht die Kennung im Auftrag.
         let prefix = bundlePrefix
         if prefix != Toolchain.defaultBundlePrefix() { request.bundleId = "\(prefix).\(game.recipe.toolchain.target)" }

@@ -85,8 +85,16 @@ or 100%); what you choose in a game itself counts there, also after an update. I
 through Meta's own interface or OpenXR (Half-Life: Alyx, Steam Link, Doom 3, Walkabout, Beat Saber 1.45), with foveated
 rendering on, too; only a picture that cannot be scaled safely keeps the linear stretch, and the game's log says why.
 The metrics panel in the headset (Create + Options held for a second) shows the resolution the game renders at,
-whether MetalFX is upscaling and on which path, and the resolution after it. The bundled toolchain 507 does not have
+whether MetalFX is upscaling and on which path, and the resolution after it; with the panel shown, a short tap of
+Create + Options together switches MetalFX on and off while the game runs. The bundled toolchain 507 does not have
 it yet; until one does, the setting says so and games are built as usual.
+
+**XR prediction** (a game's page › *Test*; takes effect with a toolchain that has it). Newer toolchains give a game
+its head pose without prediction by default – one pose per frame, as it is when the frame starts, on every path
+(OpenXR and Meta's own interface). The option switches the old behaviour back on for that game, which predicts the
+head to the moment the picture is shown; it applies from the next install or update, to every build, and in the game
+it stays switchable under *Settings › Advanced › Test*. `avpplay install --xr-prediction` does the same. Toolchain 507
+always predicts.
 
 The app speaks English and German. It follows macOS; you can choose a language in its settings (⌘,).
 

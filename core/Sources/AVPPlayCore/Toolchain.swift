@@ -268,6 +268,21 @@ public struct Toolchain: Sendable {
         return texts.contains("klepton.metalfxUpscale") && texts.contains(Toolchain.metalFXSwitch)
     }
 
+    /// Der Name, unter dem eine Installation die XR-Vorhersage von Anfang an einschaltet – in derselben Liste wie die
+    /// Test-Schalter (`KLEPTON_TEST_ON`, im Spiel `KLTestOn` und der Test-Schalter „XR prediction“). Ohne ist sie aus:
+    /// Die Toolchain gibt dann auf jedem Weg die Kopfpose ohne Vorhersage (OpenXR `KL_XR_PREDICT`, Metas Schnittstelle
+    /// `KL_OVRP_ONE_POSE`). Was im Spiel gewählt ist, gilt.
+    public static let xrPredictionSwitch = "KL_XR_PREDICT"
+
+    /// Ob diese Toolchain die XR-Vorhersage als Test-Schalter hat und sie ohne ihn auslässt. Eine ältere sagt immer
+    /// voraus, was die Option auch sagt; ihr Bau trägt den Vermerk dann nicht.
+    public var supportsXRPrediction: Bool {
+        guard supportsExperimental,
+              let text = try? String(contentsOf: root.appendingPathComponent("visionos/Sources/KleptonTuning.swift"), encoding: .utf8)
+        else { return false }
+        return text.contains("Entry(env: \"\(Toolchain.xrPredictionSwitch)\"")
+    }
+
     /// Der Name, unter dem eine Installation die Auflösung vorgibt, mit der ein Spiel beginnt (ein Bruchteil wie
     /// `0.75`; im Spiel `KLRenderScaleDefault`, sonst `render_scale` des Targets). Was der Spieler im Spiel einstellt,
     /// gilt danach wie immer (`klepton.renderScale`).
@@ -298,11 +313,13 @@ public struct Toolchain: Sendable {
     ///   Toolchain das kann (`supportsMetalFX`); auch das sagt der Stempel.
     /// - Parameter resolution: die Auflösung in Prozent, mit der das Spiel beginnt. Wirkt nur zusammen mit `metalFX`
     ///   und wo die Toolchain sie vorgeben kann (`supportsRenderScalePreset`); ohne bleibt es bei der des Targets.
+    /// - Parameter xrPrediction: die XR-Vorhersage im Spiel von Anfang an einschalten. Wirkt nur, wo die Toolchain
+    ///   das kann (`supportsXRPrediction`); auch das sagt der Stempel.
     /// - Parameters displayName, displaySuffix: der Name der App auf dem Gerät statt des üblichen bzw. ein Zusatz
     ///   dazu (`displayEnvironment`); ohne Angabe bleibt er, wie er war.
     public func buildAndInstall(recipe: Recipe, team: String, device: Device, bundleId: String?, log: URL,
                                 extraEnvironment: [String: String] = [:], experimental: Bool = false,
-                                metalFX: Bool = false, resolution: Int? = nil,
+                                metalFX: Bool = false, resolution: Int? = nil, xrPrediction: Bool = false,
                                 displayName: String? = nil, displaySuffix: String? = nil) throws {
         guard team.count == 10, team.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber) }) else {
             throw RecipeError.invalid(L("team ID '\(team)' (expected: 10 characters)", "Team-ID '\(team)' (erwartet: 10 Zeichen)"))
@@ -325,10 +342,13 @@ public struct Toolchain: Sendable {
         // Die Startauflösung gibt es nur mit MetalFX und einer Toolchain, die sie liest; der Stempel trägt, was gilt.
         let resolution = metalFX && supportsRenderScalePreset && MetalFXResolution.environmentValue(resolution) != nil
             ? resolution.map(MetalFXResolution.clamped) : nil
+        let xrPrediction = xrPrediction && supportsXRPrediction
         env["KLEPTON_APP_BUILD"] = AppStamp.build(versionCode: recipe.versionCode, toolchainVersion: version(), modified: isModified,
-                                                  experimental: experimental, metalFX: metalFX, resolution: resolution)
+                                                  experimental: experimental, metalFX: metalFX, resolution: resolution,
+                                                  xrPrediction: xrPrediction)
         // Nie aus der Umgebung dieses Programms übernehmen: Was eingeschaltet ist, sagt allein der Auftrag.
         let switchesOn = (experimental ? Toolchain.experimentalSwitches : []) + (metalFX ? [Toolchain.metalFXSwitch] : [])
+            + (xrPrediction ? [Toolchain.xrPredictionSwitch] : [])
         env["KLEPTON_TEST_ON"] = switchesOn.isEmpty ? nil : switchesOn.joined(separator: ",")
         env[Toolchain.renderScaleVariable] = MetalFXResolution.environmentValue(resolution)
         if let bundleId { env["KLEPTON_BUNDLE_ID"] = bundleId }

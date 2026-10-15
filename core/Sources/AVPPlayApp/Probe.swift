@@ -24,6 +24,9 @@ enum Probe {
         var experimentalExpected: Bool?
         /// Dasselbe für das MetalFX-Hochskalieren (`AppModel.metalFXExpected`).
         var metalFXExpected: Bool?
+        /// Ob die neueste Toolchain die XR-Vorhersage als Option kennt (`Toolchain.supportsXRPrediction`); `nil` ohne
+        /// Toolchain.
+        var xrPredictionSupported: Bool?
         var toolchainChoices = ToolchainChoices()
         /// Der neueste Stand der Spielstände je Spiel, soweit einer auf dem Mac liegt.
         var saves: [String: SaveSnapshot] = [:]
@@ -72,6 +75,7 @@ enum Probe {
         s.experimentalExpected = experimental
         let metalFX = AppModel.metalFXExpected(toolchain: toolchain)
         s.metalFXExpected = metalFX
+        s.xrPredictionSupported = toolchain?.supportsXRPrediction
         OtherSources.use(recipes: paths.recipes)
         if let recipes = paths.recipes {
             do {

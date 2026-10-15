@@ -717,6 +717,8 @@ struct GameDetail: View {
 
                 if game.recipe.servers != nil { ServerListBox(game: game) }
 
+                testOptions
+
                 if game.installed { FeedbackBox(game: game) }
 
                 GroupBox(L("Good to Know", "Gut zu wissen")) {
@@ -976,6 +978,43 @@ struct GameDetail: View {
                                 .disabled(model.syncBlocker(for: game) != nil)
                         }
                     }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading).padding(6)
+        }
+    }
+
+    /// Test: Optionen dieses Spiels, die ein Verhalten der Toolchain umstellen. Gelten ab dem nächsten Bau, in jedem
+    /// Bau (nicht nur in Testkopien); im Spiel bleiben sie unter Einstellungen › Erweitert › Test umstellbar.
+    private var testOptions: some View {
+        let chosen = model.options(for: game)
+        let wanted = chosen.xrPrediction == true
+        return GroupBox(L("Test", "Test")) {
+            VStack(alignment: .leading, spacing: 8) {
+                Toggle(isOn: Binding(get: { wanted }, set: { on in
+                    var next = chosen
+                    next.xrPrediction = on ? true : nil
+                    model.setOptions(next, for: game)
+                })) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(L("XR prediction", "XR-Vorhersage"))
+                        Text(L("Off, the game gets the head pose as it is when a frame starts, one per frame – on every path, OpenXR and Meta's own interface. On, as before: the head is predicted to the moment the picture is shown. Applies from the next install or update; in the game it stays switchable under Settings › Advanced › Test.",
+                               "Aus bekommt das Spiel die Kopfpose, wie sie zu Beginn eines Frames ist, eine pro Frame – auf jedem Weg, OpenXR und Metas eigene Schnittstelle. An wie bisher: Der Kopf wird auf den Moment vorhergesagt, in dem das Bild gezeigt wird. Gilt ab der nächsten Installation oder Aktualisierung; im Spiel bleibt es unter Einstellungen › Erweitert › Test umstellbar."))
+                            .font(.callout).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                if model.xrPredictionSupported == false {
+                    Text(L("The installed toolchain cannot switch this yet: it always predicts. It takes effect with a newer one.",
+                           "Die installierte Toolchain kann das noch nicht umstellen: Sie sagt immer voraus. Es wirkt mit einer neueren."))
+                        .font(.callout).foregroundStyle(.orange)
+                } else if game.installed, let built = game.status.builtWith, built.xrPrediction != wanted {
+                    Text(wanted
+                         ? L("Installed without XR prediction – “Update” builds it with prediction on; saved games and data are kept.",
+                             "Installiert ohne XR-Vorhersage – „Aktualisieren“ baut es mit eingeschalteter Vorhersage; Spielstände und Daten bleiben.")
+                         : L("Installed with XR prediction on – “Update” builds it without; saved games and data are kept.",
+                             "Installiert mit eingeschalteter XR-Vorhersage – „Aktualisieren“ baut es ohne; Spielstände und Daten bleiben."))
+                        .font(.callout).foregroundStyle(.secondary)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading).padding(6)
