@@ -522,8 +522,8 @@ public struct Installer: Sendable {
         let metalFX = request.metalFX == true
         if metalFX {
             report(toolchain.supportsMetalFX
-                   ? L("MetalFX: upscaling is on from the start in this build. It sharpens the picture only where the game's resolution is set below 100%, and mainly in Vulkan games that talk to Meta's own interface (not in games that come through OpenXR, nor in GL games while their foveated rendering is on); in the game it can be switched off under Settings › Rendering.",
-                       "MetalFX: Das Hochskalieren ist in diesem Bau von Anfang an eingeschaltet. Es schärft das Bild nur, wo die Auflösung des Spiels unter 100 % steht, und vor allem in Vulkan-Spielen, die über Metas eigene Schnittstelle laufen (nicht in Spielen, die über OpenXR kommen, und nicht in GL-Spielen, solange ihr Foveated Rendering an ist); im Spiel abschaltbar unter Einstellungen › Rendering.")
+                   ? L("MetalFX: upscaling is on from the start in this build. It sharpens the picture where the game's resolution is set below 100%, in every engine and path (Vulkan and GL, Meta's interface and OpenXR, with foveated rendering too); the metrics panel in the headset shows the resolution before and after it. In the game it can be switched off under Settings › Rendering.",
+                       "MetalFX: Das Hochskalieren ist in diesem Bau von Anfang an eingeschaltet. Es schärft das Bild, wo die Auflösung des Spiels unter 100 % steht, in jeder Engine und auf jedem Pfad (Vulkan und GL, Metas Schnittstelle und OpenXR, auch mit Foveated Rendering); das Leistungs-Panel in der Brille zeigt die Auflösung davor und danach. Im Spiel abschaltbar unter Einstellungen › Rendering.")
                    : L("MetalFX: this toolchain cannot switch upscaling on from the start yet; the game is built as usual.",
                        "MetalFX: Diese Toolchain kann das Hochskalieren noch nicht von Anfang an einschalten; das Spiel wird wie üblich gebaut."))
             if toolchain.supportsMetalFX, let percent = request.resolution,

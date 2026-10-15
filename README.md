@@ -81,10 +81,12 @@ the game (*Settings › Rendering › MetalFX upscaling*, off). *Settings › Ex
 it on from the start in every game you install or update, the same way as the switch above; off, the default,
 changes nothing. At 100% there is nothing to upscale, so switching it on also sets the resolution a game starts at
 to 75% (a slider below the switch; a value you choose there counts, and switching off brings back the one from before,
-or 100%); what you choose in a game itself counts there, also after an update. It works mainly in Vulkan games that talk to
-Meta's own interface (Moss, for instance). Games that come through OpenXR, GL games while their foveated rendering is
-on (the default), and anything that cannot be scaled safely keep the linear stretch. The bundled toolchain 507 does
-not have it yet; until one does, the setting says so and games are built as usual.
+or 100%); what you choose in a game itself counts there, also after an update. It works in every game – Vulkan and GL,
+through Meta's own interface or OpenXR (Half-Life: Alyx, Steam Link, Doom 3, Walkabout, Beat Saber 1.45), with foveated
+rendering on, too; only a picture that cannot be scaled safely keeps the linear stretch, and the game's log says why.
+The metrics panel in the headset (Create + Options held for a second) shows the resolution the game renders at,
+whether MetalFX is upscaling and on which path, and the resolution after it. The bundled toolchain 507 does not have
+it yet; until one does, the setting says so and games are built as usual.
 
 The app speaks English and German. It follows macOS; you can choose a language in its settings (⌘,).
 
