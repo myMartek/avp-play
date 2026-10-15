@@ -1081,8 +1081,7 @@ case "job":
         } catch let error as JobError {
             fail("\(error)")          // hier gibt es nichts fortzusetzen
         } catch {
-            fail(L("\(error)\nJob \(job.id) stopped. Resume it with: avpplay job resume \(job.id)",
-                   "\(error)\nAuftrag \(job.id) angehalten. Fortsetzen mit: avpplay job resume \(job.id)"))
+            fail(FailureKind.stopNotice(error, job: job.id))
         }
     }
     switch o.positional[1] {

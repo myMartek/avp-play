@@ -157,7 +157,7 @@ struct JobDetail: View {
                     Label(phase.text, systemImage: phase.symbol).foregroundStyle(phase.color)
                 }
                 Spacer()
-                if phase.canResume {
+                if phase.canResume, job.failureKind?.resumable ?? true {
                     Button(L("Resume", "Fortsetzen")) { model.resume(job) }.buttonStyle(.borderedProminent)
                 }
                 if phase.canCancel {
@@ -197,8 +197,10 @@ struct JobDetail: View {
                                 model.showReport = true
                             }
                         }
-                        Text(L("“Resume” continues where it stopped. Whatever has been downloaded or copied is kept.", "Mit „Fortsetzen“ geht es an derselben Stelle weiter. Was schon geladen oder kopiert ist, bleibt erhalten."))
-                            .font(.callout).foregroundStyle(.secondary)
+                        if job.failureKind?.resumable ?? true {
+                            Text(L("“Resume” continues where it stopped. Whatever has been downloaded or copied is kept.", "Mit „Fortsetzen“ geht es an derselben Stelle weiter. Was schon geladen oder kopiert ist, bleibt erhalten."))
+                                .font(.callout).foregroundStyle(.secondary)
+                        }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading).padding(6)
                 }
