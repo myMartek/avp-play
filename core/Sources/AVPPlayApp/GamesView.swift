@@ -6,8 +6,6 @@ import SwiftUI
 struct GamesView: View {
     @EnvironmentObject var model: AppModel
 
-    private var shown: [Game] { model.shownGames }
-
     /// Die Filter der Übersicht, als einzelne Ansichten: für eine Zeile oder zum Umbrechen.
     @ViewBuilder private var filterToggles: some View {
         Text(L("Show only:", "Nur zeigen:")).foregroundStyle(.secondary)
@@ -50,6 +48,8 @@ struct GamesView: View {
     }
 
     var body: some View {
+        // Einmal je Neuzeichnen gefiltert und sortiert (und im Modell gemerkt, bis sich etwas ändert).
+        let shown = model.shownGames
         NavigationStack(path: $model.gamePath) {
             ScrollView {
                 if model.loadProblem == nil, !model.games.isEmpty {

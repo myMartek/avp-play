@@ -343,6 +343,7 @@ final class AppModel: ObservableObject {
         /// Doppelt optional: außen „noch nicht bestimmt“, innen „keine Toolchain“.
         var toolchain: Toolchain??
         var updatable: [Game]?
+        var shownGames: [Game]?
     }
     var derived = Derived()
     private var derivedReset: AnyCancellable?
@@ -465,30 +466,41 @@ final class AppModel: ObservableObject {
     }
 
     /// Die Spiele, die zu den gesetzten Filtern passen.
-    var shownGames: [Game] { visible(allGames) }
+    /// Gemerkt bis zur nächsten Änderung am Zustand (siehe `derived`): Die Übersicht fragt mehrmals je Neuzeichnen.
+    var shownGames: [Game] {
+        if let known = derived.shownGames { return known }
+        let fresh = visible(allGames)
+        derived.shownGames = fresh
+        return fresh
+    }
 
     /// Aus einer Menge von Spielen die, die zu den gesetzten Filtern passen, in der Reihenfolge der Übersicht.
     func visible(_ games: [Game]) -> [Game] {
         let words = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        return games.filter { game in
+        // Was Filter und Sortierung brauchen, einmal je Spiel – nicht bei jedem Vergleich des Sortierens.
+        let keyed = games.compactMap { game -> (game: Game, rank: Int, works: Int)? in
+            let trust = game.trust, installed = game.installed, downloaded = game.downloaded
+            let favourite = isFavourite(game)
             // „Geprüft“ und „Von Nutzern bestätigt“ ergänzen einander; alle anderen Filter engen weiter ein.
-            ((!filterVerified && !filterCommunity) || (filterVerified && game.trust == .verified) || (filterCommunity && game.trust == .community))
-                && (!filterInstalled || game.installed)
-                && (!filterDownloaded || (game.downloaded && !game.installed))
-                && (!filterFavourites || isFavourite(game))
-                && (!filterFavouritesMissing || (isFavourite(game) && !game.downloaded))
+            guard ((!filterVerified && !filterCommunity) || (filterVerified && trust == .verified) || (filterCommunity && trust == .community))
+                && (!filterInstalled || installed)
+                && (!filterDownloaded || (downloaded && !installed))
+                && (!filterFavourites || favourite)
+                && (!filterFavouritesMissing || (favourite && !downloaded))
                 && (!filterMixedReality || game.mixedReality)
                 && (words.isEmpty || game.recipe.title.lowercased().contains(words) || game.recipe.package.lowercased().contains(words))
-        }.sorted { a, b in
+            else { return nil }
             // Geprüftes zuerst, dann schon Nachgeschlagenes, dann was Nutzer bestätigen, das Ungetestete, zuletzt
             // was nicht läuft – jeweils nach der Zahl derer, die sagen, es läuft, dann nach Namen. So reiht auch
             // der Katalog, damit eine nachgeladene Seite unten anschließt.
-            let rank: (Game) -> Int = { $0.trust == .verified ? 0 : ($0.prepared && $0.trust != .incompatible ? 1 : $0.trust.rawValue + 1) }
-            if rank(a) != rank(b) { return rank(a) < rank(b) }
-            let works: (Game) -> Int = { $0.catalog?.works ?? 0 }
-            if works(a) != works(b) { return works(a) > works(b) }
-            return a.recipe.title.localizedCaseInsensitiveCompare(b.recipe.title) == .orderedAscending
+            let rank = trust == .verified ? 0 : (game.prepared && trust != .incompatible ? 1 : trust.rawValue + 1)
+            return (game, rank, game.catalog?.works ?? 0)
         }
+        return keyed.sorted { a, b in
+            if a.rank != b.rank { return a.rank < b.rank }
+            if a.works != b.works { return a.works > b.works }
+            return a.game.recipe.title.localizedCaseInsensitiveCompare(b.game.recipe.title) == .orderedAscending
+        }.map(\.game)
     }
 
     /// Fragt für jedes Store-Spiel, ob das Konto es besitzt – höchstens einmal am Tag je Spiel. Beim ersten
