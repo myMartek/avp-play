@@ -164,11 +164,12 @@ recipes in [`recipes/`](recipes) are:
 | Tetris Effect: Connected | Meta Store | about 2.2 GB; drawn at the display's own resolution (a setting in the game's start window) |
 | Pistol Whip | Meta Store | about 1.6 GB; runs with fixes users sent in |
 | LES MILLS BODYCOMBAT | Meta Store | about 9.3 GB; its mixed-reality mode works – your room shows around you; the trainer videos play with their sound, smoothest with the display at 120 Hz (at 100 Hz they are shown at 50 pictures a second); from 358b920 |
+| Gun Club VR | Meta Store | about 3.7 GB; community fix 44 from fork `1f5c858` (stable head movement, gun textures, Exit saves settings, Sense grip); not project-verified yet |
 | Counter-Strike (Team Beef's CSVR) | free port + your own Counter-Strike files | the game data is fetched from your Steam account; your own servers can be listed per game |
 | Doom 3 (Doom3Quest) | free port + your own Doom 3 files | `pak000`–`pak008.pk4` from your copy of Doom 3 – fetched from your Steam account, or from a folder you choose |
 | Half-Life: Alyx | your own Steam copy (Linux build) | the game (about 73 GB) is fetched from your Steam account; the app downloads Steam Linux Runtime (from Valve) and xrizer (from this repository) itself; a German fan voice-over from the game's Steam Workshop is an optional tick, and the game's start window on the Vision Pro switches between English and German; from toolchain 478 the eyes of characters no longer flash in solid colours, and on the Vision Pro with the M5 the presets *Balanced* (the default) and *Sharp* in the game's start window draw the largest picture with detailed textures at an even half of the display rate (50 pictures a second), *Balanced* with strong foveated rendering and without bloom and ambient occlusion – found by play on one headset; how warm it gets over a long session is not measured yet. Frame cadence, effects and texture memory are settings under *Custom*, a frame-rate readout can be switched on, and a copy installed earlier keeps a custom set as it was. On the first Vision Pro (M2) the two presets are the same with the picture one size smaller; nobody has run them there yet |
 
-These twenty-three are marked **Verified**: the project has tested them on a Vision Pro. The app also lists every other
+These twenty-three are marked **Verified**: the project has tested them on a Vision Pro. The repository also has a recipe for **Gun Club VR** (Meta Store, about 3.7 GB; from fork commit `1f5c858`): a community fix a user sent in, taken over by the project but not yet verified on the author's headset. The app also lists every other
 Quest title from the Meta Store – some 17,000, loaded page by page as you scroll. What you see on each is a label:
 
 | Label | Meaning |
