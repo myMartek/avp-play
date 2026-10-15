@@ -113,6 +113,9 @@ public struct InstallRequest: Codable, Sendable, Equatable {
     /// Das MetalFX-Hochskalieren (`Toolchain.metalFXSwitch`) in diesem Bau von Anfang an einschalten. Ohne Angabe:
     /// nein.
     public var metalFX: Bool?
+    /// Die Auflösung in Prozent, mit der das Spiel beginnt, wenn `metalFX` eingeschaltet ist
+    /// (`MetalFXResolution`). Ohne Angabe: die des Targets.
+    public var resolution: Int?
 
     public init(toolchain: String) { self.toolchain = toolchain }
 }
@@ -523,10 +526,20 @@ public struct Installer: Sendable {
                        "MetalFX: Das Hochskalieren ist in diesem Bau von Anfang an eingeschaltet. Es schärft das Bild nur, wo die Auflösung des Spiels unter 100 % steht, und vor allem in Vulkan-Spielen, die über Metas eigene Schnittstelle laufen (nicht in Spielen, die über OpenXR kommen, und nicht in GL-Spielen, solange ihr Foveated Rendering an ist); im Spiel abschaltbar unter Einstellungen › Rendering.")
                    : L("MetalFX: this toolchain cannot switch upscaling on from the start yet; the game is built as usual.",
                        "MetalFX: Diese Toolchain kann das Hochskalieren noch nicht von Anfang an einschalten; das Spiel wird wie üblich gebaut."))
+            if toolchain.supportsMetalFX, let percent = request.resolution,
+               MetalFXResolution.environmentValue(percent) != nil {
+                let value = MetalFXResolution.clamped(percent)
+                report(toolchain.supportsRenderScalePreset
+                       ? L("MetalFX: the game starts at \(value)% resolution; what is set in the game (Settings › Rendering) counts from then on.",
+                           "MetalFX: Das Spiel beginnt mit \(value) % Auflösung; was im Spiel eingestellt wird (Einstellungen › Rendering), gilt danach.")
+                       : L("MetalFX: this toolchain cannot preset the resolution yet; the game starts at its usual one.",
+                           "MetalFX: Diese Toolchain kann die Auflösung noch nicht vorbelegen; das Spiel beginnt mit seiner üblichen."))
+            }
         }
         try toolchain.buildAndInstall(recipe: recipe, team: team, device: device, bundleId: bundle, log: log,
                                       extraEnvironment: TreeStore(store: store).toolchainEnvironment(recipe: recipe),
                                       experimental: experimental, metalFX: metalFX,
+                                      resolution: metalFX ? request.resolution : nil,
                                       displayName: request.displayName, displaySuffix: request.displaySuffix)
         report(String(format: L("Built and installed (%.0f s).", "Gebaut und installiert (%.0f s)."), Date().timeIntervalSince(started)))
         // Womit signiert wurde und bis wann: Daran erinnert die App rechtzeitig vor dem Ablauf.

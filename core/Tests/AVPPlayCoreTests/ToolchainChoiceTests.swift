@@ -291,6 +291,63 @@ final class ToolchainChoiceTests: XCTestCase {
         XCTAssertNil(try JSONDecoder().decode(InstallRequest.self, from: JSONEncoder().encode(request)).metalFX)
         request.metalFX = true
         XCTAssertEqual(try JSONDecoder().decode(InstallRequest.self, from: JSONEncoder().encode(request)).metalFX, true)
+        XCTAssertNil(try JSONDecoder().decode(InstallRequest.self, from: JSONEncoder().encode(request)).resolution)
+        request.resolution = 75
+        XCTAssertEqual(try JSONDecoder().decode(InstallRequest.self, from: JSONEncoder().encode(request)).resolution, 75)
+    }
+
+    // MARK: Die Auflösung zum MetalFX-Schalter
+
+    func testSwitchingMetalFXOnPresetsTheResolution() {
+        let on = MetalFXResolution.switched(metalFX: true, was: false, state: .init(resolution: 100))
+        XCTAssertEqual(on, .init(resolution: 75, before: 100))
+        // Ein eigener Wert von vorher wird gemerkt.
+        XCTAssertEqual(MetalFXResolution.switched(metalFX: true, was: false, state: .init(resolution: 90)),
+                       .init(resolution: 75, before: 90))
+    }
+
+    func testThePlayersOwnValueCountsWhileMetalFXStaysOn() {
+        // Der Spieler ändert die Vorbelegung; ein erneutes Setzen desselben Schalterstands lässt sie stehen.
+        let changed = MetalFXResolution.State(resolution: 60, before: 100)
+        XCTAssertEqual(MetalFXResolution.switched(metalFX: true, was: true, state: changed), changed)
+        XCTAssertEqual(MetalFXResolution.switched(metalFX: false, was: false, state: .init(resolution: 85)),
+                       .init(resolution: 85))
+    }
+
+    func testSwitchingMetalFXOffRestoresThePreviousValueOrFull() {
+        XCTAssertEqual(MetalFXResolution.switched(metalFX: false, was: true, state: .init(resolution: 60, before: 90)),
+                       .init(resolution: 90))
+        XCTAssertEqual(MetalFXResolution.switched(metalFX: false, was: true, state: .init(resolution: 75)),
+                       .init(resolution: 100))
+        // Ein, aus, ein: wieder 75, und davor gilt der Wert, der nach dem Ausschalten stand.
+        var state = MetalFXResolution.State(resolution: 80)
+        state = MetalFXResolution.switched(metalFX: true, was: false, state: state)
+        state.resolution = 55
+        state = MetalFXResolution.switched(metalFX: false, was: true, state: state)
+        XCTAssertEqual(state, .init(resolution: 80))
+        XCTAssertEqual(MetalFXResolution.switched(metalFX: true, was: false, state: state), .init(resolution: 75, before: 80))
+    }
+
+    func testTheResolutionHandedToTheToolchain() {
+        XCTAssertEqual(MetalFXResolution.environmentValue(75), "0.75")
+        XCTAssertEqual(MetalFXResolution.environmentValue(50), "0.50")
+        // 100 % und ohne Angabe: keine Vorgabe, es bleibt bei der des Targets.
+        XCTAssertNil(MetalFXResolution.environmentValue(100))
+        XCTAssertNil(MetalFXResolution.environmentValue(nil))
+        // Außerhalb des Bereichs oder zwischen den Schritten: auf den nächsten gültigen Wert.
+        XCTAssertEqual(MetalFXResolution.environmentValue(10), "0.50")
+        XCTAssertNil(MetalFXResolution.environmentValue(140))
+        XCTAssertEqual(MetalFXResolution.environmentValue(73), "0.75")
+    }
+
+    func testOnlyAToolchainThatReadsItCanPresetTheResolution() throws {
+        let dir = temp()
+        let toolchain = try plant(manifest(4), at: dir)
+        try "KLEPTON_TEST_ON".write(to: dir.appendingPathComponent("visionos/gen_xcodeproj.py"), atomically: true, encoding: .utf8)
+        XCTAssertFalse(toolchain.supportsRenderScalePreset)
+        try "KLEPTON_TEST_ON \(Toolchain.renderScaleVariable)"
+            .write(to: dir.appendingPathComponent("visionos/gen_xcodeproj.py"), atomically: true, encoding: .utf8)
+        XCTAssertTrue(toolchain.supportsRenderScalePreset)
     }
 
     // MARK: Was zur Wahl steht

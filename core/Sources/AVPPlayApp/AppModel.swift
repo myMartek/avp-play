@@ -249,6 +249,19 @@ final class AppModel: ObservableObject {
     /// Einstellung gilt ein Bau, der es anders hält, als aktualisierbar.
     @AppStorage(AppModel.metalFXKey) var metalFXUpscaling = false
     nonisolated static let metalFXKey = "metalFXUpscaling"
+    /// Die Auflösung in Prozent, mit der ein Spiel bei eingeschaltetem MetalFX beginnt (`MetalFXResolution`).
+    @AppStorage("metalFXResolution") var metalFXResolution = MetalFXResolution.full
+    /// Der Wert von vor dem Einschalten; 0: keiner.
+    @AppStorage("metalFXResolutionBefore") private var metalFXResolutionBefore = 0
+    /// Den MetalFX-Schalter umlegen: Ein belegt die Auflösung mit 75 % vor, aus stellt die von davor wieder her.
+    func setMetalFXUpscaling(_ on: Bool) {
+        let state = MetalFXResolution.switched(metalFX: on, was: metalFXUpscaling,
+                                               state: .init(resolution: metalFXResolution,
+                                                            before: metalFXResolutionBefore > 0 ? metalFXResolutionBefore : nil))
+        metalFXResolution = state.resolution
+        metalFXResolutionBefore = state.before ?? 0
+        metalFXUpscaling = on
+    }
     /// Was `GameStatus` von einem aktuellen Bau zum MetalFX-Hochskalieren erwartet; `nil` ohne eine Toolchain, die es
     /// kann.
     nonisolated static func metalFXExpected(toolchain: Toolchain?) -> Bool? {
@@ -1285,7 +1298,10 @@ final class AppModel: ObservableObject {
         if steps.contains(.build) { request.restoreSaves = chosen.restoreSaves ?? true }
         // Die experimentelle Einstellung gilt für jeden Bau, den dieses Programm anstößt.
         if steps.contains(.build), experimentalImplementations { request.experimental = true }
-        if steps.contains(.build), metalFXUpscaling { request.metalFX = true }
+        if steps.contains(.build), metalFXUpscaling {
+            request.metalFX = true
+            request.resolution = metalFXResolution
+        }
         // Ein eigenes Präfix oder das eines kostenlosen Teams: dann steht die Kennung im Auftrag.
         let prefix = bundlePrefix
         if prefix != Toolchain.defaultBundlePrefix() { request.bundleId = "\(prefix).\(game.recipe.toolchain.target)" }

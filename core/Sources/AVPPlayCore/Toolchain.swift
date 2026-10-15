@@ -268,6 +268,18 @@ public struct Toolchain: Sendable {
         return texts.contains("klepton.metalfxUpscale") && texts.contains(Toolchain.metalFXSwitch)
     }
 
+    /// Der Name, unter dem eine Installation die Auflösung vorgibt, mit der ein Spiel beginnt (ein Bruchteil wie
+    /// `0.75`; im Spiel `KLRenderScaleDefault`, sonst `render_scale` des Targets). Was der Spieler im Spiel einstellt,
+    /// gilt danach wie immer (`klepton.renderScale`).
+    public static let renderScaleVariable = "KLEPTON_RENDER_SCALE"
+
+    /// Ob eine Installation dieser Toolchain die Startauflösung vorgeben kann (`renderScaleVariable`). Ohne bleibt es
+    /// bei der des Targets.
+    public var supportsRenderScalePreset: Bool {
+        guard let text = try? String(contentsOf: root.appendingPathComponent("visionos/gen_xcodeproj.py"), encoding: .utf8) else { return false }
+        return text.contains(Toolchain.renderScaleVariable)
+    }
+
     /// Bis wann die zuletzt gebaute App dieses Targets signiert ist – aus dem Profil in ihrem Programmpaket.
     public func signingExpiry(recipe: Recipe) -> Date? {
         let products = root.appendingPathComponent("visionos/build/dd-device-\(recipe.toolchain.target)/Build/Products/Debug-xros")
@@ -284,11 +296,14 @@ public struct Toolchain: Sendable {
     ///   die Toolchain das kann (`supportsExperimental`); der Stempel des Baus sagt, ob es geschehen ist.
     /// - Parameter metalFX: das MetalFX-Hochskalieren im Spiel von Anfang an einschalten. Wirkt nur, wo die
     ///   Toolchain das kann (`supportsMetalFX`); auch das sagt der Stempel.
+    /// - Parameter resolution: die Auflösung in Prozent, mit der das Spiel beginnt. Wirkt nur zusammen mit `metalFX`
+    ///   und wo die Toolchain sie vorgeben kann (`supportsRenderScalePreset`); ohne bleibt es bei der des Targets.
     /// - Parameters displayName, displaySuffix: der Name der App auf dem Gerät statt des üblichen bzw. ein Zusatz
     ///   dazu (`displayEnvironment`); ohne Angabe bleibt er, wie er war.
     public func buildAndInstall(recipe: Recipe, team: String, device: Device, bundleId: String?, log: URL,
                                 extraEnvironment: [String: String] = [:], experimental: Bool = false,
-                                metalFX: Bool = false, displayName: String? = nil, displaySuffix: String? = nil) throws {
+                                metalFX: Bool = false, resolution: Int? = nil,
+                                displayName: String? = nil, displaySuffix: String? = nil) throws {
         guard team.count == 10, team.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber) }) else {
             throw RecipeError.invalid(L("team ID '\(team)' (expected: 10 characters)", "Team-ID '\(team)' (erwartet: 10 Zeichen)"))
         }
@@ -312,6 +327,8 @@ public struct Toolchain: Sendable {
         // Nie aus der Umgebung dieses Programms übernehmen: Was eingeschaltet ist, sagt allein der Auftrag.
         let switchesOn = (experimental ? Toolchain.experimentalSwitches : []) + (metalFX ? [Toolchain.metalFXSwitch] : [])
         env["KLEPTON_TEST_ON"] = switchesOn.isEmpty ? nil : switchesOn.joined(separator: ",")
+        env[Toolchain.renderScaleVariable] = metalFX && supportsRenderScalePreset
+            ? MetalFXResolution.environmentValue(resolution) : nil
         if let bundleId { env["KLEPTON_BUNDLE_ID"] = bundleId }
         // Ein kostenloses Team bekommt von Apple „Increased Memory Limit“, aber weder „Extended Virtual
         // Addressing“ noch „Low-Latency Streaming“. Mit einer der beiden im Auftrag scheitert die ganze Signatur.
@@ -536,5 +553,46 @@ final class ManifestCache: @unchecked Sendable {
         let manifest = (try? Data(contentsOf: url)).flatMap { try? ToolchainPackager.decoder.decode(ToolchainManifest.self, from: $0) }
         lock.withLock { entries[path] = (stamp, manifest) }
         return manifest
+    }
+}
+
+/// Die Auflösung, mit der ein Spiel beginnt, wenn das MetalFX-Hochskalieren von Anfang an eingeschaltet ist. Bei 100 %
+/// hat das Hochskalieren nichts zu tun; darum belegt das Einschalten die Auflösung mit 75 % vor. Ändert der Spieler sie
+/// danach, gilt sein Wert; das Ausschalten stellt den Wert von vor dem Einschalten wieder her, ohne einen 100 %.
+public enum MetalFXResolution {
+    /// Was das Einschalten vorbelegt.
+    public static let preset = 75
+    /// Ohne Vorgabe: die volle Auflösung.
+    public static let full = 100
+    /// Was sich einstellen lässt, in Schritten von 5 – so weit, wie es auch der Regler im Spiel zulässt.
+    public static let range = 50...100
+
+    /// Der Stand der Einstellung: die Auflösung und der Wert von vor dem Einschalten, falls es einen gab.
+    public struct State: Equatable, Sendable {
+        public var resolution: Int
+        public var before: Int?
+        public init(resolution: Int, before: Int? = nil) { self.resolution = resolution; self.before = before }
+    }
+
+    /// Was nach dem Umlegen des MetalFX-Schalters gilt. Ein: vorbelegen und den bisherigen Wert merken. Aus: den
+    /// gemerkten zurück, ohne einen 100 %. Ein Schalten auf den Stand, der schon gilt, ändert nichts – sonst ginge
+    /// der eigene Wert des Spielers verloren.
+    public static func switched(metalFX on: Bool, was: Bool, state: State) -> State {
+        guard on != was else { return state }
+        return on ? State(resolution: preset, before: clamped(state.resolution))
+                  : State(resolution: state.before.map(clamped) ?? full)
+    }
+
+    /// Ein Wert in `range`, auf 5 gerundet.
+    public static func clamped(_ percent: Int) -> Int {
+        min(max(Int((Double(percent) / 5).rounded()) * 5, range.lowerBound), range.upperBound)
+    }
+
+    /// Was die Toolchain unter `Toolchain.renderScaleVariable` bekommt: der Bruchteil, oder nichts bei 100 % (dann
+    /// bleibt es bei der Auflösung des Targets) und ohne Angabe.
+    public static func environmentValue(_ percent: Int?) -> String? {
+        guard let percent else { return nil }
+        let value = clamped(percent)
+        return value < full ? String(format: "%.2f", Double(value) / 100) : nil
     }
 }

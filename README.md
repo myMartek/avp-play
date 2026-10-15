@@ -79,7 +79,9 @@ a smaller picture that is stretched to the display. Klepton's compositor can do 
 spatial scaler instead of a linear one – a sharper picture for a little graphics time – and has a switch for it in
 the game (*Settings › Rendering › MetalFX upscaling*, off). *Settings › Experimental › MetalFX* in this app switches
 it on from the start in every game you install or update, the same way as the switch above; off, the default,
-changes nothing. Every game starts at 100%, where it has no effect; it works mainly in Vulkan games that talk to
+changes nothing. At 100% there is nothing to upscale, so switching it on also sets the resolution a game starts at
+to 75% (a slider below the switch; a value you choose there counts, and switching off brings back the one from before,
+or 100%); what you choose in a game itself counts there, also after an update. It works mainly in Vulkan games that talk to
 Meta's own interface (Moss, for instance). Games that come through OpenXR, GL games while their foveated rendering is
 on (the default), and anything that cannot be scaled safely keep the linear stretch. The bundled toolchain 507 does
 not have it yet; until one does, the setting says so and games are built as usual.
