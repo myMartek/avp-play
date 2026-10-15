@@ -28,6 +28,11 @@ struct Options {
     func value(_ name: String) -> String? { values[name]?.last }
 }
 
+/// Ein Hinweis auf stderr, ohne abzubrechen.
+func warn(_ message: String) {
+    FileHandle.standardError.write(Data((L("Warning: ", "Warnung: ") + Redaction.redact(message) + "\n").utf8))
+}
+
 func fail(_ message: String) -> Never {
     FileHandle.standardError.write(Data((Redaction.redact(message) + "\n").utf8))
     exit(1)
@@ -316,10 +321,10 @@ func installRequest(_ o: Options, recipe id: String? = nil) -> InstallRequest {
     if o.flags.contains("replace-running") { request.replaceRunning = true }
     if o.flags.contains("restore-saves") { request.restoreSaves = true }
     if o.flags.contains("experimental") { request.experimental = true }
-    if o.flags.contains("metalfx") {
-        request.metalFX = true
-        request.resolution = o.value("resolution").flatMap { Int($0) } ?? MetalFXResolution.preset
-    }
+    if o.flags.contains("metalfx") { request.metalFX = true }
+    let resolution = MetalFXResolution.commandLine(metalFX: request.metalFX == true, value: o.value("resolution"))
+    request.resolution = resolution.resolution
+    if let warning = resolution.warning { warn(warning) }
     request.interval = Double(o.value("interval") ?? "") ?? 0
     return request
 }

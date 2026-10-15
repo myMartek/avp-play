@@ -590,6 +590,25 @@ public enum MetalFXResolution {
         min(max(Int((Double(percent) / 5).rounded()) * 5, range.lowerBound), range.upperBound)
     }
 
+    /// Was `--resolution` auf der Kommandozeile ergibt, und eine Warnung, wenn der Wert so nicht gilt: ohne
+    /// `--metalfx` wird er nicht gebraucht, sonst ohne Angabe die Vorbelegung, und außerhalb des Bereichs oder
+    /// zwischen den Schritten der nächste gültige.
+    public static func commandLine(metalFX: Bool, value: String?) -> (resolution: Int?, warning: String?) {
+        guard metalFX else {
+            return (nil, value.map { _ in L("--resolution only applies together with --metalfx; it is ignored.",
+                                              "--resolution gilt nur zusammen mit --metalfx; es wird nicht beachtet.") })
+        }
+        guard let value else { return (preset, nil) }
+        guard let percent = Int(value.trimmingCharacters(in: .whitespaces)) else {
+            return (preset, L("--resolution \(value): not a whole number of percent; \(preset)% is used.",
+                              "--resolution \(value): keine ganze Prozentzahl; es gilt \(preset) %."))
+        }
+        let used = clamped(percent)
+        guard used != percent else { return (used, nil) }
+        return (used, L("--resolution \(percent): possible are \(range.lowerBound) to \(range.upperBound)% in steps of 5; \(used)% is used.",
+                        "--resolution \(percent): möglich sind \(range.lowerBound) bis \(range.upperBound) % in Schritten von 5; es gilt \(used) %."))
+    }
+
     /// Was die Toolchain unter `Toolchain.renderScaleVariable` bekommt: der Bruchteil, oder nichts bei 100 % (dann
     /// bleibt es bei der Auflösung des Targets) und ohne Angabe.
     public static func environmentValue(_ percent: Int?) -> String? {

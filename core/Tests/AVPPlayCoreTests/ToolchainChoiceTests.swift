@@ -380,6 +380,28 @@ final class ToolchainChoiceTests: XCTestCase {
         XCTAssertEqual(AppStamp.parse("7.4.92"), .init(versionCode: 7, toolchain: 4, modified: false))
     }
 
+    func testTheCommandLineWarnsAboutAResolutionItCannotUse() {
+        // Ohne --metalfx: nicht übernommen, aber gesagt.
+        let alone = MetalFXResolution.commandLine(metalFX: false, value: "60")
+        XCTAssertNil(alone.resolution)
+        XCTAssertTrue(alone.warning?.contains("--metalfx") == true)
+        XCTAssertEqual(MetalFXResolution.commandLine(metalFX: false, value: nil).warning, nil)
+        // Mit --metalfx: ohne Angabe die Vorbelegung, ein gültiger Wert still.
+        XCTAssertEqual(MetalFXResolution.commandLine(metalFX: true, value: nil).resolution, 75)
+        XCTAssertNil(MetalFXResolution.commandLine(metalFX: true, value: nil).warning)
+        XCTAssertEqual(MetalFXResolution.commandLine(metalFX: true, value: "60").resolution, 60)
+        XCTAssertNil(MetalFXResolution.commandLine(metalFX: true, value: "60").warning)
+        // Was so nicht geht, wird angepasst und gesagt.
+        let low = MetalFXResolution.commandLine(metalFX: true, value: "30")
+        XCTAssertEqual(low.resolution, 50)
+        XCTAssertNotNil(low.warning)
+        XCTAssertEqual(MetalFXResolution.commandLine(metalFX: true, value: "73").resolution, 75)
+        XCTAssertNotNil(MetalFXResolution.commandLine(metalFX: true, value: "73").warning)
+        let word = MetalFXResolution.commandLine(metalFX: true, value: "high")
+        XCTAssertEqual(word.resolution, 75)
+        XCTAssertNotNil(word.warning)
+    }
+
     func testRenewalKeepsTheStartingResolutionOfTheBuild() {
         func renewed(_ stamp: String) -> InstallRequest {
             var request = InstallRequest(toolchain: "/tmp/t")
