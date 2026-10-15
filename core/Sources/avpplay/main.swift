@@ -144,6 +144,7 @@ avpplay – command line for the AVP Play core library
              --icon <image file>     use your own app icon (takes priority over everything else)
              --no-store-art          don't fetch the cover image from the store page (the icon from the APK is used instead)
              --replace-running       install even if the game is running (it will be quit)
+             --controller-mode <standard|surreal>  initial controller mode (pair on Vision Pro)
              --experimental          build with the toolchain's new audio implementation switched on from the start (and, with
                                      toolchain 507, its one-head-pose-per-frame implementation, which newer toolchains use anyway;
                                      off in the game under Advanced › Test; the app's setting “Experimental” does the same)
@@ -217,6 +218,7 @@ avpplay – Kommandozeile zur Kern-Bibliothek von AVP Play
              --no-store-art          kein Titelbild von der Store-Seite holen (dann Icon aus dem APK)
              --replace-running       auch installieren, wenn das Spiel gerade läuft (es wird dabei beendet)
              --restore-saves         nach dem Kopieren die Spielstände vom Mac zurückspielen, wenn das Spiel auf dem Gerät noch keine hat
+             --controller-mode <standard|surreal>  anfänglicher Controllermodus (auf Vision Pro koppeln)
              --experimental          mit von Anfang an eingeschalteter neuer Audio-Implementierung der Toolchain bauen (mit Toolchain
                                      507 auch der Implementierung mit einer Kopfpose pro Frame, die neuere Toolchains ohnehin benutzen;
                                      im Spiel abschaltbar unter Erweitert › Test; die Einstellung „Experimentell“ tut dasselbe)
@@ -240,7 +242,7 @@ Allgemein: --account <Name>    Eintrag im Schlüsselbund (Standard: default)
 }
 
 let valued: Set<String> = ["account", "steam-account", "source", "store", "recipes", "locale", "with", "only", "interval", "from", "to", "force", "name",
-                           "team", "device", "bundle-id", "display-name", "display-suffix", "toolchain", "icon", "tool", "jobs", "toolchains", "saves", "resolution"]
+                           "team", "device", "bundle-id", "display-name", "display-suffix", "toolchain", "controller-mode", "icon", "tool", "jobs", "toolchains", "saves", "resolution"]
 let o = Options(Array(CommandLine.arguments.dropFirst()), valued: valued)
 guard let command = o.positional.first else { print(usage()); exit(0) }
 OtherSources.use(recipes: recipesDirectory(o))
@@ -332,6 +334,12 @@ func installRequest(_ o: Options, recipe id: String? = nil) -> InstallRequest {
     let resolution = MetalFXResolution.commandLine(metalFX: request.metalFX == true, value: o.value("resolution"))
     request.resolution = resolution.resolution
     if let warning = resolution.warning { warn(warning) }
+    if let value = o.value("controller-mode") {
+        guard let mode = ControllerMode(rawValue: value) else {
+            fail(L("--controller-mode must be standard or surreal", "--controller-mode muss standard oder surreal sein"))
+        }
+        request.controllerMode = mode
+    }
     request.interval = Double(o.value("interval") ?? "") ?? 0
     return request
 }

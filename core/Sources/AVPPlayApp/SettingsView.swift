@@ -75,6 +75,20 @@ struct SettingsView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
+            Section(L("Controllers", "Controller")) {
+                Picker(L("Controller Type", "Controllertyp"), selection: $model.controllerMode) {
+                    ForEach(ControllerMode.allCases) { Text($0.title).tag($0) }
+                }
+                Text(L("The initial choice for games you install or rebuild. Both controller modes are included in a compatible toolchain. Pair Surreal Touch on Vision Pro in the game's Settings. You can change the mode there without reinstalling. For an older installation, use Rebuild Controllers on its game page to reuse downloaded files and keep saved games.",
+                       "Die erste Wahl für neu installierte oder neu gebaute Spiele. Eine kompatible Toolchain enthält beide Modi. Surreal Touch in den Spieleinstellungen auf Vision Pro koppeln. Dort lässt sich der Modus ohne Neuinstallation ändern. Bei älteren Installationen „Controller neu bauen“ auf der Spielseite verwenden: geladene Dateien und Spielstände bleiben erhalten."))
+                    .font(.callout).foregroundStyle(.secondary)
+                if model.controllerMode == .surreal, model.toolchain?.supportsSurrealControllers != true {
+                    Text(L("The selected toolchain does not include Surreal Touch yet. Select your customized toolchain on the game's page before rebuilding.",
+                           "Die ausgewählte Toolchain enthält Surreal Touch noch nicht. Vor dem Neubau die angepasste Toolchain auf der Spielseite auswählen."))
+                        .font(.callout).foregroundStyle(.orange)
+                }
+            }
+
             RenewalSettings()
 
             Section(L("Online catalogue", "Online-Katalog")) {

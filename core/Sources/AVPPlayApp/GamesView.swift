@@ -659,6 +659,22 @@ struct GameDetail: View {
                     }
                 }
 
+                if game.status.stockComplete, game.status.builtWith != nil {
+                    GroupBox(L("Controllers", "Controller")) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(L("Rebuild this installed game with both controller modes using its downloaded files. The current toolchain and bundle identity are kept; saved games stay on Vision Pro. Then choose and pair controllers in the game's Settings.",
+                                   "Dieses installierte Spiel mit beiden Controllermodi aus den geladenen Dateien neu bauen. Die gewählte Toolchain und App-Kennung bleiben, Spielstände bleiben auf Vision Pro. Danach Controller in den Spieleinstellungen wählen und koppeln."))
+                                .font(.callout).foregroundStyle(.secondary)
+                            Button(L("Rebuild Controllers", "Controller neu bauen")) {
+                                model.enqueue(game, steps: InstallStep.controllerRebuild)
+                            }
+                            .disabled(model.isBusy(game.id) || model.blocker(for: game) != nil
+                                      || model.toolchain(for: game)?.supportsSurrealControllers != true)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+
                 if game.draft { untestedBox }
                 if !game.status.userProvidedMissing.isEmpty { ownFiles }
 

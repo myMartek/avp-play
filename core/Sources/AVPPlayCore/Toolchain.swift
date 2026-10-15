@@ -245,6 +245,35 @@ public struct Toolchain: Sendable {
     /// weiter tut, was die Einstellung bisher tat.
     public static let experimentalSwitches = ["KL_OVRP_ONE_POSE", "KL_AUDIO_SINK2"]
 
+    /// Both controller sources and the generated launch-default option must be present.
+    public var supportsSurrealControllers: Bool {
+        guard let generator = try? String(contentsOf: root.appendingPathComponent("visionos/gen_xcodeproj.py"), encoding: .utf8),
+              generator.contains("KLEPTON_CONTROLLER_MODE") else { return false }
+        return ["KleptonControllerInput", "KleptonControllerMode", "KleptonSurrealInput", "KleptonSurrealBackend", "KleptonSurrealView", "KleptonSurrealAim", "KleptonSurrealAimView"].allSatisfy {
+            FileManager.default.fileExists(atPath: root.appendingPathComponent("visionos/Sources/\($0).swift").path)
+        }
+    }
+
+    public func builtControllerMode(recipe: Recipe) -> ControllerMode {
+        let products = root.appendingPathComponent("visionos/build/dd-device-\(recipe.toolchain.target)/Build/Products/Debug-xros")
+        let apps = (try? FileManager.default.contentsOfDirectory(at: products, includingPropertiesForKeys: nil)) ?? []
+        for app in apps where app.pathExtension == "app" {
+            if let data = try? Data(contentsOf: app.appendingPathComponent("Info.plist")),
+               let info = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],
+               let value = info["KLControllerModeDefault"] as? String,
+               let mode = ControllerMode(rawValue: value) { return mode }
+        }
+        return .standard
+    }
+
+    public func controllerEnvironment(_ mode: ControllerMode) throws -> [String: String] {
+        if mode == .surreal && !supportsSurrealControllers {
+            throw RecipeError.invalid(L("this toolchain does not include Surreal Touch. Select a compatible custom toolchain; your current toolchain choice has not been changed",
+                                        "diese Toolchain enthält Surreal Touch nicht. Eine kompatible eigene Toolchain auswählen; die aktuelle Wahl wurde nicht geändert"))
+        }
+        return ["KLEPTON_CONTROLLER_MODE": mode.rawValue]
+    }
+
     /// Ob diese Toolchain Test-Schalter kennt, die eine Installation von Anfang an eingeschaltet hat
     /// (`KLEPTON_TEST_ON`). Gefragt wird die Toolchain selbst, damit auch ein eigener Stand zählt; eine ältere
     /// baut wie immer und ihr Bau trägt den Vermerk dann nicht.
@@ -323,10 +352,12 @@ public struct Toolchain: Sendable {
     public func buildAndInstall(recipe: Recipe, team: String, device: Device, bundleId: String?, log: URL,
                                 extraEnvironment: [String: String] = [:], experimental: Bool = false,
                                 metalFX: Bool = false, resolution: Int? = nil, xrPrediction: Bool = false,
-                                displayName: String? = nil, displaySuffix: String? = nil) throws {
+                                displayName: String? = nil, displaySuffix: String? = nil,
+                                controllerMode: ControllerMode = .standard) throws {
         guard team.count == 10, team.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber) }) else {
             throw RecipeError.invalid(L("team ID '\(team)' (expected: 10 characters)", "Team-ID '\(team)' (erwartet: 10 Zeichen)"))
         }
+        let controllerEnvironment = try controllerEnvironment(controllerMode)
         var env = ProcessInfo.processInfo.environment
         // Nur was macOS und Xcode mitbringen – auf jedem Mac dasselbe, ob dort Homebrew oder ein anderes
         // Python liegt oder nicht. Sonst baut es beim einen mit Werkzeugen, die dem anderen fehlen.
@@ -368,6 +399,7 @@ public struct Toolchain: Sendable {
         env.merge(Toolchain.genericEnvironment(recipe: recipe)) { _, new in new }
         env.merge(Toolchain.displayEnvironment(name: displayName, suffix: displaySuffix)) { _, new in new }
         env.merge(extraEnvironment) { _, new in new }
+        env.merge(controllerEnvironment) { _, new in new }
 
         // Erst eine einzelne Signatur: Fragt macOS nach dem Schlüssel, dann einmal und nicht dutzendfach.
         try SigningWarmUp.run(team: team)

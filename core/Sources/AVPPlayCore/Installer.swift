@@ -124,6 +124,8 @@ public struct InstallRequest: Codable, Sendable, Equatable {
     /// Die XR-Vorhersage (`Toolchain.xrPredictionSwitch`) in diesem Bau von Anfang an einschalten – die Option
     /// „XR prediction“ auf der Seite des Spiels. Ohne Angabe: nein, das Spiel bekommt die Kopfpose ohne Vorhersage.
     public var xrPrediction: Bool?
+    /// Initial launcher mode; an existing per-game headset preference always wins.
+    public var controllerMode: ControllerMode?
 
     public init(toolchain: String) { self.toolchain = toolchain }
 }
@@ -155,6 +157,9 @@ public enum InstallStep: String, Codable, Sendable, CaseIterable {
     /// Nur die Dateien laden, die das Programm selbst besorgen kann. Dafür braucht es das Konto, bei dem das Spiel
     /// gekauft ist, und sonst nichts – kein Xcode, kein Apple-Team, keine Vision Pro. Gebaut wird später.
     public static let download: [InstallStep] = [.account, .fetch]
+
+    /// Replace only the app, keeping its installed data. No download/uninstall/stage step.
+    public static let controllerRebuild: [InstallStep] = [.build]
 
     public var title: String {
         switch self {
@@ -567,7 +572,8 @@ public struct Installer: Sendable {
                                       experimental: experimental, metalFX: metalFX,
                                       resolution: metalFX ? request.resolution : nil,
                                       xrPrediction: xrPrediction,
-                                      displayName: request.displayName, displaySuffix: request.displaySuffix)
+                                      displayName: request.displayName, displaySuffix: request.displaySuffix,
+                                      controllerMode: request.controllerMode ?? (request.resign == true ? toolchain.builtControllerMode(recipe: recipe) : .standard))
         report(String(format: L("Built and installed (%.0f s).", "Gebaut und installiert (%.0f s)."), Date().timeIntervalSince(started)))
         // Womit signiert wurde und bis wann: Daran erinnert die App rechtzeitig vor dem Ablauf.
         var record = SigningRecord(team: team, free: free, installed: Date(), expires: toolchain.signingExpiry(recipe: recipe),
