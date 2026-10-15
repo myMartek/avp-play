@@ -25,7 +25,7 @@ public struct Recipe: Codable, Sendable, Identifiable {
     /// Übersicht kann danach filtern. Fehlt die Angabe, gilt sie als nein.
     public var mixedReality: Bool?
     /// Asset packs that lie on the device as files of their own, for the list the toolchain's runtime reads
-    /// (`AssetFilesList`). Without it, no list is written and an existing one is left alone.
+    /// (`AssetFilesList`). Without it, no list is written; one AVP Play wrote earlier is emptied, any other left alone.
     public var assetFiles: [AssetFileEntry]?
 
     public struct IconSource: Codable, Sendable, Equatable {

@@ -29,8 +29,9 @@ public struct AssetFileEntry: Codable, Sendable, Hashable {
 ///
 ///     asset <store asset id> <file relative to the OBB folder> <size in bytes> [<tag>] [meta=<text>]
 ///
-/// A title without `assetFiles` gets no list, and an existing one is left alone: nothing proves that AVP Play
-/// wrote it, so it is not ours to replace or empty.
+/// A title without `assetFiles` (also a newer store build the project has not tested, whose draft drops them) gets no
+/// list. A list already on the device is emptied only when its first line shows that AVP Play wrote it (`clearOwn`);
+/// any other file there is left alone.
 public enum AssetFilesList {
     public static let fileName = "klepton-asset-files.txt"
     /// Where the list goes in the app's data container.
@@ -39,6 +40,9 @@ public enum AssetFilesList {
     public static let maxEntries = 32
     /// The first line of every list, so that whoever finds the file on a device knows where it came from.
     public static let header = "# Written by AVP Play from the game's recipe on every install and update. Do not edit."
+    /// How a list written by AVP Play begins: the start of `header`, which stays the same when the rest of its
+    /// wording changes. A file whose first line does not begin with it is not ours.
+    public static let ownerMark = "# Written by AVP Play"
 
     /// The list for a recipe, or `nil` when the recipe has no `assetFiles`.
     public static func contents(for recipe: Recipe) -> String? {
@@ -71,6 +75,77 @@ public enum AssetFilesList {
         try fm.moveItem(at: partial, to: final)
         try copy(final, destination)
         return count
+    }
+
+    // MARK: A list left over on the device
+
+    /// The game's data container on the device, as far as the leftover list needs it. `Installer` fills it with
+    /// devicectl calls; tests with a dictionary.
+    public struct Container {
+        /// The size of the regular file at a path in the container, `nil` when there is none.
+        public var size: (String) throws -> Int64?
+        /// Copies the file at a path in the container to a local file. Nothing on the device changes.
+        public var fetch: (String, URL) throws -> Void
+        /// Copies a local file to a path in the container, replacing what is there.
+        public var put: (URL, String) throws -> Void
+
+        public init(size: @escaping (String) throws -> Int64?, fetch: @escaping (String, URL) throws -> Void,
+                    put: @escaping (URL, String) throws -> Void) {
+            self.size = size
+            self.fetch = fetch
+            self.put = put
+        }
+    }
+
+    /// What `clearOwn` found at `destination`, and did.
+    public enum Leftover: Equatable, Sendable {
+        /// No file there (or the folder could not be listed), or it is already empty: nothing to do.
+        case none
+        /// A list AVP Play wrote: it is now empty.
+        case cleared
+        /// A file AVP Play did not write: left as it is.
+        case foreign
+        /// The file could not be read: left as it is, since nothing shows it is ours.
+        case unreadable
+    }
+
+    /// Whether a list's first line is the header AVP Play writes.
+    static func isOwn(_ data: Data) -> Bool {
+        guard let line = String(decoding: data.prefix(4096), as: UTF8.self).split(separator: "\n", maxSplits: 1,
+                                                                                   omittingEmptySubsequences: false).first
+        else { return false }
+        return line.hasPrefix(ownerMark)
+    }
+
+    /// For a recipe without `assetFiles`: empties a list at `destination` that AVP Play wrote for an earlier recipe,
+    /// so the runtime no longer reports packs whose IDs and sizes belong to another build. Everything else stays:
+    /// a file without AVP Play's header, an empty file, and a file that cannot be listed or read.
+    ///
+    /// devicectl can copy into an app's data container but not delete in it, so the list is replaced by an empty
+    /// file, the same way withdrawn content is taken off the device. The runtime still finds a list then, with no
+    /// entries: no asset file is reported as installed.
+    /// - Throws: only when emptying the list fails; the list then stays as it was.
+    public static func clearOwn(in container: Container) throws -> Leftover {
+        guard let size = try? container.size(destination), size > 0 else { return .none }
+        let fm = FileManager.default
+        let folder = fm.temporaryDirectory.appendingPathComponent("avpplay-assetfiles-\(UUID().uuidString)", isDirectory: true)
+        defer { try? fm.removeItem(at: folder) }
+        let fetched = folder.appendingPathComponent("fetched", isDirectory: true).appendingPathComponent(fileName)
+        let data: Data
+        do {
+            try fm.createDirectory(at: fetched.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try container.fetch(destination, fetched)
+            data = try Data(contentsOf: fetched)
+        } catch {
+            return .unreadable
+        }
+        guard isOwn(data) else { return .foreign }
+        // Under the list's own name, as `write` hands it over.
+        let empty = folder.appendingPathComponent("empty", isDirectory: true).appendingPathComponent(fileName)
+        try fm.createDirectory(at: empty.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data().write(to: empty)
+        try container.put(empty, destination)
+        return .cleared
     }
 
     /// The rules the runtime applies to each line, checked when the recipe is loaded: a list the runtime would
