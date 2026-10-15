@@ -282,7 +282,7 @@ The command-line tool can install a second copy of a game under its own bundle I
 Vision Pro, without touching the installed game:
 
 ```bash
-avpplay install <game> --team <ID> --bundle-id com.example.test.<target> --display-suffix " (Test)"
+avpplay install <id> --team <team ID> --bundle-id com.example.test.<target> --display-suffix " (Test)"
 ```
 
 `--display-name <name>` replaces the app's name entirely, `--display-suffix <text>` appends to it; both are
