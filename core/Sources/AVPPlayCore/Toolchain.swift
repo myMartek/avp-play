@@ -322,13 +322,15 @@ public struct Toolchain: Sendable {
         env["KLEPTON_APP_VERSION"] = AppStamp.short(versionName: recipe.versionName)
         let experimental = experimental && supportsExperimental
         let metalFX = metalFX && supportsMetalFX
+        // Die Startauflösung gibt es nur mit MetalFX und einer Toolchain, die sie liest; der Stempel trägt, was gilt.
+        let resolution = metalFX && supportsRenderScalePreset && MetalFXResolution.environmentValue(resolution) != nil
+            ? resolution.map(MetalFXResolution.clamped) : nil
         env["KLEPTON_APP_BUILD"] = AppStamp.build(versionCode: recipe.versionCode, toolchainVersion: version(), modified: isModified,
-                                                  experimental: experimental, metalFX: metalFX)
+                                                  experimental: experimental, metalFX: metalFX, resolution: resolution)
         // Nie aus der Umgebung dieses Programms übernehmen: Was eingeschaltet ist, sagt allein der Auftrag.
         let switchesOn = (experimental ? Toolchain.experimentalSwitches : []) + (metalFX ? [Toolchain.metalFXSwitch] : [])
         env["KLEPTON_TEST_ON"] = switchesOn.isEmpty ? nil : switchesOn.joined(separator: ",")
-        env[Toolchain.renderScaleVariable] = metalFX && supportsRenderScalePreset
-            ? MetalFXResolution.environmentValue(resolution) : nil
+        env[Toolchain.renderScaleVariable] = MetalFXResolution.environmentValue(resolution)
         if let bundleId { env["KLEPTON_BUNDLE_ID"] = bundleId }
         // Ein kostenloses Team bekommt von Apple „Increased Memory Limit“, aber weder „Extended Virtual
         // Addressing“ noch „Low-Latency Streaming“. Mit einer der beiden im Auftrag scheitert die ganze Signatur.

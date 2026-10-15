@@ -86,6 +86,17 @@ public enum Renewal {
     /// Nach einem Versuch, der nichts verlängert hat, wird so lange gewartet, bevor derselbe Bau noch einmal läuft.
     public static let retryAfter: TimeInterval = 6 * 3600
 
+    /// Was ein neu signierter Bau vom bisherigen übernimmt: die Schalter und die Startauflösung, so wie der Stempel
+    /// sie trägt. Fehlt dort eine Auflösung, bleibt sie weg (die des Targets) – das Erneuern verlängert nur die Frist.
+    static func keepBuild(_ built: AppStamp.Built?, in request: inout InstallRequest) {
+        guard let built else { return }
+        if built.experimental { request.experimental = true }
+        if built.metalFX {
+            request.metalFX = true
+            request.resolution = built.resolution
+        }
+    }
+
     /// Ist die Installation jetzt dran? Ab dem Zeitpunkt, ab dem auch die App an die Erneuerung erinnert (zwei Tage
     /// vor Ablauf bei sieben Tagen, dreißig bei einem Jahr) – und nicht kurz nach einem Versuch, der nichts brachte.
     public static func isDue(_ record: SigningRecord, now: Date) -> Bool {
@@ -232,13 +243,7 @@ public enum Renewal {
             request.addons = false
             // Ein neu signierter Bau bleibt, was er war: Hatte er die experimentellen Implementierungen an, dann
             // auch danach – das Erneuern soll an einem Spiel nichts ändern außer der Frist.
-            if app.bundleVersion.flatMap(AppStamp.parse)?.experimental == true { request.experimental = true }
-            // Mit MetalFX auch die Vorbelegung der Auflösung. Welcher Wert es war, sagt der Stempel nicht; die
-            // übliche. Wer im Spiel selbst eine gewählt hat, behält sie ohnehin.
-            if app.bundleVersion.flatMap(AppStamp.parse)?.metalFX == true {
-                request.metalFX = true
-                request.resolution = MetalFXResolution.preset
-            }
+            Renewal.keepBuild(app.bundleVersion.flatMap(AppStamp.parse), in: &request)
             let installer = Installer(recipe: recipe, request: request, store: store, report: { log("  " + $0) })
             do {
                 try await installer.perform(.build)

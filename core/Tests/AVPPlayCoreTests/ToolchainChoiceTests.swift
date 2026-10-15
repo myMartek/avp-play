@@ -350,6 +350,54 @@ final class ToolchainChoiceTests: XCTestCase {
         XCTAssertTrue(toolchain.supportsRenderScalePreset)
     }
 
+    /// Gegen einen echten Klepton-Stand (Klepton PR #4): `AVPPLAY_KLEPTON_CHECKOUT=<Klon>` – sonst übersprungen.
+    func testAKleptonCheckoutWithTheInstallSwitchesIsRecognised() throws {
+        guard let path = ProcessInfo.processInfo.environment["AVPPLAY_KLEPTON_CHECKOUT"] else {
+            throw XCTSkip("AVPPLAY_KLEPTON_CHECKOUT not set")
+        }
+        let toolchain = try Toolchain(root: URL(fileURLWithPath: path))
+        XCTAssertTrue(toolchain.supportsMetalFX)
+        XCTAssertTrue(toolchain.supportsRenderScalePreset)
+    }
+
+    func testTheStampCarriesTheStartingResolution() {
+        XCTAssertEqual(AppStamp.build(versionCode: 7, toolchainVersion: 4, metalFX: true, resolution: 75), "7.4.44")
+        XCTAssertEqual(AppStamp.build(versionCode: 7, toolchainVersion: 4, experimental: true, metalFX: true, resolution: 50), "7.4.86")
+        // Ohne MetalFX und bei 100 % kein Vermerk.
+        XCTAssertEqual(AppStamp.build(versionCode: 7, toolchainVersion: 4, resolution: 75), "7.4")
+        XCTAssertEqual(AppStamp.build(versionCode: 7, toolchainVersion: 4, metalFX: true, resolution: 100), "7.4.4")
+        XCTAssertEqual(AppStamp.parse("7.4.44"),
+                       .init(versionCode: 7, toolchain: 4, modified: false, experimental: false, metalFX: true, resolution: 75))
+        XCTAssertEqual(AppStamp.parse("7.4.87"),
+                       .init(versionCode: 7, toolchain: 4, modified: true, experimental: true, metalFX: true, resolution: 50))
+        XCTAssertNil(AppStamp.parse("7.4.4")?.resolution)
+        for percent in stride(from: 50, through: 95, by: 5) {
+            let stamp = AppStamp.build(versionCode: 1, toolchainVersion: 2, metalFX: true, resolution: percent)
+            XCTAssertEqual(AppStamp.parse(stamp)?.resolution, percent, stamp)
+        }
+        // Eine Stufe ohne MetalFX oder jenseits von 50 % stammt nicht von hier und sagt nichts.
+        XCTAssertEqual(AppStamp.parse("7.4.40"), .init(versionCode: 7, toolchain: 4, modified: false))
+        XCTAssertEqual(AppStamp.parse("7.4.92"), .init(versionCode: 7, toolchain: 4, modified: false))
+    }
+
+    func testRenewalKeepsTheStartingResolutionOfTheBuild() {
+        func renewed(_ stamp: String) -> InstallRequest {
+            var request = InstallRequest(toolchain: "/tmp/t")
+            Renewal.keepBuild(AppStamp.parse(stamp), in: &request)
+            return request
+        }
+        XCTAssertEqual(renewed("7.4.68").resolution, 60)
+        XCTAssertEqual(renewed("7.4.68").metalFX, true)
+        XCTAssertEqual(renewed("7.4.46").experimental, true)
+        XCTAssertEqual(renewed("7.4.46").resolution, 75)
+        // Ein MetalFX-Bau ohne Vorgabe bleibt ohne – nie die 75 % der Einstellung.
+        XCTAssertEqual(renewed("7.4.4").metalFX, true)
+        XCTAssertNil(renewed("7.4.4").resolution)
+        XCTAssertNil(renewed("7.4").metalFX)
+        XCTAssertNil(renewed("7.4").resolution)
+        XCTAssertNil(renewed("7.4.2").resolution)
+    }
+
     // MARK: Was zur Wahl steht
 
     func testOptionsOfferOnlyWhatCanBuildTheRecipe() throws {
