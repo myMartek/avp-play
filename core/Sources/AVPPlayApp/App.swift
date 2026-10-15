@@ -85,6 +85,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         alert.addButton(withTitle: L("Quit", "Beenden"))
         return alert.runModal() == .alertSecondButtonReturn ? .terminateNow : .terminateCancel
     }
+
+    /// Ein laufender Auftrag wird beim Beenden unterbrochen; seine Verlaufsdatei wird vorher ordentlich geschlossen.
+    @MainActor
+    func applicationWillTerminate(_ notification: Notification) {
+        AppDelegate.model.closeAllLogs()
+    }
 }
 
 /// Das Fenster „Über AVP Play“: Version, wem was gehört, und dass das Projekt zu niemandem gehört.

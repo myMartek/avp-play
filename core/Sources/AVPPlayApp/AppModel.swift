@@ -160,8 +160,8 @@ final class AppModel: ObservableObject {
     @Published var runningJob: String?
     @Published var queued: [String] = []
     @Published var logs: [String: LogTail] = [:]
-    /// Die offenen Verlaufsdateien laufender Aufträge.
-    private var logHandles: [String: FileHandle] = [:]
+    /// Die offenen Verlaufsdateien laufender Aufträge (siehe `closeLog`).
+    private let logFiles = JobLogFiles()
     @Published var notice: String?
     @Published var teamCandidates: [Probe.Team] = []
     /// Metas letzte Antworten auf die Besitzfrage, je Store-App.
@@ -1331,6 +1331,7 @@ final class AppModel: ObservableObject {
         } else {
             queued.removeAll { $0 == job.id }
             _ = try? JobRunner(store: paths.jobs).cancel(job.id)
+            closeLog(job.id)
             reloadJobs()
         }
     }
@@ -1358,19 +1359,18 @@ final class AppModel: ObservableObject {
         if tail.lines.count > AppModel.logLinesKept + 200 { tail.lines.removeFirst(tail.lines.count - AppModel.logLinesKept) }
         logs[id] = tail
         // Die Datei bleibt offen, solange der Auftrag läuft (siehe `closeLog`).
-        if logHandles[id] == nil {
-            let url = paths.logURL(job: id)
-            if !FileManager.default.fileExists(atPath: url.path) { FileManager.default.createFile(atPath: url.path, contents: nil) }
-            if let handle = try? FileHandle(forWritingTo: url) {
-                _ = try? handle.seekToEnd()
-                logHandles[id] = handle
-            }
-        }
-        try? logHandles[id]?.write(contentsOf: Data((clean + "\n").utf8))
+        logFiles.write(clean, id: id, to: paths.logURL(job: id))
     }
 
-    private func closeLog(_ id: String) {
-        try? logHandles.removeValue(forKey: id)?.close()
+    /// Schließt die Verlaufsdatei eines Auftrags, falls sie offen ist – am Ende des Laufs, und vorsorglich überall,
+    /// wo ein Auftrag aus dem Lauf oder der Liste verschwindet. Mehrfach zu rufen schadet nicht.
+    func closeLog(_ id: String) {
+        logFiles.close(id)
+    }
+
+    /// Beim Beenden des Programms: alle Verlaufsdateien schließen.
+    func closeAllLogs() {
+        logFiles.closeAll()
     }
 
     /// Nach einer Zeile, die einen neuen Schritt meldet: nur diesen Auftrag neu lesen, nicht alle.
@@ -1383,7 +1383,7 @@ final class AppModel: ObservableObject {
     private func pump() {
         guard runningTask == nil, let id = queued.first else { return }
         queued.removeFirst()
-        guard let job = try? paths.jobs.load(id) else { return pump() }
+        guard let job = try? paths.jobs.load(id) else { closeLog(id); return pump() }
         runningJob = id
         // Der Mac soll nicht einschlafen, während geladen, gebaut oder kopiert wird.
         if awake == nil {

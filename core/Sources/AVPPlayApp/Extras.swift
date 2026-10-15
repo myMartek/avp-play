@@ -40,6 +40,7 @@ extension AppModel {
 
     func remove(_ list: [Job]) {
         for job in list where job.id != runningJob && !queued.contains(job.id) {
+            closeLog(job.id)
             paths.jobs.remove(job.id)
             logs[job.id] = nil
             copyProgress[job.id] = nil
