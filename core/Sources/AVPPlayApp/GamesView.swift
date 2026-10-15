@@ -878,6 +878,14 @@ struct GameDetail: View {
                     : L("Installed with the new pose and audio implementations switched on; the experimental setting is off now – “Update” builds it without them; saved games and data are kept.",
                         "Installiert mit eingeschalteter neuer Pose- und Audio-Implementierung; die experimentelle Einstellung ist jetzt aus – „Aktualisieren“ baut es ohne sie; Spielstände und Daten bleiben.")
             }
+            if let built = game.status.builtWith, let wanted = model.metalFXExpected, built.metalFX != wanted,
+               built.toolchain >= (model.toolchainRevision ?? 0) {
+                return wanted
+                    ? L("Installed, without the MetalFX upscaling the setting asks for – “Update” builds it with upscaling on from the start; saved games and data are kept.",
+                        "Installiert, ohne das MetalFX-Hochskalieren, das die Einstellung verlangt – „Aktualisieren“ baut es mit von Anfang an eingeschaltetem Hochskalieren; Spielstände und Daten bleiben.")
+                    : L("Installed with MetalFX upscaling on from the start; the setting is off now – “Update” builds it without; saved games and data are kept.",
+                        "Installiert mit von Anfang an eingeschaltetem MetalFX-Hochskalieren; die Einstellung ist jetzt aus – „Aktualisieren“ baut es ohne; Spielstände und Daten bleiben.")
+            }
             if let built = game.status.builtWith, built.modified {
                 return L("Installed, built with toolchain \(Toolchain.name(version: built.toolchain, modified: true)). “Update” replaces this build with one from the newest toolchain, without the changes of the modified one (see “Toolchain” below); saved games and data are kept.",
                          "Installiert, gebaut mit Toolchain \(Toolchain.name(version: built.toolchain, modified: true)). „Aktualisieren“ ersetzt diesen Bau durch einen aus der neuesten Toolchain, ohne die Änderungen der modifizierten (siehe unten unter „Toolchain“); Spielstände und Daten bleiben.")

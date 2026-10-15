@@ -250,6 +250,24 @@ public struct Toolchain: Sendable {
         return text.contains("KLEPTON_TEST_ON")
     }
 
+    /// Der Name, unter dem eine Installation das MetalFX-Hochskalieren des Compositors von Anfang an einschaltet –
+    /// in derselben Liste wie die Test-Schalter (`KLEPTON_TEST_ON`, im Spiel `KLTestOn`). Der Schalter im Spiel
+    /// (Einstellungen › Rendering › „MetalFX upscaling“, `klepton.metalfxUpscale`) bleibt davon unberührt: Was dort
+    /// gewählt ist, gilt.
+    public static let metalFXSwitch = "KL_METALFX_UPSCALE"
+
+    /// Ob diese Toolchain das MetalFX-Hochskalieren hat und eine Installation es von Anfang an einschalten kann.
+    /// Beides wird in ihren Quellen nachgesehen: der Schalter im Spiel (Klepton PR #2) und der Name, mit dem eine
+    /// Installation ihn vorbelegt. Fehlt eins, baut sie wie immer und der Bau trägt den Vermerk nicht.
+    public var supportsMetalFX: Bool {
+        guard supportsExperimental else { return false }
+        let sources = root.appendingPathComponent("visionos/Sources")
+        let texts = ["KleptonTuning.swift", "KleptonCompositor.swift"].compactMap {
+            try? String(contentsOf: sources.appendingPathComponent($0), encoding: .utf8)
+        }.joined(separator: "\n")
+        return texts.contains("klepton.metalfxUpscale") && texts.contains(Toolchain.metalFXSwitch)
+    }
+
     /// Bis wann die zuletzt gebaute App dieses Targets signiert ist – aus dem Profil in ihrem Programmpaket.
     public func signingExpiry(recipe: Recipe) -> Date? {
         let products = root.appendingPathComponent("visionos/build/dd-device-\(recipe.toolchain.target)/Build/Products/Debug-xros")
@@ -264,11 +282,13 @@ public struct Toolchain: Sendable {
     /// die Spieldaten überträgt anschließend das ergänzende Kopieren.
     /// - Parameter experimental: die experimentellen Implementierungen von Anfang an einschalten. Wirkt nur, wo
     ///   die Toolchain das kann (`supportsExperimental`); der Stempel des Baus sagt, ob es geschehen ist.
+    /// - Parameter metalFX: das MetalFX-Hochskalieren im Spiel von Anfang an einschalten. Wirkt nur, wo die
+    ///   Toolchain das kann (`supportsMetalFX`); auch das sagt der Stempel.
     /// - Parameters displayName, displaySuffix: der Name der App auf dem Gerät statt des üblichen bzw. ein Zusatz
     ///   dazu (`displayEnvironment`); ohne Angabe bleibt er, wie er war.
     public func buildAndInstall(recipe: Recipe, team: String, device: Device, bundleId: String?, log: URL,
                                 extraEnvironment: [String: String] = [:], experimental: Bool = false,
-                                displayName: String? = nil, displaySuffix: String? = nil) throws {
+                                metalFX: Bool = false, displayName: String? = nil, displaySuffix: String? = nil) throws {
         guard team.count == 10, team.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber) }) else {
             throw RecipeError.invalid(L("team ID '\(team)' (expected: 10 characters)", "Team-ID '\(team)' (erwartet: 10 Zeichen)"))
         }
@@ -286,10 +306,12 @@ public struct Toolchain: Sendable {
         env["KLEPTON_START_SCREEN"] = "1"
         env["KLEPTON_APP_VERSION"] = AppStamp.short(versionName: recipe.versionName)
         let experimental = experimental && supportsExperimental
+        let metalFX = metalFX && supportsMetalFX
         env["KLEPTON_APP_BUILD"] = AppStamp.build(versionCode: recipe.versionCode, toolchainVersion: version(), modified: isModified,
-                                                  experimental: experimental)
+                                                  experimental: experimental, metalFX: metalFX)
         // Nie aus der Umgebung dieses Programms übernehmen: Was eingeschaltet ist, sagt allein der Auftrag.
-        env["KLEPTON_TEST_ON"] = experimental ? Toolchain.experimentalSwitches.joined(separator: ",") : nil
+        let switchesOn = (experimental ? Toolchain.experimentalSwitches : []) + (metalFX ? [Toolchain.metalFXSwitch] : [])
+        env["KLEPTON_TEST_ON"] = switchesOn.isEmpty ? nil : switchesOn.joined(separator: ",")
         if let bundleId { env["KLEPTON_BUNDLE_ID"] = bundleId }
         // Ein kostenloses Team bekommt von Apple „Increased Memory Limit“, aber weder „Extended Virtual
         // Addressing“ noch „Low-Latency Streaming“. Mit einer der beiden im Auftrag scheitert die ganze Signatur.

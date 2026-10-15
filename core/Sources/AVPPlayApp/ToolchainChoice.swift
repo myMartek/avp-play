@@ -97,7 +97,7 @@ extension AppModel {
         guard var fresh = allGames.first(where: { $0.id == game.id }) ?? games.first(where: { $0.id == game.id }) else { return }
         fresh.status = GameStatus.of(recipe: fresh.recipe, store: paths.store, apps: installedApps, toolchainVersion: toolchainRevision,
                                      pin: pin, bundlePrefix: bundlePrefix, otherSourceBuilds: Set(fresh.otherSourceBuilds),
-                                     experimental: experimentalExpected)
+                                     experimental: experimentalExpected, metalFX: metalFXExpected)
         replace(fresh)
     }
 }

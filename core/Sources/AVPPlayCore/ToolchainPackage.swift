@@ -394,9 +394,11 @@ public enum AppStamp {
     /// `CFBundleVersion`: Versionscode des Spiels und Nummer der Toolchain – und eine dritte Zahl, wenn der Bau
     /// etwas Besonderes ist: 1 für eine bearbeitete Arbeitskopie der Toolchain, 2 für einen Bau, in dem die
     /// experimentellen Implementierungen von Anfang an eingeschaltet sind (`Toolchain.experimentalSwitches`),
-    /// 3 für beides. Mehr als drei Zahlen nimmt der Schlüssel nicht.
-    public static func build(versionCode: Int, toolchainVersion: Int, modified: Bool = false, experimental: Bool = false) -> String {
-        let extra = (modified ? 1 : 0) + (experimental ? 2 : 0)
+    /// 3 für beides; dazu 4, wenn das MetalFX-Hochskalieren von Anfang an eingeschaltet ist (`Toolchain.metalFXSwitch`).
+    /// Mehr als drei Zahlen nimmt der Schlüssel nicht.
+    public static func build(versionCode: Int, toolchainVersion: Int, modified: Bool = false, experimental: Bool = false,
+                             metalFX: Bool = false) -> String {
+        let extra = (modified ? 1 : 0) + (experimental ? 2 : 0) + (metalFX ? 4 : 0)
         return "\(max(0, min(versionCode, 999_999_999))).\(max(0, min(toolchainVersion, 999_999_999)))" + (extra > 0 ? ".\(extra)" : "")
     }
 
@@ -407,9 +409,12 @@ public enum AppStamp {
         public var modified: Bool
         /// Die experimentellen Implementierungen sind in diesem Bau von Anfang an eingeschaltet.
         public var experimental = false
+        /// Das MetalFX-Hochskalieren ist in diesem Bau von Anfang an eingeschaltet.
+        public var metalFX = false
 
-        public init(versionCode: Int, toolchain: Int, modified: Bool, experimental: Bool = false) {
+        public init(versionCode: Int, toolchain: Int, modified: Bool, experimental: Bool = false, metalFX: Bool = false) {
             self.versionCode = versionCode; self.toolchain = toolchain; self.modified = modified; self.experimental = experimental
+            self.metalFX = metalFX
         }
     }
 
@@ -418,8 +423,10 @@ public enum AppStamp {
         let parts = bundleVersion.split(separator: ".", omittingEmptySubsequences: false).map { Int($0) }
         guard parts.count == 2 || parts.count == 3, let code = parts[0], let toolchain = parts[1] else { return nil }
         guard parts.count == 2 || parts[2] != nil else { return nil }
-        // Die dritte Zahl ist eine Summe (siehe `build`); alles über 3 stammt nicht von diesem Werkzeug und sagt nichts.
+        // Die dritte Zahl ist eine Summe (siehe `build`); alles über 7 stammt nicht von diesem Werkzeug und sagt nichts.
         let extra = parts.count == 3 ? parts[2] ?? 0 : 0
-        return Built(versionCode: code, toolchain: toolchain, modified: extra == 1 || extra == 3, experimental: extra == 2 || extra == 3)
+        let bits = (0...7).contains(extra) ? extra : 0
+        return Built(versionCode: code, toolchain: toolchain, modified: bits & 1 != 0, experimental: bits & 2 != 0,
+                     metalFX: bits & 4 != 0)
     }
 }

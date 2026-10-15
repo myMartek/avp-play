@@ -231,6 +231,68 @@ final class ToolchainChoiceTests: XCTestCase {
         XCTAssertEqual(try JSONDecoder().decode(InstallRequest.self, from: JSONEncoder().encode(request)).experimental, true)
     }
 
+    // MARK: Das MetalFX-Hochskalieren
+
+    func testTheStampCarriesTheMetalFXBuild() {
+        XCTAssertEqual(AppStamp.build(versionCode: 7, toolchainVersion: 4, metalFX: true), "7.4.4")
+        XCTAssertEqual(AppStamp.build(versionCode: 7, toolchainVersion: 4, modified: true, experimental: true, metalFX: true), "7.4.7")
+        // Ohne die Einstellung bleibt der Stempel, wie er war.
+        XCTAssertEqual(AppStamp.build(versionCode: 7, toolchainVersion: 4), "7.4")
+        XCTAssertEqual(AppStamp.build(versionCode: 7, toolchainVersion: 4, experimental: true), "7.4.2")
+        XCTAssertEqual(AppStamp.parse("7.4.4"), .init(versionCode: 7, toolchain: 4, modified: false, experimental: false, metalFX: true))
+        XCTAssertEqual(AppStamp.parse("7.4.6"), .init(versionCode: 7, toolchain: 4, modified: false, experimental: true, metalFX: true))
+        XCTAssertEqual(AppStamp.parse("7.4.7"), .init(versionCode: 7, toolchain: 4, modified: true, experimental: true, metalFX: true))
+        XCTAssertEqual(AppStamp.parse("7.4.3")?.metalFX, false)
+        XCTAssertEqual(AppStamp.parse("7.4.8"), .init(versionCode: 7, toolchain: 4, modified: false, experimental: false, metalFX: false))
+    }
+
+    func testABuildThatDiffersFromTheMetalFXSettingCanBeUpdated() {
+        let store = ContentStore(root: temp())
+        let bundle = Toolchain.bundleId(target: "moss", prefix: "com.example")
+        func status(_ installed: String, experimental: Bool? = nil, metalFX: Bool?) -> GameStatus.OnDevice {
+            GameStatus.of(recipe: recipe(), store: store,
+                          apps: [InstalledApp(bundleIdentifier: bundle, name: "Moss", version: "1.0", bundleVersion: installed)],
+                          toolchainVersion: 4, bundlePrefix: "com.example", experimental: experimental, metalFX: metalFX).onDevice
+        }
+        XCTAssertEqual(status("7.4", metalFX: true), .olderToolchain(stamp: "1.0 (7.4)"))
+        XCTAssertEqual(status("7.4.4", metalFX: true), .current(stamp: "1.0 (7.4.4)"))
+        XCTAssertEqual(status("7.4.4", metalFX: false), .olderToolchain(stamp: "1.0 (7.4.4)"))
+        XCTAssertEqual(status("7.4", metalFX: false), .current(stamp: "1.0 (7.4)"))
+        // Beide Einstellungen zugleich: jede für sich verglichen.
+        XCTAssertEqual(status("7.4.6", experimental: true, metalFX: true), .current(stamp: "1.0 (7.4.6)"))
+        XCTAssertEqual(status("7.4.2", experimental: true, metalFX: true), .olderToolchain(stamp: "1.0 (7.4.2)"))
+        // Keine Toolchain, die es kann: kein Vergleich, das Urteil bleibt das bisherige.
+        XCTAssertEqual(status("7.4.4", metalFX: nil), .current(stamp: "1.0 (7.4.4)"))
+    }
+
+    func testOnlyAToolchainWithTheCompositorSwitchAndAnInstallDefaultSupportsMetalFX() throws {
+        let dir = temp()
+        let toolchain = try plant(manifest(4), at: dir)
+        let sources = dir.appendingPathComponent("visionos/Sources")
+        try FileManager.default.createDirectory(at: sources, withIntermediateDirectories: true)
+        try "KLEPTON_TEST_ON".write(to: dir.appendingPathComponent("visionos/gen_xcodeproj.py"), atomically: true, encoding: .utf8)
+        XCTAssertFalse(toolchain.supportsMetalFX)
+        // Klepton PR #2 allein: der Schalter im Spiel, aber nichts, womit eine Installation ihn vorbelegt.
+        try "UserDefaults.standard.bool(forKey: \"klepton.metalfxUpscale\")"
+            .write(to: sources.appendingPathComponent("KleptonCompositor.swift"), atomically: true, encoding: .utf8)
+        XCTAssertFalse(toolchain.supportsMetalFX)
+        try "onFromInstall.contains(\"\(Toolchain.metalFXSwitch)\")"
+            .write(to: sources.appendingPathComponent("KleptonTuning.swift"), atomically: true, encoding: .utf8)
+        XCTAssertTrue(toolchain.supportsMetalFX)
+        // Ohne KLEPTON_TEST_ON kommt der Name nicht ins Spiel.
+        try "".write(to: dir.appendingPathComponent("visionos/gen_xcodeproj.py"), atomically: true, encoding: .utf8)
+        XCTAssertFalse(toolchain.supportsMetalFX)
+    }
+
+    func testAnInstallRequestWithoutTheFieldHasNoMetalFX() throws {
+        var request = InstallRequest(toolchain: "/tmp/t")
+        let old = try JSONSerialization.jsonObject(with: JSONEncoder().encode(request)) as? [String: Any]
+        XCTAssertNil(old?["metalFX"])
+        XCTAssertNil(try JSONDecoder().decode(InstallRequest.self, from: JSONEncoder().encode(request)).metalFX)
+        request.metalFX = true
+        XCTAssertEqual(try JSONDecoder().decode(InstallRequest.self, from: JSONEncoder().encode(request)).metalFX, true)
+    }
+
     // MARK: Was zur Wahl steht
 
     func testOptionsOfferOnlyWhatCanBuildTheRecipe() throws {

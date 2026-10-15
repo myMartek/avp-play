@@ -110,6 +110,9 @@ public struct InstallRequest: Codable, Sendable, Equatable {
     /// ja, außer eine ausdrücklich genannte Kennung weicht von der der bisherigen eigentlichen Installation ab – oder,
     /// gibt es noch keine, von der üblichen Kennung des Teams. Das ist eine Testkopie neben dem Spiel.
     public var live: Bool?
+    /// Das MetalFX-Hochskalieren (`Toolchain.metalFXSwitch`) in diesem Bau von Anfang an einschalten. Ohne Angabe:
+    /// nein.
+    public var metalFX: Bool?
 
     public init(toolchain: String) { self.toolchain = toolchain }
 }
@@ -513,9 +516,18 @@ public struct Installer: Sendable {
                    : L("Experimental: this toolchain cannot switch the new pose and audio implementations on yet; the game is built as usual.",
                        "Experimentell: Diese Toolchain kann die neue Pose- und Audio-Implementierung noch nicht einschalten; das Spiel wird wie üblich gebaut."))
         }
+        let metalFX = request.metalFX == true
+        if metalFX {
+            report(toolchain.supportsMetalFX
+                   ? L("MetalFX: upscaling is on from the start in this build. It sharpens the picture only where the game's resolution is set below 100%, and mainly in Vulkan games that talk to Meta's own interface (not in games that come through OpenXR, nor in GL games while their foveated rendering is on); in the game it can be switched off under Settings › Rendering.",
+                       "MetalFX: Das Hochskalieren ist in diesem Bau von Anfang an eingeschaltet. Es schärft das Bild nur, wo die Auflösung des Spiels unter 100 % steht, und vor allem in Vulkan-Spielen, die über Metas eigene Schnittstelle laufen (nicht in Spielen, die über OpenXR kommen, und nicht in GL-Spielen, solange ihr Foveated Rendering an ist); im Spiel abschaltbar unter Einstellungen › Rendering.")
+                   : L("MetalFX: this toolchain cannot switch upscaling on from the start yet; the game is built as usual.",
+                       "MetalFX: Diese Toolchain kann das Hochskalieren noch nicht von Anfang an einschalten; das Spiel wird wie üblich gebaut."))
+        }
         try toolchain.buildAndInstall(recipe: recipe, team: team, device: device, bundleId: bundle, log: log,
                                       extraEnvironment: TreeStore(store: store).toolchainEnvironment(recipe: recipe),
-                                      experimental: experimental, displayName: request.displayName, displaySuffix: request.displaySuffix)
+                                      experimental: experimental, metalFX: metalFX,
+                                      displayName: request.displayName, displaySuffix: request.displaySuffix)
         report(String(format: L("Built and installed (%.0f s).", "Gebaut und installiert (%.0f s)."), Date().timeIntervalSince(started)))
         // Womit signiert wurde und bis wann: Daran erinnert die App rechtzeitig vor dem Ablauf.
         var record = SigningRecord(team: team, free: free, installed: Date(), expires: toolchain.signingExpiry(recipe: recipe),

@@ -74,6 +74,16 @@ are already installed then show "Update available", and **Update All** on the Ga
 again after you turn the setting off. Saved games and data are kept. A game with a toolchain of its own choosing
 is left as it is, and renewing a signature keeps what a build had.
 
+**MetalFX upscaling** (prepared; takes effect with a toolchain that has it). Below 100% *Resolution* a game draws
+a smaller picture that is stretched to the display. Klepton's compositor can do that stretch with Apple's MetalFX
+spatial scaler instead of a linear one – a sharper picture for a little graphics time – and has a switch for it in
+the game (*Settings › Rendering › MetalFX upscaling*, off). *Settings › Experimental › MetalFX* in this app switches
+it on from the start in every game you install or update, the same way as the switch above; off, the default,
+changes nothing. Every game starts at 100%, where it has no effect; it works mainly in Vulkan games that talk to
+Meta's own interface (Moss, for instance). Games that come through OpenXR, GL games while their foveated rendering is
+on (the default), and anything that cannot be scaled safely keep the linear stretch. The bundled toolchain 507 does
+not have it yet; until one does, the setting says so and games are built as usual.
+
 The app speaks English and German. It follows macOS; you can choose a language in its settings (⌘,).
 
 **Your disk space.** The page *Data* lists what has been downloaded, game by game and down to the file, and

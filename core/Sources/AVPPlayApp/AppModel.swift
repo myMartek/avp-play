@@ -243,6 +243,18 @@ final class AppModel: ObservableObject {
         guard let toolchain, toolchain.supportsExperimental else { return nil }
         return UserDefaults.standard.bool(forKey: experimentalKey)
     }
+    /// MetalFX: In jedem Spiel, das installiert oder aktualisiert wird, ist das Hochskalieren des Compositors von
+    /// Anfang an eingeschaltet (`Toolchain.metalFXSwitch`, Klepton PR #2). Aus ist das bisherige Verhalten: Das Spiel
+    /// startet mit dem linearen Strecken, und der Schalter im Spiel entscheidet. Wie bei der experimentellen
+    /// Einstellung gilt ein Bau, der es anders hält, als aktualisierbar.
+    @AppStorage(AppModel.metalFXKey) var metalFXUpscaling = false
+    nonisolated static let metalFXKey = "metalFXUpscaling"
+    /// Was `GameStatus` von einem aktuellen Bau zum MetalFX-Hochskalieren erwartet; `nil` ohne eine Toolchain, die es
+    /// kann.
+    nonisolated static func metalFXExpected(toolchain: Toolchain?) -> Bool? {
+        guard let toolchain, toolchain.supportsMetalFX else { return nil }
+        return UserDefaults.standard.bool(forKey: metalFXKey)
+    }
     /// Für welche Spiele eine andere Toolchain als die neueste gewählt ist (siehe `ToolchainChoices`).
     @Published var toolchainChoices = ToolchainChoices.load()
     /// Die Pakete früherer Veröffentlichungen auf GitHub; `nil`, solange niemand danach gefragt hat.
@@ -261,6 +273,8 @@ final class AppModel: ObservableObject {
     /// Was ein aktueller Bau von der experimentellen Einstellung tragen soll; `nil`, solange keine Toolchain da
     /// ist, die das kann – dann wird nicht verglichen.
     var experimentalExpected: Bool? { didSet { invalidateDerived() } }
+    /// Dasselbe für das MetalFX-Hochskalieren.
+    var metalFXExpected: Bool? { didSet { invalidateDerived() } }
     /// Wie weit das Kopieren aufs Gerät im laufenden Auftrag ist.
     @Published var copyProgress: [String: InstallProgress] = [:]
     /// Eine neuere veröffentlichte Fassung, falls es eine gibt.
@@ -432,7 +446,7 @@ final class AppModel: ObservableObject {
         // (Gerät fragen, jeden Ordner im Bestand zählen) dauert Sekunden und ändert an den anderen Spielen nichts.
         let id = game.id, catalog = game.catalog
         let paths = paths, apps = installedApps, revision = toolchainRevision, prefix = bundlePrefix, drafts = draftsDirectory
-        let pin = toolchainChoices.games[id], experimental = experimentalExpected
+        let pin = toolchainChoices.games[id], experimental = experimentalExpected, metalFX = metalFXExpected
         Task.detached(priority: .userInitiated) {
             var fresh: Game?
             if let recipes = paths.recipes {
@@ -442,7 +456,7 @@ final class AppModel: ObservableObject {
                     let active = StoreUpdate.resolve([tested], variants: variants, sources: sources, drafts: drafts, choices: choices).first ?? tested
                     fresh = Probe.game(active, draft: false, tested: tested, variants: variants, sources: sources, paths: paths,
                                        apps: apps, toolchainRevision: revision, pin: pin, bundlePrefix: prefix,
-                                       experimental: experimental)
+                                       experimental: experimental, metalFX: metalFX)
                     fresh?.catalog = catalog
                 }
             }
@@ -879,6 +893,7 @@ final class AppModel: ObservableObject {
         installedApps = s.apps
         toolchainRevision = s.toolchainRevision
         experimentalExpected = s.experimentalExpected
+        metalFXExpected = s.metalFXExpected
         toolchainChoices = s.toolchainChoices
         games = s.games
         loadOwnCatalogEntries()
@@ -1270,6 +1285,7 @@ final class AppModel: ObservableObject {
         if steps.contains(.build) { request.restoreSaves = chosen.restoreSaves ?? true }
         // Die experimentelle Einstellung gilt für jeden Bau, den dieses Programm anstößt.
         if steps.contains(.build), experimentalImplementations { request.experimental = true }
+        if steps.contains(.build), metalFXUpscaling { request.metalFX = true }
         // Ein eigenes Präfix oder das eines kostenlosen Teams: dann steht die Kennung im Auftrag.
         let prefix = bundlePrefix
         if prefix != Toolchain.defaultBundlePrefix() { request.bundleId = "\(prefix).\(game.recipe.toolchain.target)" }
