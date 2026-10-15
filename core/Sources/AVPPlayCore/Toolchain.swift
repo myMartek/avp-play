@@ -264,8 +264,11 @@ public struct Toolchain: Sendable {
     /// die Spieldaten überträgt anschließend das ergänzende Kopieren.
     /// - Parameter experimental: die experimentellen Implementierungen von Anfang an einschalten. Wirkt nur, wo
     ///   die Toolchain das kann (`supportsExperimental`); der Stempel des Baus sagt, ob es geschehen ist.
+    /// - Parameters displayName, displaySuffix: der Name der App auf dem Gerät statt des üblichen bzw. ein Zusatz
+    ///   dazu (`displayEnvironment`); ohne Angabe bleibt er, wie er war.
     public func buildAndInstall(recipe: Recipe, team: String, device: Device, bundleId: String?, log: URL,
-                                extraEnvironment: [String: String] = [:], experimental: Bool = false) throws {
+                                extraEnvironment: [String: String] = [:], experimental: Bool = false,
+                                displayName: String? = nil, displaySuffix: String? = nil) throws {
         guard team.count == 10, team.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber) }) else {
             throw RecipeError.invalid(L("team ID '\(team)' (expected: 10 characters)", "Team-ID '\(team)' (erwartet: 10 Zeichen)"))
         }
@@ -299,6 +302,7 @@ public struct Toolchain: Sendable {
             env["KLEPTON_LOW_LATENCY"] = "0"
         }
         env.merge(Toolchain.genericEnvironment(recipe: recipe)) { _, new in new }
+        env.merge(Toolchain.displayEnvironment(name: displayName, suffix: displaySuffix)) { _, new in new }
         env.merge(extraEnvironment) { _, new in new }
 
         // Erst eine einzelne Signatur: Fragt macOS nach dem Schlüssel, dann einmal und nicht dutzendfach.

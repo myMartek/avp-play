@@ -41,6 +41,22 @@ extension Toolchain {
         return ["KLEPTON_GENERIC_TARGET": recipe.toolchain.target, "KLEPTON_GENERIC_DISPLAY": String(recipe.title.prefix(60))]
     }
 
+    /// Der Name der App auf dem Gerät, wenn er vom üblichen abweichen soll – etwa für eine Testkopie unter eigener
+    /// Kennung: `name` ersetzt ihn ganz (`KLEPTON_DISPLAY_OVERRIDE`), `suffix` wird angehängt
+    /// (`KLEPTON_DISPLAY_SUFFIX`, zum Beispiel „ (Test)“). Leere Angaben zählen als keine; ohne beide bleibt alles,
+    /// wie die Toolchain es macht.
+    public static func displayEnvironment(name: String?, suffix: String?) -> [String: String] {
+        var env: [String: String] = [:]
+        if let name, !name.trimmingCharacters(in: .whitespaces).isEmpty { env["KLEPTON_DISPLAY_OVERRIDE"] = name }
+        if let suffix, !suffix.isEmpty { env["KLEPTON_DISPLAY_SUFFIX"] = suffix }
+        return env
+    }
+
+    /// Taugt der Text als Name (oder Namenszusatz) der App? Höchstens 60 Zeichen, keine Steuerzeichen.
+    public static func isValidDisplayText(_ text: String) -> Bool {
+        text.count <= 60 && !text.unicodeScalars.contains { CharacterSet.controlCharacters.contains($0) }
+    }
+
     /// Wo das Spiel seine Haupt-Datendatei sucht, relativ zum Datenordner der App – gefragt bei der Toolchain,
     /// die es am entpackten APK erkennt (Versuch) oder aus ihrer Tabelle weiß. `nil`, wenn sie das Target nicht kennt.
     public func obbDestination(recipe: Recipe) -> String? {

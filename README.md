@@ -270,6 +270,27 @@ The repository:
 | `core/Sources/avpplay` | a command-line tool with the same functions |
 | `recipes/` | the recipes |
 
+A test copy of a game can sit next to the installed one: give it its own identifier and a name to tell it apart,
+for example `avpplay install moss --team <team ID> --bundle-id com.example.test.moss --display-suffix " (Test)"`
+(or `--display-name <name>` for a whole new name). Signatures are remembered per identifier
+(`.signing/<identifier>.json` in the game's folder), so the test copy doesn't replace the game's own; `renew`,
+`saves` and `servers push` without `--bundle-id` keep using the game's own installation (`.signing.json`, as before).
+
+### A test copy next to the installed game (command line only)
+
+The command-line tool can install a second copy of a game under its own bundle ID, with its own name on the
+Vision Pro, without touching the installed game:
+
+```bash
+avpplay install <game> --team <ID> --bundle-id com.example.test.<target> --display-suffix " (Test)"
+```
+
+`--display-name <name>` replaces the app's name entirely, `--display-suffix <text>` appends to it; both are
+passed to the toolchain as `KLEPTON_DISPLAY_OVERRIDE` / `KLEPTON_DISPLAY_SUFFIX`. Left out, the name stays as
+usual. The signature of each installation is remembered per bundle ID (`.signing/<bundle ID>.json` in the
+game's folder); `.signing.json` stays the record of the installed game itself, so `renew`, `saves` and
+`servers push` without `--bundle-id` keep working on it. The Mac app has no setting for any of this.
+
 The format of the recipes is described in [docs/recipes.md](docs/recipes.md); how to report a problem or
 contribute in [CONTRIBUTING.md](CONTRIBUTING.md). Code comments are mostly German; everything a user sees is in
 English and German.

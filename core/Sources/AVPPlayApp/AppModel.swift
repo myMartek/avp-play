@@ -1210,6 +1210,8 @@ final class AppModel: ObservableObject {
         // Ein eigenes Präfix oder das eines kostenlosen Teams: dann steht die Kennung im Auftrag.
         let prefix = bundlePrefix
         if prefix != Toolchain.defaultBundlePrefix() { request.bundleId = "\(prefix).\(game.recipe.toolchain.target)" }
+        // Was dieses Programm installiert, ist immer die eigentliche Installation – auch nach einem neuen Präfix.
+        request.live = true
         do {
             // Eingefroren wird der Stand, mit dem der Auftrag beginnt. Seinen Platz in der Reihe bekommt er dabei.
             let job = try paths.jobs.enqueue(Job(recipe: recipe, request: request, steps: steps, toolchainCommit: toolchain?.commit() ?? ""))

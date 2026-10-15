@@ -102,6 +102,14 @@ public struct InstallRequest: Codable, Sendable, Equatable {
     /// Die experimentellen Implementierungen (`Toolchain.experimentalSwitches`) in diesem Bau von Anfang an
     /// einschalten. Ohne Angabe: nein.
     public var experimental: Bool?
+    /// Der Name der App auf dem Gerät statt des üblichen (`KLEPTON_DISPLAY_OVERRIDE`). Ohne Angabe: der übliche.
+    public var displayName: String?
+    /// Ein Zusatz zum Namen der App, etwa „ (Test)“ (`KLEPTON_DISPLAY_SUFFIX`). Ohne Angabe: keiner.
+    public var displaySuffix: String?
+    /// Ob die Signatur dieser Installation als die der eigentlichen gilt (`SigningRecord.save(live:)`). Ohne Angabe:
+    /// ja, außer eine ausdrücklich genannte Kennung weicht von der der bisherigen eigentlichen Installation ab –
+    /// eine Testkopie neben dem Spiel.
+    public var live: Bool?
 
     public init(toolchain: String) { self.toolchain = toolchain }
 }
@@ -507,12 +515,15 @@ public struct Installer: Sendable {
         }
         try toolchain.buildAndInstall(recipe: recipe, team: team, device: device, bundleId: bundle, log: log,
                                       extraEnvironment: TreeStore(store: store).toolchainEnvironment(recipe: recipe),
-                                      experimental: experimental)
+                                      experimental: experimental, displayName: request.displayName, displaySuffix: request.displaySuffix)
         report(String(format: L("Built and installed (%.0f s).", "Gebaut und installiert (%.0f s)."), Date().timeIntervalSince(started)))
         // Womit signiert wurde und bis wann: Daran erinnert die App rechtzeitig vor dem Ablauf.
-        let record = SigningRecord(team: team, free: free, installed: Date(), expires: toolchain.signingExpiry(recipe: recipe),
+        var record = SigningRecord(team: team, free: free, installed: Date(), expires: toolchain.signingExpiry(recipe: recipe),
                                    bundleId: bundle)
-        record.save(store: store, recipe: recipe)
+        record.displayName = request.displayName
+        record.displaySuffix = request.displaySuffix
+        // Ohne ausdrückliche Kennung ist es immer die eigentliche Installation; mit einer entscheidet `save`.
+        record.save(store: store, recipe: recipe, live: request.live ?? (request.bundleId == nil ? true : nil))
         if free {
             let until = record.expires.map { DateFormatter.localizedString(from: $0, dateStyle: .medium, timeStyle: .short) }
             report(until.map { L("Signed with a free Apple team: the game opens until \($0). Install it again before then to renew it; its data stays.",

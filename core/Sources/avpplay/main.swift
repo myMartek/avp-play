@@ -130,6 +130,10 @@ avpplay – command line for the AVP Play core library
   avpplay job resume <job>                     resume an interrupted or stopped job
   avpplay job show|cancel <job>                show progress / cancel            avpplay jobs   all jobs
              --device <UDID>  --bundle-id <ID>  --toolchain <folder>  --no-addons
+             --display-name <name>   name of the app on the Vision Pro instead of the game's usual one
+             --display-suffix <text> append this to the app's name, e.g. " (Test)" – with --bundle-id for a test copy
+                                     next to the installed game; its signature is kept apart and doesn't replace
+                                     the game's (renew, saves and servers keep using the game's own installation)
              --source steam          the game as bought on Steam instead of from the Meta Store (where the project has a
                                      recipe for it); needs --steam-account <name>
              --icon <image file>     use your own app icon (takes priority over everything else)
@@ -192,6 +196,10 @@ avpplay – Kommandozeile zur Kern-Bibliothek von AVP Play
   avpplay job resume <Auftrag>                 unterbrochenen oder angehaltenen Auftrag fortsetzen
   avpplay job show|cancel <Auftrag>            Stand zeigen / abbrechen          avpplay jobs   alle Aufträge
              --device <UDID>  --bundle-id <ID>  --toolchain <Ordner>  --no-addons
+             --display-name <Name>   Name der App auf der Vision Pro statt des üblichen des Spiels
+             --display-suffix <Text> das an den Namen der App anhängen, z. B. " (Test)" – mit --bundle-id für eine Testkopie
+                                     neben dem installierten Spiel; ihre Signatur wird getrennt gemerkt und ersetzt nicht
+                                     die des Spiels (renew, saves und servers bleiben bei dessen eigener Installation)
              --source steam          das Spiel aus dem Steam-Kauf statt aus dem Meta-Store (wo das Projekt ein Rezept
                                      dafür führt); braucht --steam-account <Name>
              --icon <Bilddatei>      eigenes App-Icon hinterlegen (hat Vorrang vor allem anderen)
@@ -215,7 +223,7 @@ Allgemein: --account <Name>    Eintrag im Schlüsselbund (Standard: default)
 }
 
 let valued: Set<String> = ["account", "steam-account", "source", "store", "recipes", "locale", "with", "only", "interval", "from", "to", "force", "name",
-                           "team", "device", "bundle-id", "toolchain", "icon", "tool", "jobs", "toolchains", "saves"]
+                           "team", "device", "bundle-id", "display-name", "display-suffix", "toolchain", "icon", "tool", "jobs", "toolchains", "saves"]
 let o = Options(Array(CommandLine.arguments.dropFirst()), valued: valued)
 guard let command = o.positional.first else { print(usage()); exit(0) }
 OtherSources.use(recipes: recipesDirectory(o))
@@ -288,6 +296,14 @@ func installRequest(_ o: Options, recipe id: String? = nil) -> InstallRequest {
     request.team = o.value("team")
     request.device = o.value("device")
     request.bundleId = o.value("bundle-id")
+    for key in ["display-name", "display-suffix"] {
+        if let text = o.value(key), !Toolchain.isValidDisplayText(text) {
+            fail(L("--\(key): at most 60 characters, no line breaks or other control characters.",
+                   "--\(key): höchstens 60 Zeichen, keine Zeilenumbrüche oder anderen Steuerzeichen."))
+        }
+    }
+    request.displayName = o.value("display-name").flatMap { $0.trimmingCharacters(in: .whitespaces).isEmpty ? nil : $0 }
+    request.displaySuffix = o.value("display-suffix").flatMap { $0.isEmpty ? nil : $0 }
     request.steamAccount = o.value("steam-account")
     request.customIcon = o.value("icon").map { URL(fileURLWithPath: $0).standardizedFileURL.path }
     request.storeArt = !o.flags.contains("no-store-art")

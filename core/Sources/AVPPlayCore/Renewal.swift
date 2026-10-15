@@ -198,7 +198,7 @@ public enum Renewal {
                 guard var current = SigningRecord.load(store: store, recipe: recipe) else { return }
                 current.renewalTried = now
                 current.renewalNote = note
-                current.save(store: store, recipe: recipe)
+                current.save(store: store, recipe: recipe, live: true)
             }
             guard let bundle = installedBundle(recipe: recipe, record: record, apps: apps),
                   let app = apps.first(where: { $0.bundleIdentifier == bundle }) else {
@@ -224,6 +224,10 @@ public enum Renewal {
             request.device = device.udid
             request.bundleId = bundle
             request.resign = true
+            // Erneuert wird die eigentliche Installation, mit dem Namen, den sie bekommen hat.
+            request.live = true
+            request.displayName = record.displayName
+            request.displaySuffix = record.displaySuffix
             request.storeArt = false
             request.addons = false
             // Ein neu signierter Bau bleibt, was er war: Hatte er die experimentellen Implementierungen an, dann
