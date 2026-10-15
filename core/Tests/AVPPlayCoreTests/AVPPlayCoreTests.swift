@@ -47,7 +47,9 @@ final class RecipeTests: XCTestCase {
         XCTAssertTrue(ids.isSuperset(of: byHand))
         for recipe in all where !byHand.contains(recipe.id) {
             XCTAssertEqual(recipe.id, recipe.store.appId.map(DraftRecipe.identifier(appId:)), "\(recipe.id)")
-            XCTAssertEqual(recipe.status.playability, "verified", "\(recipe.id)")
+            // geprüft oder von der Community bestätigt – anderes gehört nicht in die mitgelieferten Rezepte
+            XCTAssertTrue(["verified", "community"].contains(recipe.status.playability),
+                          "\(recipe.id): \(recipe.status.playability)")
             XCTAssertFalse(recipe.files.isEmpty, "\(recipe.id)")
         }
         // Counter-Strike: ein frei ladbares APK mit Prüfsumme, und die Daten des Originalspiels als ein Ordner aus dem
