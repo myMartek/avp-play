@@ -238,6 +238,9 @@ struct TrustBadge: View {
 
     var body: some View {
         let (text, symbol, color, help): (String, String, Color, String) = {
+            if game.flatApp {
+                return (L("2D App", "2D-App"), "rectangle.on.rectangle", .gray, InstallError.notAVRGame.description)
+            }
             switch game.trust {
             case .verified:
                 return (L("Verified", "Geprüft"), "checkmark.seal.fill", .blue,

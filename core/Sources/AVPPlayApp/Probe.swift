@@ -172,6 +172,7 @@ enum Probe {
             g.sources = [shipped] + otherSources.compactMap(\.source)
         }
         g.otherSourceBuilds = foreign
+        g.flatApp = FlatApp.isMarked(store: paths.store, recipe: r)
         if let tested, !switched {
             g.verifiedVersions = [GameVersion(versionCode: tested.versionCode, versionName: tested.versionName, kind: .verified, isDefault: true)]
                 + own.map { GameVersion(versionCode: $0.versionCode, versionName: $0.versionName, kind: .verified, isDefault: false) }

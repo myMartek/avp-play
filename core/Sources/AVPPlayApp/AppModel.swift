@@ -26,6 +26,8 @@ struct Game: Identifiable {
     var sources: [Recipe.Source] = []
     /// Die Versionscodes, unter denen dasselbe Spiel aus einer anderen Kaufquelle installiert wäre.
     var otherSourceBuilds: [Int] = []
+    /// Ein Versuch, dessen APK sich als 2D-App herausgestellt hat (`FlatApp`), kein VR-Spiel.
+    var flatApp = false
     var id: String { recipe.id }
     /// Sind die Dateien des Spiels bekannt? Bei einem Platzhalter noch nicht.
     var prepared: Bool { !draft || !recipe.files.isEmpty }

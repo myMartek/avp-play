@@ -15,6 +15,8 @@ public enum InstallError: Error, CustomStringConvertible, Equatable {
     case notANativeApp(String)
     /// Das APK bringt nur Programmcode für einen anderen Prozessor mit (ein reines 32-Bit-Spiel).
     case wrongArchitecture(String, [String])
+    /// Die App ist eine 2D-App (ein Panel unter Horizon OS), kein VR-Spiel (`FlatApp`).
+    case notAVRGame
     /// Für ein Spiel aus Steam fehlt der Name des Steam-Kontos, mit dem Valves Werkzeug angemeldet ist.
     case steamAccountMissing
     /// Auf dem Gerät liegt dasselbe Spiel aus einer anderen Kaufquelle (Meta statt Steam oder umgekehrt).
@@ -49,6 +51,9 @@ public enum InstallError: Error, CustomStringConvertible, Equatable {
             let list = found.joined(separator: ", ")
             return L("\(title) cannot run on the Vision Pro. This build is a 32-bit game (it only contains code for \(list)); the Vision Pro's processor runs 64-bit code only, and this tool translates 64-bit Quest games. Nothing can be changed about that from here – only a 64-bit build from the developer would work. The files already downloaded can be removed on the game's page.",
                      "\(title) kann auf der Vision Pro nicht laufen. Dieser Build ist ein 32-Bit-Spiel (er enthält nur Code für \(list)); der Prozessor der Vision Pro führt ausschließlich 64-Bit-Code aus, und dieses Werkzeug übersetzt 64-Bit-Spiele der Quest. Daran lässt sich von hier aus nichts ändern – nur ein 64-Bit-Build des Entwicklers würde gehen. Die schon geladenen Dateien lassen sich auf der Seite des Spiels entfernen.")
+        case .notAVRGame:
+            return L("This is a 2D app, not a VR game. AVP Play only supports immersive games.",
+                     "Das ist eine 2D-App, kein VR-Spiel. AVP Play unterstützt nur immersive Spiele.")
         case .freeTeamFull(let title, let installed):
             let list = installed.joined(separator: ", ")
             return L("\(title) was not installed: a free Apple account may have only \(AppleMessages.freeAppsPerDevice) apps on the Vision Pro at a time, and these are already there: \(list). Remove one on the headset (press and hold its icon, then “Remove App”), then choose “Resume”. A paid developer membership has no such limit. Before you remove a game, let AVP Play fetch its saved games (the game's page, “Saved Games”): they stay on this Mac and are put back when you install the game again.",
@@ -421,6 +426,10 @@ public struct Installer: Sendable {
                          "Es fehlt noch, und das stellst du selbst bereit, bevor das Spiel gebaut werden kann: \(open.joined(separator: ", ")). Auf der Seite des Spiels steht, woher es kommt."))
             }
         }
+        // Eine 2D-App, deren APK schon im Bestand liegt: nichts weiter laden.
+        if let apk = plan.first(where: { $0.file.role == "apk" && $0.action == .keep }) {
+            try FlatApp.refuse(apk: store.url(for: apk.file, in: recipe), recipe: recipe, store: store)
+        }
         let todo = plan.filter { $0.action != .keep && $0.action != .needsUser }
         let kept = plan.filter { $0.action == .keep }.count
         guard !todo.isEmpty else {
@@ -454,11 +463,13 @@ public struct Installer: Sendable {
         }
         // Sobald das APK da ist, steht fest, ob es überhaupt 64-Bit-Code enthält. Wenn nicht, wird nichts weiter
         // geladen – bei République VR wären das 3,4 GB für ein Spiel gewesen, das nie starten kann.
-        let title = recipe.title
+        // Ebenso, ob es eine 2D-App ist (Spotify, WhatsApp): die kann nie laufen.
+        let title = recipe.title, recipe = self.recipe, store = self.store
         fetcher.afterFile = { file, url in
             guard file.role == "apk" else { return }
             let found = ApkUnpacker.architectures(of: url)
             if ApkUnpacker.lacksArm64(found) { throw InstallError.wrongArchitecture(title, found.sorted()) }
+            try FlatApp.refuse(apk: url, recipe: recipe, store: store)
         }
         let summary = try await fetcher.run(plan, recipe: recipe) { report("  " + $0) }
         report(L("Downloaded: \(summary.downloaded) files, \(summary.kept) were already there"
@@ -486,6 +497,7 @@ public struct Installer: Sendable {
         if let apk = recipe.files.first(where: { $0.role == "apk" }) {
             let found = ApkUnpacker.architectures(of: store.url(for: apk, in: recipe))
             if ApkUnpacker.lacksArm64(found) { throw InstallError.wrongArchitecture(recipe.title, found.sorted()) }
+            try FlatApp.refuse(apk: store.url(for: apk, in: recipe), recipe: recipe, store: store)
         }
         try await prepare(toolchain)
         // Ein Versuch mit einer App, die gar kein natives Programm ist, würde gebaut, installiert und als fertig
