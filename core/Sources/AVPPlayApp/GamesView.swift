@@ -888,6 +888,14 @@ struct GameDetail: View {
                     : L("Installed with MetalFX upscaling on from the start; the setting is off now – “Update” builds it without; saved games and data are kept.",
                         "Installiert mit von Anfang an eingeschaltetem MetalFX-Hochskalieren; die Einstellung ist jetzt aus – „Aktualisieren“ baut es ohne; Spielstände und Daten bleiben.")
             }
+            if let built = game.status.builtWith, let wanted = model.xrPredictionExpected(for: game.id), built.xrPrediction != wanted,
+               built.toolchain >= (model.toolchainRevision ?? 0) {
+                return wanted
+                    ? L("Installed, without the XR prediction this game's Test option asks for – “Update” builds it with prediction on; saved games and data are kept.",
+                        "Installiert, ohne die XR-Vorhersage, die die Test-Option dieses Spiels verlangt – „Aktualisieren“ baut es mit eingeschalteter Vorhersage; Spielstände und Daten bleiben.")
+                    : L("Installed with XR prediction on; this game's Test option is off now – “Update” builds it without; saved games and data are kept.",
+                        "Installiert mit eingeschalteter XR-Vorhersage; die Test-Option dieses Spiels ist jetzt aus – „Aktualisieren“ baut es ohne; Spielstände und Daten bleiben.")
+            }
             if let built = game.status.builtWith, built.modified {
                 return L("Installed, built with toolchain \(Toolchain.name(version: built.toolchain, modified: true)). “Update” replaces this build with one from the newest toolchain, without the changes of the modified one (see “Toolchain” below); saved games and data are kept.",
                          "Installiert, gebaut mit Toolchain \(Toolchain.name(version: built.toolchain, modified: true)). „Aktualisieren“ ersetzt diesen Bau durch einen aus der neuesten Toolchain, ohne die Änderungen der modifizierten (siehe unten unter „Toolchain“); Spielstände und Daten bleiben.")

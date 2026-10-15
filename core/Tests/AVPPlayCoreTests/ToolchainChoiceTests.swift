@@ -444,6 +444,29 @@ final class ToolchainChoiceTests: XCTestCase {
         }
     }
 
+    func testABuildThatDiffersFromTheGamesXRPredictionOptionCanBeUpdated() {
+        let store = ContentStore(root: temp())
+        let bundle = Toolchain.bundleId(target: "moss", prefix: "com.example")
+        func status(_ installed: String, metalFX: Bool? = nil, xrPrediction: Bool?,
+                    pin: ToolchainChoices.Pin? = nil) -> GameStatus.OnDevice {
+            GameStatus.of(recipe: recipe(), store: store,
+                          apps: [InstalledApp(bundleIdentifier: bundle, name: "Moss", version: "1.0", bundleVersion: installed)],
+                          toolchainVersion: 4, pin: pin, bundlePrefix: "com.example", metalFX: metalFX,
+                          xrPrediction: xrPrediction).onDevice
+        }
+        XCTAssertEqual(status("7.4", xrPrediction: true), .olderToolchain(stamp: "1.0 (7.4)"))
+        XCTAssertEqual(status("7.4.128", xrPrediction: true), .current(stamp: "1.0 (7.4.128)"))
+        XCTAssertEqual(status("7.4.128", xrPrediction: false), .olderToolchain(stamp: "1.0 (7.4.128)"))
+        XCTAssertEqual(status("7.4", xrPrediction: false), .current(stamp: "1.0 (7.4)"))
+        // Zusammen mit MetalFX: jede für sich verglichen.
+        XCTAssertEqual(status("7.4.172", metalFX: true, xrPrediction: true), .current(stamp: "1.0 (7.4.172)"))
+        XCTAssertEqual(status("7.4.44", metalFX: true, xrPrediction: true), .olderToolchain(stamp: "1.0 (7.4.44)"))
+        // Keine Toolchain, die es kann, oder eine für das Spiel gewählte: kein Vergleich.
+        XCTAssertEqual(status("7.4.128", xrPrediction: nil), .current(stamp: "1.0 (7.4.128)"))
+        XCTAssertEqual(status("7.4", xrPrediction: true, pin: .init(version: 4, commit: "abc")),
+                       .current(stamp: "1.0 (7.4)"))
+    }
+
     func testRenewalKeepsTheXRPrediction() {
         func renewed(_ stamp: String) -> InstallRequest {
             var request = InstallRequest(toolchain: "/tmp/t")

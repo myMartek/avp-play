@@ -164,7 +164,8 @@ extension AppModel {
             out.append(Game(recipe: recipe,
                             status: GameStatus.of(recipe: recipe, store: paths.store, apps: installedApps, toolchainVersion: toolchainRevision,
                                                   pin: toolchainChoices.games[recipe.id], bundlePrefix: prefix,
-                                                  experimental: experimentalExpected, metalFX: metalFXExpected),
+                                                  experimental: experimentalExpected, metalFX: metalFXExpected,
+                                                  xrPrediction: xrPredictionExpected(for: recipe.id)),
                             cover: nil, catalog: entry, draft: true))
         }
         allGames = out
