@@ -27,6 +27,21 @@ public enum FailureKind: String, Codable, Sendable {
     case unsupported
     case other
 
+    /// Kann „Fortsetzen“ etwas ändern? Bei einer App, die grundsätzlich nicht laufen kann (2D-App, 32-Bit, keine
+    /// native App), nicht – dann bietet weder die Oberfläche noch die Kommandozeile es an.
+    public var resumable: Bool { self != .unsupported }
+
+    /// Was die Kommandozeile sagt, wenn ein Auftrag an `error` angehalten ist: der Fehler und, wo es etwas bringt,
+    /// wie es weitergeht.
+    public static func stopNotice(_ error: Error, job: String) -> String {
+        guard of(error).resumable else {
+            return L("\(error)\nJob \(job) stopped. There is nothing to resume.",
+                     "\(error)\nAuftrag \(job) angehalten. Hier gibt es nichts fortzusetzen.")
+        }
+        return L("\(error)\nJob \(job) stopped. Resume it with: avpplay job resume \(job)",
+                 "\(error)\nAuftrag \(job) angehalten. Fortsetzen mit: avpplay job resume \(job)")
+    }
+
     public static func of(_ error: Error) -> FailureKind {
         switch error {
         case let e as InstallError:

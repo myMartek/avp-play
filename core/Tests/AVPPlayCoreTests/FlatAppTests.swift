@@ -101,6 +101,32 @@ final class FlatAppTests: XCTestCase {
         XCTAssertEqual(FailureKind.of(InstallError.notAVRGame), .unsupported)
     }
 
+    /// Eine App, die grundsätzlich nicht laufen kann, bekommt auf der Kommandozeile keinen Hinweis aufs Fortsetzen –
+    /// wie in der Oberfläche, die dann keinen Knopf dafür zeigt.
+    func testNoResumeHintWhenThereIsNothingToResume() {
+        let before = L10n.language
+        defer { L10n.language = before }
+        for language in [Language.en, .de] {
+            L10n.language = language
+            for error in [InstallError.notAVRGame, .wrongArchitecture("Old Game", ["armeabi-v7a"]), .notANativeApp("Some App")] {
+                XCTAssertFalse(FailureKind.of(error).resumable)
+                let notice = FailureKind.stopNotice(error, job: "store-1-20261015-1")
+                XCTAssertTrue(notice.hasPrefix(error.description), notice)
+                XCTAssertFalse(notice.contains("job resume"), notice)
+            }
+            XCTAssertEqual(FailureKind.stopNotice(InstallError.notAVRGame, job: "store-1-20261015-1"), language == .en
+                ? "This is a 2D app, not a VR game. AVP Play only supports immersive games.\nJob store-1-20261015-1 stopped. There is nothing to resume."
+                : "Das ist eine 2D-App, kein VR-Spiel. AVP Play unterstützt nur immersive Spiele.\nAuftrag store-1-20261015-1 angehalten. Hier gibt es nichts fortzusetzen.")
+            // Alles andere lässt sich fortsetzen, und so steht es da.
+            let running = InstallError.appRunning("Moss")
+            XCTAssertTrue(FailureKind.of(running).resumable)
+            XCTAssertTrue(FailureKind.stopNotice(running, job: "moss-1").hasSuffix("avpplay job resume moss-1"))
+        }
+        for kind in [FailureKind.gameRunning, .notOwned, .signIn, .device, .build, .copy, .download, .ownFiles, .setup, .apple, .other] {
+            XCTAssertTrue(kind.resumable, kind.rawValue)
+        }
+    }
+
     // MARK: Echte Spiele
 
     func testEachVRManifestMarkerAloneMakesItAGame() {
