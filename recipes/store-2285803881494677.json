@@ -18,6 +18,7 @@
    "role": "apk",
    "id": "27743586188623096",
    "size": 41223155,
+   "sha256": "aa8a8f50a7ce33fd032efc5d4c72f63614fd5296238a8af6b357f42ad7271c26",
    "required": true,
    "dest": "",
    "localName": "x2285803881494677.apk"
@@ -27,6 +28,7 @@
    "role": "main-obb",
    "id": "27743584811956567",
    "size": 3972735119,
+   "sha256": "8a17c840fccf1441dd4e41ee33633104c49e2e2afdfcf655635ca916df49cb04",
    "required": true,
    "dest": "@obb"
   }
@@ -36,8 +38,8 @@
   "download": "listed",
   "notes": [
    {
-    "en": "Community verified: a user sent in fix 44 for build 410 and confirmed it on a Vision Pro (stable head movement, gun materials, Exit that saves settings, Sense grip). The project has taken the fix into Klepton (fork commit 1f5c858) but has not yet verified the game itself on Marcel's headset.",
-    "de": "Von Nutzern bestätigt: Ein Nutzer hat Fix 44 für Build 410 eingeschickt und auf einer Vision Pro bestätigt (ruhige Kopfbewegung, Waffenmaterialien, Exit speichert Einstellungen, Sense-Griff). Das Projekt hat den Fix in Klepton übernommen (Fork-Commit 1f5c858), das Spiel selbst auf Marcels Headset aber noch nicht geprüft."
+    "en": "Community verified: a user sent in fix 44 for build 410 and confirmed it on a Vision Pro (stable head movement, gun materials, Exit that saves settings, Sense grip). The project has taken the fix into Klepton (fork commit 1f5c858) but has not yet verified the game itself on the project's own headset.",
+    "de": "Von Nutzern bestätigt: Ein Nutzer hat Fix 44 für Build 410 eingeschickt und auf einer Vision Pro bestätigt (ruhige Kopfbewegung, Waffenmaterialien, Exit speichert Einstellungen, Sense-Griff). Das Projekt hat den Fix in Klepton übernommen (Fork-Commit 1f5c858), das Spiel selbst auf dem Headset des Projekts aber noch nicht geprüft."
    }
   ]
  }
