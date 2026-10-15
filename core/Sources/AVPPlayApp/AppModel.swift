@@ -255,11 +255,12 @@ final class AppModel: ObservableObject {
     let covers = CoverLoader()
     @AppStorage("filterFavourites") var filterFavourites = false
     /// Was das Gerät zuletzt als installiert gemeldet hat, und ab welcher Toolchain-Nummer ein Bau aktuell ist.
-    var installedApps: [InstalledApp]?
-    var toolchainRevision: Int?
+    /// Nicht `@Published`, fließt aber in `derived` ein – daher verwirft jede Änderung es selbst.
+    var installedApps: [InstalledApp]? { didSet { invalidateDerived() } }
+    var toolchainRevision: Int? { didSet { invalidateDerived() } }
     /// Was ein aktueller Bau von der experimentellen Einstellung tragen soll; `nil`, solange keine Toolchain da
     /// ist, die das kann – dann wird nicht verglichen.
-    var experimentalExpected: Bool?
+    var experimentalExpected: Bool? { didSet { invalidateDerived() } }
     /// Wie weit das Kopieren aufs Gerät im laufenden Auftrag ist.
     @Published var copyProgress: [String: InstallProgress] = [:]
     /// Eine neuere veröffentlichte Fassung, falls es eine gibt.
@@ -337,8 +338,12 @@ final class AppModel: ObservableObject {
     var saveTicks = 0
 
     /// Was aus dem übrigen Zustand folgt und teuer zu bestimmen ist, gemerkt bis zur nächsten Änderung: Jede
-    /// Änderung an einer veröffentlichten Eigenschaft (auch an einer Einstellung) verwirft es, dieselbe, die die
-    /// Oberfläche neu zeichnen lässt. Nicht `@Published` – das Merken selbst ist keine Änderung.
+    /// Änderung an einer veröffentlichten Eigenschaft verwirft es, dieselbe, die die Oberfläche neu zeichnen lässt.
+    /// Einstellungen (`@AppStorage`) melden sich dabei ebenso, auch wenn sie direkt in `UserDefaults` geändert
+    /// werden. Was keine solche Meldung kennt, verwirft es selbst (`invalidateDerived`): die nicht veröffentlichten
+    /// Angaben zum Gerät und zur Toolchain, und was sich außerhalb des Programms ändert – Toolchains, die die
+    /// Kommandozeile installiert oder entfernt (beim Zurückkehren ins Programm), und ein- oder ausgehängte Platten.
+    /// Nicht `@Published` – das Merken selbst ist keine Änderung.
     struct Derived {
         /// Doppelt optional: außen „noch nicht bestimmt“, innen „keine Toolchain“.
         var toolchain: Toolchain??
@@ -347,14 +352,30 @@ final class AppModel: ObservableObject {
     }
     var derived = Derived()
     private var derivedReset: AnyCancellable?
+    private var derivedObservers: [NSObjectProtocol] = []
 
     init() {
         applyLanguage()
         if let data = UserDefaults.standard.data(forKey: "gameOptions"),
            let saved = try? JSONDecoder().decode([String: GameOptions].self, from: data) { options = saved }
         derivedReset = objectWillChange.sink { [weak self] _ in
-            MainActor.assumeIsolated { self?.derived = Derived() }
+            MainActor.assumeIsolated { self?.invalidateDerived() }
         }
+        let workspace = NSWorkspace.shared.notificationCenter
+        for (center, name) in [(NotificationCenter.default, NSApplication.didBecomeActiveNotification),
+                               (workspace, NSWorkspace.didMountNotification),
+                               (workspace, NSWorkspace.didUnmountNotification),
+                               (workspace, NSWorkspace.didRenameVolumeNotification)] {
+            let token = center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.invalidateDerived() }
+            }
+            derivedObservers.append(token)
+        }
+    }
+
+    /// Verwirft, was in `derived` gemerkt ist; beim nächsten Fragen wird es neu bestimmt. Zeichnet nichts neu.
+    func invalidateDerived() {
+        derived = Derived()
     }
 
     // MARK: Besitz
