@@ -1,0 +1,373 @@
+{
+ "files": [
+  {
+   "dest": "",
+   "id": "26678381318452993",
+   "localName": "x4015163475201433.apk",
+   "name": "ShapeIt_DRM_3.0.0.18_HotFix_DLCsEntitlementCheck_.apk",
+   "required": true,
+   "role": "apk",
+   "size": 430431821,
+   "sha256": "5c5628be39a851363318eeec386f212b019b3ae3cde71ae6a76af302c2c824e3"
+  },
+  {
+   "dest": "android-files/Android/obb/com.odders.shapeit",
+   "id": "26678380168453108",
+   "name": "dlc_test_2_assets_assets_all.bundle",
+   "required": true,
+   "role": "content-bundle",
+   "size": 1056864,
+   "sha256": "63a103e9d08affc6f7434c895723df39fc6ef76f75493a89838f1a8ec8cd0578"
+  },
+  {
+   "dest": "android-files/Android/obb/com.odders.shapeit",
+   "id": "26678380165119775",
+   "name": "dlc_test_assets_assets_all.bundle",
+   "required": true,
+   "role": "content-bundle"
+  },
+  {
+   "dest": "android-files/Android/obb/com.odders.shapeit",
+   "id": "26678373728453752",
+   "name": "dlc_bonus_tracks_assets_all.bundle",
+   "required": true,
+   "role": "content-bundle",
+   "size": 428672048,
+   "sha256": "6a4d26c052806ca132bb544f144047ca9eba6585ac9aa0d1a6c40f37ad40ddaa"
+  },
+  {
+   "dest": "android-files/Android/obb/com.odders.shapeit",
+   "id": "26678372905120501",
+   "name": "volcano_assets_all.bundle",
+   "required": true,
+   "role": "content-bundle",
+   "size": 430279392,
+   "sha256": "e73f2eac5183bd1a3b656824160f1735583984030701b9284f1d00bc0c901bf7"
+  },
+  {
+   "dest": "android-files/Android/obb/com.odders.shapeit",
+   "id": "26678372655120526",
+   "name": "spacestation_assets_all.bundle",
+   "required": true,
+   "role": "content-bundle",
+   "size": 325541520,
+   "sha256": "9678471ab727d6f6c6d67567688a96496e712083eda5c94f131892928dffee63"
+  },
+  {
+   "dest": "android-files/Android/obb/com.odders.shapeit",
+   "id": "26678372301787228",
+   "name": "dlc_focus_mode_assets_all.bundle",
+   "required": true,
+   "role": "content-bundle",
+   "size": 340562544,
+   "sha256": "bb0e3b1b9ad18415910024979360672b0d6087ecb7e653e8f77447cdd7cc8ac7"
+  },
+  {
+   "dest": "android-files/Android/obb/com.odders.shapeit",
+   "id": "26678372008453924",
+   "name": "snow_assets_all.bundle",
+   "required": true,
+   "role": "content-bundle",
+   "size": 294373872,
+   "sha256": "3919d321e65bf5dcf4287fd72f30944c7fdd791d1edd1753c8c26b111743ad9d"
+  },
+  {
+   "dest": "android-files/Android/obb/com.odders.shapeit",
+   "id": "26678371965120595",
+   "name": "dlc_bc_100_assets_all.bundle",
+   "required": true,
+   "role": "content-bundle",
+   "size": 247494512,
+   "sha256": "ae4a2ea11d0558700ea19463137ab316fef61826c048fa877d9a61371efae3cf"
+  },
+  {
+   "dest": "android-files/Android/obb/com.odders.shapeit",
+   "id": "26678371925120599",
+   "name": "neotokyo_assets_all.bundle",
+   "required": true,
+   "role": "content-bundle",
+   "size": 345167952,
+   "sha256": "8eebc11d5977d99baf61c0ba9c5e18124e82fb417f34b34633bb79c6c20abb75"
+  },
+  {
+   "dest": "android-files/Android/obb/com.odders.shapeit",
+   "id": "26678371768453948",
+   "name": "dlc_all_challengepass_assets_all.bundle",
+   "required": true,
+   "role": "content-bundle",
+   "size": 358907392,
+   "sha256": "4627a7a5da84cb4ae5872e3e36e4b3b4221e5048b2b4cc1f4956fffae94c53ea"
+  },
+  {
+   "dest": "android-files/Android/obb/com.odders.shapeit",
+   "id": "26678370981787360",
+   "name": "rome_assets_all.bundle",
+   "required": true,
+   "role": "content-bundle",
+   "size": 194539936,
+   "sha256": "51113dc88e4b3a9dc8d2e173cb36099e5ddd7796217afc06da3e43b20dc55dab"
+  },
+  {
+   "dest": "android-files/Android/obb/com.odders.shapeit",
+   "id": "26678370968454028",
+   "name": "dlc_power_strike_assets_all.bundle",
+   "required": true,
+   "role": "content-bundle",
+   "size": 254032384,
+   "sha256": "a5e42b3d8f8204059b6f4bd90e20bcde058c3b87be4b9cecd74801d3b0e64df8"
+  },
+  {
+   "dest": "android-files/Android/obb/com.odders.shapeit",
+   "id": "26678370761787382",
+   "name": "cp_common_assets_all.bundle",
+   "required": true,
+   "role": "content-bundle",
+   "size": 272578368,
+   "sha256": "5b146d97d0fcfe4c41b99da8988e1b9f28648e3bbc73ada1c9e266a74b65fb44"
+  },
+  {
+   "dest": "android-files/Android/obb/com.odders.shapeit",
+   "id": "26678370558454069",
+   "name": "elysium_assets_all.bundle",
+   "required": true,
+   "role": "content-bundle",
+   "size": 295115536,
+   "sha256": "165686daec3ee201dd232b2a96544f4afb55c34cdc1174dae44b19dc9753da4c"
+  },
+  {
+   "dest": "android-files/Android/obb/com.odders.shapeit",
+   "id": "26678370391787419",
+   "name": "utopia_assets_all.bundle",
+   "required": true,
+   "role": "content-bundle",
+   "size": 284262688,
+   "sha256": "5e90d2fefa72a65621da7ab02e7212ccb308352a4e14f05cc7226459ec6d1fa9"
+  },
+  {
+   "dest": "android-files/Android/obb/com.odders.shapeit",
+   "id": "26678370021787456",
+   "name": "crowdavatars_assets_all.bundle",
+   "required": true,
+   "role": "content-bundle",
+   "size": 80344736,
+   "sha256": "cdab5866467947f1402ae5f5ade0a20e2cc90317b512f0fc6b442bc19775a3b9"
+  },
+  {
+   "dest": "android-files/Android/obb/com.odders.shapeit",
+   "id": "26678369341787524",
+   "name": "catalog_3.0.0.hash",
+   "required": true,
+   "role": "content-bundle",
+   "size": 32,
+   "sha256": "bc256b2a88f9352037fe07eca63077282eb03dfdc9582961928634502c0839f8"
+  },
+  {
+   "dest": "android-files/Android/obb/com.odders.shapeit",
+   "id": "26678369301787528",
+   "name": "localdefaultcosmetics_assets_all.bundle",
+   "required": true,
+   "role": "content-bundle",
+   "size": 74257216,
+   "sha256": "db555fee5fd584c4145d17f250e3e08fecf9c24d0d8781b544b850c76221fd5e"
+  },
+  {
+   "dest": "android-files/Android/obb/com.odders.shapeit",
+   "id": "26678368931787565",
+   "name": "localsessioncatalog_assets_all.bundle",
+   "required": true,
+   "role": "content-bundle",
+   "size": 2429052912,
+   "sha256": "9f103e5d009aed7ae04791de96cff4670d27f2f4ff4db072733d7c02b151a515"
+  },
+  {
+   "dest": "android-files/Android/obb/com.odders.shapeit",
+   "id": "26678368868454238",
+   "name": "commonenvironment_assets_all.bundle",
+   "required": true,
+   "role": "content-bundle",
+   "size": 14899472,
+   "sha256": "9db2322baa30789cd89840e87f56ee37ef9ea739d589910f1b25f399d4ed63ed"
+  },
+  {
+   "dest": "android-files/Android/obb/com.odders.shapeit",
+   "id": "26678368511787607",
+   "name": "defautlenvironment_assets_all.bundle",
+   "required": true,
+   "role": "content-bundle",
+   "size": 68847424,
+   "sha256": "6e63dd1d222a281dfe74f47784f22a811e2ff856523f704328b8a3e4f4fd5453"
+  },
+  {
+   "dest": "android-files/Android/obb/com.odders.shapeit",
+   "id": "26678368405120951",
+   "name": "cp02_assets_all.bundle",
+   "required": true,
+   "role": "content-bundle",
+   "size": 511273440,
+   "sha256": "6171bcdaafc67928b4bd3553a3261c639c5e5b8ffa1bad7889337d24063af2e9"
+  },
+  {
+   "dest": "android-files/Android/obb/com.odders.shapeit",
+   "id": "26678368348454290",
+   "name": "expansion-files-config.json",
+   "required": true,
+   "role": "content-bundle",
+   "size": 1667,
+   "sha256": "0a10341abe3378b08e1878057d036a000ee945be7397794a84a0ad7298a68d08"
+  },
+  {
+   "dest": "android-files/Android/obb/com.odders.shapeit",
+   "id": "26678368311787627",
+   "name": "edojapan_assets_all.bundle",
+   "required": true,
+   "role": "content-bundle",
+   "size": 414665968,
+   "sha256": "0f024f06d8bb8bb368f038ddcaf30185f7f0e2675883eecabbd4620caab3ca96"
+  },
+  {
+   "dest": "android-files/Android/obb/com.odders.shapeit",
+   "id": "26678368298454295",
+   "name": "defaultlocalgroup_assets_all.bundle",
+   "required": true,
+   "role": "content-bundle",
+   "size": 15240288,
+   "sha256": "4bc799719f55e8aa18303b1c7a6890e64e109501b6db9b3464da6ef9de578987"
+  },
+  {
+   "dest": "android-files/Android/obb/com.odders.shapeit",
+   "id": "26678368198454305",
+   "name": "shoppreviewvideos_assets_all.bundle",
+   "required": true,
+   "role": "content-bundle",
+   "size": 62510752,
+   "sha256": "8acb0cd3c2bbab173320baf6f4dec5f83b694a3f8ab3374251d1640cea48fc74"
+  },
+  {
+   "dest": "android-files/Android/obb/com.odders.shapeit",
+   "id": "26678368195120972",
+   "name": "debugmodules_assets_all.bundle",
+   "required": true,
+   "role": "content-bundle",
+   "size": 7600,
+   "sha256": "ae89804df5ca9169eee76006b12518b00d0261ba821bb34a64f1d02466794b04"
+  },
+  {
+   "dest": "android-files/Android/obb/com.odders.shapeit",
+   "id": "26678368175120974",
+   "name": "catalog_3.0.0.json",
+   "required": true,
+   "role": "content-bundle",
+   "size": 428225,
+   "sha256": "87492c120e7105c8ca0b9f06149d08182f1f1def4e4ef204fb8046410f6cee4a"
+  },
+  {
+   "dest": "android-files/Android/obb/com.odders.shapeit",
+   "id": "26678368155120976",
+   "name": "shaders_unitybuiltinshaders.bundle",
+   "required": true,
+   "role": "content-bundle",
+   "size": 602560,
+   "sha256": "dc7735ccfb11e868f12c2dc5340d58f07c181f4f70a490a84a56905c8660d20c"
+  },
+  {
+   "dest": "android-files/Android/obb/com.odders.shapeit",
+   "id": "26678368131787645",
+   "name": "english_onboarding_videos_assets_all.bundle",
+   "required": true,
+   "role": "content-bundle",
+   "size": 25095104,
+   "sha256": "5c2ae7192884ec9bb4690af0a441d69364e7feaf18ae8c6c721cd4866333b65b"
+  },
+  {
+   "dest": "android-files/Android/obb/com.odders.shapeit",
+   "id": "26678368085120983",
+   "name": "steampunk_assets_all.bundle",
+   "required": true,
+   "role": "content-bundle",
+   "size": 90285856,
+   "sha256": "cce78fd93725af28fc173232444dd9339121f6e5d550d37c2ea4cf9bad1cf9e7"
+  },
+  {
+   "dest": "android-files/Android/obb/com.odders.shapeit",
+   "id": "26678368051787653",
+   "name": "calltoactionvideos_assets_all.bundle",
+   "required": true,
+   "role": "content-bundle",
+   "size": 41450592,
+   "sha256": "822f30778d8d597862931f8f1b67f86579db5f35322cbf70bd0fc11a1a2c4c2e"
+  },
+  {
+   "dest": "android-files/Android/obb/com.odders.shapeit",
+   "id": "26678367965120995",
+   "name": "localwarmupcatalog_assets_all.bundle",
+   "required": true,
+   "role": "content-bundle",
+   "size": 61489936,
+   "sha256": "6e45246f923c80959fa58f70762b97fa346c89731d5cbaf6fbc5ecf74b53e839"
+  },
+  {
+   "dest": "android-files/Android/obb/com.odders.shapeit",
+   "id": "26678367695121022",
+   "name": "newzeland_assets_all.bundle",
+   "required": true,
+   "role": "content-bundle",
+   "size": 288505488,
+   "sha256": "fa5310d76aa009461b8200b0df96d052f1ec3def79114f2c0241bf7b3dfe9d13"
+  },
+  {
+   "dest": "android-files/Android/obb/com.odders.shapeit",
+   "id": "26678367395121052",
+   "name": "english_tip_videos_assets_all.bundle",
+   "required": true,
+   "role": "content-bundle",
+   "size": 293668320,
+   "sha256": "5c7732adc30f7f6d7d7dde99d91982fd5a7722f23f1a189306ff574ebb744117"
+  },
+  {
+   "dest": "android-files/Android/obb/com.odders.shapeit",
+   "id": "26678367251787733",
+   "name": "english_welcome_videos_assets_all.bundle",
+   "required": true,
+   "role": "content-bundle",
+   "size": 84229328,
+   "sha256": "013c4009e027d9bdaeb1b5d3820a1d1a0bf2d1644c3f213f47848606d8b302c4"
+  },
+  {
+   "dest": "android-files/Android/obb/com.odders.shapeit",
+   "id": "26678367158454409",
+   "name": "mars_assets_all.bundle",
+   "required": true,
+   "role": "content-bundle",
+   "size": 239046848,
+   "sha256": "b9250177fe002588f1c933ebf553c42c26d1b65c49731e7cd989fa129b44b5ed"
+  }
+ ],
+ "id": "store-4015163475201433",
+ "package": "com.odders.shapeit",
+ "schema": 1,
+ "status": {
+  "playability": "verified",
+  "download": "listed",
+  "notes": [
+   {
+    "en": "Marked as verified by the project on 2026-10-15. File list as Meta's tool reports it for this build; 37 of 38 checksums recorded from a download.",
+    "de": "Vom Projekt am 2026-10-15 als geprüft markiert. Dateiliste, wie Metas Werkzeug sie für diesen Build nennt; 37 von 38 Prüfsummen aus einem Download erfasst."
+   },
+   {
+    "en": "Menus, text, pointer, gloves and the workout videos with their sound work. The game's mixed-reality mode works: your room shows around you. The trainer videos run smoothest with the display at 120 Hz; at 100 Hz they are shown at 50 frames a second. The rings around a target only spread out on a perfect hit with a long, full swing, as on the Quest; standing makes that easier. The gloves sit where your hands are with PlayStation VR2 Sense controllers. Needs toolchain ee6e029 or newer.",
+    "de": "Menüs, Texte, Zeigestrahl, Handschuhe und die Trainingsvideos mit Ton funktionieren. Der Mixed-Reality-Modus des Spiels funktioniert: Dein Raum ist um dich herum zu sehen. Die Trainervideos laufen mit dem Display auf 120 Hz am flüssigsten; bei 100 Hz werden sie mit 50 Bildern pro Sekunde gezeigt. Die Ringe um ein Ziel dehnen sich nur bei einem perfekten Treffer mit langem, vollem Ausholen aus, wie auf der Quest; im Stehen gelingt das leichter. Mit PlayStation-VR2-Sense-Controllern sitzen die Handschuhe dort, wo deine Hände sind. Braucht Toolchain ee6e029 oder neuer."
+   }
+  ]
+ },
+ "store": {
+  "appId": "4015163475201433"
+ },
+ "title": "LES MILLS BODYCOMBAT: Fitness workouts",
+ "toolchain": {
+  "minCommit": "ee6e029c0eb93366f468b55790cce4795f337473",
+  "target": "x4015163475201433"
+ },
+ "versionCode": 300000018,
+ "versionName": "3.0.0",
+ "mixedReality": true
+}
