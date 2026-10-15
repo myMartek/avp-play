@@ -47,7 +47,7 @@ final class RecipeTests: XCTestCase {
         XCTAssertTrue(ids.isSuperset(of: byHand))
         for recipe in all where !byHand.contains(recipe.id) {
             XCTAssertEqual(recipe.id, recipe.store.appId.map(DraftRecipe.identifier(appId:)), "\(recipe.id)")
-            // geprüft oder von der Community bestätigt – anderes gehört nicht in die mitgelieferten Rezepte
+            // verified or community-confirmed; anything else does not belong in the shipped recipes
             XCTAssertTrue(["verified", "community"].contains(recipe.status.playability),
                           "\(recipe.id): \(recipe.status.playability)")
             XCTAssertFalse(recipe.files.isEmpty, "\(recipe.id)")
