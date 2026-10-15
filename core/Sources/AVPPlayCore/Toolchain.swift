@@ -240,6 +240,9 @@ public struct Toolchain: Sendable {
 
     /// Die Test-Schalter der Toolchain, die die experimentelle Einstellung des Programms in jedem Spiel von Anfang
     /// an einschaltet: die neue Kopfposen- und die neue Audio-Implementierung. Im Spiel bleiben sie abschaltbar.
+    /// `KL_OVRP_ONE_POSE` wirkt nur noch bei älteren Toolchains (507): Ab Klepton #9 ist es der Standard und kein
+    /// eigener Test-Schalter mehr, die Angabe ist dort ohne Wirkung. Bleibt in der Liste, damit ein Bau mit 507
+    /// weiter tut, was die Einstellung bisher tat.
     public static let experimentalSwitches = ["KL_OVRP_ONE_POSE", "KL_AUDIO_SINK2"]
 
     /// Ob diese Toolchain Test-Schalter kennt, die eine Installation von Anfang an eingeschaltet hat

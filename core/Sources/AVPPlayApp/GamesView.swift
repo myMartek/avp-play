@@ -873,10 +873,10 @@ struct GameDetail: View {
             if let built = game.status.builtWith, let wanted = model.experimentalExpected, built.experimental != wanted,
                built.toolchain >= (model.toolchainRevision ?? 0) {
                 return wanted
-                    ? L("Installed, without the new pose and audio implementations that the experimental setting asks for – “Update” builds it with them switched on; saved games and data are kept.",
-                        "Installiert, ohne die neue Pose- und Audio-Implementierung, die die experimentelle Einstellung verlangt – „Aktualisieren“ baut es mit beiden eingeschaltet; Spielstände und Daten bleiben.")
-                    : L("Installed with the new pose and audio implementations switched on; the experimental setting is off now – “Update” builds it without them; saved games and data are kept.",
-                        "Installiert mit eingeschalteter neuer Pose- und Audio-Implementierung; die experimentelle Einstellung ist jetzt aus – „Aktualisieren“ baut es ohne sie; Spielstände und Daten bleiben.")
+                    ? L("Installed, without the new audio implementation that the experimental setting asks for – “Update” builds it with it switched on; saved games and data are kept.",
+                        "Installiert, ohne die neue Audio-Implementierung, die die experimentelle Einstellung verlangt – „Aktualisieren“ baut es mit ihr eingeschaltet; Spielstände und Daten bleiben.")
+                    : L("Installed with the new audio implementation switched on; the experimental setting is off now – “Update” builds it without; saved games and data are kept.",
+                        "Installiert mit eingeschalteter neuer Audio-Implementierung; die experimentelle Einstellung ist jetzt aus – „Aktualisieren“ baut es ohne sie; Spielstände und Daten bleiben.")
             }
             if let built = game.status.builtWith, let wanted = model.metalFXExpected, built.metalFX != wanted,
                built.toolchain >= (model.toolchainRevision ?? 0) {

@@ -231,9 +231,10 @@ final class AppModel: ObservableObject {
     @Published var latestChoices = StoreUpdate.Choices.load()
     /// Ältere Toolchains von selbst entfernen, sobald eine neuere installiert ist und nichts mehr mit ihnen baut.
     @AppStorage("autoRemoveOldToolchains") var autoRemoveOldToolchains = true
-    /// Experimentell: In jedem Spiel, das installiert oder aktualisiert wird, sind die neue Kopfposen- und die neue
-    /// Audio-Implementierung der Toolchain von Anfang an eingeschaltet (`Toolchain.experimentalSwitches`) – als
-    /// wären die bisherigen schon entfernt. Ein Bau, der es anders hält als diese Einstellung, gilt als
+    /// Experimentell: In jedem Spiel, das installiert oder aktualisiert wird, ist die neue Audio-Implementierung der
+    /// Toolchain von Anfang an eingeschaltet (`Toolchain.experimentalSwitches`) – als wäre die bisherige schon
+    /// entfernt. Die Kopfposen-Implementierung, die die Liste auch nennt, wirkt nur noch mit Toolchain 507; neuere
+    /// benutzen sie ohnehin (Klepton #9). Ein Bau, der es anders hält als diese Einstellung, gilt als
     /// aktualisierbar, sodass „Alle aktualisieren“ nach dem Umlegen alle installierten Spiele umstellt.
     @AppStorage(AppModel.experimentalKey) var experimentalImplementations = false
     nonisolated static let experimentalKey = "experimentalImplementations"

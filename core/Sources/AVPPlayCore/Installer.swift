@@ -514,10 +514,10 @@ public struct Installer: Sendable {
         let experimental = request.experimental == true
         if experimental {
             report(toolchain.supportsExperimental
-                   ? L("Experimental: the new pose and audio implementations are on from the start in this build (they can be switched off in the game under Settings › Advanced › Test).",
-                       "Experimentell: Die neue Pose- und Audio-Implementierung sind in diesem Bau von Anfang an eingeschaltet (im Spiel abschaltbar unter Einstellungen › Erweitert › Test).")
-                   : L("Experimental: this toolchain cannot switch the new pose and audio implementations on yet; the game is built as usual.",
-                       "Experimentell: Diese Toolchain kann die neue Pose- und Audio-Implementierung noch nicht einschalten; das Spiel wird wie üblich gebaut."))
+                   ? L("Experimental: the new audio implementation is on from the start in this build (it can be switched off in the game under Settings › Advanced › Test); with toolchain 507 also the one-head-pose-per-frame implementation, which newer toolchains use by default.",
+                       "Experimentell: Die neue Audio-Implementierung ist in diesem Bau von Anfang an eingeschaltet (im Spiel abschaltbar unter Einstellungen › Erweitert › Test); mit Toolchain 507 auch die Implementierung mit einer Kopfpose pro Frame, die neuere Toolchains ohnehin benutzen.")
+                   : L("Experimental: this toolchain cannot switch the new audio implementation on yet; the game is built as usual.",
+                       "Experimentell: Diese Toolchain kann die neue Audio-Implementierung noch nicht einschalten; das Spiel wird wie üblich gebaut."))
         }
         let metalFX = request.metalFX == true
         if metalFX {

@@ -144,8 +144,9 @@ avpplay – command line for the AVP Play core library
              --icon <image file>     use your own app icon (takes priority over everything else)
              --no-store-art          don't fetch the cover image from the store page (the icon from the APK is used instead)
              --replace-running       install even if the game is running (it will be quit)
-             --experimental          build with the toolchain's new pose and audio implementations switched on from the start
-                                     (they can be turned off in the game; the app's setting “Experimental” does the same)
+             --experimental          build with the toolchain's new audio implementation switched on from the start (and, with
+                                     toolchain 507, its one-head-pose-per-frame implementation, which newer toolchains use anyway;
+                                     off in the game under Advanced › Test; the app's setting “Experimental” does the same)
              --metalfx               build with the compositor's MetalFX upscaling switched on from the start (sharpens the picture
                                      when the game's resolution is below 100%; off in the game under Settings › Rendering)
              --resolution <percent>  with --metalfx: the resolution the game starts at (default 75; 100: the game's own)
@@ -214,8 +215,9 @@ avpplay – Kommandozeile zur Kern-Bibliothek von AVP Play
              --no-store-art          kein Titelbild von der Store-Seite holen (dann Icon aus dem APK)
              --replace-running       auch installieren, wenn das Spiel gerade läuft (es wird dabei beendet)
              --restore-saves         nach dem Kopieren die Spielstände vom Mac zurückspielen, wenn das Spiel auf dem Gerät noch keine hat
-             --experimental          mit von Anfang an eingeschalteter neuer Pose- und Audio-Implementierung der Toolchain bauen
-                                     (im Spiel abschaltbar; die Einstellung „Experimentell“ des Programms tut dasselbe)
+             --experimental          mit von Anfang an eingeschalteter neuer Audio-Implementierung der Toolchain bauen (mit Toolchain
+                                     507 auch der Implementierung mit einer Kopfpose pro Frame, die neuere Toolchains ohnehin benutzen;
+                                     im Spiel abschaltbar unter Erweitert › Test; die Einstellung „Experimentell“ tut dasselbe)
              --metalfx               mit von Anfang an eingeschaltetem MetalFX-Hochskalieren des Compositors bauen (schärft das Bild,
                                      wenn die Auflösung des Spiels unter 100 % steht; im Spiel abschaltbar unter Einstellungen › Rendering)
              --resolution <Prozent>  mit --metalfx: die Auflösung, mit der das Spiel beginnt (Vorgabe 75; 100: die des Spiels)

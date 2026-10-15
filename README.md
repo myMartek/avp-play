@@ -65,11 +65,12 @@ makes that. Nothing is measured before the panel is first shown. *Advanced* › 
 headset from the start* has it there when the game opens. So that a game does not open its menu along with the
 panel, one of the two buttons alone reaches the game a quarter of a second after you press it.
 
-**Trying the new pose and audio implementations in every game** (from version 1.1.15 with toolchain 507). The
-toolchain carries a second implementation of two things every game runs on – the head pose a game gets for a frame,
-and everything between a game's sound and the output – as test switches that are off. *Settings › Experimental*
-in this app has one switch for both: with it on, every game you install or update has them switched on from the
-start, as if the old ones were gone; in a game each can still be turned off under *Advanced › Test*. Games that
+**Trying the new audio implementation in every game** (from version 1.1.15 with toolchain 507). The toolchain
+carries a second implementation of everything between a game's sound and the output, as a test switch that is off.
+*Settings › Experimental* switches it on from the start in every game you install or update, as if the old one were
+gone; in a game it can still be turned off under *Advanced › Test*. With toolchain 507 the same setting also switches
+on a second head-pose implementation (one pose per frame); newer toolchains use that in every game by default, so
+there the setting only changes the sound. Games that
 are already installed then show "Update available", and **Update All** on the Games page rebuilds them – the same
 again after you turn the setting off. Saved games and data are kept. A game with a toolchain of its own choosing
 is left as it is, and renewing a signature keeps what a build had.
