@@ -13,6 +13,7 @@ VERSION="${AVPPLAY_APP_VERSION:-1.1.16}"
 # build numbers never go backwards. AVPPLAY_APP_BUILD overrides the result.
 BUILD_OFFSET=214
 BUILD="${AVPPLAY_APP_BUILD:-$(( $(git -C "$ROOT" rev-list --count HEAD 2>/dev/null || echo 1) + BUILD_OFFSET ))}"
+[[ "$BUILD" =~ ^[0-9]+$ ]] || { echo "!! AVPPLAY_APP_BUILD must contain digits only: $BUILD" >&2; exit 1; }
 OUT="$ROOT/dist/AVP Play.app"
 
 swift build -c release --build-path .build-app --product AVPPlayApp
