@@ -75,10 +75,10 @@ are already installed then show "Update available", and **Update All** on the Ga
 again after you turn the setting off. Saved games and data are kept. A game with a toolchain of its own choosing
 is left as it is, and renewing a signature keeps what a build had.
 
-**MetalFX upscaling** (prepared; takes effect with a toolchain that has it). Below 100% *Resolution* a game draws
+**MetalFX upscaling** (from toolchain 563). Below 100% *Resolution* a game draws
 a smaller picture that is stretched to the display. Klepton's compositor can do that stretch with Apple's MetalFX
 spatial scaler instead of a linear one – a sharper picture for a little graphics time – and has a switch for it in
-the game (*Settings › Rendering › MetalFX upscaling*, off). *Settings › Experimental › MetalFX* in this app switches
+the game (in the *Picture* box of the game's settings, under *Resolution*; off). *Settings › Experimental › MetalFX* in this app switches
 it on from the start in every game you install or update, the same way as the switch above; off, the default,
 changes nothing. At 100% there is nothing to upscale, so switching it on also sets the resolution a game starts at
 to 75% (a slider below the switch; a value you choose there counts, and switching off brings back the one from before,
@@ -87,15 +87,18 @@ through Meta's own interface or OpenXR (Half-Life: Alyx, Steam Link, Doom 3, Wal
 rendering on, too; only a picture that cannot be scaled safely keeps the linear stretch, and the game's log says why.
 The metrics panel in the headset (Create + Options held for a second) shows the resolution the game renders at,
 whether MetalFX is upscaling and on which path, and the resolution after it; with the panel shown, a short tap of
-Create + Options together switches MetalFX on and off while the game runs. The bundled toolchain 507 does not have
-it yet; until one does, the setting says so and games are built as usual.
+Create + Options together switches MetalFX on and off while the game runs. In mixed reality MetalFX pauses while the
+game shows the room, and the room stays visible behind the picture when it is on.
+
+**Max resolution per eye** (from toolchain 563). A game's settings have a dropdown under *Advanced* that caps the
+size it draws each eye at.
 
 **XR prediction** (a game's page › *Test*; takes effect with a toolchain that has it). Newer toolchains give a game
 its head pose without prediction by default – one pose per frame, as it is when the frame starts, on every path
 (OpenXR and Meta's own interface). The option switches the old behaviour back on for that game, which predicts the
 head to the moment the picture is shown; it applies from the next install or update, to every build, and in the game
-it stays switchable under *Settings › Advanced › Test*. `avpplay install --xr-prediction` does the same. Toolchain 507
-always predicts.
+it stays switchable under *Settings › Advanced › Test*. `avpplay install --xr-prediction` does the same. Toolchain 507 and
+older always predict.
 
 The app speaks English and German. It follows macOS; you can choose a language in its settings (⌘,).
 
@@ -148,8 +151,8 @@ recipes in [`recipes/`](recipes) are:
 | Walkabout Mini Golf | Meta Store or Steam | purchased courses and content packs are unlocked; the first start compiles shaders for a few minutes. If you bought it on Steam instead, choose **Purchased from: Steam** on its page: the app then fetches the Android build Steam ships (for Steam Frame) from your Steam account and unlocks the add-ons Steam confirms for it. No older versions for the Steam copy |
 | SUPERHOT VR | Meta Store | |
 | Steam Link | Meta Store | streams SteamVR from a PC on your network; asks for the local network when it opens – allow it, or the PC waits for a connection (before toolchain 380 a new install was never asked); from 380 its requests to Steam's servers get through and its start window closes once the stream is up, thanks to fixes a user sent in |
-| Marvel's Deadpool VR | Meta Store | about 51 GB; the first start compiles shaders for several minutes; edge smoothing at 4x and, from toolchain 478, foveated rendering at *Medium* by default (settings in the game's start window) |
-| Alien: Rogue Incursion | Meta Store | about 14 GB; lowers its own resolution a little under load; loading screens flicker |
+| Marvel's Deadpool VR | Meta Store | about 51 GB; the first start compiles shaders for several minutes; edge smoothing at 4x and, from toolchain 478, foveated rendering at *Medium* by default (settings in the game's start window); from toolchain 563 its language packs are loaded from the installation's asset-file list |
+| Alien: Rogue Incursion | Meta Store | about 14 GB; lowers its own resolution a little under load; loading screens flicker; from toolchain 563 no black band under the picture |
 | Assassin's Creed Nexus VR | Meta Store | about 29 GB; edges shimmer somewhat, passthrough is not supported |
 | Eye of the Temple | Meta Store | the whip is drawn thanks to a fix a user sent in |
 | Resident Evil 4 | Meta Store | about 8.5 GB; runs with a fix a user sent in |
