@@ -8,7 +8,11 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 ROOT="$(cd .. && pwd)"
 VERSION="${AVPPLAY_APP_VERSION:-1.1.16}"
-BUILD="$(git -C "$ROOT" rev-list --count HEAD 2>/dev/null || echo 1)"
+# Build number: commit count plus a fixed offset. Releases 1.1.15 and earlier were built from a repository
+# with about 340 commits, 1.1.16 from one with 127; the offset keeps every later build above 340 so that
+# build numbers never go backwards. AVPPLAY_APP_BUILD overrides the result.
+BUILD_OFFSET=214
+BUILD="${AVPPLAY_APP_BUILD:-$(( $(git -C "$ROOT" rev-list --count HEAD 2>/dev/null || echo 1) + BUILD_OFFSET ))}"
 OUT="$ROOT/dist/AVP Play.app"
 
 swift build -c release --build-path .build-app --product AVPPlayApp
