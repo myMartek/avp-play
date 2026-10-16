@@ -1,0 +1,613 @@
+{
+  "files": [
+    {
+      "dest": "",
+      "id": "25259917926959468",
+      "localName": "x2677344882310094.apk",
+      "name": "onward_nondev.apk",
+      "required": true,
+      "role": "apk"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259913353626592",
+      "name": "main.com.downpourinteractive.onward.duplicateassetisolation_size_split2_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259911266960134",
+      "name": "main.com.downpourinteractive.onward.duplicateassetisolation_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259906736960587",
+      "name": "main.com.downpourinteractive.onward.quest_bazaar_day_scenes_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259905910294003",
+      "name": "main.com.downpourinteractive.onward.quest_downfall_night_scenes_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259905650294029",
+      "name": "main.com.downpourinteractive.onward.quest_turbine_night_scenes_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259905533627374",
+      "name": "main.com.downpourinteractive.onward.quest_snowpeak_night_scenes_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259905510294043",
+      "name": "main.com.downpourinteractive.onward.quest_bazaar_night_scenes_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259905483627379",
+      "name": "main.com.downpourinteractive.onward.equipmentshared_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259905440294050",
+      "name": "main.com.downpourinteractive.onward.quest_tanker_night_scenes_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259905420294052",
+      "name": "main.com.downpourinteractive.onward.duplicateassetisolation_size_split3_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259905373627390",
+      "name": "main.com.downpourinteractive.onward.duplicateassetisolation1_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259905263627401",
+      "name": "main.com.downpourinteractive.onward.scene_fob_night_scenes_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259905190294075",
+      "name": "main.com.downpourinteractive.onward.skins_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259905163627411",
+      "name": "main.com.downpourinteractive.onward.quest_downfall_day_scenes_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259905066960754",
+      "name": "main.com.downpourinteractive.onward.quest_tanker_day_scenes_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259905063627421",
+      "name": "main.com.downpourinteractive.onward.quest_snowpeak_day_scenes_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259905036960757",
+      "name": "main.com.downpourinteractive.onward.quest_quarantine_day_scenes_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259905023627425",
+      "name": "main.com.downpourinteractive.onward.quest_abandoned_night_scenes_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259905010294093",
+      "name": "main.com.downpourinteractive.onward.quest_suburbia_day_scenes_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259905006960760",
+      "name": "main.com.downpourinteractive.onward.weaponsshared_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259904966960764",
+      "name": "main.com.downpourinteractive.onward.textures_size_split6_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259904960294098",
+      "name": "main.com.downpourinteractive.onward.quest_cargo_day_scenes_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259904933627434",
+      "name": "main.com.downpourinteractive.onward.quest_abandoned_day_scenes_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259904926960768",
+      "name": "main.com.downpourinteractive.onward.quest_turbine_day_scenes_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259904920294102",
+      "name": "main.com.downpourinteractive.onward.quest_shooting_range_night_scenes_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259904896960771",
+      "name": "main.com.downpourinteractive.onward.duplicateassetisolation_size_split_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259904893627438",
+      "name": "main.com.downpourinteractive.onward.quest_suburbia_night_scenes_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259904850294109",
+      "name": "main.com.downpourinteractive.onward.quest_subway_day_scenes_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259904833627444",
+      "name": "main.com.downpourinteractive.onward.quest_shooting_range_day_scenes_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259904696960791",
+      "name": "main.com.downpourinteractive.onward.mercenary_startup_scene_scenes_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259904690294125",
+      "name": "main.com.downpourinteractive.onward.scene_main_menu_fob_scenes_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259904686960792",
+      "name": "main.com.downpourinteractive.onward.quest_egress_night_scenes_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259904673627460",
+      "name": "main.com.downpourinteractive.onward.quest_subway_night_scenes_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259904663627461",
+      "name": "main.com.downpourinteractive.onward.scene_data_cargo_night_scenes_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259904550294139",
+      "name": "main.com.downpourinteractive.onward.quest_egress_day_scenes_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259904536960807",
+      "name": "main.com.downpourinteractive.onward.duplicateassetisolation_size_split1_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259904480294146",
+      "name": "main.com.downpourinteractive.onward.quest_quarantine_night_scenes_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259904476960813",
+      "name": "main.com.downpourinteractive.onward.meshes_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259904453627482",
+      "name": "main.com.downpourinteractive.onward.wwisedata_events_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259904426960818",
+      "name": "main.com.downpourinteractive.onward.phyicsmaterials_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259904423627485",
+      "name": "main.com.downpourinteractive.onward.fonts_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259904396960821",
+      "name": "main.com.downpourinteractive.onward.subway_shared_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259904383627489",
+      "name": "main.com.downpourinteractive.onward.wwisedata_android_initbank_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259904350294159",
+      "name": "main.com.downpourinteractive.onward.scene_main_menu_fob_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259904330294161",
+      "name": "main.com.downpourinteractive.onward.road_atlas_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259904310294163",
+      "name": "main.com.downpourinteractive.onward.textures_size_split1_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259904300294164",
+      "name": "main.com.downpourinteractive.onward.shooting_range_shared_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259904293627498",
+      "name": "main.com.downpourinteractive.onward.tanker_shared_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259904280294166",
+      "name": "main.com.downpourinteractive.onward.t_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259904260294168",
+      "name": "main.com.downpourinteractive.onward.egress_shared_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259904253627502",
+      "name": "main.com.downpourinteractive.onward.skin_icons_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259904250294169",
+      "name": "main.com.downpourinteractive.onward.customcontentloader_scenes_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259904240294170",
+      "name": "main.com.downpourinteractive.onward.scenepreviewimages_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259904200294174",
+      "name": "main.com.downpourinteractive.onward.snowpeak_shared_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259904196960841",
+      "name": "main.com.downpourinteractive.onward.snow_shared_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259904193627508",
+      "name": "main.com.downpourinteractive.onward.cargo_shared_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259904190294175",
+      "name": "main.com.downpourinteractive.onward.downfall_shared_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259904180294176",
+      "name": "main.com.downpourinteractive.onward.quest_2_weapons_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259904153627512",
+      "name": "main.com.downpourinteractive.onward.quarantine_shared_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259904143627513",
+      "name": "main.com.downpourinteractive.onward.quest_loading_scenes_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259904126960848",
+      "name": "main.com.downpourinteractive.onward.wwisedata_android_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259904100294184",
+      "name": "main.com.downpourinteractive.onward.bazaar_shared_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259904050294189",
+      "name": "main.com.downpourinteractive.onward.terrains_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259904013627526",
+      "name": "main.com.downpourinteractive.onward.quest_gear_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259904006960860",
+      "name": "main.com.downpourinteractive.onward.quest_characters_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259903963627531",
+      "name": "main.com.downpourinteractive.onward.suburbia_shared_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259903873627540",
+      "name": "main.com.downpourinteractive.onward.scene_fob_day_scenes_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259903783627549",
+      "name": "main.com.downpourinteractive.onward.abandoned_shared_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259903753627552",
+      "name": "main.com.downpourinteractive.onward.shaders_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259903553627572",
+      "name": "main.com.downpourinteractive.onward.scene_fob_day_populated_scenes_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259902886960972",
+      "name": "main.com.downpourinteractive.onward.turbine_shared_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259902813627646",
+      "name": "main.com.downpourinteractive.onward.other_shared_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259902810294313",
+      "name": "main.com.downpourinteractive.onward.textures_size_split2_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259902670294327",
+      "name": "main.com.downpourinteractive.onward.textures_size_split3_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259902606961000",
+      "name": "main.com.downpourinteractive.onward.textures_size_split_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259902550294339",
+      "name": "main.com.downpourinteractive.onward.duplicateassetisolation_size_split4_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259902503627677",
+      "name": "main.com.downpourinteractive.onward.textures_size_split4_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259902226961038",
+      "name": "main.com.downpourinteractive.onward.quest_jungle_caves_night_scenes_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259902210294373",
+      "name": "main.com.downpourinteractive.onward.textures_size_split5_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259902200294374",
+      "name": "main.com.downpourinteractive.onward.gameobjects_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259902106961050",
+      "name": "main.com.downpourinteractive.onward.tentmaps_assets_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.downpourinteractive.onward",
+      "id": "25259902040294390",
+      "name": "main.com.downpourinteractive.onward.quest_jungle_caves_day_scenes_all.obb",
+      "required": true,
+      "role": "content-bundle"
+    }
+  ],
+  "id": "store-2677344882310094",
+  "package": "com.downpourinteractive.onward",
+  "schema": 1,
+  "status": {
+    "playability": "verified",
+    "download": "listed",
+    "notes": [
+      {
+        "en": "Marked as verified by the project on 2026-10-17. File list as Meta's tool reports it for this build; 0 of 83 checksums recorded from a download.",
+        "de": "Vom Projekt am 2026-10-17 als geprüft markiert. Dateiliste, wie Metas Werkzeug sie für diesen Build nennt; 0 von 83 Prüfsummen aus einem Download erfasst."
+      },
+      {
+        "en": "Onward. Tested by the project on an Apple Vision Pro with toolchain 587. Runs with community fix 50 (Klepton #40); voice chat (Vivox) is disabled. Needs toolchain 827f0b6 or newer.",
+        "de": "Onward. Vom Projekt auf einer Apple Vision Pro mit Toolchain 587 getestet. Läuft mit Community-Fix 50 (Klepton #40); der Sprachchat (Vivox) ist abgeschaltet. Braucht Toolchain 827f0b6 oder neuer."
+      }
+    ]
+  },
+  "store": {
+    "appId": "2677344882310094"
+  },
+  "title": "Onward",
+  "toolchain": {
+    "minCommit": "827f0b6",
+    "target": "x2677344882310094"
+  },
+  "versionCode": 18701,
+  "versionName": "2.0.4"
+}
