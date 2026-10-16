@@ -10,7 +10,7 @@
  },
  "toolchain": {
   "target": "x2285803881494677",
-  "minCommit": "ffeb1fa691c5e6484ec063bcd3bb37bd6ab3ae89"
+  "minCommit": "9f12962f71764452fddc25e030ed018d2d86c794"
  },
  "files": [
   {
@@ -42,8 +42,8 @@
     "de": "Vom Projekt am 2026-10-16 als geprüft markiert. Dateiliste, wie Metas Werkzeug sie für diesen Build nennt; 2 von 2 Prüfsummen aus einem Download erfasst."
    },
    {
-    "en": "Gun Club VR. Tested by the author on a Vision Pro M5 with toolchain 561: drawn at up to 4000 pixels per eye, with a steady frame rate. Builds on community fix 44 (stable head movement, gun materials, Exit that saves settings, Sense grip). Needs toolchain ffeb1fa or newer.",
-    "de": "Gun Club VR. Vom Autor auf einer Vision Pro M5 mit Toolchain 561 getestet: bis zu 4000 Pixel je Auge, mit gleichmäßiger Bildrate. Baut auf Community-Fix 44 auf (ruhige Kopfbewegung, Waffenmaterialien, Exit speichert Einstellungen, Sense-Griff). Braucht Toolchain ffeb1fa oder neuer."
+    "en": "Gun Club VR. Tested by the author on a Vision Pro M5 with toolchain 561: drawn at up to 4000 pixels per eye, with a steady frame rate. Builds on community fix 44 (stable head movement, gun materials, Exit that saves settings, Sense grip). Needs toolchain 9f12962 or newer.",
+    "de": "Gun Club VR. Vom Autor auf einer Vision Pro M5 mit Toolchain 561 getestet: bis zu 4000 Pixel je Auge, mit gleichmäßiger Bildrate. Baut auf Community-Fix 44 auf (ruhige Kopfbewegung, Waffenmaterialien, Exit speichert Einstellungen, Sense-Griff). Braucht Toolchain 9f12962 oder neuer."
    }
   ]
  }
