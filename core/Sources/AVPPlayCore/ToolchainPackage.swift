@@ -392,17 +392,18 @@ public enum AppStamp {
     }
 
     /// `CFBundleVersion`: Versionscode des Spiels und Nummer der Toolchain – und eine dritte Zahl, wenn der Bau
-    /// etwas Besonderes ist: 1 für eine bearbeitete Arbeitskopie der Toolchain, 2 für einen Bau, in dem die
-    /// experimentellen Implementierungen von Anfang an eingeschaltet sind (`Toolchain.experimentalSwitches`),
-    /// 3 für beides; dazu 4, wenn das MetalFX-Hochskalieren von Anfang an eingeschaltet ist (`Toolchain.metalFXSwitch`).
+    /// etwas Besonderes ist: 1 für eine bearbeitete Arbeitskopie der Toolchain; 4, wenn das MetalFX-Hochskalieren von
+    /// Anfang an eingeschaltet ist (`Toolchain.metalFXSwitch`). 2 stand für die frühere experimentelle Einstellung
+    /// (neue Audio- und Kopfposen-Implementierung); es wird nicht mehr geschrieben, nur noch gelesen
+    /// (`Built.experimental`), damit ältere Stempel weiter stimmen.
     /// Hat ein MetalFX-Bau eine vorgegebene Startauflösung (`MetalFXResolution`), kommt 8 × die Stufe darunter hinzu:
     /// (100 − Prozent) / 5, also 5 für 75 % – so übernimmt das Erneuern sie unverändert. Dazu 128, wenn die
     /// XR-Vorhersage von Anfang an eingeschaltet ist (`Toolchain.xrPredictionSwitch`).
     /// Mehr als drei Zahlen nimmt der Schlüssel nicht.
-    public static func build(versionCode: Int, toolchainVersion: Int, modified: Bool = false, experimental: Bool = false,
+    public static func build(versionCode: Int, toolchainVersion: Int, modified: Bool = false,
                              metalFX: Bool = false, resolution: Int? = nil, xrPrediction: Bool = false) -> String {
         let step = metalFX ? resolutionStep(resolution) : 0
-        let extra = (modified ? 1 : 0) + (experimental ? 2 : 0) + (metalFX ? 4 : 0) + 8 * step + (xrPrediction ? xrPredictionBit : 0)
+        let extra = (modified ? 1 : 0) + (metalFX ? 4 : 0) + 8 * step + (xrPrediction ? xrPredictionBit : 0)
         return "\(max(0, min(versionCode, 999_999_999))).\(max(0, min(toolchainVersion, 999_999_999)))" + (extra > 0 ? ".\(extra)" : "")
     }
 
@@ -411,7 +412,8 @@ public enum AppStamp {
         public var versionCode: Int
         public var toolchain: Int
         public var modified: Bool
-        /// Die experimentellen Implementierungen sind in diesem Bau von Anfang an eingeschaltet.
+        /// Ein Bau einer früheren Version mit der experimentellen Einstellung (Bit 2). Wird nur noch gelesen; für
+        /// den Stand eines Spiels zählt es nicht mehr.
         public var experimental = false
         /// Das MetalFX-Hochskalieren ist in diesem Bau von Anfang an eingeschaltet.
         public var metalFX = false

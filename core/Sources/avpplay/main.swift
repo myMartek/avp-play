@@ -145,9 +145,6 @@ avpplay – command line for the AVP Play core library
              --no-store-art          don't fetch the cover image from the store page (the icon from the APK is used instead)
              --replace-running       install even if the game is running (it will be quit)
              --controller-mode <standard|surreal>  initial controller mode (pair on Vision Pro)
-             --experimental          build with the toolchain's new audio implementation switched on from the start (and, with
-                                     toolchain 507, its one-head-pose-per-frame implementation, which newer toolchains use anyway;
-                                     off in the game under Advanced › Test; the app's setting “Experimental” does the same)
              --metalfx               build with the compositor's MetalFX upscaling switched on from the start (sharpens the picture
                                      when the game's resolution is below 100%; off in the game under Settings › Rendering)
              --resolution <percent>  with --metalfx: the resolution the game starts at (default 75; 100: the game's own)
@@ -219,9 +216,6 @@ avpplay – Kommandozeile zur Kern-Bibliothek von AVP Play
              --replace-running       auch installieren, wenn das Spiel gerade läuft (es wird dabei beendet)
              --restore-saves         nach dem Kopieren die Spielstände vom Mac zurückspielen, wenn das Spiel auf dem Gerät noch keine hat
              --controller-mode <standard|surreal>  anfänglicher Controllermodus (auf Vision Pro koppeln)
-             --experimental          mit von Anfang an eingeschalteter neuer Audio-Implementierung der Toolchain bauen (mit Toolchain
-                                     507 auch der Implementierung mit einer Kopfpose pro Frame, die neuere Toolchains ohnehin benutzen;
-                                     im Spiel abschaltbar unter Erweitert › Test; die Einstellung „Experimentell“ tut dasselbe)
              --metalfx               mit von Anfang an eingeschaltetem MetalFX-Hochskalieren des Compositors bauen (schärft das Bild,
                                      wenn die Auflösung des Spiels unter 100 % steht; im Spiel abschaltbar unter Einstellungen › Rendering)
              --resolution <Prozent>  mit --metalfx: die Auflösung, mit der das Spiel beginnt (Vorgabe 75; 100: die des Spiels)
@@ -328,7 +322,10 @@ func installRequest(_ o: Options, recipe id: String? = nil) -> InstallRequest {
     request.storeArt = !o.flags.contains("no-store-art")
     if o.flags.contains("replace-running") { request.replaceRunning = true }
     if o.flags.contains("restore-saves") { request.restoreSaves = true }
-    if o.flags.contains("experimental") { request.experimental = true }
+    if o.flags.contains("experimental") {
+        warn(L("--experimental no longer does anything: newer toolchains always use the new audio and head-pose implementations, and older ones are built as usual.",
+               "--experimental bewirkt nichts mehr: Neuere Toolchains benutzen die neue Audio- und Kopfposen-Implementierung immer, ältere werden wie üblich gebaut."))
+    }
     if o.flags.contains("metalfx") { request.metalFX = true }
     if o.flags.contains("xr-prediction") { request.xrPrediction = true }
     let resolution = MetalFXResolution.commandLine(metalFX: request.metalFX == true, value: o.value("resolution"))

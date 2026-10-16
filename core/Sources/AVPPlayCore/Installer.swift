@@ -104,9 +104,6 @@ public struct InstallRequest: Codable, Sendable, Equatable {
     /// Die Versionscodes, unter denen dasselbe Spiel aus einer anderen Kaufquelle installiert wäre. Liegt eine davon
     /// auf dem Gerät, wird nicht darüber installiert.
     public var otherSourceBuilds: [Int]?
-    /// Die experimentellen Implementierungen (`Toolchain.experimentalSwitches`) in diesem Bau von Anfang an
-    /// einschalten. Ohne Angabe: nein.
-    public var experimental: Bool?
     /// Der Name der App auf dem Gerät statt des üblichen (`KLEPTON_DISPLAY_OVERRIDE`). Ohne Angabe: der übliche.
     public var displayName: String?
     /// Ein Zusatz zum Namen der App, etwa „ (Test)“ (`KLEPTON_DISPLAY_SUFFIX`). Ohne Angabe: keiner.
@@ -531,14 +528,6 @@ public struct Installer: Sendable {
         }
         let log = store.directory(for: recipe).appendingPathComponent(".last-build.log")
         let started = Date()
-        let experimental = request.experimental == true
-        if experimental {
-            report(toolchain.supportsExperimental
-                   ? L("Experimental: the new audio implementation is on from the start in this build (it can be switched off in the game under Settings › Advanced › Test); with toolchain 507 also the one-head-pose-per-frame implementation, which newer toolchains use by default.",
-                       "Experimentell: Die neue Audio-Implementierung ist in diesem Bau von Anfang an eingeschaltet (im Spiel abschaltbar unter Einstellungen › Erweitert › Test); mit Toolchain 507 auch die Implementierung mit einer Kopfpose pro Frame, die neuere Toolchains ohnehin benutzen.")
-                   : L("Experimental: this toolchain cannot switch the new audio implementation on yet; the game is built as usual.",
-                       "Experimentell: Diese Toolchain kann die neue Audio-Implementierung noch nicht einschalten; das Spiel wird wie üblich gebaut."))
-        }
         let metalFX = request.metalFX == true
         if metalFX {
             report(toolchain.supportsMetalFX
@@ -569,7 +558,7 @@ public struct Installer: Sendable {
         }
         try toolchain.buildAndInstall(recipe: recipe, team: team, device: device, bundleId: bundle, log: log,
                                       extraEnvironment: TreeStore(store: store).toolchainEnvironment(recipe: recipe),
-                                      experimental: experimental, metalFX: metalFX,
+                                      metalFX: metalFX,
                                       resolution: metalFX ? request.resolution : nil,
                                       xrPrediction: xrPrediction,
                                       displayName: request.displayName, displaySuffix: request.displaySuffix,
