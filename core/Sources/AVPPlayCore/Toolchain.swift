@@ -238,13 +238,6 @@ public struct Toolchain: Sendable {
         return text.contains("KLEPTON_EVA")
     }
 
-    /// Die Test-Schalter der Toolchain, die die experimentelle Einstellung des Programms in jedem Spiel von Anfang
-    /// an einschaltet: die neue Kopfposen- und die neue Audio-Implementierung. Im Spiel bleiben sie abschaltbar.
-    /// `KL_OVRP_ONE_POSE` wirkt nur noch bei älteren Toolchains (507): Ab Klepton #9 ist es der Standard und kein
-    /// eigener Test-Schalter mehr, die Angabe ist dort ohne Wirkung. Bleibt in der Liste, damit ein Bau mit 507
-    /// weiter tut, was die Einstellung bisher tat.
-    public static let experimentalSwitches = ["KL_OVRP_ONE_POSE", "KL_AUDIO_SINK2"]
-
     /// Both controller sources and the generated launch-default option must be present.
     public var supportsSurrealControllers: Bool {
         guard let generator = try? String(contentsOf: root.appendingPathComponent("visionos/gen_xcodeproj.py"), encoding: .utf8),
@@ -277,7 +270,7 @@ public struct Toolchain: Sendable {
     /// Ob diese Toolchain Test-Schalter kennt, die eine Installation von Anfang an eingeschaltet hat
     /// (`KLEPTON_TEST_ON`). Gefragt wird die Toolchain selbst, damit auch ein eigener Stand zählt; eine ältere
     /// baut wie immer und ihr Bau trägt den Vermerk dann nicht.
-    public var supportsExperimental: Bool {
+    public var supportsTestSwitches: Bool {
         guard let text = try? String(contentsOf: root.appendingPathComponent("visionos/gen_xcodeproj.py"), encoding: .utf8) else { return false }
         return text.contains("KLEPTON_TEST_ON")
     }
@@ -292,7 +285,7 @@ public struct Toolchain: Sendable {
     /// Beides wird in ihren Quellen nachgesehen: der Schalter im Spiel (Klepton PR #2) und der Name, mit dem eine
     /// Installation ihn vorbelegt. Fehlt eins, baut sie wie immer und der Bau trägt den Vermerk nicht.
     public var supportsMetalFX: Bool {
-        guard supportsExperimental else { return false }
+        guard supportsTestSwitches else { return false }
         let sources = root.appendingPathComponent("visionos/Sources")
         let texts = ["KleptonTuning.swift", "KleptonCompositor.swift"].compactMap {
             try? String(contentsOf: sources.appendingPathComponent($0), encoding: .utf8)
@@ -302,14 +295,14 @@ public struct Toolchain: Sendable {
 
     /// Der Name, unter dem eine Installation die XR-Vorhersage von Anfang an einschaltet – in derselben Liste wie die
     /// Test-Schalter (`KLEPTON_TEST_ON`, im Spiel `KLTestOn` und der Test-Schalter „XR prediction“). Ohne ist sie aus:
-    /// Die Toolchain gibt dann auf jedem Weg die Kopfpose ohne Vorhersage (OpenXR `KL_XR_PREDICT`, Metas Schnittstelle
-    /// `KL_OVRP_ONE_POSE`). Was im Spiel gewählt ist, gilt.
+    /// Die Toolchain gibt dann auf jedem Weg die Kopfpose ohne Vorhersage (OpenXR `KL_XR_PREDICT`; über Metas
+    /// Schnittstelle eine Kopfpose pro Frame). Was im Spiel gewählt ist, gilt.
     public static let xrPredictionSwitch = "KL_XR_PREDICT"
 
     /// Ob diese Toolchain die XR-Vorhersage als Test-Schalter hat und sie ohne ihn auslässt. Eine ältere sagt immer
     /// voraus, was die Option auch sagt; ihr Bau trägt den Vermerk dann nicht.
     public var supportsXRPrediction: Bool {
-        guard supportsExperimental,
+        guard supportsTestSwitches,
               let text = try? String(contentsOf: root.appendingPathComponent("visionos/Sources/KleptonTuning.swift"), encoding: .utf8)
         else { return false }
         return text.contains("Entry(env: \"\(Toolchain.xrPredictionSwitch)\"")
@@ -339,8 +332,6 @@ public struct Toolchain: Sendable {
 
     /// Baut das Target und installiert es. Kopiert werden dabei nur die zwei kleinen Metadateien der Toolchain;
     /// die Spieldaten überträgt anschließend das ergänzende Kopieren.
-    /// - Parameter experimental: die experimentellen Implementierungen von Anfang an einschalten. Wirkt nur, wo
-    ///   die Toolchain das kann (`supportsExperimental`); der Stempel des Baus sagt, ob es geschehen ist.
     /// - Parameter metalFX: das MetalFX-Hochskalieren im Spiel von Anfang an einschalten. Wirkt nur, wo die
     ///   Toolchain das kann (`supportsMetalFX`); auch das sagt der Stempel.
     /// - Parameter resolution: die Auflösung in Prozent, mit der das Spiel beginnt. Wirkt nur zusammen mit `metalFX`
@@ -350,7 +341,7 @@ public struct Toolchain: Sendable {
     /// - Parameters displayName, displaySuffix: der Name der App auf dem Gerät statt des üblichen bzw. ein Zusatz
     ///   dazu (`displayEnvironment`); ohne Angabe bleibt er, wie er war.
     public func buildAndInstall(recipe: Recipe, team: String, device: Device, bundleId: String?, log: URL,
-                                extraEnvironment: [String: String] = [:], experimental: Bool = false,
+                                extraEnvironment: [String: String] = [:],
                                 metalFX: Bool = false, resolution: Int? = nil, xrPrediction: Bool = false,
                                 displayName: String? = nil, displaySuffix: String? = nil,
                                 controllerMode: ControllerMode = .standard) throws {
@@ -371,17 +362,16 @@ public struct Toolchain: Sendable {
         // Eine installierte App zeigt das Startfenster eines Spiels, nicht den Boot-Bericht der Entwicklung.
         env["KLEPTON_START_SCREEN"] = "1"
         env["KLEPTON_APP_VERSION"] = AppStamp.short(versionName: recipe.versionName)
-        let experimental = experimental && supportsExperimental
         let metalFX = metalFX && supportsMetalFX
         // Die Startauflösung gibt es nur mit MetalFX und einer Toolchain, die sie liest; der Stempel trägt, was gilt.
         let resolution = metalFX && supportsRenderScalePreset && MetalFXResolution.environmentValue(resolution) != nil
             ? resolution.map(MetalFXResolution.clamped) : nil
         let xrPrediction = xrPrediction && supportsXRPrediction
         env["KLEPTON_APP_BUILD"] = AppStamp.build(versionCode: recipe.versionCode, toolchainVersion: version(), modified: isModified,
-                                                  experimental: experimental, metalFX: metalFX, resolution: resolution,
+                                                  metalFX: metalFX, resolution: resolution,
                                                   xrPrediction: xrPrediction)
         // Nie aus der Umgebung dieses Programms übernehmen: Was eingeschaltet ist, sagt allein der Auftrag.
-        let switchesOn = (experimental ? Toolchain.experimentalSwitches : []) + (metalFX ? [Toolchain.metalFXSwitch] : [])
+        let switchesOn = (metalFX ? [Toolchain.metalFXSwitch] : [])
             + (xrPrediction ? [Toolchain.xrPredictionSwitch] : [])
         env["KLEPTON_TEST_ON"] = switchesOn.isEmpty ? nil : switchesOn.joined(separator: ",")
         env[Toolchain.renderScaleVariable] = MetalFXResolution.environmentValue(resolution)

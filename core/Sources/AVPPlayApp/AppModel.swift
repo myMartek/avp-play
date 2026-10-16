@@ -238,23 +238,10 @@ final class AppModel: ObservableObject {
     @AppStorage("autoRemoveOldToolchains") var autoRemoveOldToolchains = true
     /// Initial controller mode for newly built games; the headset preference wins later.
     @AppStorage(ControllerMode.preferenceKey) var controllerMode: ControllerMode = .standard
-    /// Experimentell: In jedem Spiel, das installiert oder aktualisiert wird, ist die neue Audio-Implementierung der
-    /// Toolchain von Anfang an eingeschaltet (`Toolchain.experimentalSwitches`) – als wäre die bisherige schon
-    /// entfernt. Die Kopfposen-Implementierung, die die Liste auch nennt, wirkt nur noch mit Toolchain 507; neuere
-    /// benutzen sie ohnehin (Klepton #9). Ein Bau, der es anders hält als diese Einstellung, gilt als
-    /// aktualisierbar, sodass „Alle aktualisieren“ nach dem Umlegen alle installierten Spiele umstellt.
-    @AppStorage(AppModel.experimentalKey) var experimentalImplementations = false
-    nonisolated static let experimentalKey = "experimentalImplementations"
-    /// Was `GameStatus` von einem aktuellen Bau erwartet: die Einstellung, wo die neueste Toolchain sie umsetzen
-    /// kann. Liest die Einstellung selbst, weil die Bestandsaufnahme nicht auf dem Hauptthread läuft.
-    nonisolated static func experimentalExpected(toolchain: Toolchain?) -> Bool? {
-        guard let toolchain, toolchain.supportsExperimental else { return nil }
-        return UserDefaults.standard.bool(forKey: experimentalKey)
-    }
     /// MetalFX: In jedem Spiel, das installiert oder aktualisiert wird, ist das Hochskalieren des Compositors von
     /// Anfang an eingeschaltet (`Toolchain.metalFXSwitch`, Klepton PR #2). Aus ist das bisherige Verhalten: Das Spiel
-    /// startet mit dem linearen Strecken, und der Schalter im Spiel entscheidet. Wie bei der experimentellen
-    /// Einstellung gilt ein Bau, der es anders hält, als aktualisierbar.
+    /// startet mit dem linearen Strecken, und der Schalter im Spiel entscheidet. Ein Bau, der es anders hält, gilt
+    /// als aktualisierbar.
     @AppStorage(AppModel.metalFXKey) var metalFXUpscaling = false
     nonisolated static let metalFXKey = "metalFXUpscaling"
     /// Die Auflösung in Prozent, mit der ein Spiel bei eingeschaltetem MetalFX beginnt (`MetalFXResolution`).
@@ -301,10 +288,8 @@ final class AppModel: ObservableObject {
     /// Nicht `@Published`, fließt aber in `derived` ein – daher verwirft jede Änderung es selbst.
     var installedApps: [InstalledApp]? { didSet { invalidateDerived() } }
     var toolchainRevision: Int? { didSet { invalidateDerived() } }
-    /// Was ein aktueller Bau von der experimentellen Einstellung tragen soll; `nil`, solange keine Toolchain da
-    /// ist, die das kann – dann wird nicht verglichen.
-    var experimentalExpected: Bool? { didSet { invalidateDerived() } }
-    /// Dasselbe für das MetalFX-Hochskalieren.
+    /// Was ein aktueller Bau vom MetalFX-Hochskalieren tragen soll; `nil`, solange keine Toolchain da ist, die das
+    /// kann – dann wird nicht verglichen.
     var metalFXExpected: Bool? { didSet { invalidateDerived() } }
     /// Ob die neueste Toolchain die XR-Vorhersage als Option kennt; `nil` ohne Toolchain.
     @Published var xrPredictionSupported: Bool?
@@ -479,7 +464,7 @@ final class AppModel: ObservableObject {
         // (Gerät fragen, jeden Ordner im Bestand zählen) dauert Sekunden und ändert an den anderen Spielen nichts.
         let id = game.id, catalog = game.catalog
         let paths = paths, apps = installedApps, revision = toolchainRevision, prefix = bundlePrefix, drafts = draftsDirectory
-        let pin = toolchainChoices.games[id], experimental = experimentalExpected, metalFX = metalFXExpected
+        let pin = toolchainChoices.games[id], metalFX = metalFXExpected
         let xrPrediction = xrPredictionExpected(for: id)
         Task.detached(priority: .userInitiated) {
             var fresh: Game?
@@ -490,7 +475,7 @@ final class AppModel: ObservableObject {
                     let active = StoreUpdate.resolve([tested], variants: variants, sources: sources, drafts: drafts, choices: choices).first ?? tested
                     fresh = Probe.game(active, draft: false, tested: tested, variants: variants, sources: sources, paths: paths,
                                        apps: apps, toolchainRevision: revision, pin: pin, bundlePrefix: prefix,
-                                       experimental: experimental, metalFX: metalFX, xrPrediction: xrPrediction)
+                                       metalFX: metalFX, xrPrediction: xrPrediction)
                     fresh?.catalog = catalog
                 }
             }
@@ -758,8 +743,7 @@ final class AppModel: ObservableObject {
         fresh.status = GameStatus.of(recipe: fresh.recipe, store: paths.store, apps: installedApps, toolchainVersion: toolchainRevision,
                                      pin: toolchainChoices.games[id], bundlePrefix: bundlePrefix,
                                      otherSourceBuilds: Set(fresh.otherSourceBuilds),
-                                     experimental: experimentalExpected, metalFX: metalFXExpected,
-                                     xrPrediction: xrPredictionExpected(for: id))
+                                     metalFX: metalFXExpected, xrPrediction: xrPredictionExpected(for: id))
         replace(fresh)
     }
 
@@ -947,7 +931,6 @@ final class AppModel: ObservableObject {
         // Vor den Spielen: daraus wird die Liste aller Spiele gebaut, und die braucht den neuen Stand des Geräts.
         installedApps = s.apps
         toolchainRevision = s.toolchainRevision
-        experimentalExpected = s.experimentalExpected
         metalFXExpected = s.metalFXExpected
         if xrPredictionSupported != s.xrPredictionSupported { xrPredictionSupported = s.xrPredictionSupported }
         toolchainChoices = s.toolchainChoices
@@ -1340,8 +1323,6 @@ final class AppModel: ObservableObject {
         // Nur eine Installation spielt Spielstände zurück; ein Abgleich von Inhalten rührt sie nicht an.
         if steps.contains(.build) { request.restoreSaves = chosen.restoreSaves ?? true }
         if steps.contains(.build) { request.controllerMode = controllerMode }
-        // Die experimentelle Einstellung gilt für jeden Bau, den dieses Programm anstößt.
-        if steps.contains(.build), experimentalImplementations { request.experimental = true }
         if steps.contains(.build), metalFXUpscaling {
             request.metalFX = true
             request.resolution = metalFXResolution

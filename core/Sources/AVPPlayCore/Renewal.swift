@@ -90,7 +90,6 @@ public enum Renewal {
     /// sie trägt. Fehlt dort eine Auflösung, bleibt sie weg (die des Targets) – das Erneuern verlängert nur die Frist.
     static func keepBuild(_ built: AppStamp.Built?, in request: inout InstallRequest) {
         guard let built else { return }
-        if built.experimental { request.experimental = true }
         if built.metalFX {
             request.metalFX = true
             request.resolution = built.resolution

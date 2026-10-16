@@ -185,60 +185,48 @@ final class ToolchainChoiceTests: XCTestCase {
         XCTAssertEqual(status("1").onDevice, .unstamped(stamp: "1.0 (1)"))
     }
 
-    // MARK: Die experimentelle Einstellung
+    // MARK: Die frühere experimentelle Einstellung
 
-    func testTheStampCarriesTheExperimentalBuild() {
-        XCTAssertEqual(AppStamp.build(versionCode: 7, toolchainVersion: 4, experimental: true), "7.4.2")
-        XCTAssertEqual(AppStamp.build(versionCode: 7, toolchainVersion: 4, modified: true, experimental: true), "7.4.3")
+    func testAStampFromTheFormerExperimentalSettingIsStillRead() {
+        // Bit 2 schreibt dieses Werkzeug nicht mehr; ein Stempel, der es trägt, wird weiter erkannt.
         XCTAssertEqual(AppStamp.parse("7.4.2"), .init(versionCode: 7, toolchain: 4, modified: false, experimental: true))
         XCTAssertEqual(AppStamp.parse("7.4.3"), .init(versionCode: 7, toolchain: 4, modified: true, experimental: true))
         XCTAssertEqual(AppStamp.parse("7.4.1")?.experimental, false)
         XCTAssertEqual(AppStamp.parse("7.4")?.experimental, false)
         // Eine dritte Zahl, die dieses Werkzeug nicht schreibt, sagt nichts – der Bau bleibt aber erkannt.
         XCTAssertEqual(AppStamp.parse("7.4.9"), .init(versionCode: 7, toolchain: 4, modified: false, experimental: false))
+        XCTAssertEqual(AppStamp.build(versionCode: 7, toolchainVersion: 4, modified: true), "7.4.1")
     }
 
-    func testABuildThatDiffersFromTheExperimentalSettingCanBeUpdated() {
+    func testABuildFromTheFormerExperimentalSettingIsNotOutdatedForIt() {
         let store = ContentStore(root: temp())
         let bundle = Toolchain.bundleId(target: "moss", prefix: "com.example")
-        func status(_ installed: String, experimental: Bool?, pin: ToolchainChoices.Pin? = nil) -> GameStatus.OnDevice {
+        func status(_ installed: String) -> GameStatus.OnDevice {
             GameStatus.of(recipe: recipe(), store: store,
                           apps: [InstalledApp(bundleIdentifier: bundle, name: "Moss", version: "1.0", bundleVersion: installed)],
-                          toolchainVersion: 4, pin: pin, bundlePrefix: "com.example", experimental: experimental).onDevice
+                          toolchainVersion: 4, bundlePrefix: "com.example").onDevice
         }
-        // Einstellung an: Ein Bau mit der neuesten Toolchain, aber ohne die Schalter, ist nicht mehr aktuell …
-        XCTAssertEqual(status("7.4", experimental: true), .olderToolchain(stamp: "1.0 (7.4)"))
-        XCTAssertEqual(status("7.4.2", experimental: true), .current(stamp: "1.0 (7.4.2)"))
-        // … und nach dem Ausschalten gilt dasselbe andersherum.
-        XCTAssertEqual(status("7.4.2", experimental: false), .olderToolchain(stamp: "1.0 (7.4.2)"))
-        XCTAssertEqual(status("7.4", experimental: false), .current(stamp: "1.0 (7.4)"))
-        // Ohne Vergleich (keine Toolchain, die es kann) ändert sich nichts am bisherigen Urteil.
-        XCTAssertEqual(status("7.4.2", experimental: nil), .current(stamp: "1.0 (7.4.2)"))
-        XCTAssertEqual(status("7.3.2", experimental: nil), .olderToolchain(stamp: "1.0 (7.3.2)"))
-        // Ein Spiel mit eigens gewählter Toolchain bleibt, wie es ist.
-        let pin = ToolchainChoices.Pin(version: 4, commit: "ddddddd")
-        XCTAssertEqual(status("7.4", experimental: true, pin: pin), .current(stamp: "1.0 (7.4)"))
-        XCTAssertEqual(status("7.4.2", experimental: false, pin: pin), .current(stamp: "1.0 (7.4.2)"))
+        XCTAssertEqual(status("7.4.2"), .current(stamp: "1.0 (7.4.2)"))
+        XCTAssertEqual(status("7.4"), .current(stamp: "1.0 (7.4)"))
+        XCTAssertEqual(status("7.3.2"), .olderToolchain(stamp: "1.0 (7.3.2)"))
     }
 
-    func testAnInstallRequestWithoutTheFieldIsNotExperimental() throws {
-        // Aufträge, die vor dieser Einstellung gespeichert wurden, haben das Feld nicht.
-        var request = InstallRequest(toolchain: "/tmp/t")
-        let old = try JSONSerialization.jsonObject(with: JSONEncoder().encode(request)) as? [String: Any]
-        XCTAssertNil(old?["experimental"])
-        XCTAssertNil(try JSONDecoder().decode(InstallRequest.self, from: JSONEncoder().encode(request)).experimental)
-        request.experimental = true
-        XCTAssertEqual(try JSONDecoder().decode(InstallRequest.self, from: JSONEncoder().encode(request)).experimental, true)
+    func testAnInstallRequestSavedWithTheFormerFieldStillLoads() throws {
+        // Aufträge, die eine frühere Version gespeichert hat, können `experimental` noch tragen.
+        let request = InstallRequest(toolchain: "/tmp/t")
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(request)) as? [String: Any])
+        object["experimental"] = true
+        let data = try JSONSerialization.data(withJSONObject: object)
+        XCTAssertEqual(try JSONDecoder().decode(InstallRequest.self, from: data).toolchain, "/tmp/t")
     }
 
     // MARK: Das MetalFX-Hochskalieren
 
     func testTheStampCarriesTheMetalFXBuild() {
         XCTAssertEqual(AppStamp.build(versionCode: 7, toolchainVersion: 4, metalFX: true), "7.4.4")
-        XCTAssertEqual(AppStamp.build(versionCode: 7, toolchainVersion: 4, modified: true, experimental: true, metalFX: true), "7.4.7")
+        XCTAssertEqual(AppStamp.build(versionCode: 7, toolchainVersion: 4, modified: true, metalFX: true), "7.4.5")
         // Ohne die Einstellung bleibt der Stempel, wie er war.
         XCTAssertEqual(AppStamp.build(versionCode: 7, toolchainVersion: 4), "7.4")
-        XCTAssertEqual(AppStamp.build(versionCode: 7, toolchainVersion: 4, experimental: true), "7.4.2")
         XCTAssertEqual(AppStamp.parse("7.4.4"), .init(versionCode: 7, toolchain: 4, modified: false, experimental: false, metalFX: true))
         XCTAssertEqual(AppStamp.parse("7.4.6"), .init(versionCode: 7, toolchain: 4, modified: false, experimental: true, metalFX: true))
         XCTAssertEqual(AppStamp.parse("7.4.7"), .init(versionCode: 7, toolchain: 4, modified: true, experimental: true, metalFX: true))
@@ -249,18 +237,18 @@ final class ToolchainChoiceTests: XCTestCase {
     func testABuildThatDiffersFromTheMetalFXSettingCanBeUpdated() {
         let store = ContentStore(root: temp())
         let bundle = Toolchain.bundleId(target: "moss", prefix: "com.example")
-        func status(_ installed: String, experimental: Bool? = nil, metalFX: Bool?) -> GameStatus.OnDevice {
+        func status(_ installed: String, metalFX: Bool?) -> GameStatus.OnDevice {
             GameStatus.of(recipe: recipe(), store: store,
                           apps: [InstalledApp(bundleIdentifier: bundle, name: "Moss", version: "1.0", bundleVersion: installed)],
-                          toolchainVersion: 4, bundlePrefix: "com.example", experimental: experimental, metalFX: metalFX).onDevice
+                          toolchainVersion: 4, bundlePrefix: "com.example", metalFX: metalFX).onDevice
         }
         XCTAssertEqual(status("7.4", metalFX: true), .olderToolchain(stamp: "1.0 (7.4)"))
         XCTAssertEqual(status("7.4.4", metalFX: true), .current(stamp: "1.0 (7.4.4)"))
         XCTAssertEqual(status("7.4.4", metalFX: false), .olderToolchain(stamp: "1.0 (7.4.4)"))
         XCTAssertEqual(status("7.4", metalFX: false), .current(stamp: "1.0 (7.4)"))
-        // Beide Einstellungen zugleich: jede für sich verglichen.
-        XCTAssertEqual(status("7.4.6", experimental: true, metalFX: true), .current(stamp: "1.0 (7.4.6)"))
-        XCTAssertEqual(status("7.4.2", experimental: true, metalFX: true), .olderToolchain(stamp: "1.0 (7.4.2)"))
+        // Das Bit der früheren experimentellen Einstellung zählt nicht mit.
+        XCTAssertEqual(status("7.4.6", metalFX: true), .current(stamp: "1.0 (7.4.6)"))
+        XCTAssertEqual(status("7.4.2", metalFX: true), .olderToolchain(stamp: "1.0 (7.4.2)"))
         // Keine Toolchain, die es kann: kein Vergleich, das Urteil bleibt das bisherige.
         XCTAssertEqual(status("7.4.4", metalFX: nil), .current(stamp: "1.0 (7.4.4)"))
     }
@@ -362,7 +350,7 @@ final class ToolchainChoiceTests: XCTestCase {
 
     func testTheStampCarriesTheStartingResolution() {
         XCTAssertEqual(AppStamp.build(versionCode: 7, toolchainVersion: 4, metalFX: true, resolution: 75), "7.4.44")
-        XCTAssertEqual(AppStamp.build(versionCode: 7, toolchainVersion: 4, experimental: true, metalFX: true, resolution: 50), "7.4.86")
+        XCTAssertEqual(AppStamp.build(versionCode: 7, toolchainVersion: 4, metalFX: true, resolution: 50), "7.4.84")
         // Ohne MetalFX und bei 100 % kein Vermerk.
         XCTAssertEqual(AppStamp.build(versionCode: 7, toolchainVersion: 4, resolution: 75), "7.4")
         XCTAssertEqual(AppStamp.build(versionCode: 7, toolchainVersion: 4, metalFX: true, resolution: 100), "7.4.4")
@@ -410,7 +398,8 @@ final class ToolchainChoiceTests: XCTestCase {
         }
         XCTAssertEqual(renewed("7.4.68").resolution, 60)
         XCTAssertEqual(renewed("7.4.68").metalFX, true)
-        XCTAssertEqual(renewed("7.4.46").experimental, true)
+        // Ein Bau der früheren experimentellen Einstellung (Bit 2): erneuert wie jeder andere.
+        XCTAssertEqual(renewed("7.4.46").metalFX, true)
         XCTAssertEqual(renewed("7.4.46").resolution, 75)
         // Ein MetalFX-Bau ohne Vorgabe bleibt ohne – nie die 75 % der Einstellung.
         XCTAssertEqual(renewed("7.4.4").metalFX, true)
@@ -424,8 +413,8 @@ final class ToolchainChoiceTests: XCTestCase {
 
     func testTheStampCarriesTheXRPrediction() {
         XCTAssertEqual(AppStamp.build(versionCode: 7, toolchainVersion: 4, xrPrediction: true), "7.4.128")
-        XCTAssertEqual(AppStamp.build(versionCode: 7, toolchainVersion: 4, modified: true, experimental: true, metalFX: true,
-                                      resolution: 50, xrPrediction: true), "7.4.215")
+        XCTAssertEqual(AppStamp.build(versionCode: 7, toolchainVersion: 4, modified: true, metalFX: true,
+                                      resolution: 50, xrPrediction: true), "7.4.213")
         // Ohne die Option bleibt der Stempel, wie er war.
         XCTAssertEqual(AppStamp.build(versionCode: 7, toolchainVersion: 4, metalFX: true, resolution: 75), "7.4.44")
         XCTAssertEqual(AppStamp.parse("7.4.128"),
