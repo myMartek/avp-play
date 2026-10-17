@@ -38,6 +38,7 @@ extension AppModel {
                 catalogProblem = "\(error)"
             }
         }
+        loadSteamCatalog()
         reportUsage()
     }
 
@@ -72,6 +73,31 @@ extension AppModel {
             askedOwn.formUnion(wanted)
         }
         return missing().count
+    }
+
+    // MARK: Steam-Liste
+
+    /// Holt die ganze Steam-Liste des Katalogs – ein paar Dutzend Spiele, Seite für Seite. Ein Dienst ohne Steam-Liste
+    /// (vor dem Ausrollen) antwortet nicht: dann bleibt sie leer, und es stehen nur die eigenen Steam-Spiele da.
+    func loadSteamCatalog() {
+        guard onlineCatalog else { steamCatalog = []; return }
+        let client = catalogClient
+        Task {
+            var all: [SteamCatalogGame] = []
+            var page = 0
+            do {
+                while page < 20 {
+                    let next = try await client.steamCatalog(page: page)
+                    all += next.games
+                    page += 1
+                    if !next.more || next.games.isEmpty { break }
+                }
+            } catch {
+                return
+            }
+            var seen = Set<String>()
+            steamCatalog = all.filter { seen.insert($0.appId).inserted }
+        }
     }
 
     // MARK: Im Besitz
@@ -229,7 +255,12 @@ extension AppModel {
                                                   xrPrediction: xrPredictionExpected(for: recipe.id)),
                             cover: nil, catalog: entry, draft: true))
         }
-        // Dahinter die Steam-Spiele des Kontos mit Android-Fassung, die noch kein Rezept und keinen Entwurf haben.
+        // Dahinter die Steam-Spiele mit Android-Fassung – die des Kontos und die aus der Steam-Liste des Katalogs –, die
+        // noch kein Rezept und keinen Entwurf haben.
+        let steamInfo = Dictionary(steamCatalog.map { ($0.appId, $0) }, uniquingKeysWith: { a, _ in a })
+        for index in out.indices where out[index].recipe.source == .steam {
+            if let app = out[index].recipe.store.steamAppId { out[index].steamCatalog = steamInfo[app] }
+        }
         for app in steamPlaceholders(known: games) {
             let recipe = SteamDraft.placeholder(app: app)
             var game = Game(recipe: recipe,
@@ -238,6 +269,7 @@ extension AppModel {
                                                   xrPrediction: xrPredictionExpected(for: recipe.id)),
                             cover: nil, catalog: nil, draft: true)
             game.ownershipKeys = ["steam:\(app.appId)"]
+            game.steamCatalog = steamInfo[app.appId]
             out.append(game)
         }
         allGames = out
@@ -360,15 +392,28 @@ extension AppModel {
     /// Der Katalog führt ein Spiel unter seiner Meta-Store-Seite, auch wenn es hier aus Steam installiert ist; die
     /// Meldung zählt dann für dasselbe Spiel. Dass sie die Steam-Fassung meint, sagen ihr Build und ein Vermerk am
     /// Anfang des Kommentars – der Dienst kennt kein eigenes Feld für die Kaufquelle.
+    /// Kann zu diesem Spiel eine Rückmeldung gehen? Ein Spiel aus dem Meta-Store unter seiner Store-Kennung, eines aus
+    /// Steam unter seiner Steam-App-ID.
+    func canSendFeedback(_ game: Game) -> Bool {
+        guard onlineCatalog, game.fromStore else { return false }
+        if game.recipe.source == .steam { return game.recipe.store.steamAppId.flatMap(SteamCatalogGame.serviceKey(steamAppId:)) != nil }
+        return game.recipe.catalogAppId != nil
+    }
+
     func sendFeedback(_ game: Game, result: CatalogFeedback.Result, comment: String) {
-        guard onlineCatalog, let appId = game.recipe.catalogAppId else { return }
-        let comment = game.recipe.source == .steam ? CatalogFeedback.steamMark + comment : comment
+        guard canSendFeedback(game) else { return }
+        let steamApp = game.recipe.source == .steam ? game.recipe.store.steamAppId : nil
+        guard let appId = steamApp.flatMap(SteamCatalogGame.serviceKey(steamAppId:)) ?? game.recipe.catalogAppId else { return }
         let feedback = CatalogFeedback(appId: appId, versionCode: game.recipe.versionCode, result: result, comment: comment,
                                        appVersion: appVersion, toolchain: toolchain(for: game).map { String($0.version()) } ?? "", lang: language.rawValue)
         let key = feedbackKey(game)
+        let metaApp = game.recipe.catalogAppId
         Task {
             do {
-                try await catalogClient.send(feedback)
+                // Die Steam-Fassung zählt für ihren Eintrag in der Steam-Liste. Ein Dienst ohne Steam-Liste bekommt sie wie
+                // früher beim Meta-Spiel, mit Vermerk (das erledigt `sendSteam`).
+                if let steamApp { try await catalogClient.sendSteam(feedback, steamAppId: steamApp, metaAppId: metaApp) }
+                else { try await catalogClient.send(feedback) }
                 sentFeedback[key] = result.rawValue
                 UserDefaults.standard.set(sentFeedback, forKey: "sentFeedback")
                 notice = L("Thank you – your report has been sent.", "Danke – deine Rückmeldung ist gesendet.")

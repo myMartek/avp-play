@@ -13,6 +13,8 @@ struct Game: Identifiable {
     var storeBytes: Int64 = 0
     /// Was der Online-Katalog über das Spiel sagt, soweit er es kennt.
     var catalog: CatalogGame?
+    /// Was die Steam-Liste des Katalogs über die Steam-Fassung sagt – für ein Spiel, dessen Kaufquelle Steam ist.
+    var steamCatalog: SteamCatalogGame?
     /// Kein mitgeliefertes Rezept, sondern ein Entwurf aus Katalog und Metas Werkzeug – oder erst ein Platzhalter.
     var draft = false
     /// Gesetzt, wenn statt einer geprüften Fassung eine ungetestete aus dem Store gewählt ist: der Name der Fassung,
@@ -35,12 +37,21 @@ struct Game: Identifiable {
     /// Sind die Dateien des Spiels bekannt? Bei einem Platzhalter noch nicht.
     var prepared: Bool { !draft || !recipe.files.isEmpty }
     /// Mixed-Reality-Modus, der hier funktioniert: sagt das Rezept oder der Katalog.
-    var mixedReality: Bool { recipe.mixedReality == true || catalog?.mixedReality == true }
+    var mixedReality: Bool { recipe.mixedReality == true || catalog?.mixedReality == true || steamCatalog?.mixedReality == true }
     /// Wie weit dem Spiel zu trauen ist. Was der Katalog sagt, gilt – dort legt das Projekt fest oder zählen die
     /// Meldungen. Ohne Katalog (kein Netz, abgeschaltet, Sonderapp) gilt das mitgelieferte Rezept.
     var trust: Trust {
         // Geprüft ist eine Fassung, nicht ein Name: die neuere aus dem Store hat das Projekt nicht gesehen.
         if testedVersion != nil { return .untested }
+        // Für die Steam-Fassung gilt, was die Steam-Liste des Katalogs sagt – ihr eigenes Urteil, nicht das des Meta-Stores.
+        if recipe.source == .steam, let steam = steamCatalog?.status {
+            switch steam {
+            case "verified": return .verified
+            case "community": return .community
+            case "incompatible": return .incompatible
+            default: return .untested
+            }
+        }
         // Ebenso eine Kaufquelle: Was der Katalog sagt, gilt der Fassung aus dem Meta-Store. Die aus Steam ist ein
         // anderer Stand des Spiels und trägt ihr eigenes Urteil im Rezept.
         if recipe.source == .steam, !sources.isEmpty, recipe.status.playability != "verified" { return .untested }
@@ -189,6 +200,8 @@ final class AppModel: ObservableObject {
     }
     private(set) var steamLibraryIds: Set<String> = []
     @Published var loadingSteamLibrary = false
+    /// Die Steam-Liste des Katalogdienstes: alle Steam-Spiele mit Android-Fassung, die das Projekt führt, mit Einstufung.
+    @Published var steamCatalog: [SteamCatalogGame] = [] { didSet { if steamCatalog != oldValue { rebuildAllGames() } } }
     @Published var steamLibraryProblem: String?
     /// Spiele, für die gerade einzeln bei Meta nachgefragt wird („Kauf prüfen“), und was dabei zuletzt zu sagen war.
     @Published var checkingPurchase: Set<String> = []
@@ -438,7 +451,12 @@ final class AppModel: ObservableObject {
     func owned(_ game: Game) -> Owned {
         guard let key = OwnershipCache.key(for: game.recipe) else { return .notApplicable }
         // Ohne eigene Antwort sagt die Bibliothek des Meta-Kontos, ob es dazugehört – nur ja, nie nein.
-        guard let record = ownership[key] else { return libraryIds.contains(key) || steamLibraryIds.contains(key) ? .yes : .unknown }
+        guard let record = ownership[key] else {
+            if libraryIds.contains(key) || steamLibraryIds.contains(key) { return .yes }
+            // Ein Steam-Spiel aus der Liste des Katalogs, das in den gelesenen Steam-Spielen des Kontos fehlt, gehört ihm nicht.
+            if game.draft, !game.prepared, game.recipe.source == .steam, steamLibrary != nil { return .no }
+            return .unknown
+        }
         return record.owned ? .yes : .no
     }
 
@@ -584,7 +602,7 @@ final class AppModel: ObservableObject {
             // was nicht läuft – jeweils nach der Zahl derer, die sagen, es läuft, dann nach Namen. So reiht auch
             // der Katalog, damit eine nachgeladene Seite unten anschließt.
             let rank = trust == .verified ? 0 : (game.prepared && trust != .incompatible ? 1 : trust.rawValue + 1)
-            return (game, rank, game.catalog?.works ?? 0)
+            return (game, rank, (game.recipe.source == .steam ? game.steamCatalog?.works : game.catalog?.works) ?? 0)
         }
         return keyed.sorted { a, b in
             if a.rank != b.rank { return a.rank < b.rank }

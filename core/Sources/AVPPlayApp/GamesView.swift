@@ -191,7 +191,7 @@ struct FeedbackBox: View {
     var body: some View {
         GroupBox(L("How does it run?", "Wie läuft es?")) {
             VStack(alignment: .leading, spacing: 8) {
-                if !(game.fromStore && game.recipe.catalogAppId != nil && model.onlineCatalog) {
+                if !model.canSendFeedback(game) {
                     // Sonderapps kennt der Katalog nicht, und ohne Katalog gibt es keinen Empfänger.
                     EmptyView()
                 } else if game.status.builtWith?.modified == true {
@@ -839,12 +839,17 @@ struct GameDetail: View {
                        "Du kannst es versuchen. Jedes der geprüften Spiele brauchte eigene Anpassungen, bevor es lief – ein vom Projekt nicht getestetes startet also womöglich nicht. Sag danach, wie es lief: Melden mehr Leute, dass ein Spiel läuft, als dass es nicht läuft, wird es „Von Nutzern bestätigt“, umgekehrt „Inkompatibel“."))
                     .font(.callout).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
-                if let c = game.catalog, c.works + c.problems + c.fails > 0 {
+                // Für die Steam-Fassung zählen die Meldungen und Notizen ihres Eintrags in der Steam-Liste.
+                let reports: (works: Int, problems: Int, fails: Int)? = game.recipe.source == .steam
+                    ? game.steamCatalog.map { ($0.works, $0.problems, $0.fails) } : game.catalog.map { ($0.works, $0.problems, $0.fails) }
+                if let c = reports, c.works + c.problems + c.fails > 0 {
                     Text(L("Reports from users: \(c.works) say it works, \(c.problems) report problems, \(c.fails) say it does not start.",
                            "Meldungen von Nutzern: \(c.works) sagen, es läuft, \(c.problems) melden Probleme, \(c.fails) sagen, es startet nicht."))
                         .font(.callout)
                 }
-                if let note = game.catalog?.note { Label(note, systemImage: "text.bubble").font(.callout) }
+                if let note = game.recipe.source == .steam ? game.steamCatalog?.note : game.catalog?.note {
+                    Label(note, systemImage: "text.bubble").font(.callout)
+                }
                 if game.prepared, DraftRecipe.isGeneric(game.recipe.toolchain.target) {
                     Label(L("The toolchain has no entry of its own for this game. It is built with general settings for its engine – the least certain kind of attempt.",
                             "Die Toolchain hat für dieses Spiel keinen eigenen Eintrag. Es wird mit allgemeinen Einstellungen für seine Engine gebaut – die unsicherste Art von Versuch."),
@@ -887,7 +892,13 @@ struct GameDetail: View {
     /// Für ein Steam-Spiel ohne Rezept: seine Android-Fassung laden und daraus den Entwurf schreiben.
     private var steamPrepare: some View {
         let app = model.steamLibrary?.apps.first { $0.appId == game.recipe.store.steamAppId }
-        let blocker = model.steamBlocker(for: game)
+        // Steht das Spiel nur in der Steam-Liste des Katalogs: gehört es dem Konto nicht, oder ist es noch nicht gelesen?
+        let blocker = model.steamBlocker(for: game) ?? (app == nil
+            ? (model.steamLibrary == nil
+                ? L("Your Steam games have not been read yet (filter “Steam” or “Owned”).", "Deine Steam-Spiele sind noch nicht gelesen (Filter „Steam“ oder „Im Besitz“).")
+                : L("This game is not in your Steam account. Once you own it on Steam, it can be downloaded here.",
+                    "Dieses Spiel gehört nicht zu deinem Steam-Konto. Sobald es dir bei Steam gehört, lässt es sich hier laden."))
+            : nil)
         return VStack(alignment: .leading, spacing: 6) {
             Text(L("Steam ships an Android build of this game for its own headset. The app downloads it from your Steam account, checks what arrived and writes an untested recipe from it; then it can be built and installed like any other game.",
                    "Steam liefert für sein eigenes Headset eine Android-Fassung dieses Spiels aus. Die App lädt sie aus deinem Steam-Konto, prüft, was ankommt, und schreibt daraus ein ungetestetes Rezept; danach lässt es sich bauen und installieren wie jedes andere Spiel."))

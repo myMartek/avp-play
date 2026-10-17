@@ -134,7 +134,10 @@ Steam. With a Steam sign-in, *Steam* and *Owned* also show the Steam games in yo
 build (the build Steam makes for its own headset), read with Valve's SteamCMD once a day: no third-party service
 learns which games you own. Such a game without a recipe is untested; **Download from Steam** on its page fetches its
 Android build from your account, checks every file and writes a recipe with checksums, and then it builds and
-installs like any other game. On the command line: `avpplay steam library` and `avpplay steam prepare <app ID>`.
+installs like any other game. *Steam* also lists the other Steam games with an Android build that the project
+knows, marked as not in your account, with the project's label for the Steam version; reports and fixes for a
+Steam game count for its Steam entry, not for the Meta Store game. On the command line: `avpplay steam library` and
+`avpplay steam prepare <app ID>`.
 
 **Mixed reality.** The overview's *Mixed Reality* filter shows the games whose mixed-reality mode works with AVP
 Play – your own room around the game. At the moment these are TRIANGLE STRATEGY, Demeo, Richie's Plank

@@ -102,10 +102,17 @@ extension AppModel {
         }
     }
 
-    /// Die Steam-Spiele mit Android-Fassung, die es auf diesem Mac noch nicht gibt – weder als Rezept noch als Entwurf.
+    /// Die Steam-Spiele mit Android-Fassung, die es auf diesem Mac noch nicht gibt – weder als Rezept noch als Entwurf:
+    /// die des Kontos und dahinter die übrigen aus der Steam-Liste des Katalogs (die gehören dem Konto nicht oder sind
+    /// noch nicht gelesen). Ein Eintrag der Liste ohne Depot-Angaben lässt sich nicht laden, nur zeigen.
     func steamPlaceholders(known games: [Game]) -> [SteamAndroidApp] {
-        let known = Set(games.flatMap { $0.ownershipKeys.isEmpty ? [OwnershipCache.key(for: $0.recipe)].compactMap { $0 } : $0.ownershipKeys })
-        return (steamLibrary?.apps ?? []).filter { !known.contains("steam:\($0.appId)") }
+        var known = Set(games.flatMap { $0.ownershipKeys.isEmpty ? [OwnershipCache.key(for: $0.recipe)].compactMap { $0 } : $0.ownershipKeys })
+        var out: [SteamAndroidApp] = []
+        for app in steamLibrary?.apps ?? [] where known.insert("steam:\(app.appId)").inserted { out.append(app) }
+        for entry in steamCatalog where known.insert("steam:\(entry.appId)").inserted {
+            out.append(SteamAndroidApp(appId: entry.appId, name: entry.title, depots: [], apks: []))
+        }
+        return out
     }
 
     /// „Von Steam laden“ für ein ungetestetes Steam-Spiel: lädt seine Android-Fassung, schreibt daraus den Entwurf (mit
