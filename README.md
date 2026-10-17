@@ -140,9 +140,16 @@ knows, marked as not in your account, with the project's label for the Steam ver
 Steam game count for its Steam entry, not for the Meta Store game. On the command line: `avpplay steam library` and
 `avpplay steam prepare <app ID>`.
 
+**Your own filters.** Under *Filters* in the sidebar you make filters of your own, such as “32 Bit” or “For
+Guests”. A game goes into one with the *Filter* button on its page, or select several in the overview and use
+*Filter …* in the bar below it. Above the overview each filter can then show only its games or hide them – click it
+to switch between off, show only these and hide these – so all favourites without the 32-bit ones is two clicks.
+With a filter set to show only its games, the list can be exported as well; *Filters* also exports each filter on
+its own.
+
 **Mixed reality.** The overview's *Mixed Reality* filter shows the games whose mixed-reality mode works with AVP
 Play – your own room around the game. At the moment these are TRIANGLE STRATEGY, Demeo, Richie's Plank
-Experience, LES MILLS BODYCOMBAT and DreamSpace.
+Experience, LES MILLS BODYCOMBAT, DreamSpace and Cubism.
 
 **Updates.** Once a day the app asks GitHub whether a newer release exists and offers to install it. It replaces
 itself only with a version that is signed by the same developer and notarised by Apple. You can turn the check
@@ -156,10 +163,10 @@ recipes in [`recipes/`](recipes) are:
 | Game | Source | Notes |
 |---|---|---|
 | Asgard's Wrath 2 | Meta Store | text and voices follow the headset's language; voice packs are an optional tick; the first start compiles shaders for several minutes, on the game's own screen |
-| Batman: Arkham Shadow | Meta Store | optional voice languages; from toolchain 478 drawn at 4608 pixels an eye and full resolution with foveated rendering at *Strong* (before: 3072 at 70 %) – both are settings in the game's start window, and a copy installed earlier takes the new defaults once |
+| Batman: Arkham Shadow | Meta Store | optional voice languages; from toolchain 478 drawn at 4608 pixels an eye and full resolution with foveated rendering at *Strong* (before: 3072 at 70 %) – both are settings in the game's start window, and a copy installed earlier takes the new defaults once; from toolchain 607 a shader the game sees for the first time is compiled behind the picture instead of stopping it for up to a second, and the game draws every second refresh (an even 50 of 100) – both are switches under Advanced › Test that start on for this game |
 | Beat Saber | Meta Store | purchased song packs are downloaded and unlocked; the current version (1.45) is drawn at the display's full resolution with foveated rendering (on by default); edge smoothing (2x/4x) is a setting in the game's start window, off by default |
 | Moss | Meta Store or Steam | from toolchain 485 drawn at the display's own resolution (4608 pixels an eye) with foveated rendering at *Strong*, 16x anisotropic filtering and a frame on every second refresh of the display (an even 60 of 120); before, it ran at about 45 frames a second. A copy installed earlier takes the new picture once. If you bought it on Steam instead, choose **Purchased from: Steam** on its page (from toolchain 507): the app fetches the Android build Steam ships (for Steam Frame, about 2.7 GB) from your Steam account; jump is Cross, attack is Circle or Square. No older versions for the Steam copy, and its saved games are separate |
-| Walkabout Mini Golf | Meta Store or Steam | purchased courses and content packs are unlocked; the first start compiles shaders for a few minutes. If you bought it on Steam instead, choose **Purchased from: Steam** on its page: the app then fetches the Android build Steam ships (for Steam Frame) from your Steam account and unlocks the add-ons Steam confirms for it. No older versions for the Steam copy; from toolchain 595 the ball and putt sounds play (community fix 46) and signing in to its game service no longer hangs the loading screen |
+| Walkabout Mini Golf | Meta Store or Steam | purchased courses and content packs are unlocked; the first start compiles shaders for a few minutes. If you bought it on Steam instead, choose **Purchased from: Steam** on its page: the app then fetches the Android build Steam ships (for Steam Frame) from your Steam account and unlocks the add-ons Steam confirms for it. No older versions for the Steam copy; from toolchain 595 the ball and putt sounds play (community fix 46) and signing in to its game service no longer hangs the loading screen; from toolchain 608 the start window's Settings has **Unlock all putters and balls**: after the game's first start it writes every lost ball and Foxhunt putter of the courses you own, and the two Homestar Runner hole celebrations a bought pack still has to earn, into your saved game (it asks first, as this cannot be undone; Putter Pass and other purchases are not touched); from toolchain 610 the multiplayer voice chat can use the Vision Pro's microphone: turn on **Microphone** in the start window's Settings (off by default; visionOS asks for the microphone once) |
 | SUPERHOT VR | Meta Store | |
 | Steam Link | Meta Store | streams SteamVR from a PC on your network; asks for the local network when it opens – allow it, or the PC waits for a connection (before toolchain 380 a new install was never asked); from 380 its requests to Steam's servers get through and its start window closes once the stream is up, thanks to fixes a user sent in; from toolchain 595 it presents itself to the PC as a Quest 3, so the stream is sharper (2560 pixels an eye), and the sound no longer drops out (community fix 49) |
 | Marvel's Deadpool VR | Meta Store | about 51 GB; the first start compiles shaders for several minutes; edge smoothing at 4x and, from toolchain 478, foveated rendering at *Medium* by default (settings in the game's start window); from toolchain 563 its language packs are loaded from the installation's asset-file list |
@@ -179,12 +186,13 @@ recipes in [`recipes/`](recipes) are:
 | Pistol Whip | Meta Store | about 1.6 GB; runs with fixes users sent in |
 | LES MILLS BODYCOMBAT | Meta Store | about 9.3 GB; its mixed-reality mode works – your room shows around you; the trainer videos play with their sound, smoothest with the display at 120 Hz (at 100 Hz they are shown at 50 pictures a second); from toolchain 595 |
 | Onward | Meta Store | about 8.5 GB; runs with community fix 50; voice chat is switched off; from toolchain 595 |
+| Cubism | Meta Store | about 150 MB; its mixed-reality mode works – your room shows behind the puzzle; runs with community fix 52; from fork commit `07da7ed` |
 | Gun Club VR | Meta Store | about 3.7 GB; drawn at up to 4000 pixels an eye with a steady frame rate; builds on community fix 44 (stable head movement, gun textures, Exit saves settings, Sense grip); from fork commit `9f12962` |
 | Counter-Strike (Team Beef's CSVR) | free port + your own Counter-Strike files | the game data is fetched from your Steam account; your own servers can be listed per game |
 | Doom 3 (Doom3Quest) | free port + your own Doom 3 files | `pak000`–`pak008.pk4` from your copy of Doom 3 – fetched from your Steam account, or from a folder you choose |
 | Half-Life: Alyx | your own Steam copy (Linux build) | the game (about 73 GB) is fetched from your Steam account; the app downloads Steam Linux Runtime (from Valve) and xrizer (from this repository) itself; a German fan voice-over from the game's Steam Workshop is an optional tick, and the game's start window on the Vision Pro switches between English and German; from toolchain 478 the eyes of characters no longer flash in solid colours, and on the Vision Pro with the M5 the presets *Balanced* (the default) and *Sharp* in the game's start window draw the largest picture with detailed textures at an even half of the display rate (50 pictures a second), *Balanced* with strong foveated rendering and without bloom and ambient occlusion – found by play on one headset; how warm it gets over a long session is not measured yet. Frame cadence, effects and texture memory are settings under *Custom*, a frame-rate readout can be switched on, and a copy installed earlier keeps a custom set as it was. On the first Vision Pro (M2) the two presets are the same with the picture one size smaller; nobody has run them there yet; from toolchain 595 it gets its icon and start picture from Steam's store artwork (community fix 47) |
 
-These twenty-eight are marked **Verified**: the project has tested them on a Vision Pro. The app also lists every other
+These twenty-nine are marked **Verified**: the project has tested them on a Vision Pro. The app also lists every other
 Quest title from the Meta Store – some 17,000, loaded page by page as you scroll. What you see on each is a label:
 
 | Label | Meaning |
@@ -207,7 +215,7 @@ while fixing the game, shown as "(modified)". The game then stays on that toolch
 one, when the game is updated and when its signature is renewed. The app removes older toolchains by itself to
 save disk space; one that is chosen for a game stays, and a switch in Settings turns the tidying off.
 
-All twenty-eight were installed with this app on the author's headset. "Community Verified" means exactly what it
+All twenty-nine were installed with this app on the author's headset. "Community Verified" means exactly what it
 says: reports from users, not a guarantee. A recipe is tied to one build of a game; other builds need
 their own recipe.
 

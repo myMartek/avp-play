@@ -89,6 +89,19 @@ struct SettingsView: View {
                 }
             }
 
+            Section(L("Play area", "Spielbereich")) {
+                Toggle(L("Measure room in the games that are installed", "„Raum vermessen“ in den Spielen, die installiert werden"),
+                       isOn: $model.roomMeasuringForNewGames)
+                Text(L("On, a game starts only once the room you are in is measured or recognised (or you play stationary), and a see-through wall shows near the edge of the play area. The room is measured once and shared by all games. Each game can switch it on or off for itself in its Settings › Play area; this is what games start with when they are installed or rebuilt.",
+                       "An startet ein Spiel erst, wenn der Raum, in dem du bist, vermessen oder erkannt ist (oder du stationär spielst), und am Rand des Spielbereichs zeigt sich eine durchsichtige Wand. Der Raum wird einmal vermessen und gilt für alle Spiele. Jedes Spiel kann das in seinen Einstellungen › Spielbereich für sich ein- oder ausschalten; hier steht, womit Spiele beim Installieren oder Neubauen beginnen."))
+                    .font(.callout).foregroundStyle(.secondary)
+                if model.toolchain.map({ !$0.supportsRoomMeasuring }) == true {
+                    Text(L("The current toolchain has no room measuring yet; it builds games as before.",
+                           "Die aktuelle Toolchain hat die Raumvermessung noch nicht; sie baut Spiele wie bisher."))
+                        .font(.callout).foregroundStyle(.orange)
+                }
+            }
+
             RenewalSettings()
 
             Section(L("Online catalogue", "Online-Katalog")) {

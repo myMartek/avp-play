@@ -321,6 +321,16 @@ public struct Toolchain: Sendable {
         return text.contains("Entry(env: \"\(Toolchain.xrPredictionSwitch)\"")
     }
 
+    /// Der Name, unter dem eine Installation sagt, ob die Raumvermessung (Spielbereich, „Raum vermessen“) im Spiel von
+    /// Anfang an an ist (`1`) oder aus (`0`; im Spiel `KLRoomGuardDefault`). Was im Spiel gewählt ist, gilt danach.
+    public static let roomMeasuringVariable = "KLEPTON_ROOM_GUARD"
+
+    /// Ob diese Toolchain die Raumvermessung hat und eine Installation sie vorgeben kann.
+    public var supportsRoomMeasuring: Bool {
+        guard let text = try? String(contentsOf: root.appendingPathComponent("visionos/gen_xcodeproj.py"), encoding: .utf8) else { return false }
+        return text.contains(Toolchain.roomMeasuringVariable)
+    }
+
     /// Der Name, unter dem eine Installation die Auflösung vorgibt, mit der ein Spiel beginnt (ein Bruchteil wie
     /// `0.75`; im Spiel `KLRenderScaleDefault`, sonst `render_scale` des Targets). Was der Spieler im Spiel einstellt,
     /// gilt danach wie immer (`klepton.renderScale`).

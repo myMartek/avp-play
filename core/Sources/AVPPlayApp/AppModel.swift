@@ -137,11 +137,12 @@ enum AccountState: Equatable {
 
 enum AppSection: String, CaseIterable, Identifiable {
     /// Die Einstellungen stehen als letzter Punkt in der Seitenleiste, nicht in einem eigenen Fenster.
-    case games, jobs, data, setup, settings
+    case games, filters, jobs, data, setup, settings
     var id: String { rawValue }
     var title: String {
         switch self {
         case .games: return L("Games", "Spiele")
+        case .filters: return L("Filters", "Filter")
         case .jobs: return L("Jobs", "Aufträge")
         case .data: return L("Data", "Datenverwaltung")
         case .setup: return L("Setup", "Einrichtung")
@@ -151,6 +152,7 @@ enum AppSection: String, CaseIterable, Identifiable {
     var symbol: String {
         switch self {
         case .games: return "square.grid.2x2"
+        case .filters: return "line.3.horizontal.decrease.circle"
         case .jobs: return "list.bullet.clipboard"
         case .data: return "externaldrive"
         case .setup: return "checklist"
@@ -261,6 +263,15 @@ final class AppModel: ObservableObject {
     var installAfterSteam: Set<String> = []
     @Published var prepareNote: [String: String] = [:]
     @Published var favourites: Set<String> = Set(UserDefaults.standard.stringArray(forKey: "favourites") ?? [])
+    /// Die eigenen Filter (Seite „Filter“) und wie jeder gerade in der Übersicht wirkt; was nicht drinsteht, ist aus.
+    @Published var customFilters: [CustomFilter] = CustomFilters.decode(UserDefaults.standard.string(forKey: "customFilters")) {
+        didSet { UserDefaults.standard.set(CustomFilters.encode(customFilters), forKey: "customFilters") }
+    }
+    @Published var customFilterModes: [String: CustomFilterMode] = CustomFilters.modes(
+        from: UserDefaults.standard.dictionary(forKey: "customFilterModes") as? [String: String],
+        filters: CustomFilters.decode(UserDefaults.standard.string(forKey: "customFilters"))) {
+        didSet { UserDefaults.standard.set(customFilterModes.mapValues(\.rawValue), forKey: "customFilterModes") }
+    }
     @Published var sentFeedback: [String: String] = UserDefaults.standard.dictionary(forKey: "sentFeedback") as? [String: String] ?? [:]
     @AppStorage("onlineCatalog") var onlineCatalog = true
     /// Dem Katalog sagen, dass die App in Gebrauch ist und welche Spiele installiert wurden – ohne Kennung.
@@ -363,6 +374,8 @@ final class AppModel: ObservableObject {
     /// Ob ein Filter gesetzt ist, der die Favoriten braucht – dann sollen alle dastehen, auch die, bis zu denen der
     /// Katalog noch nicht geladen ist.
     var favouritesWanted: Bool { filterFavourites || filterFavouritesMissing }
+    /// Ob ein eigener Filter auf „nur diese“ steht: Auch dann ist die Liste auf diesem Mac vollständig bekannt.
+    var customOnlyWanted: Bool { customFilterModes.values.contains(.only) }
     private var routed = false
     @AppStorage("teamId") var teamId = ""
     /// Die Sprache, in der das Programm gerade spricht. Ansichten hängen daran und bauen sich beim Wechsel neu.
@@ -593,6 +606,8 @@ final class AppModel: ObservableObject {
     /// Aus einer Menge von Spielen die, die zu den gesetzten Filtern passen, in der Reihenfolge der Übersicht.
     func visible(_ games: [Game]) -> [Game] {
         let words = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        // Die eigenen Filter nur, wenn einer gesetzt ist.
+        let custom = customFilterModes.isEmpty ? [] : customFilters
         // Was Filter und Sortierung brauchen, einmal je Spiel – nicht bei jedem Vergleich des Sortierens.
         let keyed = games.compactMap { game -> (game: Game, rank: Int, works: Int)? in
             let trust = game.trust, installed = game.installed, downloaded = game.downloaded
@@ -606,6 +621,7 @@ final class AppModel: ObservableObject {
                 && (!filterMixedReality || game.mixedReality)
                 && (!filterOwned || ownedAnywhere(game))
                 && ((!filterMeta && !filterSteam) || (filterMeta && game.fromMeta) || (filterSteam && game.fromSteam))
+                && (custom.isEmpty || CustomFilters.passes(game.id, filters: custom, modes: customFilterModes))
                 && (words.isEmpty || game.recipe.title.lowercased().contains(words) || game.recipe.package.lowercased().contains(words))
             else { return nil }
             // Geprüftes zuerst, dann schon Nachgeschlagenes, dann was Nutzer bestätigen, das Ungetestete, zuletzt

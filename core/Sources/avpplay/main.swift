@@ -153,6 +153,8 @@ avpplay – command line for the AVP Play core library
              --resolution <percent>  with --metalfx: the resolution the game starts at (default 75; 100: the game's own)
              --xr-prediction         build with XR head prediction switched on from the start (off by default; in the game under
                                      Settings › Advanced › Test; the game page's option “XR prediction” does the same)
+             --room-measuring <on|off>  "Measure room" and the play area in the game from the start (default: the app's
+                                     setting for all games, on unless changed; in the game under Settings › Play area)
              --addons-only           job start: only sync purchased add-on content of an installed game (no build, no --team)
              --download-only         job start: only download the files (needs no Xcode, toolchain, --team or device)
              --build-only            job start: check, download, build and install the app, but do not copy the game data yet
@@ -227,6 +229,8 @@ avpplay – Kommandozeile zur Kern-Bibliothek von AVP Play
              --resolution <Prozent>  mit --metalfx: die Auflösung, mit der das Spiel beginnt (Vorgabe 75; 100: die des Spiels)
              --xr-prediction         mit von Anfang an eingeschalteter XR-Vorhersage der Kopfpose bauen (sonst aus; im Spiel unter
                                      Einstellungen › Erweitert › Test; die Option „XR-Vorhersage“ auf der Seite des Spiels tut dasselbe)
+             --room-measuring <on|off>  „Raum vermessen“ und der Spielbereich im Spiel von Anfang an (Vorgabe: die Einstellung
+                                     der App für alle Spiele, an, solange sie nicht geändert ist; im Spiel unter Einstellungen › Spielbereich)
              --addons-only           job start: nur gekaufte Zusatzinhalte eines installierten Spiels abgleichen (kein Bau, kein --team)
              --download-only         job start: nur die Dateien laden (braucht weder Xcode noch Toolchain, --team oder Gerät)
              --build-only            job start: prüfen, laden, bauen und die App installieren, aber die Spieldaten noch nicht kopieren
@@ -242,7 +246,8 @@ Allgemein: --account <Name>    Eintrag im Schlüsselbund (Standard: default)
 }
 
 let valued: Set<String> = ["account", "steam-account", "source", "store", "recipes", "locale", "with", "only", "interval", "from", "to", "force", "name",
-                           "team", "device", "bundle-id", "display-name", "display-suffix", "toolchain", "controller-mode", "icon", "tool", "jobs", "toolchains", "saves", "resolution"]
+                           "team", "device", "bundle-id", "display-name", "display-suffix", "toolchain", "controller-mode", "icon", "tool", "jobs", "toolchains", "saves", "resolution",
+                           "room-measuring"]
 let o = Options(Array(CommandLine.arguments.dropFirst()), valued: valued)
 guard let command = o.positional.first else { print(usage()); exit(0) }
 OtherSources.use(recipes: recipesDirectory(o))
@@ -334,6 +339,12 @@ func installRequest(_ o: Options, recipe id: String? = nil) -> InstallRequest {
     }
     if o.flags.contains("metalfx") { request.metalFX = true }
     if o.flags.contains("xr-prediction") { request.xrPrediction = true }
+    if let value = o.value("room-measuring") {
+        guard value == "on" || value == "off" else {
+            fail(L("--room-measuring must be on or off", "--room-measuring muss on oder off sein"))
+        }
+        request.roomMeasuring = value == "on"
+    }
     let resolution = MetalFXResolution.commandLine(metalFX: request.metalFX == true, value: o.value("resolution"))
     request.resolution = resolution.resolution
     if let warning = resolution.warning { warn(warning) }
