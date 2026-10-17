@@ -7,7 +7,7 @@ It downloads your purchased Quest games from Meta with your own account, transla
 account and copies them to your headset. No game content is distributed with this project, and nothing is
 downloaded that Meta does not confirm you have purchased.
 
-**New here?** The [user guide in the wiki](https://github.com/myMartek/avp-play/wiki) explains setup and everyday
+**New here?** The [user guide](docs/guide/README.md) (German and English) explains setup and everyday
 use step by step, in simple words – in English and German.
 
 > AVP Play is made by one person and tested on one Mac with one Vision Pro, plus what other players report.
