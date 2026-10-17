@@ -7,7 +7,10 @@ It downloads your purchased Quest games from Meta with your own account, transla
 account and copies them to your headset. No game content is distributed with this project, and nothing is
 downloaded that Meta does not confirm you have purchased.
 
-> **Status: first public release.** It has been built and used by one person, on one Mac with one Vision Pro.
+**New here?** The [user guide in the wiki](https://github.com/myMartek/avp-play/wiki) explains setup and everyday
+use step by step, in simple words – in English and German.
+
+> AVP Play is made by one person and tested on one Mac with one Vision Pro, plus what other players report.
 > Expect rough edges, and please report what happens on your setup.
 
 ## What you need
@@ -16,8 +19,9 @@ downloaded that Meta does not confirm you have purchased.
 |---|---|
 | Mac | Apple silicon, macOS 14 or later, with [Xcode](https://apps.apple.com/app/xcode/id497799835) and its visionOS platform installed |
 | Headset | Apple Vision Pro, paired with Xcode, Developer Mode on, on the same Wi-Fi as the Mac |
-| Apple account | A paid [Apple Developer Program](https://developer.apple.com/programs/) membership. Free teams do not work: the entitlements the games need are missing. |
-| Meta account | The account that owns the games, and Meta's own command-line tool [`ovr-platform-util`](https://developers.meta.com/horizon/resources/publish-reference-platform-command-line-utility/) (used to sign in, to look up the files of a game nobody has tested yet, and as a second way to download a file when Meta's direct address refuses it). You download it from Meta's page; the app finds the download and sets it up. |
+| Apple account | An Apple developer team, signed in to Xcode. A free Apple account works, with Apple's limits: a game opens for 7 days after it was installed (installing it again renews it, saved games stay), at most 3 apps from the account can be on the Vision Pro at once, at most 10 new games can be set up within 7 days, and the permission for more address space is missing, so a very large game may not start. A paid [Apple Developer Program](https://developer.apple.com/programs/) membership has none of these limits. |
+| Meta account | Only for games from the Meta Store: the account that owns them, and Meta's own command-line tool [`ovr-platform-util`](https://developers.meta.com/horizon/resources/publish-reference-platform-command-line-utility/) (used to sign in, to look up the files of a game nobody has tested yet, and as a second way to download a file when Meta's direct address refuses it). You download it from Meta's page; the app finds the download and sets it up. |
+| Steam account | Only for the games whose files come from a Steam purchase (Doom 3, Counter-Strike, Half-Life: Alyx) or that you choose to get from Steam. |
 | Controllers | Whatever the game needs – most of these games expect tracked controllers. An ordinary game controller (DualSense, Xbox, …) also works together with your hands: the hands show where they are and pinch to grab, the controller adds both sticks and the buttons. Moss is set up for this. |
 | Disk space | Games are large. Asgard's Wrath 2 alone is about 34 GB on the Mac and again on the headset. |
 
@@ -25,8 +29,9 @@ downloaded that Meta does not confirm you have purchased.
 
 1. Download `AVP-Play-<version>.dmg` from the [latest release](../../releases/latest), open it and drag
    **AVP Play** into Applications.
-2. Open AVP Play. The **Setup** page checks the five things it needs (Xcode, Vision Pro, Apple developer team,
-   Meta account, toolchain) and tells you what to do for each one that is missing. The toolchain comes with the
+2. Open AVP Play. The **Setup** page checks the four things it needs (Xcode, Vision Pro, Apple developer team,
+   toolchain) and the two accounts that are only needed for their own games (Meta for games from the Meta Store,
+   Steam for games from Steam), and tells you what to do for each one that is missing. The toolchain comes with the
    app and installs itself.
    For the Meta account, the app opens Meta's download page for its sign-in tool; once the file is in your
    Downloads folder the app picks it up by itself – you do not have to move it or make it executable.
@@ -35,7 +40,7 @@ downloaded that Meta does not confirm you have purchased.
    run one after another, from the bottom of the list upwards; drag a waiting job to change when its turn is.
 
 Not everything set up yet? A game's files can be downloaded as soon as its account is signed in – **Download
-Files Now** on the game's page needs neither Xcode nor a developer team nor the headset. Building and installing
+Only** on the game's page needs neither Xcode nor a developer team nor the headset. Building and installing
 follow once Setup is complete, without downloading again.
 
 Every installed game opens with the same start window: its picture, its name, **Start** and **Settings**.
@@ -88,12 +93,12 @@ game shows the room, and the room stays visible behind the picture when it is on
 **Max resolution per eye** (from toolchain 563). A game's settings have a dropdown under *Advanced* that caps the
 size it draws each eye at.
 
-**XR prediction** (a game's page › *Test*; takes effect with a toolchain that has it). Newer toolchains give a game
-its head pose without prediction by default – one pose per frame, as it is when the frame starts, on every path
-(OpenXR and Meta's own interface). The option switches the old behaviour back on for that game, which predicts the
-head to the moment the picture is shown; it applies from the next install or update, to every build, and in the game
-it stays switchable under *Settings › Advanced › Test*. `avpplay install --xr-prediction` does the same. Toolchain 507 and
-older always predict.
+**XR prediction** (in the game's start window under *Settings › Advanced › Test*; from version 1.3.0 no longer on
+the game's page in this app). Newer toolchains give a game its head pose without prediction by default – one pose
+per frame, as it is when the frame starts. The switch brings the old behaviour back for a game that comes through
+OpenXR, which predicts the head to the moment the picture is shown; it applies from the next start.
+`avpplay install --xr-prediction` builds a game with it switched on from the start. Toolchain 507 and older always
+predict.
 
 The app speaks English and German. It follows macOS; you can choose a language in its settings (⌘,).
 
