@@ -159,7 +159,7 @@ its own.
 
 **Mixed reality.** The overview's *Mixed Reality* filter shows the games whose mixed-reality mode works with AVP
 Play – your own room around the game. At the moment these are TRIANGLE STRATEGY, Demeo, Richie's Plank
-Experience, LES MILLS BODYCOMBAT, DreamSpace and Cubism, and from toolchain 629 Banners & Bastions (community fix
+Experience, LES MILLS BODYCOMBAT, DreamSpace and Cubism, and from toolchain 631 Banners & Bastions (community fix
 55).
 
 **Play area.** From toolchain 616 a game knows the room you play in. Before its first start you measure the room
@@ -169,7 +169,10 @@ by itself – measured in one game, it is known in the next; in a new room you m
 your head, centred again whenever you recentre. In the game a faint see-through wall appears as you come close to
 the edge and gets clearer the closer you are; the floor and tables never set it off. *Measure room* in the app's
 settings decides whether newly installed games use it (on by default); each game can switch it on or off at the top
-of *Settings* › *Play area* in its start window.
+of *Settings* › *Play area* in its start window. From toolchain 631 the start window has the two choices right under
+*Start*: *Play area* – room scale, stationary or off – and *At the edge* – a wall, or the game fading out so that the
+room shows through (that needs the mixed space; at up to 120 frames a second the wall shows instead). The fade starts
+late: 20 cm before the edge for the head, 10 cm for a hand.
 
 **Updates.** Once a day the app asks GitHub whether a newer release exists and offers to install it. It replaces
 itself only with a version that is signed by the same developer and notarised by Apple. You can turn the check
@@ -208,7 +211,7 @@ recipes in [`recipes/`](recipes) are:
 | Onward | Meta Store | about 8.5 GB; runs with community fix 50; voice chat is switched off; from toolchain 595 |
 | Cubism | Meta Store | about 150 MB; its mixed-reality mode works – your room shows behind the puzzle; runs with community fix 52; from fork commit `07da7ed` |
 | Gun Club VR | Meta Store | about 3.7 GB; drawn at up to 4000 pixels an eye with a steady frame rate; builds on community fix 44 (stable head movement, gun textures, Exit saves settings, Sense grip); from fork commit `9f12962` |
-| Catan VR | Meta Store | about 220 MB; from toolchain 629 the menu shows instead of a white picture, with the right brightness and eye height, and the hands are drawn |
+| Catan VR | Meta Store | about 220 MB; from toolchain 631 the menu shows instead of a white picture, with the right brightness and eye height, and the hands are drawn |
 | Counter-Strike (Team Beef's CSVR) | free port + your own Counter-Strike files | the game data is fetched from your Steam account; your own servers can be listed per game |
 | Doom 3 (Doom3Quest) | free port + your own Doom 3 files | `pak000`–`pak008.pk4` from your copy of Doom 3 – fetched from your Steam account, or from a folder you choose |
 | Half-Life: Alyx | your own Steam copy (Linux build) | the game (about 73 GB) is fetched from your Steam account; the app downloads Steam Linux Runtime (from Valve) and xrizer (from this repository) itself; a German fan voice-over from the game's Steam Workshop is an optional tick, and the game's start window on the Vision Pro switches between English and German; from toolchain 478 the eyes of characters no longer flash in solid colours, and on the Vision Pro with the M5 the presets *Balanced* (the default) and *Sharp* in the game's start window draw the largest picture with detailed textures at an even half of the display rate (50 pictures a second), *Balanced* with strong foveated rendering and without bloom and ambient occlusion – found by play on one headset; how warm it gets over a long session is not measured yet. Frame cadence, effects and texture memory are settings under *Custom*, a frame-rate readout can be switched on, and a copy installed earlier keeps a custom set as it was. On the first Vision Pro (M2) the two presets are the same with the picture one size smaller; nobody has run them there yet; from toolchain 595 it gets its icon and start picture from Steam's store artwork (community fix 47) |
