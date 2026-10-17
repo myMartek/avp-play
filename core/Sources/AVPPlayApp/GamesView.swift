@@ -14,6 +14,12 @@ struct GamesView: View {
         Toggle(L("Owned", "Im Besitz"), isOn: $model.filterOwned)
             .help(L("Games you own: in the library of your Meta account (as Meta's Horizon app shows it) or, for games that can come from Steam, in your Steam account. Needs the sign-in under “Setup”.",
                     "Spiele, die dir gehören: in der Bibliothek deines Meta-Kontos (wie Metas Horizon-App sie zeigt) oder, bei Spielen, die es auch über Steam gibt, in deinem Steam-Konto. Braucht die Anmeldung unter „Einrichtung“."))
+        Toggle(L("Horizon+ Games", "Horizon+ Spiele"), isOn: $model.filterHorizonGames)
+            .help(L("Games from the Horizon+ Games Catalog: a Meta Horizon+ subscription lets you download them at any time (not the monthly games). Read from Meta with your sign-in, at most once a day.",
+                    "Spiele aus dem Horizon+-Spielekatalog: Ein Meta-Horizon+-Abo lässt sie jederzeit laden (nicht die Monatsspiele). Mit deiner Anmeldung bei Meta gelesen, höchstens einmal am Tag."))
+        Toggle("Horizon+ Indie", isOn: $model.filterHorizonIndie)
+            .help(L("Games from the Horizon+ Indie Catalog: a Meta Horizon+ subscription lets you download them at any time. Read from Meta with your sign-in, at most once a day.",
+                    "Spiele aus dem Horizon+-Indie-Katalog: Ein Meta-Horizon+-Abo lässt sie jederzeit laden. Mit deiner Anmeldung bei Meta gelesen, höchstens einmal am Tag."))
         Toggle("Meta", isOn: $model.filterMeta)
             .help(L("Games from the Meta Store – also those for which Steam is chosen as the purchase source.",
                     "Spiele aus dem Meta-Store – auch solche, bei denen Steam als Kaufquelle gewählt ist."))
@@ -68,6 +74,16 @@ struct GamesView: View {
                 .font(.callout).foregroundStyle(.orange).help(problem)
         } else if model.filterOwned, model.account != .signedIn, !model.steamSignedIn {
             Text(L("Sign in under “Setup” to see what you own.", "Melde dich unter „Einrichtung“ an, um zu sehen, was dir gehört."))
+                .font(.callout).foregroundStyle(.secondary)
+        }
+        if model.loadingHorizonPlus {
+            ProgressView().controlSize(.small)
+            Text(L("Loading the Horizon+ catalogues …", "Die Horizon+-Kataloge werden geladen …")).font(.callout).foregroundStyle(.secondary)
+        } else if model.horizonPlusWanted, let problem = model.horizonPlusProblem {
+            Label(L("Horizon+ catalogues not loaded", "Horizon+-Kataloge nicht geladen"), systemImage: "exclamationmark.triangle")
+                .font(.callout).foregroundStyle(.orange).help(problem)
+        } else if model.horizonPlusWanted, model.account != .signedIn, model.horizonPlus == nil {
+            Text(L("Sign in to Meta under “Setup” to load the Horizon+ catalogues.", "Melde dich unter „Einrichtung“ bei Meta an, um die Horizon+-Kataloge zu laden."))
                 .font(.callout).foregroundStyle(.secondary)
         }
         if model.loadingSteamLibrary {
@@ -162,6 +178,9 @@ struct GamesView: View {
                     model.checkOwnership()
                 }
             }
+            // Unter „Horizon+“: die beiden Kataloge des Abos laden.
+            .onChange(of: model.filterHorizonGames, initial: true) { if model.filterHorizonGames { model.loadHorizonPlus() } }
+            .onChange(of: model.filterHorizonIndie, initial: true) { if model.filterHorizonIndie { model.loadHorizonPlus() } }
             // Unter „Steam“: welche Steam-Spiele des Kontos eine Android-Fassung haben.
             .onChange(of: model.filterSteam, initial: true) { if model.filterSteam { model.loadSteamLibrary() } }
             .navigationDestination(for: String.self) { id in
@@ -799,6 +818,14 @@ struct GameDetail: View {
                             Link(L("View on Steam", "Bei Steam ansehen"), destination: page)
                         }
                         Text(playability)
+                        if let app = game.recipe.catalogAppId, let catalogue = model.horizonPlus?.catalogue(of: app) {
+                            Label(catalogue == .indie
+                                  ? L("In the Horizon+ Indie Catalog: with a Meta Horizon+ subscription it can be downloaded without buying it.",
+                                      "Im Horizon+-Indie-Katalog: Mit einem Meta-Horizon+-Abo lässt es sich ohne Kauf laden.")
+                                  : L("In the Horizon+ Games Catalog: with a Meta Horizon+ subscription it can be downloaded without buying it.",
+                                      "Im Horizon+-Spielekatalog: Mit einem Meta-Horizon+-Abo lässt es sich ohne Kauf laden."),
+                                  systemImage: "sparkles")
+                        }
                         if let notes = game.recipe.status.notes, !notes.isEmpty {
                             DisclosureGroup(L("Notes on This Recipe", "Anmerkungen zu diesem Rezept")) {
                                 VStack(alignment: .leading, spacing: 6) {

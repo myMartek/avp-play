@@ -114,6 +114,8 @@ extension AppModel {
         if filterFavouritesMissing { parts.append(L("favourites not downloaded", "nicht geladene Favoriten")) }
         if filterMixedReality { parts.append(L("mixed reality", "Mixed Reality")) }
         if filterOwned { parts.append(L("owned", "im Besitz")) }
+        if filterHorizonGames { parts.append(L("Horizon+ games", "Horizon+ Spiele")) }
+        if filterHorizonIndie { parts.append("Horizon+ Indie") }
         if filterMeta { parts.append("Meta") }
         if filterSteam { parts.append("Steam") }
         for filter in customFilters {
@@ -194,7 +196,7 @@ extension AppModel {
     /// gemerkt oder einem eigenen Filter zugeordnet ist, kennt dieser Mac ganz. Ohne einen dieser Filter zeigt die
     /// Übersicht nur den Teil des Katalogs, der schon geladen ist – das wäre keine Liste, sondern ein Ausschnitt.
     /// Ein eigener Filter zum Ausblenden allein macht die Liste nicht vollständig, wohl aber zusammen mit einem der anderen.
-    var canExportShown: Bool { filterInstalled || filterDownloaded || favouritesWanted || customOnlyWanted }
+    var canExportShown: Bool { filterInstalled || filterDownloaded || favouritesWanted || customOnlyWanted || (horizonPlusWanted && horizonPlus != nil) }
 
     private func writeList(_ text: String, name: String) {
         let panel = NSSavePanel()

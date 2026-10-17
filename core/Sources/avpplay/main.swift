@@ -102,6 +102,7 @@ avpplay – command line for the AVP Play core library
   avpplay account                              check the stored Meta token
   avpplay owns <id>                            does the account own the game?
   avpplay library                              the apps in the Meta account's library (store app ID, name, why it is there)
+  avpplay horizonplus                          the games of the Horizon+ Games and Indie Catalogs (store app ID, name, catalog)
   avpplay files <build ID> [--details]         the files of a build (Meta's tool; its build details if the tool can't find it)
   avpplay steam setup|login <name>|logout      Valve's SteamCMD: fetch it, sign in to Steam (you type the password into Valve's tool), sign out
   avpplay steam library --steam-account <name>  the account's Steam games with an Android build
@@ -176,6 +177,7 @@ avpplay – Kommandozeile zur Kern-Bibliothek von AVP Play
   avpplay account                              hinterlegten Meta-Token prüfen
   avpplay owns <id>                            Besitzt das Konto das Spiel?
   avpplay library                              die Apps in der Bibliothek des Meta-Kontos (Store-App-ID, Name, warum sie dort ist)
+  avpplay horizonplus                          die Spiele des Horizon+-Spiele- und -Indie-Katalogs (Store-App-ID, Name, Katalog)
   avpplay files <Build-ID> [--details]         die Dateien eines Builds (Metas Werkzeug; findet es ihn nicht, die Build-Details)
   avpplay steam setup|login <Name>|logout      Valves SteamCMD: holen, bei Steam anmelden (das Passwort tippst du in Valves Werkzeug), abmelden
   avpplay steam library --steam-account <Name>  die Steam-Spiele des Kontos mit Android-Fassung
@@ -563,6 +565,18 @@ case "library":
             print("\(app.appId)\t\(app.title)\t\(app.grant ?? "")")
         }
         print(L("\(apps.count) apps.", "\(apps.count) Apps."))
+    }
+    catch { fail("\(error)") }
+
+case "horizonplus":
+    // Was ein Horizon+-Abo jederzeit laden lässt – was die App unter „Horizon+“ zeigt.
+    let (client, _) = await signedIn(o)
+    do {
+        let games = try await client.horizonPlusCatalog()
+        for game in games {
+            print("\(game.appId)\t\(game.title)\t\(game.catalogue.rawValue)")
+        }
+        print(L("\(games.count) games.", "\(games.count) Spiele."))
     }
     catch { fail("\(error)") }
 

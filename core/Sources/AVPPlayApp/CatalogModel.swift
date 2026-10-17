@@ -158,6 +158,57 @@ extension AppModel {
         }
     }
 
+    // MARK: Horizon+
+
+    /// Lädt die beiden Horizon+-Kataloge – höchstens einmal am Tag, `force` sofort – und holt dann beim Katalog-
+    /// dienst, was er über die Spiele darin sagt, die er noch nicht geliefert hat: Unter „Horizon+“ sollen alle stehen.
+    ///
+    /// Wie überall bei Meta: erst `/me`, der Token nur im Kopf der Anfrage, und beim ersten unerwarteten Ergebnis ist
+    /// Schluss – die zuletzt geladenen Kataloge bleiben dann stehen. Die Kataloge gehören zu keinem Konto; die
+    /// Anmeldung braucht es nur für die Abfrage selbst.
+    func loadHorizonPlus(force: Bool = false) {
+        guard account == .signedIn, storeBlocker == nil, !loadingHorizonPlus else { return }
+        if !force, let horizonPlus, !horizonPlus.isStale() {
+            loadHorizonPlusCatalogEntries()
+            return
+        }
+        loadingHorizonPlus = true
+        let cache = HorizonPlusCache(store: paths.store)
+        Task.detached {
+            var problem: String?
+            var fresh: HorizonPlusCatalog?
+            do {
+                let client = MetaClient(token: try TokenStore().read())
+                _ = try await client.me()
+                let catalog = HorizonPlusCatalog(checked: Date(), games: try await client.horizonPlusCatalog())
+                try? cache.save(catalog)
+                fresh = catalog
+            } catch {
+                problem = Redaction.redact("\(error)")
+            }
+            let loaded = fresh
+            let note = problem
+            await MainActor.run {
+                self.loadingHorizonPlus = false
+                self.horizonPlusProblem = note
+                if let loaded { self.horizonPlus = loaded }
+                self.loadHorizonPlusCatalogEntries()
+            }
+        }
+    }
+
+    /// Fragt den Katalogdienst nach den Horizon+-Spielen, die er noch nicht geliefert hat – jede Kennung einmal.
+    func loadHorizonPlusCatalogEntries() {
+        guard onlineCatalog, !horizonPlusIds.isEmpty else { return }
+        let known = Set(catalog.map(\.appId)).union(games.compactMap { $0.recipe.catalogAppId })
+        let missing = horizonPlusIds.subtracting(known).subtracting(askedHorizonPlus).sorted()
+        guard !missing.isEmpty else { return }
+        askedHorizonPlus.formUnion(missing)
+        Task {
+            do { merge(try await catalogClient.games(appIds: missing)) } catch { askedHorizonPlus.subtract(missing) }
+        }
+    }
+
     /// Nach einer neuen Anmeldung: Die Bibliothek gehört zum vorigen Konto.
     func forgetLibrary() {
         MetaLibraryCache(store: paths.store).clear()
@@ -190,7 +241,7 @@ extension AppModel {
     /// installiert oder gemerkt ist, steht schon vollständig da – und was dem Nutzer gehört, holt `loadLibrary` gezielt.
     var canLoadMore: Bool {
         // Nur Steam: der Katalog führt Meta-Spiele, Nachladen bringt nichts.
-        guard onlineCatalog, !filterInstalled, !favouritesWanted, !filterDownloaded, !customOnlyWanted, !filterOwned, !(filterSteam && !filterMeta) else { return false }
+        guard onlineCatalog, !filterInstalled, !favouritesWanted, !filterDownloaded, !customOnlyWanted, !filterOwned, !horizonPlusWanted, !(filterSteam && !filterMeta) else { return false }
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard query.isEmpty else { return query == searchedQuery && searchMore }
         // Geprüftes und von Nutzern Bestätigtes steht im Katalog vorn. Ist einer dieser Filter gesetzt, lohnt
