@@ -33,7 +33,7 @@
  },
  "title": "Steam Link",
  "toolchain": {
-  "minCommit": "90f3aa9",
+  "minCommit": "a6d33f8",
   "target": "steamlink-vr"
  },
  "versionCode": 5002363,
