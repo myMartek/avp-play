@@ -167,11 +167,13 @@ struct RootView: View {
         }
     }
 
-    /// Wie viele Punkte der Einrichtung noch offen sind bzw. wie viele Aufträge Aufmerksamkeit brauchen.
+    /// Wie viele Punkte der Einrichtung noch offen sind bzw. wie viele Aufträge noch anstehen.
     private func badge(for section: AppSection) -> Int {
         switch section {
         case .games, .data, .settings: return 0
-        case .jobs: return model.jobs.filter { model.phase(of: $0) == .stopped || model.phase(of: $0) == .running }.count
+        // Der laufende und die wartenden: es läuft immer nur einer, also sagt die Zahl, wie viele noch kommen.
+        // Abgeschlossene, angehaltene, abgebrochene und unterbrochene zählen nicht mit.
+        case .jobs: return model.jobs.filter { [.running, .queued].contains(model.phase(of: $0)) }.count
         case .setup:
             // Die Konten zählen nicht: Meta braucht es nur für Spiele aus dem Meta-Store, Steam nur für zwei Spiele.
             return [model.xcodeProblem != nil, model.device == nil, !model.teamValid, model.toolchainText == nil].filter { $0 }.count
