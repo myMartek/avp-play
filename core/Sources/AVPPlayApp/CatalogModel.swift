@@ -157,7 +157,8 @@ extension AppModel {
     /// nächste Seite des ganzen Katalogs. Mit einem Filter, der nur auf diesem Mac entschieden wird, nicht: was
     /// installiert oder gemerkt ist, steht schon vollständig da – und was dem Nutzer gehört, holt `loadLibrary` gezielt.
     var canLoadMore: Bool {
-        guard onlineCatalog, !filterInstalled, !favouritesWanted, !filterDownloaded, !filterOwned else { return false }
+        // Nur Steam: der Katalog führt Meta-Spiele, Nachladen bringt nichts.
+        guard onlineCatalog, !filterInstalled, !favouritesWanted, !filterDownloaded, !filterOwned, !(filterSteam && !filterMeta) else { return false }
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard query.isEmpty else { return query == searchedQuery && searchMore }
         // Geprüftes und von Nutzern Bestätigtes steht im Katalog vorn. Ist einer dieser Filter gesetzt, lohnt
@@ -227,6 +228,17 @@ extension AppModel {
                                                   metalFX: metalFXExpected,
                                                   xrPrediction: xrPredictionExpected(for: recipe.id)),
                             cover: nil, catalog: entry, draft: true))
+        }
+        // Dahinter die Steam-Spiele des Kontos mit Android-Fassung, die noch kein Rezept und keinen Entwurf haben.
+        for app in steamPlaceholders(known: games) {
+            let recipe = SteamDraft.placeholder(app: app)
+            var game = Game(recipe: recipe,
+                            status: GameStatus.of(recipe: recipe, store: paths.store, apps: installedApps, toolchainVersion: toolchainRevision,
+                                                  pin: toolchainChoices.games[recipe.id], bundlePrefix: prefix, metalFX: metalFXExpected,
+                                                  xrPrediction: xrPredictionExpected(for: recipe.id)),
+                            cover: nil, catalog: nil, draft: true)
+            game.ownershipKeys = ["steam:\(app.appId)"]
+            out.append(game)
         }
         allGames = out
     }

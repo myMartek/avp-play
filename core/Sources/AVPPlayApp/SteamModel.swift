@@ -64,7 +64,88 @@ extension AppModel {
     func steamSignOut() {
         try? SteamTool().signOut()
         steamSignedInAs = ""
+        SteamLibraryCache(store: paths.store).clear()
+        steamLibrary = nil
         steamNote = L("Signed out of Steam. SteamCMD’s remembered sign-in has been deleted.", "Bei Steam abgemeldet. Die gemerkte Anmeldung von SteamCMD ist gelöscht.")
+    }
+
+    // MARK: Steam-Spiele mit Android-Fassung
+
+    /// Liest, welche Spiele des Steam-Kontos eine Android-Fassung haben – höchstens einmal am Tag, `force` sofort.
+    /// Valves Werkzeug fragt dafür die Lizenzen und die App-Daten ab; das dauert mit vielen Spielen über eine Minute.
+    /// Gelingt es nicht, bleibt der letzte Stand stehen.
+    func loadSteamLibrary(force: Bool = false) {
+        guard steamSignedIn, storeBlocker == nil, !loadingSteamLibrary else { return }
+        if !force, let steamLibrary, !steamLibrary.isStale() { return }
+        loadingSteamLibrary = true
+        let account = steamAccount
+        let cache = SteamLibraryCache(store: paths.store)
+        Task.detached {
+            var problem: String?
+            var fresh: SteamLibrary?
+            var signedOut = false
+            do {
+                let library = SteamLibrary(checked: Date(), apps: try SteamLibraryScan(account: account).run())
+                try? cache.save(library)
+                fresh = library
+            } catch {
+                if case SteamError.notSignedIn = error { signedOut = true }
+                problem = Redaction.redact("\(error)")
+            }
+            let loaded = fresh, note = problem, lost = signedOut
+            await MainActor.run {
+                self.loadingSteamLibrary = false
+                self.steamLibraryProblem = note
+                if lost { self.steamSignedInAs = "" }
+                if let loaded { self.steamLibrary = loaded }
+            }
+        }
+    }
+
+    /// Die Steam-Spiele mit Android-Fassung, die es auf diesem Mac noch nicht gibt – weder als Rezept noch als Entwurf.
+    func steamPlaceholders(known games: [Game]) -> [SteamAndroidApp] {
+        let known = Set(games.flatMap { $0.ownershipKeys.isEmpty ? [OwnershipCache.key(for: $0.recipe)].compactMap { $0 } : $0.ownershipKeys })
+        return (steamLibrary?.apps ?? []).filter { !known.contains("steam:\($0.appId)") }
+    }
+
+    /// „Von Steam laden“ für ein ungetestetes Steam-Spiel: lädt seine Android-Fassung, schreibt daraus den Entwurf (mit
+    /// Prüfsummen) und übernimmt die Dateien in den Bestand. Danach baut und installiert es der übliche Weg.
+    func prepareFromSteam(_ game: Game) {
+        guard game.draft, game.recipe.source == .steam, let appId = game.recipe.store.steamAppId,
+              let app = steamLibrary?.apps.first(where: { $0.appId == appId }), !preparing.contains(game.id) else { return }
+        if let why = steamBlocker(for: game) { prepareNote[game.id] = why; return }
+        preparing.insert(game.id)
+        prepareNote[game.id] = L("Asking Steam whether this account owns the game …", "Steam wird gefragt, ob das Spiel zu diesem Konto gehört …")
+        let store = paths.store, account = steamAccount, drafts = draftsDirectory, id = game.id
+        let minCommit = toolchain?.commit() ?? ""
+        let flags = steamStops
+        flags.clear(id)
+        Task.detached {
+            var note: String?
+            do {
+                let recipe = try SteamDraftMaker(store: store, account: account).prepare(
+                    app: app, target: DraftRecipe.genericTarget(appId:), minCommit: minCommit,
+                    shouldStop: { flags.isRequested(id) },
+                    progress: { p in
+                        let text = L("Downloading from Steam: \(Installer.gigabytes(p.done)) of \(Installer.gigabytes(p.total)) …",
+                                     "Von Steam wird geladen: \(Installer.gigabytes(p.done)) von \(Installer.gigabytes(p.total)) …")
+                        Task { @MainActor in if self.preparing.contains(id) { self.prepareNote[id] = text } }
+                    },
+                    report: { line in Task { @MainActor in if self.preparing.contains(id) { self.prepareNote[id] = line } } })
+                try FileManager.default.createDirectory(at: drafts, withIntermediateDirectories: true)
+                let encoder = JSONEncoder()
+                encoder.outputFormatting = [.sortedKeys, .prettyPrinted]
+                try encoder.encode(recipe).write(to: drafts.appendingPathComponent("\(recipe.id).json"), options: .atomic)
+            } catch {
+                note = Redaction.redact("\(error)")
+            }
+            let final = note
+            await MainActor.run {
+                self.preparing.remove(id)
+                self.prepareNote[id] = final
+                self.refresh()
+            }
+        }
     }
 
     /// Was einem Abruf bei Steam im Weg steht.

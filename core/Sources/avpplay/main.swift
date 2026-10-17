@@ -104,6 +104,8 @@ avpplay – command line for the AVP Play core library
   avpplay library                              the apps in the Meta account's library (store app ID, name, why it is there)
   avpplay files <build ID> [--details]         the files of a build (Meta's tool; its build details if the tool can't find it)
   avpplay steam setup|login <name>|logout      Valve's SteamCMD: fetch it, sign in to Steam (you type the password into Valve's tool), sign out
+  avpplay steam library --steam-account <name>  the account's Steam games with an Android build
+  avpplay steam prepare <app ID> --steam-account <name>   download a Steam game's Android build and write an untested recipe from it
   avpplay steam fetch <id> --steam-account <name> [--with <file name>]   get the files a recipe needs from your own Steam purchase
   avpplay purchases <id>                       confirmed in-game purchases and the add-on content that goes with them
            --skus              also name each purchase as the store names it
@@ -174,6 +176,8 @@ avpplay – Kommandozeile zur Kern-Bibliothek von AVP Play
   avpplay library                              die Apps in der Bibliothek des Meta-Kontos (Store-App-ID, Name, warum sie dort ist)
   avpplay files <Build-ID> [--details]         die Dateien eines Builds (Metas Werkzeug; findet es ihn nicht, die Build-Details)
   avpplay steam setup|login <Name>|logout      Valves SteamCMD: holen, bei Steam anmelden (das Passwort tippst du in Valves Werkzeug), abmelden
+  avpplay steam library --steam-account <Name>  die Steam-Spiele des Kontos mit Android-Fassung
+  avpplay steam prepare <App-ID> --steam-account <Name>   die Android-Fassung eines Steam-Spiels laden und daraus ein ungetestetes Rezept schreiben
   avpplay steam fetch <id> --steam-account <Name> [--with <Dateiname>]   die Dateien eines Rezepts aus dem eigenen Steam-Kauf holen
   avpplay purchases <id>                       bestätigte Käufe im Spiel und zugehörige Zusatzinhalte
            --skus              jeden Kauf auch so nennen, wie der Store ihn nennt
@@ -477,9 +481,41 @@ case "steam":
                 FileHandle.standardError.write(Data(String(format: "\r  %.1f %%  ", 100 * Double(p.done) / Double(max(p.total, 1))).utf8))
             }, report: { print($0) })
         } catch { fail("\(error)") }
+    case "library":
+        // Die Spiele des Kontos, für die Steam eine Android-Fassung ausliefert – was die App unter „Im Besitz“ zeigt.
+        guard let account = o.value("steam-account"), SteamTool.isAccountName(account) else { fail("\(SteamError.badAccountName)") }
+        do {
+            let apps = try SteamLibraryScan(tool: tool, account: account).run()
+            for app in apps {
+                print("\(app.appId)\t\(app.name)\t\(Installer.gigabytes(app.bytes))\t\(app.apks.first ?? "")")
+            }
+            print(L("\(apps.count) games with an Android build.", "\(apps.count) Spiele mit Android-Fassung."))
+        } catch { fail("\(error)") }
+    case "prepare":
+        // Wie „Von Steam laden“ in der App: Android-Depot laden, Entwurf schreiben, Dateien in den Bestand übernehmen.
+        guard o.positional.count > 2, let account = o.value("steam-account"), SteamTool.isAccountName(account) else {
+            fail(L("Usage: avpplay steam prepare <Steam app ID> --steam-account <account name>", "Aufruf: avpplay steam prepare <Steam-App-ID> --steam-account <Kontoname>"))
+        }
+        do {
+            let apps = try SteamLibraryScan(tool: tool, account: account).run()
+            guard let app = apps.first(where: { $0.appId == o.positional[2] }) else {
+                fail(L("This account has no Android build of Steam app \(o.positional[2]).", "Zu Steam-App \(o.positional[2]) gibt es in diesem Konto keine Android-Fassung."))
+            }
+            let recipe = try SteamDraftMaker(tool: tool, store: contentStore(o), account: account).prepare(
+                app: app, target: DraftRecipe.genericTarget(appId:), minCommit: "", progress: { p in
+                    FileHandle.standardError.write(Data(String(format: "\r  %.1f %%  ", 100 * Double(p.done) / Double(max(p.total, 1))).utf8))
+                }, report: { print($0) })
+            let drafts = DataLocation.base.appendingPathComponent("drafts", isDirectory: true)
+            try FileManager.default.createDirectory(at: drafts, withIntermediateDirectories: true)
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.sortedKeys, .prettyPrinted]
+            try encoder.encode(recipe).write(to: drafts.appendingPathComponent("\(recipe.id).json"), options: .atomic)
+            print(L("Draft \(recipe.id): \(recipe.package) \(recipe.versionName) (\(recipe.versionCode)), \(recipe.files.count) files.",
+                    "Entwurf \(recipe.id): \(recipe.package) \(recipe.versionName) (\(recipe.versionCode)), \(recipe.files.count) Dateien."))
+        } catch { fail("\(error)") }
     default:
-        fail(L("Usage: avpplay steam setup | steam login <account name> | steam logout | steam fetch <recipe> --steam-account <account name>",
-               "Aufruf: avpplay steam setup | steam login <Kontoname> | steam logout | steam fetch <Rezept> --steam-account <Kontoname>"))
+        fail(L("Usage: avpplay steam setup | steam login <account name> | steam logout | steam fetch <recipe> --steam-account <account name> | steam library --steam-account <account name> | steam prepare <Steam app ID> --steam-account <account name>",
+               "Aufruf: avpplay steam setup | steam login <Kontoname> | steam logout | steam fetch <Rezept> --steam-account <Kontoname> | steam library --steam-account <Kontoname> | steam prepare <Steam-App-ID> --steam-account <Kontoname>"))
     }
 
 case "logout":

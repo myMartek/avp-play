@@ -129,6 +129,13 @@ fetch to this Mac.
 for games that can also come from Steam, the ones in your Steam account. Where Meta has answered the ownership
 question for a single game, that answer counts. `avpplay library` prints the same list on the command line.
 
+**Meta and Steam.** The *Meta* and *Steam* filters show only the games whose purchase source is the Meta Store or
+Steam. With a Steam sign-in, *Steam* and *Owned* also show the Steam games in your account that ship an Android
+build (the build Steam makes for its own headset), read with Valve's SteamCMD once a day: no third-party service
+learns which games you own. Such a game without a recipe is untested; **Download from Steam** on its page fetches its
+Android build from your account, checks every file and writes a recipe with checksums, and then it builds and
+installs like any other game. On the command line: `avpplay steam library` and `avpplay steam prepare <app ID>`.
+
 **Mixed reality.** The overview's *Mixed Reality* filter shows the games whose mixed-reality mode works with AVP
 Play – your own room around the game. At the moment these are TRIANGLE STRATEGY, Demeo, Richie's Plank
 Experience, LES MILLS BODYCOMBAT and DreamSpace.

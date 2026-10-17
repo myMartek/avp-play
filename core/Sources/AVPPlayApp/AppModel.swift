@@ -180,6 +180,16 @@ final class AppModel: ObservableObject {
     private(set) var libraryIds: Set<String> = []
     @Published var loadingLibrary = false
     @Published var libraryProblem: String?
+    /// Die zuletzt gelesenen Steam-Spiele mit Android-Fassung, ihre Schlüssel (`steam:<App>`), und ob gerade gelesen wird.
+    @Published var steamLibrary: SteamLibrary? {
+        didSet {
+            steamLibraryIds = Set((steamLibrary?.apps ?? []).map { "steam:\($0.appId)" })
+            if steamLibrary != oldValue { rebuildAllGames() }
+        }
+    }
+    private(set) var steamLibraryIds: Set<String> = []
+    @Published var loadingSteamLibrary = false
+    @Published var steamLibraryProblem: String?
     /// Spiele, für die gerade einzeln bei Meta nachgefragt wird („Kauf prüfen“), und was dabei zuletzt zu sagen war.
     @Published var checkingPurchase: Set<String> = []
     @Published var purchaseNote: [String: String] = [:]
@@ -324,6 +334,9 @@ final class AppModel: ObservableObject {
     @AppStorage("filterMixedReality") var filterMixedReality = false
     /// Nur Spiele, die dem Nutzer gehören: in der Bibliothek seines Meta-Kontos oder von Steam bestätigt.
     @AppStorage("filterOwned") var filterOwned = false
+    /// Nur Spiele, deren Kaufquelle Meta ist, oder nur die aus Steam; beide zusammen ergänzen einander.
+    @AppStorage("filterMeta") var filterMeta = false
+    @AppStorage("filterSteam") var filterSteam = false
     /// Ob ein Filter gesetzt ist, der die Favoriten braucht – dann sollen alle dastehen, auch die, bis zu denen der
     /// Katalog noch nicht geladen ist.
     var favouritesWanted: Bool { filterFavourites || filterFavouritesMissing }
@@ -425,7 +438,7 @@ final class AppModel: ObservableObject {
     func owned(_ game: Game) -> Owned {
         guard let key = OwnershipCache.key(for: game.recipe) else { return .notApplicable }
         // Ohne eigene Antwort sagt die Bibliothek des Meta-Kontos, ob es dazugehört – nur ja, nie nein.
-        guard let record = ownership[key] else { return libraryIds.contains(key) ? .yes : .unknown }
+        guard let record = ownership[key] else { return libraryIds.contains(key) || steamLibraryIds.contains(key) ? .yes : .unknown }
         return record.owned ? .yes : .no
     }
 
@@ -436,7 +449,7 @@ final class AppModel: ObservableObject {
     /// (gesehen 2026-10-17 bei einer kostenlosen Beta); die stünden sonst unter „Im Besitz“ und ließen sich nicht laden.
     func ownedAnywhere(_ game: Game) -> Bool {
         let keys = game.ownershipKeys.isEmpty ? OwnershipCache.key(for: game.recipe).map { [$0] } ?? [] : game.ownershipKeys
-        return keys.contains { ownership[$0]?.owned ?? libraryIds.contains($0) }
+        return keys.contains { ownership[$0]?.owned ?? (libraryIds.contains($0) || steamLibraryIds.contains($0)) }
     }
 
     /// Das Rezept eines Spiels für eine Kaufquelle: das geltende, das mitgelieferte oder das aus `recipes/sources`.
@@ -564,6 +577,7 @@ final class AppModel: ObservableObject {
                 && (!filterFavouritesMissing || (favourite && !downloaded))
                 && (!filterMixedReality || game.mixedReality)
                 && (!filterOwned || ownedAnywhere(game))
+                && ((!filterMeta && !filterSteam) || (filterMeta && game.recipe.source == .meta) || (filterSteam && game.recipe.source == .steam))
                 && (words.isEmpty || game.recipe.title.lowercased().contains(words) || game.recipe.package.lowercased().contains(words))
             else { return nil }
             // Geprüftes zuerst, dann schon Nachgeschlagenes, dann was Nutzer bestätigen, das Ungetestete, zuletzt
@@ -892,6 +906,9 @@ final class AppModel: ObservableObject {
         if !teamValid { return L("The Apple team ID is still missing (see “Setup”).", "Die Apple-Team-ID fehlt noch (siehe „Einrichtung“).") }
         if device == nil { return deviceProblem ?? L("The Vision Pro is not reachable.", "Die Vision Pro ist nicht erreichbar.") }
         if game.draft, !game.prepared {
+            if game.recipe.source == .steam {
+                return prepareNote[game.id] ?? L("Download this game from Steam first (below).", "Lade dieses Spiel zuerst von Steam (unten).")
+            }
             return prepareNote[game.id] ?? L("The files of this game have not been looked up yet.", "Die Dateien dieses Spiels sind noch nicht nachgeschlagen.")
         }
         if let why = accountBlocker(for: game) { return why }
@@ -979,8 +996,10 @@ final class AppModel: ObservableObject {
         reloadJobs()
         ownership = OwnershipCache(store: paths.store).load()
         if account != .signedOut { library = MetaLibraryCache(store: paths.store).load() }
+        if steamLibrary == nil { steamLibrary = SteamLibraryCache(store: paths.store).load() }
         checkOwnership()
         if filterOwned { loadLibrary() }
+        if filterOwned || filterSteam { loadSteamLibrary() }
         // Beim ersten Start dorthin, wo etwas zu tun ist. Ein ausgeschaltetes Headset zählt nicht dazu.
         if !routed {
             routed = true

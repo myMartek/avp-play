@@ -93,8 +93,14 @@ enum Probe {
                 // Entwürfe für ungetestete Spiele, die schon nachgeschlagen wurden. Ein mitgeliefertes Rezept für
                 // dieselbe Store-App geht vor.
                 let shipped = Set(bundled.compactMap { $0.store.appId })
+                // Ebenso für Entwürfe aus Steam: ein mitgeliefertes Steam-Rezept (auch als weitere Kaufquelle) geht vor.
+                let shippedSteam = Set((bundled + sources).compactMap { $0.store.steamAppId })
                 let drafts = ((try? RecipeStore(directory: DataLocation.base.appendingPathComponent("drafts", isDirectory: true)).loadAll()) ?? [])
-                    .filter { r in r.id.hasPrefix("store-") && !(r.store.appId.map(shipped.contains) ?? true) }
+                    .filter { r in
+                        if r.id.hasPrefix("store-") { return !(r.store.appId.map(shipped.contains) ?? true) }
+                        guard let app = SteamDraft.appId(of: r.id) else { return false }
+                        return r.store.steamAppId == app && !shippedSteam.contains(app)
+                    }
                 // Wo der Nutzer die neueste Fassung aus dem Store gewählt hat, gilt deren Rezept statt des geprüften.
                 let active = StoreUpdate.resolve(bundled, variants: variants, sources: sources,
                                                  drafts: DataLocation.base.appendingPathComponent("drafts", isDirectory: true))

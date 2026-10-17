@@ -14,6 +14,11 @@ struct GamesView: View {
         Toggle(L("Owned", "Im Besitz"), isOn: $model.filterOwned)
             .help(L("Games you own: in the library of your Meta account (as Meta's Horizon app shows it) or, for games that can come from Steam, in your Steam account. Needs the sign-in under “Setup”.",
                     "Spiele, die dir gehören: in der Bibliothek deines Meta-Kontos (wie Metas Horizon-App sie zeigt) oder, bei Spielen, die es auch über Steam gibt, in deinem Steam-Konto. Braucht die Anmeldung unter „Einrichtung“."))
+        Toggle("Meta", isOn: $model.filterMeta)
+            .help(L("Games whose purchase source is the Meta Store.", "Spiele, deren Kaufquelle der Meta-Store ist."))
+        Toggle("Steam", isOn: $model.filterSteam)
+            .help(L("Games whose purchase source is Steam – with a Steam sign-in also the Steam games in your account that have an Android build.",
+                    "Spiele, deren Kaufquelle Steam ist – mit einer Steam-Anmeldung auch die Steam-Spiele deines Kontos, die eine Android-Fassung haben."))
         Toggle(L("Installed", "Installiert"), isOn: $model.filterInstalled)
         Toggle(L("Downloaded, Not Installed", "Geladen, nicht installiert"), isOn: $model.filterDownloaded)
             .help(L("Games whose files are completely on this Mac but which are not on the Vision Pro. While the Vision Pro is not reachable, every downloaded game is shown.",
@@ -53,6 +58,13 @@ struct GamesView: View {
         } else if model.filterOwned, model.account != .signedIn, !model.steamSignedIn {
             Text(L("Sign in under “Setup” to see what you own.", "Melde dich unter „Einrichtung“ an, um zu sehen, was dir gehört."))
                 .font(.callout).foregroundStyle(.secondary)
+        }
+        if model.loadingSteamLibrary {
+            ProgressView().controlSize(.small)
+            Text(L("Reading your Steam games …", "Deine Steam-Spiele werden gelesen …")).font(.callout).foregroundStyle(.secondary)
+        } else if model.filterOwned || model.filterSteam, let problem = model.steamLibraryProblem {
+            Label(L("Steam games not read", "Steam-Spiele nicht gelesen"), systemImage: "exclamationmark.triangle")
+                .font(.callout).foregroundStyle(.orange).help(problem)
         }
         if model.checkingOwnership {
             ProgressView().controlSize(.small)
@@ -130,9 +142,12 @@ struct GamesView: View {
             .onChange(of: model.filterOwned, initial: true) {
                 if model.filterOwned {
                     model.loadLibrary()
+                    model.loadSteamLibrary()
                     model.checkOwnership()
                 }
             }
+            // Unter „Steam“: welche Steam-Spiele des Kontos eine Android-Fassung haben.
+            .onChange(of: model.filterSteam, initial: true) { if model.filterSteam { model.loadSteamLibrary() } }
             .navigationDestination(for: String.self) { id in
                 if let game = model.allGames.first(where: { $0.id == id }) { GameDetail(game: game) }
             }
@@ -835,10 +850,27 @@ struct GameDetail: View {
                             "Die Toolchain hat für dieses Spiel keinen eigenen Eintrag. Es wird mit allgemeinen Einstellungen für seine Engine gebaut – die unsicherste Art von Versuch."),
                           systemImage: "wand.and.stars").font(.callout).fixedSize(horizontal: false, vertical: true)
                 }
+                if game.recipe.source == .steam, !game.prepared, !model.preparing.contains(game.id) {
+                    steamPrepare
+                }
                 if model.preparing.contains(game.id) {
-                    HStack { ProgressView().controlSize(.small); Text(model.prepareNote[game.id] ?? "").font(.callout) }
+                    HStack {
+                        ProgressView().controlSize(.small)
+                        Text(model.prepareNote[game.id] ?? "").font(.callout)
+                        if game.recipe.source == .steam {
+                            Spacer()
+                            Button(L("Stop", "Anhalten")) { model.stopSteam(game) }.controlSize(.small)
+                        }
+                    }
                 } else if let note = model.prepareNote[game.id] {
                     Label(note, systemImage: "info.circle").font(.callout).fixedSize(horizontal: false, vertical: true)
+                } else if game.prepared, game.recipe.source == .steam {
+                    Label(game.recipe.files.count == 1
+                            ? L("Version \(game.recipe.versionName): one file (the APK), from Steam's Android build.",
+                                "Fassung \(game.recipe.versionName): eine Datei (das APK), aus Steams Android-Fassung.")
+                            : L("Version \(game.recipe.versionName): \(game.recipe.files.count) files, from Steam's Android build.",
+                                "Fassung \(game.recipe.versionName): \(game.recipe.files.count) Dateien, aus Steams Android-Fassung."),
+                          systemImage: "checkmark.circle").font(.callout)
                 } else if game.prepared {
                     Label(game.recipe.files.count == 1
                             ? L("Build \(game.recipe.versionName): one file (the APK), as Meta's tool lists it.",
@@ -849,6 +881,23 @@ struct GameDetail: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading).padding(6)
+        }
+    }
+
+    /// Für ein Steam-Spiel ohne Rezept: seine Android-Fassung laden und daraus den Entwurf schreiben.
+    private var steamPrepare: some View {
+        let app = model.steamLibrary?.apps.first { $0.appId == game.recipe.store.steamAppId }
+        let blocker = model.steamBlocker(for: game)
+        return VStack(alignment: .leading, spacing: 6) {
+            Text(L("Steam ships an Android build of this game for its own headset. The app downloads it from your Steam account, checks what arrived and writes an untested recipe from it; then it can be built and installed like any other game.",
+                   "Steam liefert für sein eigenes Headset eine Android-Fassung dieses Spiels aus. Die App lädt sie aus deinem Steam-Konto, prüft, was ankommt, und schreibt daraus ein ungetestetes Rezept; danach lässt es sich bauen und installieren wie jedes andere Spiel."))
+                .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            HStack {
+                Button(app.map { L("Download from Steam (\(Installer.gigabytes($0.bytes)))", "Von Steam laden (\(Installer.gigabytes($0.bytes)))") }
+                       ?? L("Download from Steam", "Von Steam laden")) { model.prepareFromSteam(game) }
+                    .disabled(app == nil || blocker != nil)
+                if let blocker { Text(blocker).font(.callout).foregroundStyle(.secondary) }
+            }
         }
     }
 
