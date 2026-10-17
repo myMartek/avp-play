@@ -643,7 +643,10 @@ struct GameDetail: View {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 6) {
                         Text(game.recipe.title).font(.largeTitle.bold())
-                        Text(L("Version \(game.recipe.versionName)", "Version \(game.recipe.versionName)")).foregroundStyle(.secondary)
+                        // Ein Steam-Spiel, das noch nicht geladen ist, kennt seine Fassung erst aus dem APK.
+                        if !game.recipe.versionName.isEmpty {
+                            Text(L("Version \(game.recipe.versionName)", "Version \(game.recipe.versionName)")).foregroundStyle(.secondary)
+                        }
                         HStack(spacing: 10) {
                             StatusBadge(status: game.status, busy: model.isBusy(game.id))
                             TrustBadge(game: game)
@@ -683,8 +686,7 @@ struct GameDetail: View {
                             }
                             .controlSize(.large)
                             .disabled(downloadBlocked != nil)
-                            let size = game.status.bytesToDownload > 0 ? Installer.gigabytes(game.status.bytesToDownload)
-                                : game.status.filesToDownload == 1 ? L("One file", "Eine Datei") : L("\(game.status.filesToDownload) files", "\(game.status.filesToDownload) Dateien")
+                            let size = model.downloadSizeText(game)
                             Text(downloadBlocked
                                  ?? (blocked == nil
                                      ? L("\(size) – fetches the files to this Mac; nothing is built or installed.",
@@ -726,8 +728,10 @@ struct GameDetail: View {
                         }
                         if game.status.bytesToDownload > 0 {
                             row(L("Still to download", "Noch zu laden"), Installer.gigabytes(game.status.bytesToDownload))
+                        } else if !game.prepared, let app = model.steamDraftApp(game) {
+                            row(L("Still to download", "Noch zu laden"), L("\(Installer.gigabytes(app.bytes)) from Steam", "\(Installer.gigabytes(app.bytes)) von Steam"))
                         } else if !game.prepared {
-                            row(L("Files", "Dateien"), L("not looked up yet", "noch nicht nachgeschlagen"))
+                            row(L("Files", "Dateien"), game.recipe.source == .steam ? L("not downloaded yet", "noch nicht geladen") : L("not looked up yet", "noch nicht nachgeschlagen"))
                         } else if game.status.filesPresent < game.status.filesRequired {
                             row(L("Still to download", "Noch zu laden"),
                                 game.status.filesRequired - game.status.filesPresent == 1
@@ -892,27 +896,12 @@ struct GameDetail: View {
         }
     }
 
-    /// Für ein Steam-Spiel ohne Rezept: seine Android-Fassung laden und daraus den Entwurf schreiben.
+    /// Für ein Steam-Spiel ohne Rezept: was „Installieren“ und „Nur herunterladen“ hier tun. Was dem im Weg steht
+    /// (nicht im Konto, noch nicht gelesen), steht unter den Knöpfen oben.
     private var steamPrepare: some View {
-        let app = model.steamLibrary?.apps.first { $0.appId == game.recipe.store.steamAppId }
-        // Steht das Spiel nur in der Steam-Liste des Katalogs: gehört es dem Konto nicht, oder ist es noch nicht gelesen?
-        let blocker = model.steamBlocker(for: game) ?? (app == nil
-            ? (model.steamLibrary == nil
-                ? L("Your Steam games have not been read yet (filter “Steam” or “Owned”).", "Deine Steam-Spiele sind noch nicht gelesen (Filter „Steam“ oder „Im Besitz“).")
-                : L("This game is not in your Steam account. Once you own it on Steam, it can be downloaded here.",
-                    "Dieses Spiel gehört nicht zu deinem Steam-Konto. Sobald es dir bei Steam gehört, lässt es sich hier laden."))
-            : nil)
-        return VStack(alignment: .leading, spacing: 6) {
-            Text(L("Steam ships an Android build of this game for its own headset. The app downloads it from your Steam account, checks what arrived and writes an untested recipe from it; then it can be built and installed like any other game.",
-                   "Steam liefert für sein eigenes Headset eine Android-Fassung dieses Spiels aus. Die App lädt sie aus deinem Steam-Konto, prüft, was ankommt, und schreibt daraus ein ungetestetes Rezept; danach lässt es sich bauen und installieren wie jedes andere Spiel."))
-                .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            HStack {
-                Button(app.map { L("Download from Steam (\(Installer.gigabytes($0.bytes)))", "Von Steam laden (\(Installer.gigabytes($0.bytes)))") }
-                       ?? L("Download from Steam", "Von Steam laden")) { model.prepareFromSteam(game) }
-                    .disabled(app == nil || blocker != nil)
-                if let blocker { Text(blocker).font(.callout).foregroundStyle(.secondary) }
-            }
-        }
+        Text(L("Steam ships an Android build of this game for its own headset. “Install” downloads it from your Steam account, checks what arrived, writes an untested recipe from it and then builds and installs it; “Download Only” stops after the download.",
+               "Steam liefert für sein eigenes Headset eine Android-Fassung dieses Spiels aus. „Installieren“ lädt sie aus deinem Steam-Konto, prüft, was ankommt, schreibt daraus ein ungetestetes Rezept und baut und installiert es dann; „Nur herunterladen“ hört nach dem Laden auf."))
+            .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
     }
 
     /// Was beim Entfernen verloren geht – bei Sonderapps auch Dateien, die sich nicht neu laden lassen.

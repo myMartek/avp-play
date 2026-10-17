@@ -117,11 +117,41 @@ extension AppModel {
 
     /// „Von Steam laden“ für ein ungetestetes Steam-Spiel: lädt seine Android-Fassung, schreibt daraus den Entwurf (mit
     /// Prüfsummen) und übernimmt die Dateien in den Bestand. Danach baut und installiert es der übliche Weg.
-    func prepareFromSteam(_ game: Game) {
+    /// Ein Steam-Spiel des Kontos, dessen Android-Fassung noch nicht geladen ist: seine Angaben aus den gelesenen
+    /// Steam-Spielen. `nil` für jedes andere Spiel.
+    func steamDraftApp(_ game: Game) -> SteamAndroidApp? {
+        guard game.draft, !game.prepared, game.recipe.source == .steam, let id = game.recipe.store.steamAppId else { return nil }
+        return steamLibrary?.apps.first { $0.appId == id }
+    }
+
+    /// Was dem Laden eines solchen Steam-Spiels im Weg steht: es lädt gerade, die Steam-Spiele sind noch nicht
+    /// gelesen, oder es gehört dem Konto nicht.
+    func steamDraftBlocker(for game: Game) -> String? {
+        if preparing.contains(game.id) { return prepareNote[game.id] ?? L("Downloading from Steam …", "Wird von Steam geladen …") }
+        if let why = steamBlocker(for: game) { return why }
+        guard steamDraftApp(game) == nil else { return nil }
+        if steamLibrary == nil {
+            return L("Your Steam games have not been read yet (filter “Steam” or “Owned”).", "Deine Steam-Spiele sind noch nicht gelesen (Filter „Steam“ oder „Im Besitz“).")
+        }
+        return L("This game is not in your Steam account. Once you own it on Steam, it can be installed here.",
+                 "Dieses Spiel gehört nicht zu deinem Steam-Konto. Sobald es dir bei Steam gehört, lässt es sich hier installieren.")
+    }
+
+    /// Nach dem Lesen der Spiele: was nach dem Laden von Steam installiert werden sollte und nun einen Entwurf hat.
+    func installPreparedSteamGames() {
+        for id in installAfterSteam {
+            guard let game = games.first(where: { $0.id == id }), game.prepared else { continue }
+            installAfterSteam.remove(id)
+            install(game)
+        }
+    }
+
+    func prepareFromSteam(_ game: Game, thenInstall: Bool = false) {
         guard game.draft, game.recipe.source == .steam, let appId = game.recipe.store.steamAppId,
               let app = steamLibrary?.apps.first(where: { $0.appId == appId }), !preparing.contains(game.id) else { return }
         if let why = steamBlocker(for: game) { prepareNote[game.id] = why; return }
         preparing.insert(game.id)
+        if thenInstall { installAfterSteam.insert(game.id) } else { installAfterSteam.remove(game.id) }
         prepareNote[game.id] = L("Asking Steam whether this account owns the game …", "Steam wird gefragt, ob das Spiel zu diesem Konto gehört …")
         let store = paths.store, account = steamAccount, drafts = draftsDirectory, id = game.id
         let minCommit = toolchain?.commit() ?? ""
@@ -150,6 +180,8 @@ extension AppModel {
             await MainActor.run {
                 self.preparing.remove(id)
                 self.prepareNote[id] = final
+                // Ging es schief, wird danach auch nicht installiert.
+                if final != nil { self.installAfterSteam.remove(id) }
                 self.refresh()
             }
         }

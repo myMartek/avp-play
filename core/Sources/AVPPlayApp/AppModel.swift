@@ -257,6 +257,8 @@ final class AppModel: ObservableObject {
     @Published var searchText = ""
     @Published var searching = false
     @Published var preparing: Set<String> = []
+    /// Steam-Spiele, die nach dem Laden von Steam gleich installiert werden sollen – sobald ihr Entwurf gelesen ist.
+    var installAfterSteam: Set<String> = []
     @Published var prepareNote: [String: String] = [:]
     @Published var favourites: Set<String> = Set(UserDefaults.standard.stringArray(forKey: "favourites") ?? [])
     @Published var sentFeedback: [String: String] = UserDefaults.standard.dictionary(forKey: "sentFeedback") as? [String: String] ?? [:]
@@ -932,10 +934,12 @@ final class AppModel: ObservableObject {
         if !teamValid { return L("The Apple team ID is still missing (see “Setup”).", "Die Apple-Team-ID fehlt noch (siehe „Einrichtung“).") }
         if device == nil { return deviceProblem ?? L("The Vision Pro is not reachable.", "Die Vision Pro ist nicht erreichbar.") }
         if game.draft, !game.prepared {
+            // Ein Steam-Spiel des Kontos lädt „Installieren“ selbst von Steam; was dem im Weg steht, sagt `steamDraftBlocker`.
             if game.recipe.source == .steam {
-                return prepareNote[game.id] ?? L("Download this game from Steam first (below).", "Lade dieses Spiel zuerst von Steam (unten).")
+                if let why = steamDraftBlocker(for: game) { return why }
+            } else {
+                return prepareNote[game.id] ?? L("The files of this game have not been looked up yet.", "Die Dateien dieses Spiels sind noch nicht nachgeschlagen.")
             }
-            return prepareNote[game.id] ?? L("The files of this game have not been looked up yet.", "Die Dateien dieses Spiels sind noch nicht nachgeschlagen.")
         }
         if let why = accountBlocker(for: game) { return why }
         if owned(game) == .no { return notOwnedText(game) }
@@ -1021,6 +1025,7 @@ final class AppModel: ObservableObject {
         saveSnapshots = s.saves
         reloadJobs()
         ownership = OwnershipCache(store: paths.store).load()
+        installPreparedSteamGames()
         if account != .signedOut { library = MetaLibraryCache(store: paths.store).load() }
         if steamLibrary == nil { steamLibrary = SteamLibraryCache(store: paths.store).load() }
         checkOwnership()
@@ -1285,6 +1290,9 @@ final class AppModel: ObservableObject {
 
     func install(_ game: Game) {
         guard blocker(for: game) == nil else { return }
+        // Ein Steam-Spiel, dessen Dateien noch nicht von Steam geladen sind: erst laden und den Entwurf schreiben, dann
+        // – sobald er gelesen ist – wie jedes andere Spiel bauen und installieren.
+        if steamDraftApp(game) != nil { prepareFromSteam(game, thenInstall: true); return }
         enqueue(game, steps: InstallStep.allCases)
     }
 
@@ -1294,7 +1302,11 @@ final class AppModel: ObservableObject {
     func downloadBlocker(for game: Game) -> String? {
         if let why = storeBlocker { return why }
         if game.draft, !game.prepared {
-            return prepareNote[game.id] ?? L("The files of this game have not been looked up yet.", "Die Dateien dieses Spiels sind noch nicht nachgeschlagen.")
+            if game.recipe.source == .steam {
+                if let why = steamDraftBlocker(for: game) { return why }
+            } else {
+                return prepareNote[game.id] ?? L("The files of this game have not been looked up yet.", "Die Dateien dieses Spiels sind noch nicht nachgeschlagen.")
+            }
         }
         if let why = accountBlocker(for: game) { return why }
         if owned(game) == .no { return notOwnedText(game) }
@@ -1308,11 +1320,22 @@ final class AppModel: ObservableObject {
 
     /// Ob es für das Spiel etwas gibt, das das Programm selbst laden kann und das noch fehlt. Gezählt werden die
     /// Dateien, nicht ihre Größe: bei einem nachgeschlagenen Spiel aus dem Meta-Store kennt die vorab niemand.
-    func hasDownloads(_ game: Game) -> Bool { game.status.filesToDownload > 0 || game.status.bytesToDownload > 0 }
+    func hasDownloads(_ game: Game) -> Bool {
+        game.status.filesToDownload > 0 || game.status.bytesToDownload > 0 || steamDraftApp(game) != nil
+    }
+
+    /// Wie viel für das Spiel noch zu laden ist, in Worten – bei einem Steam-Spiel, das noch nicht geladen ist, die
+    /// Größe seiner Android-Fassung laut Steam.
+    func downloadSizeText(_ game: Game) -> String {
+        if let app = steamDraftApp(game) { return Installer.gigabytes(app.bytes) }
+        if game.status.bytesToDownload > 0 { return Installer.gigabytes(game.status.bytesToDownload) }
+        return game.status.filesToDownload == 1 ? L("One file", "Eine Datei") : L("\(game.status.filesToDownload) files", "\(game.status.filesToDownload) Dateien")
+    }
 
     /// Lädt die Dateien des Spiels, ohne es zu bauen oder zu installieren.
     func download(_ game: Game) {
         guard hasDownloads(game), downloadBlocker(for: game) == nil else { return }
+        if steamDraftApp(game) != nil { prepareFromSteam(game, thenInstall: false); return }
         enqueue(game, steps: InstallStep.download)
     }
 
