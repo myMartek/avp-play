@@ -10,7 +10,7 @@
  },
  "toolchain": {
   "target": "batman",
-  "minCommit": "6d185aa"
+  "minCommit": "a86a5f6"
  },
  "files": [
   {
