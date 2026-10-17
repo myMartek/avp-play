@@ -377,7 +377,7 @@ public struct MetaClient: Sendable {
         return r
     }
 
-    private func graph(path: String, query: [URLQueryItem] = [], form: [String: String]? = nil) async throws -> Data {
+    func graph(path: String, query: [URLQueryItem] = [], form: [String: String]? = nil) async throws -> Data {
         var request = MetaClient.request(MetaClient.graphURL(path: path, query: query), token: token)
         if let form {
             request.httpMethod = "POST"

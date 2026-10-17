@@ -197,6 +197,12 @@ final class AppModel: ObservableObject {
     private(set) var libraryIds: Set<String> = []
     @Published var loadingLibrary = false
     @Published var libraryProblem: String?
+    /// Die zuletzt geladenen Horizon+-Kataloge (für den Filter „Horizon+“), ihre Kennungen, und ob gerade geladen wird.
+    @Published var horizonPlus: HorizonPlusCatalog? { didSet { horizonPlusIds = horizonPlus?.appIds ?? [] } }
+    private(set) var horizonPlusIds: Set<String> = []
+    @Published var loadingHorizonPlus = false
+    @Published var horizonPlusProblem: String?
+    var askedHorizonPlus: Set<String> = []
     /// Die zuletzt gelesenen Steam-Spiele mit Android-Fassung, ihre Schlüssel (`steam:<App>`), und ob gerade gelesen wird.
     @Published var steamLibrary: SteamLibrary? {
         didSet {
@@ -360,6 +366,8 @@ final class AppModel: ObservableObject {
     @AppStorage("filterMixedReality") var filterMixedReality = false
     /// Nur Spiele, die dem Nutzer gehören: in der Bibliothek seines Meta-Kontos oder von Steam bestätigt.
     @AppStorage("filterOwned") var filterOwned = false
+    /// Nur Spiele, die ein Horizon+-Abo jederzeit laden lässt: Spielekatalog und Indie-Katalog (nicht die Monatsspiele).
+    @AppStorage("filterHorizonPlus") var filterHorizonPlus = false
     /// Nur Spiele aus dem Meta-Store oder nur die aus Steam (gleich, welche Kaufquelle gewählt ist); beide zusammen
     /// ergänzen einander.
     @AppStorage("filterMeta") var filterMeta = false
@@ -481,6 +489,13 @@ final class AppModel: ObservableObject {
     /// Je Quelle gilt die eigene Antwort auf die Besitzfrage – dieselbe, die vor jedem Laden gestellt wird. Wo es keine
     /// gibt, gilt die Bibliothek des Meta-Kontos. Sie führt auch Apps, die Meta auf die einzelne Frage nicht bestätigt
     /// (gesehen 2026-10-17 bei einer kostenlosen Beta); die stünden sonst unter „Im Besitz“ und ließen sich nicht laden.
+    /// Steht das Spiel in einem der Horizon+-Kataloge? Nach der Store-Kennung des Meta-Spiels – auch wenn Steam als
+    /// Kaufquelle gewählt ist: Das Abo gilt für die Meta-Fassung.
+    func inHorizonPlus(_ game: Game) -> Bool {
+        guard let app = game.recipe.catalogAppId else { return false }
+        return horizonPlusIds.contains(app)
+    }
+
     func ownedAnywhere(_ game: Game) -> Bool {
         let keys = game.ownershipKeys.isEmpty ? OwnershipCache.key(for: game.recipe).map { [$0] } ?? [] : game.ownershipKeys
         return keys.contains { ownership[$0]?.owned ?? (libraryIds.contains($0) || steamLibraryIds.contains($0)) }
@@ -612,6 +627,7 @@ final class AppModel: ObservableObject {
                 && (!filterFavouritesMissing || (favourite && !downloaded))
                 && (!filterMixedReality || game.mixedReality)
                 && (!filterOwned || ownedAnywhere(game))
+                && (!filterHorizonPlus || inHorizonPlus(game))
                 && ((!filterMeta && !filterSteam) || (filterMeta && game.fromMeta) || (filterSteam && game.fromSteam))
                 && (custom.isEmpty || CustomFilters.passes(game.id, filters: custom, modes: customFilterModes))
                 && (words.isEmpty || game.recipe.title.lowercased().contains(words) || game.recipe.package.lowercased().contains(words))
@@ -1024,9 +1040,11 @@ final class AppModel: ObservableObject {
         ownership = OwnershipCache(store: paths.store).load()
         installPreparedSteamGames()
         if account != .signedOut { library = MetaLibraryCache(store: paths.store).load() }
+        if horizonPlus == nil { horizonPlus = HorizonPlusCache(store: paths.store).load() }
         if steamLibrary == nil { steamLibrary = SteamLibraryCache(store: paths.store).load() }
         checkOwnership()
         if filterOwned { loadLibrary() }
+        if filterHorizonPlus { loadHorizonPlus() }
         if filterOwned || filterSteam { loadSteamLibrary() }
         // Beim ersten Start dorthin, wo etwas zu tun ist. Ein ausgeschaltetes Headset zählt nicht dazu.
         if !routed {
@@ -1065,6 +1083,7 @@ final class AppModel: ObservableObject {
                 self.account = state
                 self.checkOwnership()
                 if self.filterOwned { self.loadLibrary() }
+                if self.filterHorizonPlus { self.loadHorizonPlus() }
             }
         }
     }
