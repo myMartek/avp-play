@@ -179,7 +179,10 @@ struct LoginSheet: View {
             focused = true
         }
         .onChange(of: session.outcome) {
-            if session.outcome == .success { model.checkAccount() }
+            if session.outcome == .success {
+                model.forgetLibrary()
+                model.checkAccount()
+            }
         }
     }
 

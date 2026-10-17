@@ -11,6 +11,15 @@ struct GamesView: View {
         Text(L("Show only:", "Nur zeigen:")).foregroundStyle(.secondary)
         Toggle(L("Verified", "Geprüft"), isOn: $model.filterVerified)
         if model.onlineCatalog { Toggle(L("Community Verified", "Von Nutzern bestätigt"), isOn: $model.filterCommunity) }
+        Toggle(L("Owned", "Im Besitz"), isOn: $model.filterOwned)
+            .help(L("Games you own: in the library of your Meta account (as Meta's Horizon app shows it) or, for games that can come from Steam, in your Steam account. Needs the sign-in under “Setup”.",
+                    "Spiele, die dir gehören: in der Bibliothek deines Meta-Kontos (wie Metas Horizon-App sie zeigt) oder, bei Spielen, die es auch über Steam gibt, in deinem Steam-Konto. Braucht die Anmeldung unter „Einrichtung“."))
+        Toggle("Meta", isOn: $model.filterMeta)
+            .help(L("Games from the Meta Store – also those for which Steam is chosen as the purchase source.",
+                    "Spiele aus dem Meta-Store – auch solche, bei denen Steam als Kaufquelle gewählt ist."))
+        Toggle("Steam", isOn: $model.filterSteam)
+            .help(L("Games available on Steam: as a purchase source (also when Meta is chosen), games whose files come from a Steam purchase such as Half-Life: Alyx, and the Steam games with an Android build.",
+                    "Spiele, die es bei Steam gibt: als Kaufquelle (auch wenn Meta gewählt ist), Spiele, deren Dateien aus einem Steam-Kauf kommen wie Half-Life: Alyx, und die Steam-Spiele mit Android-Fassung."))
         Toggle(L("Installed", "Installiert"), isOn: $model.filterInstalled)
         Toggle(L("Downloaded, Not Installed", "Geladen, nicht installiert"), isOn: $model.filterDownloaded)
             .help(L("Games whose files are completely on this Mac but which are not on the Vision Pro. While the Vision Pro is not reachable, every downloaded game is shown.",
@@ -50,6 +59,23 @@ struct GamesView: View {
         let updatable = model.updatable.count
         if updatable > 1 {
             Button(L("Update All (\(updatable))", "Alle aktualisieren (\(updatable))")) { model.updateAll() }
+        }
+        if model.loadingLibrary {
+            ProgressView().controlSize(.small)
+            Text(L("Loading your Meta library …", "Deine Meta-Bibliothek wird geladen …")).font(.callout).foregroundStyle(.secondary)
+        } else if model.filterOwned, let problem = model.libraryProblem {
+            Label(L("Library not loaded", "Bibliothek nicht geladen"), systemImage: "exclamationmark.triangle")
+                .font(.callout).foregroundStyle(.orange).help(problem)
+        } else if model.filterOwned, model.account != .signedIn, !model.steamSignedIn {
+            Text(L("Sign in under “Setup” to see what you own.", "Melde dich unter „Einrichtung“ an, um zu sehen, was dir gehört."))
+                .font(.callout).foregroundStyle(.secondary)
+        }
+        if model.loadingSteamLibrary {
+            ProgressView().controlSize(.small)
+            Text(L("Reading your Steam games …", "Deine Steam-Spiele werden gelesen …")).font(.callout).foregroundStyle(.secondary)
+        } else if model.filterOwned || model.filterSteam, let problem = model.steamLibraryProblem {
+            Label(L("Steam games not read", "Steam-Spiele nicht gelesen"), systemImage: "exclamationmark.triangle")
+                .font(.callout).foregroundStyle(.orange).help(problem)
         }
         if model.checkingOwnership {
             ProgressView().controlSize(.small)
@@ -128,6 +154,16 @@ struct GamesView: View {
             // Unter einem Filter über die Favoriten sollen alle stehen, auch die, bis zu denen der Katalog noch nicht geladen ist.
             // Ebenso unter einem eigenen Filter auf „nur diese“.
             .task(id: model.listedIds) { if !model.listedIds.isEmpty { await model.loadMissing(model.listedIds) } }
+            // Unter „Im Besitz“: die Bibliothek des Meta-Kontos laden und Steam für die Spiele mit Steam-Rezept fragen.
+            .onChange(of: model.filterOwned, initial: true) {
+                if model.filterOwned {
+                    model.loadLibrary()
+                    model.loadSteamLibrary()
+                    model.checkOwnership()
+                }
+            }
+            // Unter „Steam“: welche Steam-Spiele des Kontos eine Android-Fassung haben.
+            .onChange(of: model.filterSteam, initial: true) { if model.filterSteam { model.loadSteamLibrary() } }
             .navigationDestination(for: String.self) { id in
                 if let game = model.allGames.first(where: { $0.id == id }) { GameDetail(game: game) }
             }
@@ -171,7 +207,7 @@ struct FeedbackBox: View {
     var body: some View {
         GroupBox(L("How does it run?", "Wie läuft es?")) {
             VStack(alignment: .leading, spacing: 8) {
-                if !(game.fromStore && game.recipe.catalogAppId != nil && model.onlineCatalog) {
+                if !model.canSendFeedback(game) {
                     // Sonderapps kennt der Katalog nicht, und ohne Katalog gibt es keinen Empfänger.
                     EmptyView()
                 } else if game.status.builtWith?.modified == true {
@@ -429,7 +465,9 @@ struct CoverImage: View {
             // scrollt eine aus dem Bild, endet ihre Aufgabe, und ein noch nicht begonnener Abruf entfällt.
             .task(id: game.id) {
                 fetched = nil
-                guard game.cover == nil, model.storePictures, let appId = game.recipe.catalogAppId,
+                // Ein Steam-Spiel ohne Seite im Meta-Store bekommt sein Bild von Valve.
+                let steam = game.recipe.catalogAppId == nil ? game.recipe.store.steamAppId.map { CoverCache.steamPrefix + $0 } : nil
+                guard game.cover == nil, model.storePictures, let appId = game.recipe.catalogAppId ?? steam,
                       let data = await model.covers.image(appId: appId, catalogHasOne: game.catalog?.cover == true), !Task.isCancelled else { return }
                 fetched = NSImage(data: data)
             }
@@ -620,7 +658,10 @@ struct GameDetail: View {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 6) {
                         Text(game.recipe.title).font(.largeTitle.bold())
-                        Text(L("Version \(game.recipe.versionName)", "Version \(game.recipe.versionName)")).foregroundStyle(.secondary)
+                        // Ein Steam-Spiel, das noch nicht geladen ist, kennt seine Fassung erst aus dem APK.
+                        if !game.recipe.versionName.isEmpty {
+                            Text(L("Version \(game.recipe.versionName)", "Version \(game.recipe.versionName)")).foregroundStyle(.secondary)
+                        }
                         HStack(spacing: 10) {
                             StatusBadge(status: game.status, busy: model.isBusy(game.id))
                             TrustBadge(game: game)
@@ -661,8 +702,7 @@ struct GameDetail: View {
                             }
                             .controlSize(.large)
                             .disabled(downloadBlocked != nil)
-                            let size = game.status.bytesToDownload > 0 ? Installer.gigabytes(game.status.bytesToDownload)
-                                : game.status.filesToDownload == 1 ? L("One file", "Eine Datei") : L("\(game.status.filesToDownload) files", "\(game.status.filesToDownload) Dateien")
+                            let size = model.downloadSizeText(game)
                             Text(downloadBlocked
                                  ?? (blocked == nil
                                      ? L("\(size) – fetches the files to this Mac; nothing is built or installed.",
@@ -704,8 +744,10 @@ struct GameDetail: View {
                         }
                         if game.status.bytesToDownload > 0 {
                             row(L("Still to download", "Noch zu laden"), Installer.gigabytes(game.status.bytesToDownload))
+                        } else if !game.prepared, let app = model.steamDraftApp(game) {
+                            row(L("Still to download", "Noch zu laden"), L("\(Installer.gigabytes(app.bytes)) from Steam", "\(Installer.gigabytes(app.bytes)) von Steam"))
                         } else if !game.prepared {
-                            row(L("Files", "Dateien"), L("not looked up yet", "noch nicht nachgeschlagen"))
+                            row(L("Files", "Dateien"), game.recipe.source == .steam ? L("not downloaded yet", "noch nicht geladen") : L("not looked up yet", "noch nicht nachgeschlagen"))
                         } else if game.status.filesPresent < game.status.filesRequired {
                             row(L("Still to download", "Noch zu laden"),
                                 game.status.filesRequired - game.status.filesPresent == 1
@@ -820,21 +862,43 @@ struct GameDetail: View {
                        "Du kannst es versuchen. Jedes der geprüften Spiele brauchte eigene Anpassungen, bevor es lief – ein vom Projekt nicht getestetes startet also womöglich nicht. Sag danach, wie es lief: Melden mehr Leute, dass ein Spiel läuft, als dass es nicht läuft, wird es „Von Nutzern bestätigt“, umgekehrt „Inkompatibel“."))
                     .font(.callout).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
-                if let c = game.catalog, c.works + c.problems + c.fails > 0 {
+                // Für die Steam-Fassung zählen die Meldungen und Notizen ihres Eintrags in der Steam-Liste.
+                let reports: (works: Int, problems: Int, fails: Int)? = game.recipe.source == .steam
+                    ? game.steamCatalog.map { ($0.works, $0.problems, $0.fails) } : game.catalog.map { ($0.works, $0.problems, $0.fails) }
+                if let c = reports, c.works + c.problems + c.fails > 0 {
                     Text(L("Reports from users: \(c.works) say it works, \(c.problems) report problems, \(c.fails) say it does not start.",
                            "Meldungen von Nutzern: \(c.works) sagen, es läuft, \(c.problems) melden Probleme, \(c.fails) sagen, es startet nicht."))
                         .font(.callout)
                 }
-                if let note = game.catalog?.note { Label(note, systemImage: "text.bubble").font(.callout) }
+                if let note = game.recipe.source == .steam ? game.steamCatalog?.note : game.catalog?.note {
+                    Label(note, systemImage: "text.bubble").font(.callout)
+                }
                 if game.prepared, DraftRecipe.isGeneric(game.recipe.toolchain.target) {
                     Label(L("The toolchain has no entry of its own for this game. It is built with general settings for its engine – the least certain kind of attempt.",
                             "Die Toolchain hat für dieses Spiel keinen eigenen Eintrag. Es wird mit allgemeinen Einstellungen für seine Engine gebaut – die unsicherste Art von Versuch."),
                           systemImage: "wand.and.stars").font(.callout).fixedSize(horizontal: false, vertical: true)
                 }
+                if game.recipe.source == .steam, !game.prepared, !model.preparing.contains(game.id) {
+                    steamPrepare
+                }
                 if model.preparing.contains(game.id) {
-                    HStack { ProgressView().controlSize(.small); Text(model.prepareNote[game.id] ?? "").font(.callout) }
+                    HStack {
+                        ProgressView().controlSize(.small)
+                        Text(model.prepareNote[game.id] ?? "").font(.callout)
+                        if game.recipe.source == .steam {
+                            Spacer()
+                            Button(L("Stop", "Anhalten")) { model.stopSteam(game) }.controlSize(.small)
+                        }
+                    }
                 } else if let note = model.prepareNote[game.id] {
                     Label(note, systemImage: "info.circle").font(.callout).fixedSize(horizontal: false, vertical: true)
+                } else if game.prepared, game.recipe.source == .steam {
+                    Label(game.recipe.files.count == 1
+                            ? L("Version \(game.recipe.versionName): one file (the APK), from Steam's Android build.",
+                                "Fassung \(game.recipe.versionName): eine Datei (das APK), aus Steams Android-Fassung.")
+                            : L("Version \(game.recipe.versionName): \(game.recipe.files.count) files, from Steam's Android build.",
+                                "Fassung \(game.recipe.versionName): \(game.recipe.files.count) Dateien, aus Steams Android-Fassung."),
+                          systemImage: "checkmark.circle").font(.callout)
                 } else if game.prepared {
                     Label(game.recipe.files.count == 1
                             ? L("Build \(game.recipe.versionName): one file (the APK), as Meta's tool lists it.",
@@ -846,6 +910,14 @@ struct GameDetail: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading).padding(6)
         }
+    }
+
+    /// Für ein Steam-Spiel ohne Rezept: was „Installieren“ und „Nur herunterladen“ hier tun. Was dem im Weg steht
+    /// (nicht im Konto, noch nicht gelesen), steht unter den Knöpfen oben.
+    private var steamPrepare: some View {
+        Text(L("Steam ships an Android build of this game for its own headset. “Install” downloads it from your Steam account, checks what arrived, writes an untested recipe from it and then builds and installs it; “Download Only” stops after the download.",
+               "Steam liefert für sein eigenes Headset eine Android-Fassung dieses Spiels aus. „Installieren“ lädt sie aus deinem Steam-Konto, prüft, was ankommt, schreibt daraus ein ungetestetes Rezept und baut und installiert es dann; „Nur herunterladen“ hört nach dem Laden auf."))
+            .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
     }
 
     /// Was beim Entfernen verloren geht – bei Sonderapps auch Dateien, die sich nicht neu laden lassen.

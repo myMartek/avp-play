@@ -124,6 +124,22 @@ that it knows which games people have that do not run yet. It is only a list: no
 account or device. *Favourites Not Downloaded* is also the quick way to see what of your favourites is still to
 fetch to this Mac.
 
+**Owned.** The overview's *Owned* filter shows only the games you own: the ones in your Meta account's library
+(the list Meta's Horizon app shows, read with your Meta sign-in at most once an hour while the filter is on) and,
+for games that can also come from Steam, the ones in your Steam account. Where Meta has answered the ownership
+question for a single game, that answer counts. `avpplay library` prints the same list on the command line.
+
+**Meta and Steam.** The *Meta* and *Steam* filters show only the games available from the Meta Store or from Steam,
+whichever purchase source is chosen; *Steam* includes games whose files come from a Steam purchase, such as
+Half-Life: Alyx, Doom 3 and Counter-Strike. With a Steam sign-in, *Steam* and *Owned* also show the Steam games in your account that ship an Android
+build (the build Steam makes for its own headset), read with Valve's SteamCMD once a day: no third-party service
+learns which games you own. Such a game without a recipe is untested; **Download from Steam** on its page fetches its
+Android build from your account, checks every file and writes a recipe with checksums, and then it builds and
+installs like any other game. *Steam* also lists the other Steam games with an Android build that the project
+knows, marked as not in your account, with the project's label for the Steam version; reports and fixes for a
+Steam game count for its Steam entry, not for the Meta Store game. On the command line: `avpplay steam library` and
+`avpplay steam prepare <app ID>`.
+
 **Your own filters.** Under *Filters* in the sidebar you make filters of your own, such as “32 Bit” or “For
 Guests”. A game goes into one with the *Filter* button on its page, or select several in the overview and use
 *Filter …* in the bar below it. Above the overview each filter can then show only its games or hide them – click it
@@ -238,12 +254,18 @@ their own recipe.
 - **Pictures** of games whose files are not on your Mac yet come from the game's public page in the Meta Store
   (meta.com): only for games you are looking at, two at a time, without your Meta sign-in or cookies. A small
   copy is kept in a cache (`~/Library/Caches/AVPPlay`) that the *Data* page can empty; Settings › Pictures turns
-  this off. A few store pages show no picture to a visitor who is not signed in (Richie's Plank Experience);
+  this off. Steam games without a Meta Store page get their picture from Valve's public image server
+  (steamstatic.com, for newer games via the public store API store.steampowered.com), likewise without any sign-in.
+  An installed Steam game takes its icon and start image from the Steam client's picture cache on this Mac, or
+  else from Valve's library picture and logo on the same server.
+  A few store pages show no picture to a visitor who is not signed in (Richie's Plank Experience);
   for such a game the picture comes from the project's catalogue service, which is asked only when the catalogue
   names one. Other games without a picture keep a coloured tile with their name. When a game is installed, its
   icon and start picture come from the store page too, and from the catalogue service when the page gave none.
 - **Ownership** is asked of Meta before anything is downloaded, and once a day so the app can show which games
-  are yours. A game that counted as not owned is asked about again within the hour, and **Check Purchase** on a
+  are yours. With the *Owned* filter on, the app also reads your account's library, the way Meta's Horizon app
+  does, at most once an hour; it keeps the list (app number, name, why it is in the account) on your Mac and
+  forgets it when you sign out. A game that counted as not owned is asked about again within the hour, and **Check Purchase** on a
   game's page asks right away. Add-on content is downloaded only for purchases Meta confirms. Bought
   something later? **Sync DLCs** on the game's page asks again, downloads what is new and adds it to the installed
   game without building it again.

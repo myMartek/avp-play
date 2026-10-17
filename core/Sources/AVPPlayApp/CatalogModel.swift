@@ -33,10 +33,12 @@ extension AppModel {
                 catalogProblem = nil
                 askedOwn = []
                 loadOwnCatalogEntries()
+                loadOwnedCatalogEntries()
             } catch {
                 catalogProblem = "\(error)"
             }
         }
+        loadSteamCatalog()
         reportUsage()
     }
 
@@ -79,6 +81,90 @@ extension AppModel {
         return missing().count
     }
 
+    // MARK: Steam-Liste
+
+    /// Holt die ganze Steam-Liste des Katalogs – ein paar Dutzend Spiele, Seite für Seite. Ein Dienst ohne Steam-Liste
+    /// (vor dem Ausrollen) antwortet nicht: dann bleibt sie leer, und es stehen nur die eigenen Steam-Spiele da.
+    func loadSteamCatalog() {
+        guard onlineCatalog else { steamCatalog = []; return }
+        let client = catalogClient
+        Task {
+            var all: [SteamCatalogGame] = []
+            var page = 0
+            do {
+                while page < 20 {
+                    let next = try await client.steamCatalog(page: page)
+                    all += next.games
+                    page += 1
+                    if !next.more || next.games.isEmpty { break }
+                }
+            } catch {
+                return
+            }
+            var seen = Set<String>()
+            steamCatalog = all.filter { seen.insert($0.appId).inserted }
+        }
+    }
+
+    // MARK: Im Besitz
+
+    /// Lädt die Bibliothek des Meta-Kontos – höchstens einmal in der Stunde, `force` sofort – und holt dann beim
+    /// Katalog, was er über die Spiele darin sagt, die er noch nicht geliefert hat: Unter „Im Besitz“ sollen alle
+    /// stehen, nicht nur die, bis zu denen jemand geblättert hat. Steam fragt der Durchgang in `checkOwnership`.
+    ///
+    /// Wie überall bei Meta: erst `/me`, der Token nur im Kopf der Anfrage, und beim ersten unerwarteten Ergebnis ist
+    /// Schluss – die zuletzt geladene Bibliothek bleibt dann stehen.
+    func loadLibrary(force: Bool = false) {
+        guard account == .signedIn, storeBlocker == nil, !loadingLibrary else { return }
+        if !force, let library, !library.isStale() {
+            loadOwnedCatalogEntries()
+            return
+        }
+        loadingLibrary = true
+        let cache = MetaLibraryCache(store: paths.store)
+        Task.detached {
+            var problem: String?
+            var fresh: MetaLibrary?
+            do {
+                let client = MetaClient(token: try TokenStore().read())
+                let user = try await client.me()
+                let library = MetaLibrary(checked: Date(), apps: try await client.library(userId: user))
+                try? cache.save(library)
+                fresh = library
+            } catch {
+                problem = Redaction.redact("\(error)")
+            }
+            let loaded = fresh
+            let note = problem
+            await MainActor.run {
+                self.loadingLibrary = false
+                self.libraryProblem = note
+                if let loaded { self.library = loaded }
+                self.loadOwnedCatalogEntries()
+            }
+        }
+    }
+
+    /// Fragt den Katalog nach den Spielen der Bibliothek, die er noch nicht geliefert hat – jede Kennung einmal, wie
+    /// bei den eigenen und gemerkten Spielen. Was er nicht kennt (Apps, Videos, Systemprogramme), fehlt einfach.
+    func loadOwnedCatalogEntries() {
+        guard onlineCatalog, !libraryIds.isEmpty else { return }
+        let known = Set(catalog.map(\.appId)).union(games.compactMap { $0.recipe.catalogAppId })
+        let missing = libraryIds.subtracting(known).subtracting(askedOwn).sorted()
+        guard !missing.isEmpty else { return }
+        askedOwn.formUnion(missing)
+        Task {
+            do { merge(try await catalogClient.games(appIds: missing)) } catch { askedOwn.subtract(missing) }
+        }
+    }
+
+    /// Nach einer neuen Anmeldung: Die Bibliothek gehört zum vorigen Konto.
+    func forgetLibrary() {
+        MetaLibraryCache(store: paths.store).clear()
+        library = nil
+        libraryProblem = nil
+    }
+
     /// Sucht im Katalog. Der Dienst lernt dabei neue Spiele kennen; hier kommen sie als „ungetestet“ an.
     func searchCatalog() {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -101,9 +187,10 @@ extension AppModel {
 
     /// Gibt es zu dem, was gerade gezeigt wird, noch eine Seite? Bei einer Suche die nächsten Treffer, sonst die
     /// nächste Seite des ganzen Katalogs. Mit einem Filter, der nur auf diesem Mac entschieden wird, nicht: was
-    /// installiert oder gemerkt ist, steht schon vollständig da.
+    /// installiert oder gemerkt ist, steht schon vollständig da – und was dem Nutzer gehört, holt `loadLibrary` gezielt.
     var canLoadMore: Bool {
-        guard onlineCatalog, !filterInstalled, !favouritesWanted, !filterDownloaded, !customOnlyWanted else { return false }
+        // Nur Steam: der Katalog führt Meta-Spiele, Nachladen bringt nichts.
+        guard onlineCatalog, !filterInstalled, !favouritesWanted, !filterDownloaded, !customOnlyWanted, !filterOwned, !(filterSteam && !filterMeta) else { return false }
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard query.isEmpty else { return query == searchedQuery && searchMore }
         // Geprüftes und von Nutzern Bestätigtes steht im Katalog vorn. Ist einer dieser Filter gesetzt, lohnt
@@ -173,6 +260,23 @@ extension AppModel {
                                                   metalFX: metalFXExpected,
                                                   xrPrediction: xrPredictionExpected(for: recipe.id)),
                             cover: nil, catalog: entry, draft: true))
+        }
+        // Dahinter die Steam-Spiele mit Android-Fassung – die des Kontos und die aus der Steam-Liste des Katalogs –, die
+        // noch kein Rezept und keinen Entwurf haben.
+        let steamInfo = Dictionary(steamCatalog.map { ($0.appId, $0) }, uniquingKeysWith: { a, _ in a })
+        for index in out.indices where out[index].recipe.source == .steam {
+            if let app = out[index].recipe.store.steamAppId { out[index].steamCatalog = steamInfo[app] }
+        }
+        for app in steamPlaceholders(known: games) {
+            let recipe = SteamDraft.placeholder(app: app)
+            var game = Game(recipe: recipe,
+                            status: GameStatus.of(recipe: recipe, store: paths.store, apps: installedApps, toolchainVersion: toolchainRevision,
+                                                  pin: toolchainChoices.games[recipe.id], bundlePrefix: prefix, metalFX: metalFXExpected,
+                                                  xrPrediction: xrPredictionExpected(for: recipe.id)),
+                            cover: nil, catalog: nil, draft: true)
+            game.ownershipKeys = ["steam:\(app.appId)"]
+            game.steamCatalog = steamInfo[app.appId]
+            out.append(game)
         }
         allGames = out
     }
@@ -294,15 +398,28 @@ extension AppModel {
     /// Der Katalog führt ein Spiel unter seiner Meta-Store-Seite, auch wenn es hier aus Steam installiert ist; die
     /// Meldung zählt dann für dasselbe Spiel. Dass sie die Steam-Fassung meint, sagen ihr Build und ein Vermerk am
     /// Anfang des Kommentars – der Dienst kennt kein eigenes Feld für die Kaufquelle.
+    /// Kann zu diesem Spiel eine Rückmeldung gehen? Ein Spiel aus dem Meta-Store unter seiner Store-Kennung, eines aus
+    /// Steam unter seiner Steam-App-ID.
+    func canSendFeedback(_ game: Game) -> Bool {
+        guard onlineCatalog, game.fromStore else { return false }
+        if game.recipe.source == .steam { return game.recipe.store.steamAppId.flatMap(SteamCatalogGame.serviceKey(steamAppId:)) != nil }
+        return game.recipe.catalogAppId != nil
+    }
+
     func sendFeedback(_ game: Game, result: CatalogFeedback.Result, comment: String) {
-        guard onlineCatalog, let appId = game.recipe.catalogAppId else { return }
-        let comment = game.recipe.source == .steam ? CatalogFeedback.steamMark + comment : comment
+        guard canSendFeedback(game) else { return }
+        let steamApp = game.recipe.source == .steam ? game.recipe.store.steamAppId : nil
+        guard let appId = steamApp.flatMap(SteamCatalogGame.serviceKey(steamAppId:)) ?? game.recipe.catalogAppId else { return }
         let feedback = CatalogFeedback(appId: appId, versionCode: game.recipe.versionCode, result: result, comment: comment,
                                        appVersion: appVersion, toolchain: toolchain(for: game).map { String($0.version()) } ?? "", lang: language.rawValue)
         let key = feedbackKey(game)
+        let metaApp = game.recipe.catalogAppId
         Task {
             do {
-                try await catalogClient.send(feedback)
+                // Die Steam-Fassung zählt für ihren Eintrag in der Steam-Liste. Ein Dienst ohne Steam-Liste bekommt sie wie
+                // früher beim Meta-Spiel, mit Vermerk (das erledigt `sendSteam`).
+                if let steamApp { try await catalogClient.sendSteam(feedback, steamAppId: steamApp, metaAppId: metaApp) }
+                else { try await catalogClient.send(feedback) }
                 sentFeedback[key] = result.rawValue
                 UserDefaults.standard.set(sentFeedback, forKey: "sentFeedback")
                 notice = L("Thank you – your report has been sent.", "Danke – deine Rückmeldung ist gesendet.")

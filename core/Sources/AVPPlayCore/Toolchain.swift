@@ -137,7 +137,13 @@ public struct Toolchain: Sendable {
         let storeCover = Toolchain.storeCoverURL(store: store, recipe: recipe)
         let customMark = (try? Hashing.sha256(of: customIcon)).map { String($0.prefix(16)) } ?? "-"
         let coverMark = (try? Hashing.sha256(of: storeCover)).map { String($0.prefix(16)) } ?? "-"
-        let want = "\(apk.sha256 ?? "ohne-pruefsumme") \(recipe.versionCode) icon4 \(customMark) \(coverMark)"
+        // Bei einem Spiel aus Steam auch die Steam-Bilder (Bildspeicher des Steam-Clients oder von Valve geholt): kommen
+        // sie hinzu, wird das Icon neu geschrieben.
+        let steamArt = recipe.source == .steam ? recipe.store.steamAppId.flatMap {
+            AppIcon.steamLibrary(appId: $0, cacheRoots: AppIcon.steamCacheRoots + [Toolchain.steamArtURL(store: store, recipe: recipe)])
+        } : nil
+        let steamMark = steamArt.map { " steam-\(AppIcon.fingerprint($0).prefix(16))" } ?? ""
+        let want = "\(apk.sha256 ?? "ohne-pruefsumme") \(recipe.versionCode) icon4 \(customMark) \(coverMark)\(steamMark)"
         let fm = FileManager.default
 
         let apkTarget = root.appendingPathComponent(localName)
@@ -180,7 +186,8 @@ public struct Toolchain: Sendable {
         if let cover = AppIcon.custom(at: storeCoverURL(store: store, recipe: recipe)) {
             return (cover, L("cover image from the Meta Store", "Titelbild aus dem Meta-Store"))
         }
-        if let steam = recipe.icon?.steamAppId, let art = AppIcon.steamLibrary(appId: steam) {
+        if let steam = recipe.icon?.steamAppId ?? recipe.store.steamAppId,
+           let art = AppIcon.steamLibrary(appId: steam, cacheRoots: AppIcon.steamCacheRoots + [steamArtURL(store: store, recipe: recipe)]) {
             return (art, L("Steam library", "Steam-Bibliothek"))
         }
         if let apk = recipe.files.first(where: { $0.role == "apk" }),
@@ -193,6 +200,12 @@ public struct Toolchain: Sendable {
     /// Hier kann der Nutzer ein eigenes Icon hinterlegen (PNG, am besten quadratisch und groß).
     public static func customIconURL(store: ContentStore, recipe: Recipe) -> URL {
         store.directory(for: recipe).appendingPathComponent("icon.png")
+    }
+
+    /// Bibliotheksbild und Logo eines Steam-Spiels von Valves Bilder-Server (siehe `SteamArt.libraryArt`), aufgebaut
+    /// wie der Bildspeicher des Steam-Clients: `<Ordner>/<App-ID>/library_hero.jpg` und `logo.png`.
+    public static func steamArtURL(store: ContentStore, recipe: Recipe) -> URL {
+        store.directory(for: recipe).appendingPathComponent("steam-art", isDirectory: true)
     }
 
     /// Das zwischengespeicherte Titelbild aus dem Store (siehe `StoreArt`).

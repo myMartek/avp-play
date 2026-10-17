@@ -46,6 +46,50 @@ public struct CatalogGame: Codable, Sendable, Identifiable, Equatable {
     static func isPlain(_ s: String) -> Bool { !s.unicodeScalars.contains { $0.value < 0x20 || $0.value == 0x7f } }
 }
 
+/// Ein Spiel aus der Steam-Liste des Katalogdienstes: ein Steam-Kauf mit Android-Fassung, geführt unter seiner
+/// Steam-App-ID. Es hat dieselben Einstufungen, Notizen und Meldungen wie ein Spiel des Meta-Katalogs, aber eigene –
+/// eine Meldung zur Steam-Fassung von Moss zählt nicht für Moss im Meta-Store. Die Liste kennt nur Spiele, die das
+/// Projekt eingetragen hat; was dort fehlt, ist schlicht nicht in der Antwort.
+public struct SteamCatalogGame: Codable, Sendable, Identifiable, Equatable {
+    /// Die Steam-App-ID, nur Ziffern.
+    public var appId: String
+    public var title: String
+    public var package: String?
+    /// `verified`, `community`, `untested` oder `incompatible` – wie `CatalogGame.status`.
+    public var status: String
+    /// Das Projekt hat das Spiel als geprüft markiert, aber noch kein Steam-Rezept dafür veröffentlicht.
+    public var verifiedPending: Bool?
+    public var noteEn: String?
+    public var noteDe: String?
+    /// Unter welchem Namen die Toolchain das Spiel kennt; fehlt, wenn sie es nicht kennt.
+    public var target: String?
+    public var mixedReality: Bool?
+    /// Die Meta-Store-Seite desselben Spiels, wo es eine hat.
+    public var metaAppId: String?
+    public var works: Int
+    public var problems: Int
+    public var fails: Int
+
+    public var id: String { appId }
+    public var note: String? { (L10n.language == .de ? noteDe : noteEn).flatMap { $0.isEmpty ? nil : $0 } ?? noteEn.flatMap { $0.isEmpty ? nil : $0 } }
+
+    public var isSane: Bool {
+        SteamCatalogGame.isIdentifier(appId) && !title.isEmpty && title.count <= 200 && (package ?? "").count <= 300
+            && CatalogGame.isPlain(title) && CatalogGame.isPlain(package ?? "")
+            && (target ?? "").allSatisfy { $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" || $0 == ".") }
+            && (metaAppId.map(CatalogGame.isIdentifier) ?? true)
+    }
+
+    /// Eine Steam-App-ID, wie der Dienst sie annimmt: Ziffern ohne führende Null, höchstens zehn.
+    public static func isIdentifier(_ s: String) -> Bool {
+        (1...10).contains(s.count) && s.first != "0" && s.allSatisfy { $0.isASCII && $0.isNumber }
+    }
+
+    /// Unter dieser Kennung nehmen Meldungen und Fixes ein Steam-Spiel an: `steam-<Steam-App-ID>` – dieselbe, unter
+    /// der die App ihre Steam-Spiele führt. `nil`, wenn es keine Steam-App-ID ist.
+    public static func serviceKey(steamAppId: String) -> String? { isIdentifier(steamAppId) ? "steam-" + steamAppId : nil }
+}
+
 public struct CatalogBuild: Codable, Sendable, Equatable {
     public var buildId: String
     public var version: String
@@ -66,7 +110,8 @@ public struct CatalogFeedback: Codable, Sendable, Equatable {
     public var toolchain: String
     public var lang: String
 
-    /// Steht vor dem Kommentar einer Meldung zur Fassung eines Spiels aus Steam.
+    /// Steht vor dem Kommentar einer Meldung zur Fassung eines Spiels aus Steam, die an die Meta-Seite des Spiels geht –
+    /// so meldeten App-Fassungen bis 1.2.x, und so meldet `CatalogClient.sendSteam` an einen Dienst ohne Steam-Liste.
     public static let steamMark = "[Steam] "
 
     public init(appId: String, versionCode: Int, result: Result, comment: String, appVersion: String, toolchain: String, lang: String) {
@@ -208,8 +253,8 @@ public struct CatalogClient: Sendable {
     public static let idsPerRequest = 100
 
     /// Teilt Kennungen in Anfragen auf, die der Dienst annimmt; was keine Kennung ist, fällt weg.
-    static func batches(of appIds: [String], size: Int = idsPerRequest) -> [[String]] {
-        let ids = appIds.filter(CatalogGame.isIdentifier)
+    static func batches(of appIds: [String], size: Int = idsPerRequest, valid: (String) -> Bool = CatalogGame.isIdentifier) -> [[String]] {
+        let ids = appIds.filter(valid)
         return stride(from: 0, to: ids.count, by: max(1, size)).map { Array(ids[$0..<min($0 + size, ids.count)]) }
     }
 
@@ -235,6 +280,52 @@ public struct CatalogClient: Sendable {
         guard CatalogGame.isIdentifier(appId) else { throw CatalogError.unexpected }
         let data = try await send(request("api/v1/games/\(appId)"), expecting: 200)
         guard let game = try? JSONDecoder().decode(CatalogGame.self, from: data), game.isSane, game.appId == appId else {
+            throw CatalogError.unexpected
+        }
+        return game
+    }
+
+    /// Genau diese Spiele aus der Steam-Liste des Dienstes, nach Steam-App-ID – für die Steam-Spiele, die der Nutzer
+    /// besitzt. Spiele, die die Liste nicht kennt, fehlen in der Antwort. Höchstens 100 Kennungen je Anfrage.
+    /// Ein Dienst ohne Steam-Liste (vor 2026-10-17) antwortet mit `CatalogError.refused(404)`.
+    public func steamGames(appIds: [String]) async throws -> [SteamCatalogGame] {
+        struct Answer: Decodable { let games: [SteamCatalogGame] }
+        var found: [SteamCatalogGame] = []
+        for ids in CatalogClient.batches(of: appIds, valid: SteamCatalogGame.isIdentifier) {
+            let data = try await send(request("api/v1/steam", query: [URLQueryItem(name: "ids", value: ids.joined(separator: ","))]), expecting: 200)
+            guard let answer = try? JSONDecoder().decode(Answer.self, from: data) else { throw CatalogError.unexpected }
+            found += answer.games.filter { $0.isSane && ids.contains($0.appId) }
+        }
+        return found
+    }
+
+    /// Eine Seite der Steam-Liste.
+    public struct SteamPage: Sendable {
+        public var games: [SteamCatalogGame]
+        /// Gibt es danach eine weitere Seite?
+        public var more: Bool
+        /// Wie viele Spiele insgesamt passen; `nil`, wenn der Dienst es nicht sagt.
+        public var total: Int?
+    }
+
+    /// Eine Seite der ganzen Steam-Liste (60 Spiele), Geprüftes zuerst – alle Steam-Spiele mit Android-Fassung, die das
+    /// Projekt kennt, ob der Nutzer sie besitzt oder nicht. Mit Suchbegriff nur die passenden (Titel, Paket, App-ID).
+    /// Ein Dienst ohne Steam-Liste antwortet mit `CatalogError.refused(404)`.
+    public func steamCatalog(query: String = "", page: Int = 0) async throws -> SteamPage {
+        struct Answer: Decodable { let games: [SteamCatalogGame]; let more: Bool; let total: Int? }
+        var items = [URLQueryItem(name: "page", value: String(max(0, page)))]
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !q.isEmpty { items.append(URLQueryItem(name: "q", value: String(q.prefix(80)))) }
+        let data = try await send(request("api/v1/steam", query: items), expecting: 200)
+        guard let answer = try? JSONDecoder().decode(Answer.self, from: data) else { throw CatalogError.unexpected }
+        return SteamPage(games: answer.games.filter(\.isSane), more: answer.more, total: answer.total)
+    }
+
+    /// Ein Spiel der Steam-Liste. `CatalogError.refused(404)`, wenn die Liste es nicht kennt.
+    public func steamGame(appId: String) async throws -> SteamCatalogGame {
+        guard SteamCatalogGame.isIdentifier(appId) else { throw CatalogError.unexpected }
+        let data = try await send(request("api/v1/steam/\(appId)"), expecting: 200)
+        guard let game = try? JSONDecoder().decode(SteamCatalogGame.self, from: data), game.isSane, game.appId == appId else {
             throw CatalogError.unexpected
         }
         return game
@@ -266,6 +357,25 @@ public struct CatalogClient: Sendable {
     }
 
     public func send(_ feedback: CatalogFeedback) async throws { try await post("api/v1/feedback", feedback) }
+
+    /// Eine Rückmeldung zur Steam-Fassung eines Spiels: Sie geht an die Steam-Liste des Dienstes (`appId` von
+    /// `feedback` wird dafür ersetzt). Ein Dienst ohne Steam-Liste lehnt die Kennung ab (400); dann geht sie wie bis
+    /// 1.2.x an die Meta-Seite desselben Spiels, mit `CatalogFeedback.steamMark` vor dem Kommentar – sofern es eine
+    /// gibt. Der Dienst mit Steam-Liste holt solche Meldungen später selbst herüber.
+    public func sendSteam(_ feedback: CatalogFeedback, steamAppId: String, metaAppId: String?) async throws {
+        guard let key = SteamCatalogGame.serviceKey(steamAppId: steamAppId) else { throw CatalogError.unexpected }
+        var steam = feedback
+        steam.appId = key
+        do {
+            try await send(steam)
+        } catch CatalogError.refused(let status) where status == 400 {
+            guard let meta = metaAppId, CatalogGame.isIdentifier(meta) else { throw CatalogError.refused(status) }
+            var old = feedback
+            old.appId = meta
+            old.comment = String((CatalogFeedback.steamMark + feedback.comment).trimmingCharacters(in: .whitespacesAndNewlines).prefix(1000))
+            try await send(old)
+        }
+    }
 
     /// „Diese Kopie ist heute in Gebrauch“ – höchstens einmal am Tag, siehe `UsagePing`.
     public func send(_ ping: UsagePing) async throws { try await post("api/v1/ping", ping) }

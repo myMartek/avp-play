@@ -75,9 +75,9 @@ extension AppModel {
         let api = catalogClient.base.appendingPathComponent("api/v1/fixes").absoluteString
         let symptomsJSON = chosen.map { "\"\($0.rawValue)\"" }.joined(separator: ", ")
         let language = self.language == .de ? "German" : "English"
-        // Unter welcher Kennung der Dienst des Projekts das Spiel führt: die Store-Kennung, und bei einem Spiel, das
-        // nicht aus dem Meta-Store kommt, der Name seines Rezepts.
-        let fixIdentifier = recipe.store.appId ?? recipe.id
+        // Unter welcher Kennung der Dienst des Projekts das Spiel führt: bei einem Spiel aus Steam „steam-<App-ID>“ (seine
+        // Steam-Liste), sonst die Store-Kennung, und bei einem Spiel aus keinem Store der Name seines Rezepts.
+        let fixIdentifier = recipe.store.steamAppId.flatMap { SteamCatalogGame.serviceKey(steamAppId: $0) } ?? recipe.store.appId ?? recipe.id
 
         // Der erste Schritt: die Arbeitskopie anlegen und kennzeichnen – oder in der eines früheren Fixes weitermachen.
         let copyStep = continuing ? """

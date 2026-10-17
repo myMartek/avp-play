@@ -13,6 +13,8 @@ struct Game: Identifiable {
     var storeBytes: Int64 = 0
     /// Was der Online-Katalog über das Spiel sagt, soweit er es kennt.
     var catalog: CatalogGame?
+    /// Was die Steam-Liste des Katalogs über die Steam-Fassung sagt – für ein Spiel, dessen Kaufquelle Steam ist.
+    var steamCatalog: SteamCatalogGame?
     /// Kein mitgeliefertes Rezept, sondern ein Entwurf aus Katalog und Metas Werkzeug – oder erst ein Platzhalter.
     var draft = false
     /// Gesetzt, wenn statt einer geprüften Fassung eine ungetestete aus dem Store gewählt ist: der Name der Fassung,
@@ -26,18 +28,30 @@ struct Game: Identifiable {
     var sources: [Recipe.Source] = []
     /// Die Versionscodes, unter denen dasselbe Spiel aus einer anderen Kaufquelle installiert wäre.
     var otherSourceBuilds: [Int] = []
+    /// Unter welchen Schlüsseln (`OwnershipCache.key`) das Spiel bei seinen Kaufquellen geführt wird – bei Meta und,
+    /// wo es ein Rezept dafür gibt, bei Steam. Leer bei einem Platzhalter aus dem Katalog: dann gilt sein Rezept.
+    var ownershipKeys: [String] = []
     /// Ein Versuch, dessen APK sich als 2D-App herausgestellt hat (`FlatApp`), kein VR-Spiel.
     var flatApp = false
     var id: String { recipe.id }
     /// Sind die Dateien des Spiels bekannt? Bei einem Platzhalter noch nicht.
     var prepared: Bool { !draft || !recipe.files.isEmpty }
     /// Mixed-Reality-Modus, der hier funktioniert: sagt das Rezept oder der Katalog.
-    var mixedReality: Bool { recipe.mixedReality == true || catalog?.mixedReality == true }
+    var mixedReality: Bool { recipe.mixedReality == true || catalog?.mixedReality == true || steamCatalog?.mixedReality == true }
     /// Wie weit dem Spiel zu trauen ist. Was der Katalog sagt, gilt – dort legt das Projekt fest oder zählen die
     /// Meldungen. Ohne Katalog (kein Netz, abgeschaltet, Sonderapp) gilt das mitgelieferte Rezept.
     var trust: Trust {
         // Geprüft ist eine Fassung, nicht ein Name: die neuere aus dem Store hat das Projekt nicht gesehen.
         if testedVersion != nil { return .untested }
+        // Für die Steam-Fassung gilt, was die Steam-Liste des Katalogs sagt – ihr eigenes Urteil, nicht das des Meta-Stores.
+        if recipe.source == .steam, let steam = steamCatalog?.status {
+            switch steam {
+            case "verified": return .verified
+            case "community": return .community
+            case "incompatible": return .incompatible
+            default: return .untested
+            }
+        }
         // Ebenso eine Kaufquelle: Was der Katalog sagt, gilt der Fassung aus dem Meta-Store. Die aus Steam ist ein
         // anderer Stand des Spiels und trägt ihr eigenes Urteil im Rezept.
         if recipe.source == .steam, !sources.isEmpty, recipe.status.playability != "verified" { return .untested }
@@ -54,6 +68,13 @@ struct Game: Identifiable {
     var needsMetaAccount: Bool { recipe.store.appId != nil }
     /// Aus dem eigenen Steam-Kauf: Besitz und Zusatzinhalte bestätigt Steam, geladen wird mit Valves Werkzeug.
     var needsSteamAccount: Bool { recipe.source == .steam }
+    /// Gibt es das Spiel im Meta-Store – als geltende Kaufquelle oder als wählbare andere?
+    var fromMeta: Bool { recipe.store.appId != nil || sources.contains(.meta) }
+    /// Gibt es das Spiel bei Steam – als Kaufquelle (auch als wählbare andere), oder kommen seine Dateien aus einem
+    /// Steam-Kauf (Half-Life: Alyx, Doom 3, Counter-Strike)?
+    var fromSteam: Bool {
+        recipe.store.steamAppId != nil || sources.contains(.steam) || recipe.icon?.steamAppId != nil || SteamFetcher.usesSteam(recipe)
+    }
     /// Kommt das Spiel aus einem Store, bei dem das Programm den Kauf prüft und die Dateien selbst lädt?
     var fromStore: Bool { recipe.source != nil }
     /// Vom Projekt selbst auf einer Vision Pro geprüft.
@@ -174,6 +195,23 @@ final class AppModel: ObservableObject {
     /// Metas letzte Antworten auf die Besitzfrage, je Store-App.
     @Published var ownership: [String: OwnershipRecord] = [:]
     @Published var checkingOwnership = false
+    /// Die zuletzt geladene Bibliothek des Meta-Kontos (für „Im Besitz“), ihre Kennungen, und ob sie gerade geladen wird.
+    @Published var library: MetaLibrary? { didSet { libraryIds = library?.appIds ?? [] } }
+    private(set) var libraryIds: Set<String> = []
+    @Published var loadingLibrary = false
+    @Published var libraryProblem: String?
+    /// Die zuletzt gelesenen Steam-Spiele mit Android-Fassung, ihre Schlüssel (`steam:<App>`), und ob gerade gelesen wird.
+    @Published var steamLibrary: SteamLibrary? {
+        didSet {
+            steamLibraryIds = Set((steamLibrary?.apps ?? []).map { "steam:\($0.appId)" })
+            if steamLibrary != oldValue { rebuildAllGames() }
+        }
+    }
+    private(set) var steamLibraryIds: Set<String> = []
+    @Published var loadingSteamLibrary = false
+    /// Die Steam-Liste des Katalogdienstes: alle Steam-Spiele mit Android-Fassung, die das Projekt führt, mit Einstufung.
+    @Published var steamCatalog: [SteamCatalogGame] = [] { didSet { if steamCatalog != oldValue { rebuildAllGames() } } }
+    @Published var steamLibraryProblem: String?
     /// Spiele, für die gerade einzeln bei Meta nachgefragt wird („Kauf prüfen“), und was dabei zuletzt zu sagen war.
     @Published var checkingPurchase: Set<String> = []
     @Published var purchaseNote: [String: String] = [:]
@@ -221,6 +259,8 @@ final class AppModel: ObservableObject {
     @Published var searchText = ""
     @Published var searching = false
     @Published var preparing: Set<String> = []
+    /// Steam-Spiele, die nach dem Laden von Steam gleich installiert werden sollen – sobald ihr Entwurf gelesen ist.
+    var installAfterSteam: Set<String> = []
     @Published var prepareNote: [String: String] = [:]
     @Published var favourites: Set<String> = Set(UserDefaults.standard.stringArray(forKey: "favourites") ?? [])
     /// Die eigenen Filter (Seite „Filter“) und wie jeder gerade in der Übersicht wirkt; was nicht drinsteht, ist aus.
@@ -333,6 +373,12 @@ final class AppModel: ObservableObject {
     @AppStorage("filterFavouritesMissing") var filterFavouritesMissing = false
     /// Nur Spiele mit einem Mixed-Reality-Modus, der mit AVP Play funktioniert.
     @AppStorage("filterMixedReality") var filterMixedReality = false
+    /// Nur Spiele, die dem Nutzer gehören: in der Bibliothek seines Meta-Kontos oder von Steam bestätigt.
+    @AppStorage("filterOwned") var filterOwned = false
+    /// Nur Spiele aus dem Meta-Store oder nur die aus Steam (gleich, welche Kaufquelle gewählt ist); beide zusammen
+    /// ergänzen einander.
+    @AppStorage("filterMeta") var filterMeta = false
+    @AppStorage("filterSteam") var filterSteam = false
     /// Ob ein Filter gesetzt ist, der die Favoriten braucht – dann sollen alle dastehen, auch die, bis zu denen der
     /// Katalog noch nicht geladen ist.
     var favouritesWanted: Bool { filterFavourites || filterFavouritesMissing }
@@ -435,8 +481,24 @@ final class AppModel: ObservableObject {
 
     func owned(_ game: Game) -> Owned {
         guard let key = OwnershipCache.key(for: game.recipe) else { return .notApplicable }
-        guard let record = ownership[key] else { return .unknown }
+        // Ohne eigene Antwort sagt die Bibliothek des Meta-Kontos, ob es dazugehört – nur ja, nie nein.
+        guard let record = ownership[key] else {
+            if libraryIds.contains(key) || steamLibraryIds.contains(key) { return .yes }
+            // Ein Steam-Spiel aus der Liste des Katalogs, das in den gelesenen Steam-Spielen des Kontos fehlt, gehört ihm nicht.
+            if game.draft, !game.prepared, game.recipe.source == .steam, steamLibrary != nil { return .no }
+            return .unknown
+        }
         return record.owned ? .yes : .no
+    }
+
+    /// Gehört das Spiel dem Nutzer, gleich bei welcher Kaufquelle? Für den Filter „Im Besitz“.
+    ///
+    /// Je Quelle gilt die eigene Antwort auf die Besitzfrage – dieselbe, die vor jedem Laden gestellt wird. Wo es keine
+    /// gibt, gilt die Bibliothek des Meta-Kontos. Sie führt auch Apps, die Meta auf die einzelne Frage nicht bestätigt
+    /// (gesehen 2026-10-17 bei einer kostenlosen Beta); die stünden sonst unter „Im Besitz“ und ließen sich nicht laden.
+    func ownedAnywhere(_ game: Game) -> Bool {
+        let keys = game.ownershipKeys.isEmpty ? OwnershipCache.key(for: game.recipe).map { [$0] } ?? [] : game.ownershipKeys
+        return keys.contains { ownership[$0]?.owned ?? (libraryIds.contains($0) || steamLibraryIds.contains($0)) }
     }
 
     /// Das Rezept eines Spiels für eine Kaufquelle: das geltende, das mitgelieferte oder das aus `recipes/sources`.
@@ -565,6 +627,8 @@ final class AppModel: ObservableObject {
                 && (!filterFavourites || favourite)
                 && (!filterFavouritesMissing || (favourite && !downloaded))
                 && (!filterMixedReality || game.mixedReality)
+                && (!filterOwned || ownedAnywhere(game))
+                && ((!filterMeta && !filterSteam) || (filterMeta && game.fromMeta) || (filterSteam && game.fromSteam))
                 && (custom.isEmpty || CustomFilters.passes(game.id, filters: custom, modes: customFilterModes))
                 && (words.isEmpty || game.recipe.title.lowercased().contains(words) || game.recipe.package.lowercased().contains(words))
             else { return nil }
@@ -572,7 +636,7 @@ final class AppModel: ObservableObject {
             // was nicht läuft – jeweils nach der Zahl derer, die sagen, es läuft, dann nach Namen. So reiht auch
             // der Katalog, damit eine nachgeladene Seite unten anschließt.
             let rank = trust == .verified ? 0 : (game.prepared && trust != .incompatible ? 1 : trust.rawValue + 1)
-            return (game, rank, game.catalog?.works ?? 0)
+            return (game, rank, (game.recipe.source == .steam ? game.steamCatalog?.works : game.catalog?.works) ?? 0)
         }
         return keyed.sorted { a, b in
             if a.rank != b.rank { return a.rank < b.rank }
@@ -595,9 +659,12 @@ final class AppModel: ObservableObject {
         ownership = known
         let due = account == .signedIn
             ? games.compactMap { $0.recipe.store.appId }.filter { force || OwnershipCache.needsCheck(known[$0]) } : []
+        // Steam: die Spiele, bei denen Steam gewählt ist – und mit „Im Besitz“ jedes, für das es ein Steam-Rezept gibt.
+        let steamApps = filterOwned
+            ? games.flatMap(\.ownershipKeys).filter { $0.hasPrefix("steam:") }.map { String($0.dropFirst("steam:".count)) }
+            : games.filter { $0.recipe.source == .steam }.compactMap { $0.recipe.store.steamAppId }
         let steamDue = steamSignedIn
-            ? games.filter { $0.recipe.source == .steam }.compactMap { $0.recipe.store.steamAppId }
-                .filter { force || OwnershipCache.needsCheck(known["steam:\($0)"]) } : []
+            ? Array(Set(steamApps)).sorted().filter { force || OwnershipCache.needsCheck(known["steam:\($0)"]) } : []
         guard !due.isEmpty || !steamDue.isEmpty else { return }
         checkingOwnership = true
         let steamAccount = steamAccount
@@ -891,7 +958,12 @@ final class AppModel: ObservableObject {
         if !teamValid { return L("The Apple team ID is still missing (see “Setup”).", "Die Apple-Team-ID fehlt noch (siehe „Einrichtung“).") }
         if device == nil { return deviceProblem ?? L("The Vision Pro is not reachable.", "Die Vision Pro ist nicht erreichbar.") }
         if game.draft, !game.prepared {
-            return prepareNote[game.id] ?? L("The files of this game have not been looked up yet.", "Die Dateien dieses Spiels sind noch nicht nachgeschlagen.")
+            // Ein Steam-Spiel des Kontos lädt „Installieren“ selbst von Steam; was dem im Weg steht, sagt `steamDraftBlocker`.
+            if game.recipe.source == .steam {
+                if let why = steamDraftBlocker(for: game) { return why }
+            } else {
+                return prepareNote[game.id] ?? L("The files of this game have not been looked up yet.", "Die Dateien dieses Spiels sind noch nicht nachgeschlagen.")
+            }
         }
         if let why = accountBlocker(for: game) { return why }
         if owned(game) == .no { return notOwnedText(game) }
@@ -977,7 +1049,12 @@ final class AppModel: ObservableObject {
         saveSnapshots = s.saves
         reloadJobs()
         ownership = OwnershipCache(store: paths.store).load()
+        installPreparedSteamGames()
+        if account != .signedOut { library = MetaLibraryCache(store: paths.store).load() }
+        if steamLibrary == nil { steamLibrary = SteamLibraryCache(store: paths.store).load() }
         checkOwnership()
+        if filterOwned { loadLibrary() }
+        if filterOwned || filterSteam { loadSteamLibrary() }
         // Beim ersten Start dorthin, wo etwas zu tun ist. Ein ausgeschaltetes Headset zählt nicht dazu.
         if !routed {
             routed = true
@@ -1014,6 +1091,7 @@ final class AppModel: ObservableObject {
             await MainActor.run {
                 self.account = state
                 self.checkOwnership()
+                if self.filterOwned { self.loadLibrary() }
             }
         }
     }
@@ -1023,6 +1101,8 @@ final class AppModel: ObservableObject {
         account = .signedOut
         OwnershipCache(store: paths.store).clear()
         ownership = [:]
+        MetaLibraryCache(store: paths.store).clear()
+        library = nil
     }
 
     // MARK: Metas Werkzeug
@@ -1234,6 +1314,9 @@ final class AppModel: ObservableObject {
 
     func install(_ game: Game) {
         guard blocker(for: game) == nil else { return }
+        // Ein Steam-Spiel, dessen Dateien noch nicht von Steam geladen sind: erst laden und den Entwurf schreiben, dann
+        // – sobald er gelesen ist – wie jedes andere Spiel bauen und installieren.
+        if steamDraftApp(game) != nil { prepareFromSteam(game, thenInstall: true); return }
         enqueue(game, steps: InstallStep.allCases)
     }
 
@@ -1243,7 +1326,11 @@ final class AppModel: ObservableObject {
     func downloadBlocker(for game: Game) -> String? {
         if let why = storeBlocker { return why }
         if game.draft, !game.prepared {
-            return prepareNote[game.id] ?? L("The files of this game have not been looked up yet.", "Die Dateien dieses Spiels sind noch nicht nachgeschlagen.")
+            if game.recipe.source == .steam {
+                if let why = steamDraftBlocker(for: game) { return why }
+            } else {
+                return prepareNote[game.id] ?? L("The files of this game have not been looked up yet.", "Die Dateien dieses Spiels sind noch nicht nachgeschlagen.")
+            }
         }
         if let why = accountBlocker(for: game) { return why }
         if owned(game) == .no { return notOwnedText(game) }
@@ -1257,11 +1344,22 @@ final class AppModel: ObservableObject {
 
     /// Ob es für das Spiel etwas gibt, das das Programm selbst laden kann und das noch fehlt. Gezählt werden die
     /// Dateien, nicht ihre Größe: bei einem nachgeschlagenen Spiel aus dem Meta-Store kennt die vorab niemand.
-    func hasDownloads(_ game: Game) -> Bool { game.status.filesToDownload > 0 || game.status.bytesToDownload > 0 }
+    func hasDownloads(_ game: Game) -> Bool {
+        game.status.filesToDownload > 0 || game.status.bytesToDownload > 0 || steamDraftApp(game) != nil
+    }
+
+    /// Wie viel für das Spiel noch zu laden ist, in Worten – bei einem Steam-Spiel, das noch nicht geladen ist, die
+    /// Größe seiner Android-Fassung laut Steam.
+    func downloadSizeText(_ game: Game) -> String {
+        if let app = steamDraftApp(game) { return Installer.gigabytes(app.bytes) }
+        if game.status.bytesToDownload > 0 { return Installer.gigabytes(game.status.bytesToDownload) }
+        return game.status.filesToDownload == 1 ? L("One file", "Eine Datei") : L("\(game.status.filesToDownload) files", "\(game.status.filesToDownload) Dateien")
+    }
 
     /// Lädt die Dateien des Spiels, ohne es zu bauen oder zu installieren.
     func download(_ game: Game) {
         guard hasDownloads(game), downloadBlocker(for: game) == nil else { return }
+        if steamDraftApp(game) != nil { prepareFromSteam(game, thenInstall: false); return }
         enqueue(game, steps: InstallStep.download)
     }
 

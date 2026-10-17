@@ -109,3 +109,81 @@ public struct StoreArt: Sendable {
         return nil
     }
 }
+
+/// Das Titelbild eines Steam-Spiels im Querformat, von Valves öffentlichem Bilder-Server – ohne Anmeldung, ohne
+/// Cookies. Zuerst die festen Adressen (Kapsel 616×353, Kopfbild 460×215); neuere Spiele legen ihre Bilder unter
+/// einem Pfad mit Prüfsumme ab, den nur die öffentliche Store-Schnittstelle nennt (`appdetails`, nur Grunddaten).
+public struct SteamArt: Sendable {
+    public init() {}
+
+    static func fixedURLs(steamAppId: String) -> [URL] {
+        ["capsule_616x353.jpg", "header.jpg"].compactMap {
+            URL(string: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/\(steamAppId)/\($0)")
+        }
+    }
+
+    /// Bilder nur von Valves Auslieferungs-Hosts.
+    static func isAllowedImageHost(_ url: URL) -> Bool {
+        guard url.scheme == "https", let host = url.host?.lowercased() else { return false }
+        return host.hasSuffix(".steamstatic.com")
+    }
+
+    /// Querformat in der Art der Steam-Bilder: mindestens 400 Pixel breit, 1,5 bis 2,2 zu 1.
+    static func isLandscape(width: Int, height: Int) -> Bool {
+        width >= 400 && height > 0 && width * 10 >= height * 15 && width * 10 <= height * 22
+    }
+
+    /// Die Bildadresse, die `appdetails` als Kopfbild nennt – nur, wenn sie auf Valves Bilder-Server zeigt.
+    static func headerImage(inAppDetails data: Data, steamAppId: String) -> URL? {
+        guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let entry = root[steamAppId] as? [String: Any], entry["success"] as? Bool == true,
+              let details = entry["data"] as? [String: Any], let raw = details["header_image"] as? String,
+              let url = URL(string: raw), isAllowedImageHost(url) else { return nil }
+        return url
+    }
+
+    /// Bibliotheksbild (breit, für den Hintergrund) und freigestelltes Logo, wie sie der Steam-Client für seine
+    /// Bibliothek lädt – daraus entstehen Icon und Startbild eines installierten Steam-Spiels. `nil`, wenn eins fehlt
+    /// (neuere Spiele legen sie unter einem Pfad mit Prüfsumme ab, den keine öffentliche Schnittstelle nennt).
+    public func libraryArt(steamAppId: String) async -> (hero: Data, logo: Data)? {
+        guard SteamCatalogGame.isIdentifier(steamAppId) else { return nil }
+        let config = URLSessionConfiguration.ephemeral
+        config.httpCookieStorage = nil
+        config.urlCache = nil
+        config.timeoutIntervalForRequest = 30
+        let session = URLSession(configuration: config)
+        defer { session.finishTasksAndInvalidate() }
+        func fetch(_ name: String) async -> Data? {
+            guard let url = URL(string: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/\(steamAppId)/\(name)"),
+                  let (data, response) = try? await session.data(from: url), (response as? HTTPURLResponse)?.statusCode == 200,
+                  data.count <= 10_000_000, AppIcon.image(data) != nil else { return nil }
+            return data
+        }
+        guard let hero = await fetch("library_hero.jpg"), let logo = await fetch("logo.png") else { return nil }
+        return (hero, logo)
+    }
+
+    public func landscapeCover(steamAppId: String) async -> Data? {
+        guard SteamCatalogGame.isIdentifier(steamAppId) else { return nil }
+        let config = URLSessionConfiguration.ephemeral
+        config.httpCookieStorage = nil
+        config.urlCache = nil
+        config.timeoutIntervalForRequest = 30
+        let session = URLSession(configuration: config)
+        defer { session.finishTasksAndInvalidate() }
+        func image(_ url: URL) async -> Data? {
+            guard SteamArt.isAllowedImageHost(url), let (data, response) = try? await session.data(from: url),
+                  (response as? HTTPURLResponse)?.statusCode == 200, data.count <= 5_000_000,
+                  let size = StoreArt.pixelSize(data), SteamArt.isLandscape(width: size.width, height: size.height) else { return nil }
+            return data
+        }
+        for url in SteamArt.fixedURLs(steamAppId: steamAppId) {
+            if Task.isCancelled { return nil }
+            if let data = await image(url) { return data }
+        }
+        guard let details = URL(string: "https://store.steampowered.com/api/appdetails?appids=\(steamAppId)&filters=basic"),
+              let (data, response) = try? await session.data(from: details), (response as? HTTPURLResponse)?.statusCode == 200,
+              let url = SteamArt.headerImage(inAppDetails: data, steamAppId: steamAppId) else { return nil }
+        return await image(url)
+    }
+}

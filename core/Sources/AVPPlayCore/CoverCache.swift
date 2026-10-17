@@ -24,7 +24,12 @@ public struct CoverCache: Sendable {
             .appendingPathComponent("\(DataLocation.folderName)/covers", isDirectory: true)
     }
 
-    static func isAppId(_ id: String) -> Bool { !id.isEmpty && id.count <= 24 && id.allSatisfy { $0.isASCII && $0.isNumber } }
+    /// Eine Meta-Store-Kennung, oder `steam-<App-ID>` für das Bild eines Steam-Spiels.
+    static func isAppId(_ id: String) -> Bool {
+        let digits = id.hasPrefix(steamPrefix) ? String(id.dropFirst(steamPrefix.count)) : id
+        return !digits.isEmpty && digits.count <= 24 && digits.allSatisfy { $0.isASCII && $0.isNumber }
+    }
+    public static let steamPrefix = "steam-"
     func imageFile(_ appId: String) -> URL { directory.appendingPathComponent("\(appId).jpg") }
     func missFile(_ appId: String) -> URL { directory.appendingPathComponent("\(appId).none") }
 
@@ -100,6 +105,7 @@ public actor CoverLoader {
     private let cache: CoverCache
     private let fetch: @Sendable (String) async -> Data?
     private let fromCatalog: @Sendable (String) async -> Data?
+    private let fromSteam: @Sendable (String) async -> Data?
     /// Spiele, bei denen der Katalogdienst in dieser Sitzung nichts geliefert hat – damit eine Karte ohne Netz
     /// nicht bei jedem Erscheinen neu fragt.
     private var catalogFailed: Set<String> = []
@@ -112,9 +118,11 @@ public actor CoverLoader {
 
     public init(cache: CoverCache = CoverCache(), concurrent: Int = 2,
                 fromCatalog: @escaping @Sendable (String) async -> Data? = { await CatalogClient().cover(appId: $0) },
+                fromSteam: @escaping @Sendable (String) async -> Data? = { await SteamArt().landscapeCover(steamAppId: $0) },
                 fetch: @escaping @Sendable (String) async -> Data? = { await StoreArt().landscapeCover(appId: $0) }) {
         self.cache = cache
         self.fetch = fetch
+        self.fromSteam = fromSteam
         self.fromCatalog = fromCatalog
         self.free = max(1, concurrent)
     }
@@ -137,9 +145,15 @@ public actor CoverLoader {
         if Task.isCancelled { release(); return nil }
         if let hit = memory[appId] { release(); return hit }
         if let task = running[appId] { release(); return await task.value }
-        let cache = cache, fetch = fetch, fromCatalog = fromCatalog
+        let cache = cache, fetch = fetch, fromCatalog = fromCatalog, fromSteam = fromSteam
+        // Ein Steam-Spiel (`steam-<App-ID>`) hat sein Bild bei Valve, nicht auf einer Seite des Meta-Stores.
+        let steamApp: String? = appId.hasPrefix(CoverCache.steamPrefix) ? String(appId.dropFirst(CoverCache.steamPrefix.count)) : nil
         let task = Task<Data?, Never> {
-            if !storeHasNone, let original = await fetch(appId), let small = cache.store(appId: appId, original: original) { return small }
+            let original: Data?
+            if storeHasNone { original = nil }
+            else if let steamApp { original = await fromSteam(steamApp) }
+            else { original = await fetch(appId) }
+            if let original, let small = cache.store(appId: appId, original: original) { return small }
             if askCatalog, let original = await fromCatalog(appId), let small = cache.store(appId: appId, original: original) { return small }
             cache.noteMissing(appId: appId)
             return nil

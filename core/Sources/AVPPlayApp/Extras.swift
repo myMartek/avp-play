@@ -113,6 +113,9 @@ extension AppModel {
         if filterFavourites { parts.append(L("favourites", "Favoriten")) }
         if filterFavouritesMissing { parts.append(L("favourites not downloaded", "nicht geladene Favoriten")) }
         if filterMixedReality { parts.append(L("mixed reality", "Mixed Reality")) }
+        if filterOwned { parts.append(L("owned", "im Besitz")) }
+        if filterMeta { parts.append("Meta") }
+        if filterSteam { parts.append("Steam") }
         for filter in customFilters {
             switch customFilterModes[filter.id] ?? .off {
             case .off: break

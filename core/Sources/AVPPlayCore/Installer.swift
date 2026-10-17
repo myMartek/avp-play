@@ -633,6 +633,25 @@ public struct Installer: Sendable {
                          "Startbild: die Store-Seite zeigt kein Titelbild – vom Katalog des Projekts geholt."))
             }
         }
+        // Ein Steam-Spiel ohne Seite im Meta-Store: Bibliotheksbild und Logo von Valves Bilder-Server – daraus werden Icon
+        // und Startbild, wie mit dem Steam-Client auf dem Mac. Gibt es die nicht, wenigstens das Titelbild als Startbild.
+        if request.storeArt, recipe.source == .steam, recipe.catalogAppId == nil, let steam = recipe.store.steamAppId,
+           AppIcon.steamLibrary(appId: steam) == nil {
+            let folder = Toolchain.steamArtURL(store: store, recipe: recipe).appendingPathComponent(steam, isDirectory: true)
+            if !FileManager.default.fileExists(atPath: folder.appendingPathComponent("logo.png").path) {
+                if let art = await SteamArt().libraryArt(steamAppId: steam) {
+                    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+                    try art.hero.write(to: folder.appendingPathComponent("library_hero.jpg"), options: .atomic)
+                    try art.logo.write(to: folder.appendingPathComponent("logo.png"), options: .atomic)
+                    report(L("Icon and start image: fetched the library picture and logo from Steam.",
+                             "Icon und Startbild: Bibliotheksbild und Logo von Steam geholt."))
+                } else if !FileManager.default.fileExists(atPath: wide.path), let image = await SteamArt().landscapeCover(steamAppId: steam) {
+                    try image.write(to: wide, options: .atomic)
+                    report(L("Start image: fetched the cover image from Steam (no library picture there).",
+                             "Startbild: Titelbild von Steam geholt (dort kein Bibliotheksbild)."))
+                }
+            }
+        }
         try toolchain.prepare(recipe: recipe, store: store)
     }
 
