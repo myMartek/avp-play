@@ -158,9 +158,6 @@ public enum InstallStep: String, Codable, Sendable, CaseIterable {
     /// gekauft ist, und sonst nichts – kein Xcode, kein Apple-Team, keine Vision Pro. Gebaut wird später.
     public static let download: [InstallStep] = [.account, .fetch]
 
-    /// Replace only the app, keeping its installed data. No download/uninstall/stage step.
-    public static let controllerRebuild: [InstallStep] = [.build]
-
     public var title: String {
         switch self {
         case .account: return L("Check account and ownership", "Konto und Besitz prüfen")

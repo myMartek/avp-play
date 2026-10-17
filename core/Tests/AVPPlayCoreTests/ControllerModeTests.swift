@@ -25,9 +25,6 @@ final class ControllerModeTests: XCTestCase {
         XCTAssertEqual(saved.toolchain, "/custom/chosen")
         XCTAssertNil(saved.bundleId)
     }
-    func testControllerRebuildNeverFetchesStagesOrUninstalls() {
-        XCTAssertEqual(InstallStep.controllerRebuild, [.build])
-    }
     func testToolchainCapabilityAndExplicitEnvironment() throws {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("surreal-toolchain-\(UUID())")
         defer { try? FileManager.default.removeItem(at: dir) }

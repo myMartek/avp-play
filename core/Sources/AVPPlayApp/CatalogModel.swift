@@ -257,8 +257,7 @@ extension AppModel {
             out.append(Game(recipe: recipe,
                             status: GameStatus.of(recipe: recipe, store: paths.store, apps: installedApps, toolchainVersion: toolchainRevision,
                                                   pin: toolchainChoices.games[recipe.id], bundlePrefix: prefix,
-                                                  metalFX: metalFXExpected,
-                                                  xrPrediction: xrPredictionExpected(for: recipe.id)),
+                                                  metalFX: metalFXExpected),
                             cover: nil, catalog: entry, draft: true))
         }
         // Dahinter die Steam-Spiele mit Android-Fassung – die des Kontos und die aus der Steam-Liste des Katalogs –, die
@@ -271,8 +270,7 @@ extension AppModel {
             let recipe = SteamDraft.placeholder(app: app)
             var game = Game(recipe: recipe,
                             status: GameStatus.of(recipe: recipe, store: paths.store, apps: installedApps, toolchainVersion: toolchainRevision,
-                                                  pin: toolchainChoices.games[recipe.id], bundlePrefix: prefix, metalFX: metalFXExpected,
-                                                  xrPrediction: xrPredictionExpected(for: recipe.id)),
+                                                  pin: toolchainChoices.games[recipe.id], bundlePrefix: prefix, metalFX: metalFXExpected),
                             cover: nil, catalog: nil, draft: true)
             game.ownershipKeys = ["steam:\(app.appId)"]
             game.steamCatalog = steamInfo[app.appId]

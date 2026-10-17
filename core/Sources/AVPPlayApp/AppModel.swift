@@ -118,9 +118,6 @@ struct GameOptions: Codable, Equatable {
     /// Beim Installieren die Spielstände vom Mac zurückspielen, wenn das Spiel auf dem Gerät noch keine hat.
     /// Wählbar und nicht fest, weil ältere gespeicherte Angaben den Eintrag nicht kennen; ohne Angabe: ja.
     var restoreSaves: Bool?
-    /// Test: die XR-Vorhersage in diesem Spiel von Anfang an einschalten (`Toolchain.xrPredictionSwitch`). Ohne
-    /// Angabe: aus – das Spiel bekommt die Kopfpose ohne Vorhersage.
-    var xrPrediction: Bool?
 }
 
 /// Die in der Übersicht angehakten Spiele – ein eigener, kleiner Zustand (siehe `AppModel.picked`).
@@ -322,16 +319,6 @@ final class AppModel: ObservableObject {
         guard let toolchain, toolchain.supportsMetalFX else { return nil }
         return UserDefaults.standard.bool(forKey: metalFXKey)
     }
-    /// Was `GameStatus` von einem aktuellen Bau zur XR-Vorhersage erwartet – je Spiel, aus dessen Option
-    /// (`GameOptions.xrPrediction`); `nil` ohne eine Toolchain, die sie umstellen kann. Liest die gespeicherten
-    /// Optionen selbst, weil die Bestandsaufnahme nicht auf dem Hauptthread läuft.
-    nonisolated static func xrPredictionExpected(supported: Bool?) -> ((String) -> Bool)? {
-        guard supported == true else { return nil }
-        let saved = UserDefaults.standard.data(forKey: "gameOptions")
-            .flatMap { try? JSONDecoder().decode([String: GameOptions].self, from: $0) } ?? [:]
-        let on = Set(saved.filter { $0.value.xrPrediction == true }.keys)
-        return { on.contains($0) }
-    }
     /// Für welche Spiele eine andere Toolchain als die neueste gewählt ist (siehe `ToolchainChoices`).
     @Published var toolchainChoices = ToolchainChoices.load()
     /// Die Pakete früherer Veröffentlichungen auf GitHub; `nil`, solange niemand danach gefragt hat.
@@ -350,8 +337,6 @@ final class AppModel: ObservableObject {
     /// Was ein aktueller Bau vom MetalFX-Hochskalieren tragen soll; `nil`, solange keine Toolchain da ist, die das
     /// kann – dann wird nicht verglichen.
     var metalFXExpected: Bool? { didSet { invalidateDerived() } }
-    /// Ob die neueste Toolchain die XR-Vorhersage als Option kennt; `nil` ohne Toolchain.
-    @Published var xrPredictionSupported: Bool?
     /// Wie weit das Kopieren aufs Gerät im laufenden Auftrag ist.
     @Published var copyProgress: [String: InstallProgress] = [:]
     /// Eine neuere veröffentlichte Fassung, falls es eine gibt.
@@ -548,7 +533,6 @@ final class AppModel: ObservableObject {
         let id = game.id, catalog = game.catalog
         let paths = paths, apps = installedApps, revision = toolchainRevision, prefix = bundlePrefix, drafts = draftsDirectory
         let pin = toolchainChoices.games[id], metalFX = metalFXExpected
-        let xrPrediction = xrPredictionExpected(for: id)
         Task.detached(priority: .userInitiated) {
             var fresh: Game?
             if let recipes = paths.recipes {
@@ -558,7 +542,7 @@ final class AppModel: ObservableObject {
                     let active = StoreUpdate.resolve([tested], variants: variants, sources: sources, drafts: drafts, choices: choices).first ?? tested
                     fresh = Probe.game(active, draft: false, tested: tested, variants: variants, sources: sources, paths: paths,
                                        apps: apps, toolchainRevision: revision, pin: pin, bundlePrefix: prefix,
-                                       metalFX: metalFX, xrPrediction: xrPrediction)
+                                       metalFX: metalFX)
                     fresh?.catalog = catalog
                 }
             }
@@ -820,12 +804,8 @@ final class AppModel: ObservableObject {
     }
 
     func setOptions(_ value: GameOptions, for game: Game) {
-        let xrBefore = options(for: game).xrPrediction == true
         options[game.id] = value
         if let data = try? JSONEncoder().encode(options) { UserDefaults.standard.set(data, forKey: "gameOptions") }
-        // Die XR-Vorhersage entscheidet mit, ob ein installierter Bau aktuell ist: den Stand dieses Spiels gleich neu
-        // bestimmen, nicht erst bei der nächsten Bestandsaufnahme.
-        if (value.xrPrediction == true) != xrBefore { refreshStatus(of: game.id) }
     }
 
     /// Bestimmt den Stand eines Spiels neu, mit dem, was gerade bekannt ist (Gerät, Toolchain, Einstellungen).
@@ -834,14 +814,8 @@ final class AppModel: ObservableObject {
         fresh.status = GameStatus.of(recipe: fresh.recipe, store: paths.store, apps: installedApps, toolchainVersion: toolchainRevision,
                                      pin: toolchainChoices.games[id], bundlePrefix: bundlePrefix,
                                      otherSourceBuilds: Set(fresh.otherSourceBuilds),
-                                     metalFX: metalFXExpected, xrPrediction: xrPredictionExpected(for: id))
+                                     metalFX: metalFXExpected)
         replace(fresh)
-    }
-
-    /// `xrPredictionExpected(supported:)` für ein Spiel, aus den Optionen im Speicher.
-    func xrPredictionExpected(for id: String) -> Bool? {
-        guard xrPredictionSupported == true else { return nil }
-        return options[id]?.xrPrediction == true
     }
 
     /// Wählbare Dateien, die das Rezept unter eigenem Namen anbietet – etwa eine Sprachausgabe von Fans.
@@ -1028,7 +1002,6 @@ final class AppModel: ObservableObject {
         installedApps = s.apps
         toolchainRevision = s.toolchainRevision
         metalFXExpected = s.metalFXExpected
-        if xrPredictionSupported != s.xrPredictionSupported { xrPredictionSupported = s.xrPredictionSupported }
         toolchainChoices = s.toolchainChoices
         games = s.games
         loadOwnCatalogEntries()
@@ -1449,8 +1422,6 @@ final class AppModel: ObservableObject {
             request.metalFX = true
             request.resolution = metalFXResolution
         }
-        // Die Test-Option des Spiels gilt für jeden Bau – nicht nur für Testkopien.
-        if steps.contains(.build), chosen.xrPrediction == true { request.xrPrediction = true }
         // Ein eigenes Präfix oder das eines kostenlosen Teams: dann steht die Kennung im Auftrag.
         let prefix = bundlePrefix
         if prefix != Toolchain.defaultBundlePrefix() { request.bundleId = "\(prefix).\(game.recipe.toolchain.target)" }
