@@ -134,10 +134,10 @@ fetch to this Mac.
 for games that can also come from Steam, the ones in your Steam account. Where Meta has answered the ownership
 question for a single game, that answer counts. `avpplay library` prints the same list on the command line.
 
-**Horizon+.** The *Horizon+* filter shows the games a Meta Horizon+ subscription lets you download at any time:
-the Games Catalog and the Indie Catalog of the Meta Store (not the monthly games). The app reads both lists from Meta
-with your Meta sign-in, the way Meta's Horizon app does, at most once a day; a game's page says which catalogue it is
-in. `avpplay horizonplus` prints the same list on the command line.
+**Horizon+.** The *Horizon+ Games* and *Horizon+ Indie* filters show the games a Meta Horizon+ subscription lets you
+download at any time: the Games Catalog and the Indie Catalog of the Meta Store (not the monthly games). With both on,
+you see both catalogues. The app reads the lists from Meta with your Meta sign-in, the way Meta's Horizon app does, at
+most once a day; a game's page says which catalogue it is in. `avpplay horizonplus` prints the same list on the command line.
 
 **Meta and Steam.** The *Meta* and *Steam* filters show only the games available from the Meta Store or from Steam,
 whichever purchase source is chosen; *Steam* includes games whose files come from a Steam purchase, such as
@@ -284,7 +284,7 @@ their own recipe.
 - **Ownership** is asked of Meta before anything is downloaded, and once a day so the app can show which games
   are yours. With the *Owned* filter on, the app also reads your account's library, the way Meta's Horizon app
   does, at most once an hour; it keeps the list (app number, name, why it is in the account) on your Mac and
-  forgets it when you sign out. With the *Horizon+* filter on, it reads the two Horizon+ catalogues the same way, at
+  forgets it when you sign out. With a *Horizon+* filter on, it reads the two Horizon+ catalogues the same way, at
   most once a day (app number and name only). A game that counted as not owned is asked about again within the hour, and **Check Purchase** on a
   game's page asks right away. Add-on content is downloaded only for purchases Meta confirms. Bought
   something later? **Sync DLCs** on the game's page asks again, downloads what is new and adds it to the installed

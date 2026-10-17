@@ -198,8 +198,16 @@ final class AppModel: ObservableObject {
     @Published var loadingLibrary = false
     @Published var libraryProblem: String?
     /// Die zuletzt geladenen Horizon+-Kataloge (für den Filter „Horizon+“), ihre Kennungen, und ob gerade geladen wird.
-    @Published var horizonPlus: HorizonPlusCatalog? { didSet { horizonPlusIds = horizonPlus?.appIds ?? [] } }
+    @Published var horizonPlus: HorizonPlusCatalog? {
+        didSet {
+            horizonPlusIds = horizonPlus?.appIds ?? []
+            horizonGamesIds = horizonPlus?.appIds(in: .games) ?? []
+            horizonIndieIds = horizonPlus?.appIds(in: .indie) ?? []
+        }
+    }
     private(set) var horizonPlusIds: Set<String> = []
+    private(set) var horizonGamesIds: Set<String> = []
+    private(set) var horizonIndieIds: Set<String> = []
     @Published var loadingHorizonPlus = false
     @Published var horizonPlusProblem: String?
     var askedHorizonPlus: Set<String> = []
@@ -366,8 +374,12 @@ final class AppModel: ObservableObject {
     @AppStorage("filterMixedReality") var filterMixedReality = false
     /// Nur Spiele, die dem Nutzer gehören: in der Bibliothek seines Meta-Kontos oder von Steam bestätigt.
     @AppStorage("filterOwned") var filterOwned = false
-    /// Nur Spiele, die ein Horizon+-Abo jederzeit laden lässt: Spielekatalog und Indie-Katalog (nicht die Monatsspiele).
-    @AppStorage("filterHorizonPlus") var filterHorizonPlus = false
+    /// Nur Spiele, die ein Horizon+-Abo jederzeit laden lässt (nicht die Monatsspiele): aus dem Spielekatalog, aus dem
+    /// Indie-Katalog; beide zusammen ergänzen einander.
+    @AppStorage("filterHorizonGames") var filterHorizonGames = false
+    @AppStorage("filterHorizonIndie") var filterHorizonIndie = false
+    /// Ob einer der beiden Horizon+-Filter gesetzt ist – dann werden die Kataloge gebraucht.
+    var horizonPlusWanted: Bool { filterHorizonGames || filterHorizonIndie }
     /// Nur Spiele aus dem Meta-Store oder nur die aus Steam (gleich, welche Kaufquelle gewählt ist); beide zusammen
     /// ergänzen einander.
     @AppStorage("filterMeta") var filterMeta = false
@@ -489,11 +501,11 @@ final class AppModel: ObservableObject {
     /// Je Quelle gilt die eigene Antwort auf die Besitzfrage – dieselbe, die vor jedem Laden gestellt wird. Wo es keine
     /// gibt, gilt die Bibliothek des Meta-Kontos. Sie führt auch Apps, die Meta auf die einzelne Frage nicht bestätigt
     /// (gesehen 2026-10-17 bei einer kostenlosen Beta); die stünden sonst unter „Im Besitz“ und ließen sich nicht laden.
-    /// Steht das Spiel in einem der Horizon+-Kataloge? Nach der Store-Kennung des Meta-Spiels – auch wenn Steam als
-    /// Kaufquelle gewählt ist: Das Abo gilt für die Meta-Fassung.
-    func inHorizonPlus(_ game: Game) -> Bool {
+    /// Steht das Spiel in einem der gewählten Horizon+-Kataloge? Nach der Store-Kennung des Meta-Spiels – auch wenn
+    /// Steam als Kaufquelle gewählt ist: Das Abo gilt für die Meta-Fassung.
+    func inChosenHorizonPlus(_ game: Game) -> Bool {
         guard let app = game.recipe.catalogAppId else { return false }
-        return horizonPlusIds.contains(app)
+        return (filterHorizonGames && horizonGamesIds.contains(app)) || (filterHorizonIndie && horizonIndieIds.contains(app))
     }
 
     func ownedAnywhere(_ game: Game) -> Bool {
@@ -627,7 +639,7 @@ final class AppModel: ObservableObject {
                 && (!filterFavouritesMissing || (favourite && !downloaded))
                 && (!filterMixedReality || game.mixedReality)
                 && (!filterOwned || ownedAnywhere(game))
-                && (!filterHorizonPlus || inHorizonPlus(game))
+                && (!horizonPlusWanted || inChosenHorizonPlus(game))
                 && ((!filterMeta && !filterSteam) || (filterMeta && game.fromMeta) || (filterSteam && game.fromSteam))
                 && (custom.isEmpty || CustomFilters.passes(game.id, filters: custom, modes: customFilterModes))
                 && (words.isEmpty || game.recipe.title.lowercased().contains(words) || game.recipe.package.lowercased().contains(words))
@@ -1044,7 +1056,7 @@ final class AppModel: ObservableObject {
         if steamLibrary == nil { steamLibrary = SteamLibraryCache(store: paths.store).load() }
         checkOwnership()
         if filterOwned { loadLibrary() }
-        if filterHorizonPlus { loadHorizonPlus() }
+        if horizonPlusWanted { loadHorizonPlus() }
         if filterOwned || filterSteam { loadSteamLibrary() }
         // Beim ersten Start dorthin, wo etwas zu tun ist. Ein ausgeschaltetes Headset zählt nicht dazu.
         if !routed {
@@ -1083,7 +1095,7 @@ final class AppModel: ObservableObject {
                 self.account = state
                 self.checkOwnership()
                 if self.filterOwned { self.loadLibrary() }
-                if self.filterHorizonPlus { self.loadHorizonPlus() }
+                if self.horizonPlusWanted { self.loadHorizonPlus() }
             }
         }
     }

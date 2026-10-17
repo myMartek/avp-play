@@ -241,7 +241,7 @@ extension AppModel {
     /// installiert oder gemerkt ist, steht schon vollständig da – und was dem Nutzer gehört, holt `loadLibrary` gezielt.
     var canLoadMore: Bool {
         // Nur Steam: der Katalog führt Meta-Spiele, Nachladen bringt nichts.
-        guard onlineCatalog, !filterInstalled, !favouritesWanted, !filterDownloaded, !customOnlyWanted, !filterOwned, !filterHorizonPlus, !(filterSteam && !filterMeta) else { return false }
+        guard onlineCatalog, !filterInstalled, !favouritesWanted, !filterDownloaded, !customOnlyWanted, !filterOwned, !horizonPlusWanted, !(filterSteam && !filterMeta) else { return false }
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard query.isEmpty else { return query == searchedQuery && searchMore }
         // Geprüftes und von Nutzern Bestätigtes steht im Katalog vorn. Ist einer dieser Filter gesetzt, lohnt

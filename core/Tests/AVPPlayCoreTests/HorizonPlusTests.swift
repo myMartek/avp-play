@@ -71,6 +71,8 @@ final class HorizonPlusTests: XCTestCase {
         try cache.save(catalog)
         XCTAssertEqual(cache.load(), catalog)
         XCTAssertEqual(catalog.appIds, ["6341779295861881", "1234567890123456"])
+        XCTAssertEqual(catalog.appIds(in: .games), ["6341779295861881"])
+        XCTAssertEqual(catalog.appIds(in: .indie), ["1234567890123456"])
         XCTAssertEqual(catalog.catalogue(of: "1234567890123456"), .indie)
         XCTAssertNil(catalog.catalogue(of: "1"))
         XCTAssertFalse(catalog.isStale(now: now.addingTimeInterval(3600 * 20)))

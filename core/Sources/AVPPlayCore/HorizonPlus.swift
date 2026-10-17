@@ -27,6 +27,11 @@ public struct HorizonPlusCatalog: Codable, Sendable, Equatable {
 
     public var appIds: Set<String> { Set(games.map(\.appId)) }
 
+    /// Die Kennungen eines der beiden Kataloge.
+    public func appIds(in catalogue: HorizonPlusGame.Catalogue) -> Set<String> {
+        Set(games.filter { $0.catalogue == catalogue }.map(\.appId))
+    }
+
     public func catalogue(of appId: String) -> HorizonPlusGame.Catalogue? {
         games.first { $0.appId == appId }?.catalogue
     }
