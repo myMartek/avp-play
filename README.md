@@ -246,7 +246,9 @@ their own recipe.
 - **Pictures** of games whose files are not on your Mac yet come from the game's public page in the Meta Store
   (meta.com): only for games you are looking at, two at a time, without your Meta sign-in or cookies. A small
   copy is kept in a cache (`~/Library/Caches/AVPPlay`) that the *Data* page can empty; Settings › Pictures turns
-  this off. A few store pages show no picture to a visitor who is not signed in (Richie's Plank Experience);
+  this off. Steam games without a Meta Store page get their picture from Valve's public image server
+  (steamstatic.com, for newer games via the public store API store.steampowered.com), likewise without any sign-in.
+  A few store pages show no picture to a visitor who is not signed in (Richie's Plank Experience);
   for such a game the picture comes from the project's catalogue service, which is asked only when the catalogue
   names one. Other games without a picture keep a coloured tile with their name. When a game is installed, its
   icon and start picture come from the store page too, and from the catalogue service when the page gave none.

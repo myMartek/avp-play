@@ -450,7 +450,9 @@ struct CoverImage: View {
             // scrollt eine aus dem Bild, endet ihre Aufgabe, und ein noch nicht begonnener Abruf entfällt.
             .task(id: game.id) {
                 fetched = nil
-                guard game.cover == nil, model.storePictures, let appId = game.recipe.catalogAppId,
+                // Ein Steam-Spiel ohne Seite im Meta-Store bekommt sein Bild von Valve.
+                let steam = game.recipe.catalogAppId == nil ? game.recipe.store.steamAppId.map { CoverCache.steamPrefix + $0 } : nil
+                guard game.cover == nil, model.storePictures, let appId = game.recipe.catalogAppId ?? steam,
                       let data = await model.covers.image(appId: appId, catalogHasOne: game.catalog?.cover == true), !Task.isCancelled else { return }
                 fetched = NSImage(data: data)
             }

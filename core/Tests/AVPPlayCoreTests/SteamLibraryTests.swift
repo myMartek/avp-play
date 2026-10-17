@@ -262,3 +262,55 @@ final class SteamLibraryTests: XCTestCase {
         XCTAssertNil(cache.load())
     }
 }
+
+/// Titelbilder von Steam: welche Adressen und Bilder angenommen werden, und wie der Zwischenspeicher sie führt.
+final class SteamArtTests: XCTestCase {
+    func testFixedAddressesAndHosts() {
+        XCTAssertEqual(SteamArt.fixedURLs(steamAppId: "438100").map(\.lastPathComponent), ["capsule_616x353.jpg", "header.jpg"])
+        XCTAssertTrue(SteamArt.isAllowedImageHost(URL(string: "https://shared.akamai.steamstatic.com/a.jpg")!))
+        XCTAssertFalse(SteamArt.isAllowedImageHost(URL(string: "http://shared.akamai.steamstatic.com/a.jpg")!))
+        XCTAssertFalse(SteamArt.isAllowedImageHost(URL(string: "https://steamstatic.com.evil.example/a.jpg")!))
+    }
+
+    func testLandscapeShapes() {
+        XCTAssertTrue(SteamArt.isLandscape(width: 616, height: 353))
+        XCTAssertTrue(SteamArt.isLandscape(width: 460, height: 215))
+        XCTAssertFalse(SteamArt.isLandscape(width: 600, height: 900), "Hochformat")
+        XCTAssertFalse(SteamArt.isLandscape(width: 231, height: 87), "zu klein")
+        XCTAssertFalse(SteamArt.isLandscape(width: 3840, height: 1240), "Bibliotheks-Banner")
+    }
+
+    func testHeaderImageFromAppDetails() {
+        let ok = Data(#"{"4688290":{"success":true,"data":{"header_image":"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4688290/6b7a/header.jpg?t=1"}}}"#.utf8)
+        XCTAssertEqual(SteamArt.headerImage(inAppDetails: ok, steamAppId: "4688290")?.lastPathComponent, "header.jpg")
+        let foreign = Data(#"{"4688290":{"success":true,"data":{"header_image":"https://evil.example/header.jpg"}}}"#.utf8)
+        XCTAssertNil(SteamArt.headerImage(inAppDetails: foreign, steamAppId: "4688290"))
+        XCTAssertNil(SteamArt.headerImage(inAppDetails: Data(#"{"4688290":{"success":false}}"#.utf8), steamAppId: "4688290"))
+        XCTAssertNil(SteamArt.headerImage(inAppDetails: ok, steamAppId: "1"))
+    }
+
+    func testCacheKeysForSteamPictures() {
+        XCTAssertTrue(CoverCache.isAppId("steam-438100"))
+        XCTAssertTrue(CoverCache.isAppId("2264524423619421"))
+        XCTAssertFalse(CoverCache.isAppId("steam-"))
+        XCTAssertFalse(CoverCache.isAppId("steam-../x"))
+    }
+
+    func testLoaderAsksSteamForSteamKeys() async {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("qi-steamart-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let asked = Asked()
+        let loader = CoverLoader(cache: CoverCache(directory: dir), fromCatalog: { _ in nil },
+                                 fromSteam: { id in await asked.add("steam:\(id)"); return nil },
+                                 fetch: { id in await asked.add("meta:\(id)"); return nil })
+        _ = await loader.image(appId: "steam-438100")
+        _ = await loader.image(appId: "2264524423619421")
+        let calls = await asked.all
+        XCTAssertEqual(calls.sorted(), ["meta:2264524423619421", "steam:438100"])
+    }
+
+    private actor Asked {
+        var all: [String] = []
+        func add(_ s: String) { all.append(s) }
+    }
+}
