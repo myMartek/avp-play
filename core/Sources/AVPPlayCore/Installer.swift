@@ -123,6 +123,9 @@ public struct InstallRequest: Codable, Sendable, Equatable {
     public var xrPrediction: Bool?
     /// Initial launcher mode; an existing per-game headset preference always wins.
     public var controllerMode: ControllerMode?
+    /// Die Raumvermessung (Spielbereich) im Spiel von Anfang an einschalten. Ohne Angabe: wie die Einstellung der
+    /// App für alle Spiele (`InstallDefaults.roomMeasuring`). Im Spiel lässt sie sich danach umstellen.
+    public var roomMeasuring: Bool?
 
     public init(toolchain: String) { self.toolchain = toolchain }
 }
@@ -556,8 +559,18 @@ public struct Installer: Sendable {
             report(L("XR prediction: on from the start in this build (in the game under Settings › Advanced › Test).",
                      "XR-Vorhersage: In diesem Bau von Anfang an eingeschaltet (im Spiel unter Einstellungen › Erweitert › Test)."))
         }
+        // Die Raumvermessung: an, außer die Einstellung der App für alle Spiele (oder der Auftrag) sagt aus.
+        let roomMeasuring = request.roomMeasuring ?? InstallDefaults.roomMeasuring()
+        var extraEnvironment = TreeStore(store: store).toolchainEnvironment(recipe: recipe)
+        if toolchain.supportsRoomMeasuring {
+            extraEnvironment[Toolchain.roomMeasuringVariable] = roomMeasuring ? "1" : "0"
+            if !roomMeasuring {
+                report(L("Measure room: off in this game from the start (it can be switched on in the game under Settings › Play area).",
+                         "Raum vermessen: In diesem Spiel von Anfang an aus (im Spiel unter Einstellungen › Spielbereich einschaltbar)."))
+            }
+        }
         try toolchain.buildAndInstall(recipe: recipe, team: team, device: device, bundleId: bundle, log: log,
-                                      extraEnvironment: TreeStore(store: store).toolchainEnvironment(recipe: recipe),
+                                      extraEnvironment: extraEnvironment,
                                       metalFX: metalFX,
                                       resolution: metalFX ? request.resolution : nil,
                                       xrPrediction: xrPrediction,

@@ -238,6 +238,14 @@ final class AppModel: ObservableObject {
     @AppStorage("autoRemoveOldToolchains") var autoRemoveOldToolchains = true
     /// Initial controller mode for newly built games; the headset preference wins later.
     @AppStorage(ControllerMode.preferenceKey) var controllerMode: ControllerMode = .standard
+    /// „Raum vermessen“ in Spielen, die gebaut werden (`InstallDefaults.roomMeasuring`) – in einer Datei, nicht in den
+    /// Einstellungen der App, damit die Kommandozeile und das Erneuern der Signaturen dasselbe bauen.
+    @Published var roomMeasuringForNewGames = InstallDefaults.roomMeasuring() {
+        didSet {
+            guard roomMeasuringForNewGames != oldValue else { return }
+            try? InstallDefaults.setRoomMeasuring(roomMeasuringForNewGames)
+        }
+    }
     /// MetalFX: In jedem Spiel, das installiert oder aktualisiert wird, ist das Hochskalieren des Compositors von
     /// Anfang an eingeschaltet (`Toolchain.metalFXSwitch`, Klepton PR #2). Aus ist das bisherige Verhalten: Das Spiel
     /// startet mit dem linearen Strecken, und der Schalter im Spiel entscheidet. Ein Bau, der es anders hält, gilt
