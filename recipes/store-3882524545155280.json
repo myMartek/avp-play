@@ -1,0 +1,41 @@
+{
+  "schema": 1,
+  "id": "store-3882524545155280",
+  "title": "Catan VR",
+  "package": "com.Experiment7.Aurora",
+  "versionName": "1.1.842",
+  "versionCode": 11842,
+  "store": {
+    "appId": "3882524545155280"
+  },
+  "toolchain": {
+    "target": "x3882524545155280",
+    "minCommit": "ec9f76d"
+  },
+  "files": [
+    {
+      "dest": "",
+      "id": "5910430145698033",
+      "localName": "x3882524545155280.apk",
+      "name": "Catan.apk",
+      "required": true,
+      "role": "apk",
+      "size": 220531211,
+      "sha256": "d90a7a7fc88456213f669115325d1f5b8d53e53d7d6b8cb6a66fc20db53da0d3"
+    }
+  ],
+  "status": {
+    "playability": "verified",
+    "download": "listed",
+    "notes": [
+      {
+        "en": "Marked as verified by the project on 2026-10-17. File list as Meta's tool reports it for this build; 1 of 1 checksums recorded from a download.",
+        "de": "Vom Projekt am 2026-10-17 als geprüft markiert. Dateiliste, wie Metas Werkzeug sie für diesen Build nennt; 1 von 1 Prüfsummen aus einem Download erfasst."
+      },
+      {
+        "en": "Catan VR. Tested by the project on an Apple Vision Pro: the menu shows instead of a white picture, brightness and eye height are right, and the hands are drawn. Needs toolchain ec9f76d or newer.",
+        "de": "Catan VR. Vom Projekt auf einer Apple Vision Pro getestet: Das Menü erscheint statt eines weißen Bildes, Helligkeit und Augenhöhe stimmen, und die Hände sind zu sehen. Braucht Toolchain ec9f76d oder neuer."
+      }
+    ]
+  }
+}
