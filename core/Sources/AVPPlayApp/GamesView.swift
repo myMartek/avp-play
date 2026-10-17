@@ -15,10 +15,11 @@ struct GamesView: View {
             .help(L("Games you own: in the library of your Meta account (as Meta's Horizon app shows it) or, for games that can come from Steam, in your Steam account. Needs the sign-in under “Setup”.",
                     "Spiele, die dir gehören: in der Bibliothek deines Meta-Kontos (wie Metas Horizon-App sie zeigt) oder, bei Spielen, die es auch über Steam gibt, in deinem Steam-Konto. Braucht die Anmeldung unter „Einrichtung“."))
         Toggle("Meta", isOn: $model.filterMeta)
-            .help(L("Games whose purchase source is the Meta Store.", "Spiele, deren Kaufquelle der Meta-Store ist."))
+            .help(L("Games from the Meta Store – also those for which Steam is chosen as the purchase source.",
+                    "Spiele aus dem Meta-Store – auch solche, bei denen Steam als Kaufquelle gewählt ist."))
         Toggle("Steam", isOn: $model.filterSteam)
-            .help(L("Games whose purchase source is Steam – with a Steam sign-in also the Steam games in your account that have an Android build.",
-                    "Spiele, deren Kaufquelle Steam ist – mit einer Steam-Anmeldung auch die Steam-Spiele deines Kontos, die eine Android-Fassung haben."))
+            .help(L("Games available on Steam: as a purchase source (also when Meta is chosen), games whose files come from a Steam purchase such as Half-Life: Alyx, and the Steam games with an Android build.",
+                    "Spiele, die es bei Steam gibt: als Kaufquelle (auch wenn Meta gewählt ist), Spiele, deren Dateien aus einem Steam-Kauf kommen wie Half-Life: Alyx, und die Steam-Spiele mit Android-Fassung."))
         Toggle(L("Installed", "Installiert"), isOn: $model.filterInstalled)
         Toggle(L("Downloaded, Not Installed", "Geladen, nicht installiert"), isOn: $model.filterDownloaded)
             .help(L("Games whose files are completely on this Mac but which are not on the Vision Pro. While the Vision Pro is not reachable, every downloaded game is shown.",

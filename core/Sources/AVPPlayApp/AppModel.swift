@@ -68,6 +68,13 @@ struct Game: Identifiable {
     var needsMetaAccount: Bool { recipe.store.appId != nil }
     /// Aus dem eigenen Steam-Kauf: Besitz und Zusatzinhalte bestätigt Steam, geladen wird mit Valves Werkzeug.
     var needsSteamAccount: Bool { recipe.source == .steam }
+    /// Gibt es das Spiel im Meta-Store – als geltende Kaufquelle oder als wählbare andere?
+    var fromMeta: Bool { recipe.store.appId != nil || sources.contains(.meta) }
+    /// Gibt es das Spiel bei Steam – als Kaufquelle (auch als wählbare andere), oder kommen seine Dateien aus einem
+    /// Steam-Kauf (Half-Life: Alyx, Doom 3, Counter-Strike)?
+    var fromSteam: Bool {
+        recipe.store.steamAppId != nil || sources.contains(.steam) || recipe.icon?.steamAppId != nil || SteamFetcher.usesSteam(recipe)
+    }
     /// Kommt das Spiel aus einem Store, bei dem das Programm den Kauf prüft und die Dateien selbst lädt?
     var fromStore: Bool { recipe.source != nil }
     /// Vom Projekt selbst auf einer Vision Pro geprüft.
@@ -347,7 +354,8 @@ final class AppModel: ObservableObject {
     @AppStorage("filterMixedReality") var filterMixedReality = false
     /// Nur Spiele, die dem Nutzer gehören: in der Bibliothek seines Meta-Kontos oder von Steam bestätigt.
     @AppStorage("filterOwned") var filterOwned = false
-    /// Nur Spiele, deren Kaufquelle Meta ist, oder nur die aus Steam; beide zusammen ergänzen einander.
+    /// Nur Spiele aus dem Meta-Store oder nur die aus Steam (gleich, welche Kaufquelle gewählt ist); beide zusammen
+    /// ergänzen einander.
     @AppStorage("filterMeta") var filterMeta = false
     @AppStorage("filterSteam") var filterSteam = false
     /// Ob ein Filter gesetzt ist, der die Favoriten braucht – dann sollen alle dastehen, auch die, bis zu denen der
@@ -595,7 +603,7 @@ final class AppModel: ObservableObject {
                 && (!filterFavouritesMissing || (favourite && !downloaded))
                 && (!filterMixedReality || game.mixedReality)
                 && (!filterOwned || ownedAnywhere(game))
-                && ((!filterMeta && !filterSteam) || (filterMeta && game.recipe.source == .meta) || (filterSteam && game.recipe.source == .steam))
+                && ((!filterMeta && !filterSteam) || (filterMeta && game.fromMeta) || (filterSteam && game.fromSteam))
                 && (words.isEmpty || game.recipe.title.lowercased().contains(words) || game.recipe.package.lowercased().contains(words))
             else { return nil }
             // Geprüftes zuerst, dann schon Nachgeschlagenes, dann was Nutzer bestätigen, das Ungetestete, zuletzt
