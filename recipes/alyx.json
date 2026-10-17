@@ -8,7 +8,7 @@
  "store": {},
  "toolchain": {
   "target": "alyx",
-  "minCommit": "9fe3a5d"
+  "minCommit": "a6d33f8"
  },
  "files": [
   {

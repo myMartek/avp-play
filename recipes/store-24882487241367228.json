@@ -69,7 +69,7 @@
  },
  "title": "Alien: Rogue Incursion",
  "toolchain": {
-  "minCommit": "e5874b0",
+  "minCommit": "a6d33f8",
   "target": "x24882487241367228"
  },
  "versionCode": 526346,

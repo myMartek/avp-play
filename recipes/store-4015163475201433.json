@@ -354,8 +354,8 @@
     "de": "Vom Projekt am 2026-10-15 als geprüft markiert. Dateiliste, wie Metas Werkzeug sie für diesen Build nennt; 37 von 38 Prüfsummen aus einem Download erfasst."
    },
    {
-    "en": "Menus, text, pointer, gloves and the workout videos with their sound work. The game's mixed-reality mode works: your room shows around you. The trainer videos run smoothest with the display at 120 Hz; at 100 Hz they are shown at 50 frames a second. The rings around a target only spread out on a perfect hit with a long, full swing, as on the Quest; standing makes that easier. The gloves sit where your hands are with PlayStation VR2 Sense controllers. Needs toolchain 358b920 or newer.",
-    "de": "Menüs, Texte, Zeigestrahl, Handschuhe und die Trainingsvideos mit Ton funktionieren. Der Mixed-Reality-Modus des Spiels funktioniert: Dein Raum ist um dich herum zu sehen. Die Trainervideos laufen mit dem Display auf 120 Hz am flüssigsten; bei 100 Hz werden sie mit 50 Bildern pro Sekunde gezeigt. Die Ringe um ein Ziel dehnen sich nur bei einem perfekten Treffer mit langem, vollem Ausholen aus, wie auf der Quest; im Stehen gelingt das leichter. Mit PlayStation-VR2-Sense-Controllern sitzen die Handschuhe dort, wo deine Hände sind. Braucht Toolchain 358b920 oder neuer."
+    "en": "Menus, text, pointer, gloves and the workout videos with their sound work. The game's mixed-reality mode works: your room shows around you. The trainer videos run smoothest with the display at 120 Hz; at 100 Hz they are shown at 50 frames a second. The rings around a target only spread out on a perfect hit with a long, full swing, as on the Quest; standing makes that easier. The gloves sit where your hands are with PlayStation VR2 Sense controllers. Needs toolchain dd8cca3 or newer.",
+    "de": "Menüs, Texte, Zeigestrahl, Handschuhe und die Trainingsvideos mit Ton funktionieren. Der Mixed-Reality-Modus des Spiels funktioniert: Dein Raum ist um dich herum zu sehen. Die Trainervideos laufen mit dem Display auf 120 Hz am flüssigsten; bei 100 Hz werden sie mit 50 Bildern pro Sekunde gezeigt. Die Ringe um ein Ziel dehnen sich nur bei einem perfekten Treffer mit langem, vollem Ausholen aus, wie auf der Quest; im Stehen gelingt das leichter. Mit PlayStation-VR2-Sense-Controllern sitzen die Handschuhe dort, wo deine Hände sind. Braucht Toolchain dd8cca3 oder neuer."
    }
   ]
  },
@@ -364,7 +364,7 @@
  },
  "title": "LES MILLS BODYCOMBAT: Fitness workouts",
  "toolchain": {
-  "minCommit": "358b920ef35f8d28933d4a4dac779f1c61630e0a",
+  "minCommit": "dd8cca30a7b48cae093ec00994061192ea885184",
   "target": "x4015163475201433"
  },
  "versionCode": 300000018,
