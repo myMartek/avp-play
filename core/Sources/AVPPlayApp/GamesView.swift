@@ -24,6 +24,16 @@ struct GamesView: View {
                     "Spiele mit einem Mixed-Reality-Modus, der mit AVP Play funktioniert: Der eigene Raum ist um das Spiel herum zu sehen."))
     }
 
+    /// Die eigenen Filter (Seite „Filter“), in einer Zeile unter den übrigen.
+    @ViewBuilder private var customFilterRow: some View {
+        if !model.customFilters.isEmpty {
+            FlowLayout(spacing: 14, lineSpacing: 8) {
+                Text(L("Your filters:", "Eigene Filter:")).foregroundStyle(.secondary)
+                ForEach(model.customFilters) { CustomFilterChip(filter: $0) }
+            }
+        }
+    }
+
     /// Was neben den Filtern steht: die Liste ausgeben, alles aktualisieren, und was gerade im Hintergrund läuft.
     @ViewBuilder private var listActions: some View {
         Button(L("Export List …", "Liste exportieren …")) { model.exportGameList(shownOnly: true) }
@@ -31,8 +41,8 @@ struct GamesView: View {
             .help(model.canExportShown
                   ? L("Writes the games that match the filters and the search into a text file to pass on – all of them, also favourites the overview has not loaded yet. Only a list: no game files, nothing about your account or device.",
                       "Schreibt die Spiele, die zu den Filtern und der Suche passen, in eine Textdatei zum Weitergeben – alle, auch Favoriten, die die Übersicht noch nicht geladen hat. Nur eine Liste: keine Spieldateien, nichts über dein Konto oder Gerät.")
-                  : L("Set “Installed”, “Downloaded, Not Installed”, “Favourites” or “Favourites Not Downloaded” first: only those are lists this Mac knows completely.",
-                      "Setze zuerst „Installiert“, „Geladen, nicht installiert“, „Favoriten“ oder „Nicht geladene Favoriten“: Nur das sind Listen, die dieser Mac vollständig kennt."))
+                  : L("Set “Installed”, “Downloaded, Not Installed”, “Favourites”, “Favourites Not Downloaded” or one of your filters to “Show Only These” first: only those are lists this Mac knows completely.",
+                      "Setze zuerst „Installiert“, „Geladen, nicht installiert“, „Favoriten“, „Nicht geladene Favoriten“ oder einen eigenen Filter auf „Nur diese zeigen“: Nur das sind Listen, die dieser Mac vollständig kennt."))
         if model.searching {
             ProgressView().controlSize(.small)
             Text(L("Searching the catalogue …", "Katalog wird durchsucht …")).font(.callout).foregroundStyle(.secondary)
@@ -55,20 +65,24 @@ struct GamesView: View {
                 if model.loadProblem == nil, !model.games.isEmpty {
                     // In einer Zeile, solange das Fenster breit genug ist; sonst brechen die Schalter um wie Wörter und
                     // die Knöpfe stehen darunter. Sechs Schalter mit deutschen Namen sind breiter als ein schmales Fenster.
-                    ViewThatFits(in: .horizontal) {
-                        HStack {
-                            filterToggles
-                            Spacer()
-                            listActions
-                        }
-                        VStack(alignment: .leading, spacing: 10) {
-                            FlowLayout(spacing: 10, lineSpacing: 8) { filterToggles }
+                    VStack(alignment: .leading, spacing: 10) {
+                        ViewThatFits(in: .horizontal) {
                             HStack {
-                                listActions
+                                filterToggles
                                 Spacer()
+                                listActions
+                            }
+                            VStack(alignment: .leading, spacing: 10) {
+                                FlowLayout(spacing: 10, lineSpacing: 8) { filterToggles }
+                                HStack {
+                                    listActions
+                                    Spacer()
+                                }
                             }
                         }
+                        customFilterRow
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 22).padding(.top, 18)
                 }
                 if let problem = model.loadProblem {
@@ -112,7 +126,8 @@ struct GamesView: View {
                 if !Task.isCancelled { model.searchCatalog() }
             }
             // Unter einem Filter über die Favoriten sollen alle stehen, auch die, bis zu denen der Katalog noch nicht geladen ist.
-            .task(id: model.favouritesWanted) { if model.favouritesWanted { await model.loadAllFavourites() } }
+            // Ebenso unter einem eigenen Filter auf „nur diese“.
+            .task(id: model.listedIds) { if !model.listedIds.isEmpty { await model.loadMissing(model.listedIds) } }
             .navigationDestination(for: String.self) { id in
                 if let game = model.allGames.first(where: { $0.id == id }) { GameDetail(game: game) }
             }
@@ -610,6 +625,7 @@ struct GameDetail: View {
                             StatusBadge(status: game.status, busy: model.isBusy(game.id))
                             TrustBadge(game: game)
                             FavouriteButton(game: game)
+                            GameFilterButton(game: game)
                         }
                     }
                     Spacer()

@@ -132,6 +132,7 @@ struct RootView: View {
             Group {
                 switch model.section {
                 case .games: GamesView()
+                case .filters: FiltersView()
                 case .jobs: JobsView()
                 case .data: DataView()
                 case .setup: SetupView()
@@ -170,7 +171,7 @@ struct RootView: View {
     /// Wie viele Punkte der Einrichtung noch offen sind bzw. wie viele Aufträge noch anstehen.
     private func badge(for section: AppSection) -> Int {
         switch section {
-        case .games, .data, .settings: return 0
+        case .games, .filters, .data, .settings: return 0
         // Der laufende und die wartenden: es läuft immer nur einer, also sagt die Zahl, wie viele noch kommen.
         // Abgeschlossene, angehaltene, abgebrochene und unterbrochene zählen nicht mit.
         case .jobs: return model.jobs.filter { [.running, .queued].contains(model.phase(of: $0)) }.count
@@ -259,6 +260,20 @@ enum Snapshot {
         var waited = 0.0
         while model.checkingOwnership, waited < 60 { await pause(0.5); waited += 0.5 }
         capture("1-spiele", dir)
+        // `--demo-filter`: einen eigenen Filter mit den ersten Spielen anlegen (nur ohne eigene Filter, für die Bilder).
+        if CommandLine.arguments.contains("--demo-filter"), model.customFilters.isEmpty {
+            model.section = .games
+            let ids = Set(model.shownGames.prefix(4).map(\.id))
+            if let filter = model.createFilter(named: "32 Bit", games: ids) { model.setFilterMode(filter.id, .hide) }
+            model.createFilter(named: L("For Guests", "Für Gäste"), games: Set(model.shownGames.dropFirst(2).prefix(3).map(\.id)))
+            await pause(1.2)
+            capture("1-spiele-eigener-filter", dir)
+        }
+        model.section = .filters
+        await pause(1.2)
+        capture("1-filter", dir)
+        model.section = .games
+        await pause(0.8)
         for id in ["doom3quest", "walkabout"] where model.games.contains(where: { $0.id == id }) {
             model.gamePath = [id]
             await pause(1.2)

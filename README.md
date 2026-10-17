@@ -124,6 +124,13 @@ that it knows which games people have that do not run yet. It is only a list: no
 account or device. *Favourites Not Downloaded* is also the quick way to see what of your favourites is still to
 fetch to this Mac.
 
+**Your own filters.** Under *Filters* in the sidebar you make filters of your own, such as “32 Bit” or “For
+Guests”. A game goes into one with the *Filter* button on its page, or select several in the overview and use
+*Filter …* in the bar below it. Above the overview each filter can then show only its games or hide them – click it
+to switch between off, show only these and hide these – so all favourites without the 32-bit ones is two clicks.
+With a filter set to show only its games, the list can be exported as well; *Filters* also exports each filter on
+its own.
+
 **Mixed reality.** The overview's *Mixed Reality* filter shows the games whose mixed-reality mode works with AVP
 Play – your own room around the game. At the moment these are TRIANGLE STRATEGY, Demeo, Richie's Plank
 Experience, LES MILLS BODYCOMBAT, DreamSpace and Cubism.

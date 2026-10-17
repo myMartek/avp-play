@@ -88,14 +88,19 @@ extension AppModel {
     func gameListText(now: Date = Date()) -> String {
         let downloaded = allGames.filter { $0.storeBytes > 0 || $0.downloaded }.map(listEntry)
         let owned = allGames.filter { owned($0) == .yes }.map(listEntry)
-        let known = Dictionary(allGames.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
-        let starred = favourites.sorted().map { id -> GameList.Entry in
-            known[id].map(listEntry) ?? GameList.Entry(title: id, storeId: DraftRecipe.appId(of: id) ?? "", version: "",
-                                                       label: L("not loaded", "nicht geladen"), downloaded: false, installed: nil)
-        }
+        let starred = listEntries(favourites)
         return GameList.text(downloaded: downloaded, owned: owned, favourites: starred, appVersion: appVersion,
                              toolchain: toolchain.map { String($0.version()) } ?? "",
                              made: now.formatted(date: .abbreviated, time: .omitted))
+    }
+
+    /// Die Einträge zu einer Menge von Spielen; eines, das der Katalog gerade nicht geladen hat, steht mit seiner Kennung da.
+    func listEntries(_ ids: Set<String>) -> [GameList.Entry] {
+        let known = Dictionary(allGames.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        return ids.sorted().map { id -> GameList.Entry in
+            known[id].map(listEntry) ?? GameList.Entry(title: id, storeId: DraftRecipe.appId(of: id) ?? "", version: "",
+                                                       label: L("not loaded", "nicht geladen"), downloaded: false, installed: nil)
+        }
     }
 
     /// Was die Übersicht gerade zeigt, in Worten: die gesetzten Filter und die Suche.
@@ -108,6 +113,13 @@ extension AppModel {
         if filterFavourites { parts.append(L("favourites", "Favoriten")) }
         if filterFavouritesMissing { parts.append(L("favourites not downloaded", "nicht geladene Favoriten")) }
         if filterMixedReality { parts.append(L("mixed reality", "Mixed Reality")) }
+        for filter in customFilters {
+            switch customFilterModes[filter.id] ?? .off {
+            case .off: break
+            case .only: parts.append(L("in “\(filter.name)”", "in „\(filter.name)“"))
+            case .hide: parts.append(L("without “\(filter.name)”", "ohne „\(filter.name)“"))
+            }
+        }
         let words = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         if !words.isEmpty { parts.append(L("search “\(words)”", "Suche „\(words)“")) }
         return parts.isEmpty ? L("All games the app has loaded", "Alle Spiele, die die App geladen hat")
@@ -127,9 +139,16 @@ extension AppModel {
     /// enthalten, nicht nur die, bis zu denen jemand geblättert hat.
     func exportGameList(shownOnly: Bool = false) {
         Task {
+            if shownOnly {
+                // Was die gesetzten Filter vollständig machen will: die Favoriten und die Spiele der eigenen Filter.
+                let unloaded = await loadMissing(listedIds)
+                writeList(shownGamesText(), name: L("games", "Spiele"))
+                if unloaded > 0 { notice = AppModel.unloadedNote(unloaded) }
+                return
+            }
             let unloaded = await loadAllFavourites()
-            writeGameList(shownOnly: shownOnly)
-            if unloaded > 0, !shownOnly || favouritesWanted {
+            writeList(gameListText(), name: L("my games", "meine Spiele"))
+            if unloaded > 0 {
                 notice = unloaded == 1
                     ? L("One favourite could not be loaded from the catalogue and is missing from the list or stands there by its number only.",
                         "Ein Favorit ließ sich nicht aus dem Katalog laden und fehlt in der Liste oder steht dort nur mit seiner Kennung.")
@@ -139,20 +158,50 @@ extension AppModel {
         }
     }
 
-    /// Ob die Übersicht gerade etwas zeigt, das sich als vollständige Liste ausgeben lässt: Was installiert, geladen
-    /// oder gemerkt ist, kennt dieser Mac ganz. Ohne einen dieser Filter zeigt die Übersicht nur den Teil des
-    /// Katalogs, der schon geladen ist – das wäre keine Liste, sondern ein Ausschnitt.
-    var canExportShown: Bool { filterInstalled || filterDownloaded || favouritesWanted }
+    /// Die Spiele eines eigenen Filters als Liste – alle, auch die, die die Übersicht gerade nicht geladen hat.
+    func exportFilter(_ filter: CustomFilter) {
+        Task {
+            let unloaded = await loadMissing(filter.games)
+            let title = L("Filter “\(filter.name)”", "Filter „\(filter.name)“")
+            let text = GameList.text(title: title, entries: listEntries(filter.games), appVersion: appVersion,
+                                     toolchain: toolchain.map { String($0.version()) } ?? "",
+                                     made: Date().formatted(date: .abbreviated, time: .omitted))
+            writeList(text, name: StoreIndex.fileSafe(filter.name))
+            if unloaded > 0 { notice = AppModel.unloadedNote(unloaded) }
+        }
+    }
 
-    private func writeGameList(shownOnly: Bool) {
+    static func unloadedNote(_ count: Int) -> String {
+        count == 1
+            ? L("One game could not be loaded from the catalogue and is missing from the list or stands there by its number only.",
+                "Ein Spiel ließ sich nicht aus dem Katalog laden und fehlt in der Liste oder steht dort nur mit seiner Kennung.")
+            : L("\(count) games could not be loaded from the catalogue and are missing from the list or stand there by their number only.",
+                "\(count) Spiele ließen sich nicht aus dem Katalog laden und fehlen in der Liste oder stehen dort nur mit ihrer Kennung.")
+    }
+
+    /// Die Spiele, die die gesetzten Filter vollständig sehen wollen, auch wenn der Katalog sie noch nicht geladen
+    /// hat: die Favoriten unter einem Favoriten-Filter und die Spiele jedes eigenen Filters auf „nur diese“.
+    var listedIds: [String] {
+        var ids = favouritesWanted ? favourites : []
+        for filter in customFilters where customFilterModes[filter.id] == .only { ids.formUnion(filter.games) }
+        return ids.sorted()
+    }
+
+    /// Ob die Übersicht gerade etwas zeigt, das sich als vollständige Liste ausgeben lässt: Was installiert, geladen,
+    /// gemerkt oder einem eigenen Filter zugeordnet ist, kennt dieser Mac ganz. Ohne einen dieser Filter zeigt die
+    /// Übersicht nur den Teil des Katalogs, der schon geladen ist – das wäre keine Liste, sondern ein Ausschnitt.
+    /// Ein eigener Filter zum Ausblenden allein macht die Liste nicht vollständig, wohl aber zusammen mit einem der anderen.
+    var canExportShown: Bool { filterInstalled || filterDownloaded || favouritesWanted || customOnlyWanted }
+
+    private func writeList(_ text: String, name: String) {
         let panel = NSSavePanel()
         panel.title = L("Export Game List", "Spieleliste exportieren")
         panel.allowedContentTypes = [.plainText]
-        panel.nameFieldStringValue = "AVP Play – " + (shownOnly ? L("games", "Spiele") : L("my games", "meine Spiele")) + " "
+        panel.nameFieldStringValue = "AVP Play – " + name + " "
             + ISO8601DateFormatter.string(from: Date(), timeZone: .current, formatOptions: [.withFullDate]) + ".txt"
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
-            try Data((shownOnly ? shownGamesText() : gameListText()).utf8).write(to: url, options: .atomic)
+            try Data(text.utf8).write(to: url, options: .atomic)
             NSWorkspace.shared.activateFileViewerSelecting([url])
         } catch {
             notice = error.localizedDescription
