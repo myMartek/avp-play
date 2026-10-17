@@ -158,6 +158,73 @@ public struct MetaClient: Sendable {
         return ListedFile(name: name, id: id, kind: kind, sizeText: size)
     }
 
+    /// Die hinterlegte Abfrage „aktive Berechtigungen des Kontos“, unter der Nummer, unter der Metas Horizon-App
+    /// (Android, `OCLibraryActiveEntitlementsListQuery`) ihre Bibliothek lädt.
+    static let libraryQuery = "35577972275181723"
+
+    /// Die Bibliothek des Kontos: alle Apps, auf die es gerade eine Berechtigung hat – gekauft, im Abo, geschenkt,
+    /// vorbestellt –, wie Metas Horizon-App sie zeigt. Für den Filter „Im Besitz“.
+    ///
+    /// Wie `builds(appId:)` steht auch diese Abfrage in keiner Dokumentation für Entwickler. Der Nutzer hat ihr am
+    /// 2026-10-17 zugestimmt (Issue #25), als zweiter solcher Abfrage. Sie liest nur; je App werden Kennung, Name und
+    /// Grund der Berechtigung übernommen. Eine Seite, die anders aussieht als erwartet, beendet die Abfrage mit einem
+    /// Fehler – keine weiteren Versuche, und keine halbe Liste, die als ganze gälte.
+    public func library(userId: String, pageSize: Int = 50, maxPages: Int = 40) async throws -> [LibraryApp] {
+        guard CatalogGame.isIdentifier(userId) else { throw MetaError.unexpected(status: 200) }
+        var apps: [LibraryApp] = []
+        var cursor: String?
+        for _ in 0..<maxPages {
+            var variables: [String: Any] = [
+                "id": userId, "count": pageSize, "platform": "ANDROID_6DOF", "orderBy": "display_name_alphabetical",
+                // Was die Horizon-App selbst ausblendet: Umgebungen, Interna, die Tastatur.
+                "excludeCategories": ["ENVIRONMENTS", "INTERNAL", "TRACKED_KEYBOARD"],
+            ]
+            if let cursor { variables["cursor"] = cursor }
+            let json = String(decoding: try JSONSerialization.data(withJSONObject: variables, options: [.sortedKeys]), as: UTF8.self)
+            let data = try await graph(path: "/graphql", form: ["doc_id": MetaClient.libraryQuery, "variables": json])
+            guard let page = MetaClient.libraryPage(inAnswer: data) else { throw MetaError.unexpected(status: 200) }
+            apps += page.apps
+            guard let next = page.next else { return MetaClient.unique(apps) }
+            cursor = next
+        }
+        // So viele Seiten hat kein Konto; was danach käme, fehlte. Lieber keine Liste als eine falsche.
+        throw MetaError.unexpected(status: 200)
+    }
+
+    /// Eine Seite der Bibliothek: `data.node.app_entitlements` mit `edges[].node.item` (`id`, `display_name`,
+    /// `entitlement.grant_reason`) und `page_info`. `next` ist die Marke der Folgeseite, `nil` am Ende.
+    /// `nil` für die ganze Seite, wenn sie nicht so aussieht – auch bei einer Folgeseite ohne brauchbare Marke.
+    static func libraryPage(inAnswer data: Data) -> (apps: [LibraryApp], next: String?)? {
+        guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let payload = root["data"] as? [String: Any], let node = payload["node"] as? [String: Any],
+              let connection = node["app_entitlements"] as? [String: Any],
+              let edges = connection["edges"] as? [[String: Any]],
+              let info = connection["page_info"] as? [String: Any] else { return nil }
+        var apps: [LibraryApp] = []
+        for edge in edges {
+            guard let item = (edge["node"] as? [String: Any])?["item"] as? [String: Any] else { continue }
+            guard let id = item["id"] as? String, CatalogGame.isIdentifier(id) else { continue }
+            let title = (item["display_name"] as? String).map { String($0.prefix(200)) } ?? ""
+            let grant = ((item["entitlement"] as? [String: Any])?["grant_reason"] as? String).flatMap { reason in
+                reason.count <= 64 && reason.allSatisfy { $0.isASCII && ($0.isUppercase || $0.isNumber || $0 == "_") } ? reason : nil
+            }
+            apps.append(LibraryApp(appId: id, title: title, grant: grant))
+        }
+        guard (info["has_next_page"] as? Bool) == true else { return (apps, nil) }
+        guard let next = info["end_cursor"] as? String, isPageMark(next) else { return nil }
+        return (apps, next)
+    }
+
+    /// Eine Seitenmarke ist eine Zeile aus Buchstaben, Ziffern und `-_=`, wie Meta sie schickt; anderes geht nicht zurück.
+    static func isPageMark(_ s: String) -> Bool {
+        (1...2048).contains(s.count) && s.allSatisfy { $0.isASCII && ($0.isLetter || $0.isNumber || "-_=".contains($0)) }
+    }
+
+    private static func unique(_ apps: [LibraryApp]) -> [LibraryApp] {
+        var seen = Set<String>()
+        return apps.filter { seen.insert($0.appId).inserted }
+    }
+
     /// Die vom Store bestätigten Käufe innerhalb einer App (SKUs). Abgelaufene Käufe zählen nicht.
     public func purchases(appId: String, now: Date = Date()) async throws -> [String] {
         struct Page: Decodable {

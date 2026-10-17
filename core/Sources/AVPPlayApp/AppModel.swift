@@ -26,6 +26,9 @@ struct Game: Identifiable {
     var sources: [Recipe.Source] = []
     /// Die Versionscodes, unter denen dasselbe Spiel aus einer anderen Kaufquelle installiert wäre.
     var otherSourceBuilds: [Int] = []
+    /// Unter welchen Schlüsseln (`OwnershipCache.key`) das Spiel bei seinen Kaufquellen geführt wird – bei Meta und,
+    /// wo es ein Rezept dafür gibt, bei Steam. Leer bei einem Platzhalter aus dem Katalog: dann gilt sein Rezept.
+    var ownershipKeys: [String] = []
     /// Ein Versuch, dessen APK sich als 2D-App herausgestellt hat (`FlatApp`), kein VR-Spiel.
     var flatApp = false
     var id: String { recipe.id }
@@ -172,6 +175,11 @@ final class AppModel: ObservableObject {
     /// Metas letzte Antworten auf die Besitzfrage, je Store-App.
     @Published var ownership: [String: OwnershipRecord] = [:]
     @Published var checkingOwnership = false
+    /// Die zuletzt geladene Bibliothek des Meta-Kontos (für „Im Besitz“), ihre Kennungen, und ob sie gerade geladen wird.
+    @Published var library: MetaLibrary? { didSet { libraryIds = library?.appIds ?? [] } }
+    private(set) var libraryIds: Set<String> = []
+    @Published var loadingLibrary = false
+    @Published var libraryProblem: String?
     /// Spiele, für die gerade einzeln bei Meta nachgefragt wird („Kauf prüfen“), und was dabei zuletzt zu sagen war.
     @Published var checkingPurchase: Set<String> = []
     @Published var purchaseNote: [String: String] = [:]
@@ -314,6 +322,8 @@ final class AppModel: ObservableObject {
     @AppStorage("filterFavouritesMissing") var filterFavouritesMissing = false
     /// Nur Spiele mit einem Mixed-Reality-Modus, der mit AVP Play funktioniert.
     @AppStorage("filterMixedReality") var filterMixedReality = false
+    /// Nur Spiele, die dem Nutzer gehören: in der Bibliothek seines Meta-Kontos oder von Steam bestätigt.
+    @AppStorage("filterOwned") var filterOwned = false
     /// Ob ein Filter gesetzt ist, der die Favoriten braucht – dann sollen alle dastehen, auch die, bis zu denen der
     /// Katalog noch nicht geladen ist.
     var favouritesWanted: Bool { filterFavourites || filterFavouritesMissing }
@@ -414,8 +424,19 @@ final class AppModel: ObservableObject {
 
     func owned(_ game: Game) -> Owned {
         guard let key = OwnershipCache.key(for: game.recipe) else { return .notApplicable }
-        guard let record = ownership[key] else { return .unknown }
+        // Ohne eigene Antwort sagt die Bibliothek des Meta-Kontos, ob es dazugehört – nur ja, nie nein.
+        guard let record = ownership[key] else { return libraryIds.contains(key) ? .yes : .unknown }
         return record.owned ? .yes : .no
+    }
+
+    /// Gehört das Spiel dem Nutzer, gleich bei welcher Kaufquelle? Für den Filter „Im Besitz“.
+    ///
+    /// Je Quelle gilt die eigene Antwort auf die Besitzfrage – dieselbe, die vor jedem Laden gestellt wird. Wo es keine
+    /// gibt, gilt die Bibliothek des Meta-Kontos. Sie führt auch Apps, die Meta auf die einzelne Frage nicht bestätigt
+    /// (gesehen 2026-10-17 bei einer kostenlosen Beta); die stünden sonst unter „Im Besitz“ und ließen sich nicht laden.
+    func ownedAnywhere(_ game: Game) -> Bool {
+        let keys = game.ownershipKeys.isEmpty ? OwnershipCache.key(for: game.recipe).map { [$0] } ?? [] : game.ownershipKeys
+        return keys.contains { ownership[$0]?.owned ?? libraryIds.contains($0) }
     }
 
     /// Das Rezept eines Spiels für eine Kaufquelle: das geltende, das mitgelieferte oder das aus `recipes/sources`.
@@ -542,6 +563,7 @@ final class AppModel: ObservableObject {
                 && (!filterFavourites || favourite)
                 && (!filterFavouritesMissing || (favourite && !downloaded))
                 && (!filterMixedReality || game.mixedReality)
+                && (!filterOwned || ownedAnywhere(game))
                 && (words.isEmpty || game.recipe.title.lowercased().contains(words) || game.recipe.package.lowercased().contains(words))
             else { return nil }
             // Geprüftes zuerst, dann schon Nachgeschlagenes, dann was Nutzer bestätigen, das Ungetestete, zuletzt
@@ -571,9 +593,12 @@ final class AppModel: ObservableObject {
         ownership = known
         let due = account == .signedIn
             ? games.compactMap { $0.recipe.store.appId }.filter { force || OwnershipCache.needsCheck(known[$0]) } : []
+        // Steam: die Spiele, bei denen Steam gewählt ist – und mit „Im Besitz“ jedes, für das es ein Steam-Rezept gibt.
+        let steamApps = filterOwned
+            ? games.flatMap(\.ownershipKeys).filter { $0.hasPrefix("steam:") }.map { String($0.dropFirst("steam:".count)) }
+            : games.filter { $0.recipe.source == .steam }.compactMap { $0.recipe.store.steamAppId }
         let steamDue = steamSignedIn
-            ? games.filter { $0.recipe.source == .steam }.compactMap { $0.recipe.store.steamAppId }
-                .filter { force || OwnershipCache.needsCheck(known["steam:\($0)"]) } : []
+            ? Array(Set(steamApps)).sorted().filter { force || OwnershipCache.needsCheck(known["steam:\($0)"]) } : []
         guard !due.isEmpty || !steamDue.isEmpty else { return }
         checkingOwnership = true
         let steamAccount = steamAccount
@@ -953,7 +978,9 @@ final class AppModel: ObservableObject {
         saveSnapshots = s.saves
         reloadJobs()
         ownership = OwnershipCache(store: paths.store).load()
+        if account != .signedOut { library = MetaLibraryCache(store: paths.store).load() }
         checkOwnership()
+        if filterOwned { loadLibrary() }
         // Beim ersten Start dorthin, wo etwas zu tun ist. Ein ausgeschaltetes Headset zählt nicht dazu.
         if !routed {
             routed = true
@@ -990,6 +1017,7 @@ final class AppModel: ObservableObject {
             await MainActor.run {
                 self.account = state
                 self.checkOwnership()
+                if self.filterOwned { self.loadLibrary() }
             }
         }
     }
@@ -999,6 +1027,8 @@ final class AppModel: ObservableObject {
         account = .signedOut
         OwnershipCache(store: paths.store).clear()
         ownership = [:]
+        MetaLibraryCache(store: paths.store).clear()
+        library = nil
     }
 
     // MARK: Metas Werkzeug

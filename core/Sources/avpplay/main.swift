@@ -101,6 +101,7 @@ avpplay – command line for the AVP Play core library
   avpplay logout                               delete the stored Meta token
   avpplay account                              check the stored Meta token
   avpplay owns <id>                            does the account own the game?
+  avpplay library                              the apps in the Meta account's library (store app ID, name, why it is there)
   avpplay files <build ID> [--details]         the files of a build (Meta's tool; its build details if the tool can't find it)
   avpplay steam setup|login <name>|logout      Valve's SteamCMD: fetch it, sign in to Steam (you type the password into Valve's tool), sign out
   avpplay steam fetch <id> --steam-account <name> [--with <file name>]   get the files a recipe needs from your own Steam purchase
@@ -170,6 +171,7 @@ avpplay – Kommandozeile zur Kern-Bibliothek von AVP Play
   avpplay logout                               hinterlegten Meta-Token löschen
   avpplay account                              hinterlegten Meta-Token prüfen
   avpplay owns <id>                            Besitzt das Konto das Spiel?
+  avpplay library                              die Apps in der Bibliothek des Meta-Kontos (Store-App-ID, Name, warum sie dort ist)
   avpplay files <Build-ID> [--details]         die Dateien eines Builds (Metas Werkzeug; findet es ihn nicht, die Build-Details)
   avpplay steam setup|login <Name>|logout      Valves SteamCMD: holen, bei Steam anmelden (das Passwort tippst du in Valves Werkzeug), abmelden
   avpplay steam fetch <id> --steam-account <Name> [--with <Dateiname>]   die Dateien eines Rezepts aus dem eigenen Steam-Kauf holen
@@ -503,6 +505,17 @@ case "owns":
         print(try await client.ownsApp(appId: app, userId: user)
               ? L("\(r.title): owned.", "\(r.title): im Besitz.")
               : L("\(r.title): not owned.", "\(r.title): nicht im Besitz."))
+    }
+    catch { fail("\(error)") }
+
+case "library":
+    let (client, user) = await signedIn(o)
+    do {
+        let apps = try await client.library(userId: user)
+        for app in apps.sorted(by: { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }) {
+            print("\(app.appId)\t\(app.title)\t\(app.grant ?? "")")
+        }
+        print(L("\(apps.count) apps.", "\(apps.count) Apps."))
     }
     catch { fail("\(error)") }
 

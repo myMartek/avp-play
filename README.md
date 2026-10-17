@@ -124,6 +124,11 @@ that it knows which games people have that do not run yet. It is only a list: no
 account or device. *Favourites Not Downloaded* is also the quick way to see what of your favourites is still to
 fetch to this Mac.
 
+**Owned.** The overview's *Owned* filter shows only the games you own: the ones in your Meta account's library
+(the list Meta's Horizon app shows, read with your Meta sign-in at most once an hour while the filter is on) and,
+for games that can also come from Steam, the ones in your Steam account. Where Meta has answered the ownership
+question for a single game, that answer counts. `avpplay library` prints the same list on the command line.
+
 **Mixed reality.** The overview's *Mixed Reality* filter shows the games whose mixed-reality mode works with AVP
 Play – your own room around the game. At the moment these are TRIANGLE STRATEGY, Demeo, Richie's Plank
 Experience, LES MILLS BODYCOMBAT and DreamSpace.
@@ -235,7 +240,9 @@ their own recipe.
   names one. Other games without a picture keep a coloured tile with their name. When a game is installed, its
   icon and start picture come from the store page too, and from the catalogue service when the page gave none.
 - **Ownership** is asked of Meta before anything is downloaded, and once a day so the app can show which games
-  are yours. A game that counted as not owned is asked about again within the hour, and **Check Purchase** on a
+  are yours. With the *Owned* filter on, the app also reads your account's library, the way Meta's Horizon app
+  does, at most once an hour; it keeps the list (app number, name, why it is in the account) on your Mac and
+  forgets it when you sign out. A game that counted as not owned is asked about again within the hour, and **Check Purchase** on a
   game's page asks right away. Add-on content is downloaded only for purchases Meta confirms. Bought
   something later? **Sync DLCs** on the game's page asks again, downloads what is new and adds it to the installed
   game without building it again.

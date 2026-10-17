@@ -11,6 +11,9 @@ struct GamesView: View {
         Text(L("Show only:", "Nur zeigen:")).foregroundStyle(.secondary)
         Toggle(L("Verified", "Geprüft"), isOn: $model.filterVerified)
         if model.onlineCatalog { Toggle(L("Community Verified", "Von Nutzern bestätigt"), isOn: $model.filterCommunity) }
+        Toggle(L("Owned", "Im Besitz"), isOn: $model.filterOwned)
+            .help(L("Games you own: in the library of your Meta account (as Meta's Horizon app shows it) or, for games that can come from Steam, in your Steam account. Needs the sign-in under “Setup”.",
+                    "Spiele, die dir gehören: in der Bibliothek deines Meta-Kontos (wie Metas Horizon-App sie zeigt) oder, bei Spielen, die es auch über Steam gibt, in deinem Steam-Konto. Braucht die Anmeldung unter „Einrichtung“."))
         Toggle(L("Installed", "Installiert"), isOn: $model.filterInstalled)
         Toggle(L("Downloaded, Not Installed", "Geladen, nicht installiert"), isOn: $model.filterDownloaded)
             .help(L("Games whose files are completely on this Mac but which are not on the Vision Pro. While the Vision Pro is not reachable, every downloaded game is shown.",
@@ -40,6 +43,16 @@ struct GamesView: View {
         let updatable = model.updatable.count
         if updatable > 1 {
             Button(L("Update All (\(updatable))", "Alle aktualisieren (\(updatable))")) { model.updateAll() }
+        }
+        if model.loadingLibrary {
+            ProgressView().controlSize(.small)
+            Text(L("Loading your Meta library …", "Deine Meta-Bibliothek wird geladen …")).font(.callout).foregroundStyle(.secondary)
+        } else if model.filterOwned, let problem = model.libraryProblem {
+            Label(L("Library not loaded", "Bibliothek nicht geladen"), systemImage: "exclamationmark.triangle")
+                .font(.callout).foregroundStyle(.orange).help(problem)
+        } else if model.filterOwned, model.account != .signedIn, !model.steamSignedIn {
+            Text(L("Sign in under “Setup” to see what you own.", "Melde dich unter „Einrichtung“ an, um zu sehen, was dir gehört."))
+                .font(.callout).foregroundStyle(.secondary)
         }
         if model.checkingOwnership {
             ProgressView().controlSize(.small)
@@ -113,6 +126,13 @@ struct GamesView: View {
             }
             // Unter einem Filter über die Favoriten sollen alle stehen, auch die, bis zu denen der Katalog noch nicht geladen ist.
             .task(id: model.favouritesWanted) { if model.favouritesWanted { await model.loadAllFavourites() } }
+            // Unter „Im Besitz“: die Bibliothek des Meta-Kontos laden und Steam für die Spiele mit Steam-Rezept fragen.
+            .onChange(of: model.filterOwned, initial: true) {
+                if model.filterOwned {
+                    model.loadLibrary()
+                    model.checkOwnership()
+                }
+            }
             .navigationDestination(for: String.self) { id in
                 if let game = model.allGames.first(where: { $0.id == id }) { GameDetail(game: game) }
             }

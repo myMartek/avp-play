@@ -33,6 +33,7 @@ extension AppModel {
                 catalogProblem = nil
                 askedOwn = []
                 loadOwnCatalogEntries()
+                loadOwnedCatalogEntries()
             } catch {
                 catalogProblem = "\(error)"
             }
@@ -73,6 +74,65 @@ extension AppModel {
         return missing().count
     }
 
+    // MARK: Im Besitz
+
+    /// Lädt die Bibliothek des Meta-Kontos – höchstens einmal in der Stunde, `force` sofort – und holt dann beim
+    /// Katalog, was er über die Spiele darin sagt, die er noch nicht geliefert hat: Unter „Im Besitz“ sollen alle
+    /// stehen, nicht nur die, bis zu denen jemand geblättert hat. Steam fragt der Durchgang in `checkOwnership`.
+    ///
+    /// Wie überall bei Meta: erst `/me`, der Token nur im Kopf der Anfrage, und beim ersten unerwarteten Ergebnis ist
+    /// Schluss – die zuletzt geladene Bibliothek bleibt dann stehen.
+    func loadLibrary(force: Bool = false) {
+        guard account == .signedIn, storeBlocker == nil, !loadingLibrary else { return }
+        if !force, let library, !library.isStale() {
+            loadOwnedCatalogEntries()
+            return
+        }
+        loadingLibrary = true
+        let cache = MetaLibraryCache(store: paths.store)
+        Task.detached {
+            var problem: String?
+            var fresh: MetaLibrary?
+            do {
+                let client = MetaClient(token: try TokenStore().read())
+                let user = try await client.me()
+                let library = MetaLibrary(checked: Date(), apps: try await client.library(userId: user))
+                try? cache.save(library)
+                fresh = library
+            } catch {
+                problem = Redaction.redact("\(error)")
+            }
+            let loaded = fresh
+            let note = problem
+            await MainActor.run {
+                self.loadingLibrary = false
+                self.libraryProblem = note
+                if let loaded { self.library = loaded }
+                self.loadOwnedCatalogEntries()
+            }
+        }
+    }
+
+    /// Fragt den Katalog nach den Spielen der Bibliothek, die er noch nicht geliefert hat – jede Kennung einmal, wie
+    /// bei den eigenen und gemerkten Spielen. Was er nicht kennt (Apps, Videos, Systemprogramme), fehlt einfach.
+    func loadOwnedCatalogEntries() {
+        guard onlineCatalog, !libraryIds.isEmpty else { return }
+        let known = Set(catalog.map(\.appId)).union(games.compactMap { $0.recipe.catalogAppId })
+        let missing = libraryIds.subtracting(known).subtracting(askedOwn).sorted()
+        guard !missing.isEmpty else { return }
+        askedOwn.formUnion(missing)
+        Task {
+            do { merge(try await catalogClient.games(appIds: missing)) } catch { askedOwn.subtract(missing) }
+        }
+    }
+
+    /// Nach einer neuen Anmeldung: Die Bibliothek gehört zum vorigen Konto.
+    func forgetLibrary() {
+        MetaLibraryCache(store: paths.store).clear()
+        library = nil
+        libraryProblem = nil
+    }
+
     /// Sucht im Katalog. Der Dienst lernt dabei neue Spiele kennen; hier kommen sie als „ungetestet“ an.
     func searchCatalog() {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -95,9 +155,9 @@ extension AppModel {
 
     /// Gibt es zu dem, was gerade gezeigt wird, noch eine Seite? Bei einer Suche die nächsten Treffer, sonst die
     /// nächste Seite des ganzen Katalogs. Mit einem Filter, der nur auf diesem Mac entschieden wird, nicht: was
-    /// installiert oder gemerkt ist, steht schon vollständig da.
+    /// installiert oder gemerkt ist, steht schon vollständig da – und was dem Nutzer gehört, holt `loadLibrary` gezielt.
     var canLoadMore: Bool {
-        guard onlineCatalog, !filterInstalled, !favouritesWanted, !filterDownloaded else { return false }
+        guard onlineCatalog, !filterInstalled, !favouritesWanted, !filterDownloaded, !filterOwned else { return false }
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard query.isEmpty else { return query == searchedQuery && searchMore }
         // Geprüftes und von Nutzern Bestätigtes steht im Katalog vorn. Ist einer dieser Filter gesetzt, lohnt

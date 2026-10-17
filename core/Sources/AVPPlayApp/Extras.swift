@@ -108,6 +108,7 @@ extension AppModel {
         if filterFavourites { parts.append(L("favourites", "Favoriten")) }
         if filterFavouritesMissing { parts.append(L("favourites not downloaded", "nicht geladene Favoriten")) }
         if filterMixedReality { parts.append(L("mixed reality", "Mixed Reality")) }
+        if filterOwned { parts.append(L("owned", "im Besitz")) }
         let words = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         if !words.isEmpty { parts.append(L("search “\(words)”", "Suche „\(words)“")) }
         return parts.isEmpty ? L("All games the app has loaded", "Alle Spiele, die die App geladen hat")
