@@ -44,7 +44,8 @@ extension AppModel {
     /// damit ihr Kennzeichen stimmt, auch wenn ihre Seite des Katalogs nie geladen wird. Jede Kennung nur einmal.
     func loadOwnCatalogEntries() {
         guard onlineCatalog, catalogNextPage > 0 else { return }
-        let mine = Set(games.compactMap { $0.recipe.catalogAppId } + favourites.compactMap(DraftRecipe.appId(of:)))
+        let mine = Set(games.compactMap { $0.recipe.catalogAppId } + favourites.compactMap(DraftRecipe.appId(of:))
+                       + customFilters.flatMap(\.games).compactMap(DraftRecipe.appId(of:)))
         let missing = mine.subtracting(catalog.map(\.appId)).subtracting(askedOwn).sorted()
         guard !missing.isEmpty else { return }
         askedOwn.formUnion(missing)
@@ -58,10 +59,15 @@ extension AppModel {
     /// Liste der Favoriten vollständig ist, auch wenn die Übersicht erst einen Teil des Katalogs geladen hat.
     /// Sagt, wie viele danach noch fehlen (kein Netz, Katalog abgeschaltet, vom Katalog nicht mehr geführt).
     @discardableResult
-    func loadAllFavourites() async -> Int {
+    func loadAllFavourites() async -> Int { await loadMissing(favourites) }
+
+    /// Dasselbe für beliebige Spiele – etwa die eines eigenen Filters.
+    @discardableResult
+    func loadMissing<S: Sequence>(_ ids: S) async -> Int where S.Element == String {
+        let ids = Array(ids)
         func missing() -> [String] {
             let loaded = Set(catalog.map(\.appId)).union(games.compactMap { $0.recipe.catalogAppId })
-            return favourites.compactMap(DraftRecipe.appId(of:)).filter { !loaded.contains($0) }.sorted()
+            return Set(ids.compactMap(DraftRecipe.appId(of:))).filter { !loaded.contains($0) }.sorted()
         }
         let wanted = missing()
         guard !wanted.isEmpty else { return 0 }
@@ -97,7 +103,7 @@ extension AppModel {
     /// nächste Seite des ganzen Katalogs. Mit einem Filter, der nur auf diesem Mac entschieden wird, nicht: was
     /// installiert oder gemerkt ist, steht schon vollständig da.
     var canLoadMore: Bool {
-        guard onlineCatalog, !filterInstalled, !favouritesWanted, !filterDownloaded else { return false }
+        guard onlineCatalog, !filterInstalled, !favouritesWanted, !filterDownloaded, !customOnlyWanted else { return false }
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard query.isEmpty else { return query == searchedQuery && searchMore }
         // Geprüftes und von Nutzern Bestätigtes steht im Katalog vorn. Ist einer dieser Filter gesetzt, lohnt

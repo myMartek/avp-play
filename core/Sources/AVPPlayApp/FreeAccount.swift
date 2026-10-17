@@ -285,6 +285,12 @@ struct SelectionBar: View {
                     .font(.callout).foregroundStyle(.secondary)
             }
             Spacer()
+            FilterMenu(ids: games.map(\.id)) {
+                Label(L("Filter …", "Filter …"), systemImage: "line.3.horizontal.decrease.circle")
+            }
+            .fixedSize()
+            .help(L("Add the selected games to a filter of your own, such as “32 Bit”, or take them out of one.",
+                    "Die gewählten Spiele einem eigenen Filter zuordnen, etwa „32 Bit“, oder sie aus einem herausnehmen."))
             Button(L("Clear Selection", "Auswahl aufheben")) { model.selection = [] }
             Button(L("Download Only", "Nur herunterladen")) { model.runBulk(.download) }
                 .help(L("Fetches the files of the selected games to this Mac. Needs only the account the games were bought with – no Xcode, no Apple team, no Vision Pro.",
