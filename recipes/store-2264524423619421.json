@@ -1,0 +1,42 @@
+{
+  "schema": 1,
+  "id": "store-2264524423619421",
+  "title": "Cubism",
+  "package": "com.tvb.cubism",
+  "versionName": "1.8.0",
+  "versionCode": 361,
+  "store": {
+    "appId": "2264524423619421"
+  },
+  "toolchain": {
+    "target": "x2264524423619421",
+    "minCommit": "07da7ed"
+  },
+  "files": [
+    {
+      "dest": "",
+      "id": "31292070773771400",
+      "localName": "x2264524423619421.apk",
+      "name": "Cubism.apk",
+      "required": true,
+      "role": "apk",
+      "size": 148814573,
+      "sha256": "caf8fa34a373cecc808a20dac85377f2e09b6fe46e75c02d61d79f5ae012b96f"
+    }
+  ],
+  "status": {
+    "playability": "verified",
+    "download": "listed",
+    "notes": [
+      {
+        "en": "Marked as verified by the project on 2026-10-17. File list as Meta's tool reports it for this build; 1 of 1 checksums recorded from a download.",
+        "de": "Vom Projekt am 2026-10-17 als geprüft markiert. Dateiliste, wie Metas Werkzeug sie für diesen Build nennt; 1 von 1 Prüfsummen aus einem Download erfasst."
+      },
+      {
+        "en": "Cubism. Tested by the project on an Apple Vision Pro: the game runs. Its mixed-reality mode shows your room behind the puzzle. Runs with community fix 52 (the game's own OVRPlugin version, an offline player, passthrough). Needs toolchain 07da7ed or newer.",
+        "de": "Cubism. Vom Projekt auf einer Apple Vision Pro getestet: Das Spiel läuft. Sein Mixed-Reality-Modus zeigt deinen Raum hinter dem Puzzle. Läuft mit Community-Fix 52 (die OVRPlugin-Version des Spiels, ein Offline-Spieler, Passthrough). Braucht Toolchain 07da7ed oder neuer."
+      }
+    ]
+  },
+  "mixedReality": true
+}
