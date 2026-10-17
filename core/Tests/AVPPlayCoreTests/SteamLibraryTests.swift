@@ -1,4 +1,6 @@
 import XCTest
+import CoreGraphics
+import ImageIO
 @testable import AVPPlayCore
 
 /// Die Steam-Spiele mit Android-Fassung: was aus SteamCMDs Ausgaben gelesen wird, und wie aus einem Depot ein
@@ -312,5 +314,34 @@ final class SteamArtTests: XCTestCase {
     private actor Asked {
         var all: [String] = []
         func add(_ s: String) { all.append(s) }
+    }
+}
+
+/// Icon und Startbild eines installierten Steam-Spiels aus Bibliotheksbild und Logo von Steam.
+final class SteamIconArtTests: XCTestCase {
+    private func png(width: Int, height: Int) -> Data {
+        let ctx = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
+                            space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+        ctx.setFillColor(CGColor(red: 0.8, green: 0.1, blue: 0.1, alpha: 1))
+        ctx.fill(CGRect(x: 0, y: 0, width: width, height: height))
+        let out = NSMutableData()
+        let dest = CGImageDestinationCreateWithData(out, "public.png" as CFString, 1, nil)!
+        CGImageDestinationAddImage(dest, ctx.makeImage()!, nil)
+        CGImageDestinationFinalize(dest)
+        return out as Data
+    }
+
+    func testSteamGameUsesFetchedLibraryArt() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("qi-steamicon-\(UUID().uuidString)", isDirectory: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: dir) }
+        let store = ContentStore(root: dir)
+        let recipe = SteamDraft.placeholder(app: SteamAndroidApp(appId: "999999901", name: "Test", depots: [], apks: []))
+        XCTAssertNil(Toolchain.chooseIcon(recipe: recipe, store: store))
+        let folder = Toolchain.steamArtURL(store: store, recipe: recipe).appendingPathComponent("999999901", isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        try png(width: 1920, height: 620).write(to: folder.appendingPathComponent("library_hero.jpg"))
+        try png(width: 640, height: 360).write(to: folder.appendingPathComponent("logo.png"))
+        guard case .layered? = Toolchain.chooseIcon(recipe: recipe, store: store)?.source else { return XCTFail("kein Icon aus den Steam-Bildern") }
+        XCTAssertNotNil(StartHero.choose(recipe: recipe, store: store))
     }
 }

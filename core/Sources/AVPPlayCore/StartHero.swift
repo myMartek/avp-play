@@ -26,7 +26,9 @@ public enum StartHero {
         if let wide = usable(storeURL(store: store, recipe: recipe)) {
             return (wide, L("cover image (landscape) from the Meta Store", "Titelbild (quer) aus dem Meta-Store"))
         }
-        if let steam = recipe.icon?.steamAppId, case .layered(let background, _)? = AppIcon.steamLibrary(appId: steam) {
+        if let steam = recipe.icon?.steamAppId ?? recipe.store.steamAppId,
+           case .layered(let background, _)? = AppIcon.steamLibrary(appId: steam, cacheRoots: AppIcon.steamCacheRoots
+                                                                       + [Toolchain.steamArtURL(store: store, recipe: recipe)]) {
             return (background, L("Steam library", "Steam-Bibliothek"))
         }
         if let square = usable(Toolchain.storeCoverURL(store: store, recipe: recipe)) {

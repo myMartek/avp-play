@@ -142,6 +142,27 @@ public struct SteamArt: Sendable {
         return url
     }
 
+    /// Bibliotheksbild (breit, für den Hintergrund) und freigestelltes Logo, wie sie der Steam-Client für seine
+    /// Bibliothek lädt – daraus entstehen Icon und Startbild eines installierten Steam-Spiels. `nil`, wenn eins fehlt
+    /// (neuere Spiele legen sie unter einem Pfad mit Prüfsumme ab, den keine öffentliche Schnittstelle nennt).
+    public func libraryArt(steamAppId: String) async -> (hero: Data, logo: Data)? {
+        guard SteamCatalogGame.isIdentifier(steamAppId) else { return nil }
+        let config = URLSessionConfiguration.ephemeral
+        config.httpCookieStorage = nil
+        config.urlCache = nil
+        config.timeoutIntervalForRequest = 30
+        let session = URLSession(configuration: config)
+        defer { session.finishTasksAndInvalidate() }
+        func fetch(_ name: String) async -> Data? {
+            guard let url = URL(string: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/\(steamAppId)/\(name)"),
+                  let (data, response) = try? await session.data(from: url), (response as? HTTPURLResponse)?.statusCode == 200,
+                  data.count <= 10_000_000, AppIcon.image(data) != nil else { return nil }
+            return data
+        }
+        guard let hero = await fetch("library_hero.jpg"), let logo = await fetch("logo.png") else { return nil }
+        return (hero, logo)
+    }
+
     public func landscapeCover(steamAppId: String) async -> Data? {
         guard SteamCatalogGame.isIdentifier(steamAppId) else { return nil }
         let config = URLSessionConfiguration.ephemeral

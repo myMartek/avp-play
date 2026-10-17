@@ -248,6 +248,8 @@ their own recipe.
   copy is kept in a cache (`~/Library/Caches/AVPPlay`) that the *Data* page can empty; Settings › Pictures turns
   this off. Steam games without a Meta Store page get their picture from Valve's public image server
   (steamstatic.com, for newer games via the public store API store.steampowered.com), likewise without any sign-in.
+  An installed Steam game takes its icon and start image from the Steam client's picture cache on this Mac, or
+  else from Valve's library picture and logo on the same server.
   A few store pages show no picture to a visitor who is not signed in (Richie's Plank Experience);
   for such a game the picture comes from the project's catalogue service, which is asked only when the catalogue
   names one. Other games without a picture keep a coloured tile with their name. When a game is installed, its
