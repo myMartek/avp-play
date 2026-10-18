@@ -1,0 +1,51 @@
+{
+ "files": [
+  {
+   "dest": "",
+   "id": "28244572511890636",
+   "localName": "x2436558143118760.apk",
+   "name": "SynthRiders-Quest-3.6.6a1-1177.apk",
+   "required": true,
+   "role": "apk",
+   "size": 152817954,
+   "sha256": "1fd7c839ad696123f8a3b4c10b7642f2f02409e1ce7a82c9b8f44d5fa64877b6"
+  },
+  {
+   "dest": "@obb",
+   "id": "28244568448557709",
+   "name": "main.1177.com.kluge.SynthRiders.obb",
+   "required": true,
+   "role": "main-obb",
+   "size": 3418792351,
+   "sha256": "d95bceedc6990642b632e04571438f6be175aa58bfab0d190689ecf52695ce76"
+  }
+ ],
+ "id": "store-2436558143118760",
+ "package": "com.kluge.SynthRiders",
+ "schema": 1,
+ "status": {
+  "playability": "verified",
+  "download": "proven",
+  "notes": [
+   {
+    "en": "Marked as verified by the project on 2026-10-19. File list as Meta's tool reports it for this build; 2 of 2 checksums recorded from a download.",
+    "de": "Vom Projekt am 2026-10-19 als geprüft markiert. Dateiliste, wie Metas Werkzeug sie für diesen Build nennt; 2 von 2 Prüfsummen aus einem Download erfasst."
+   },
+   {
+    "en": "Synth Riders. Tested by the project on an Apple Vision Pro: the game runs, including its mixed-reality mode, whose effects land on the room's real walls (taken from the room scan). Needs toolchain 3d43ca1 or newer.",
+    "de": "Synth Riders. Vom Projekt auf einer Apple Vision Pro getestet: Das Spiel läuft, auch im Mixed-Reality-Modus; dessen Effekte liegen auf den echten Wänden des Raums (aus dem Raum-Scan). Braucht Toolchain 3d43ca1 oder neuer."
+   }
+  ]
+ },
+ "store": {
+  "appId": "2436558143118760"
+ },
+ "title": "Synth Riders",
+ "toolchain": {
+  "minCommit": "3d43ca1",
+  "target": "x2436558143118760"
+ },
+ "versionCode": 1177,
+ "versionName": "3.6.6a1",
+ "mixedReality": true
+}
