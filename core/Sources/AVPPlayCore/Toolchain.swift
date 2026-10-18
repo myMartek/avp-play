@@ -331,6 +331,16 @@ public struct Toolchain: Sendable {
         return text.contains(Toolchain.roomMeasuringVariable)
     }
 
+    /// Der Name, unter dem eine Installation sagt, mit welcher Sprache ein Spiel beginnt (`GameLanguage`; im Spiel
+    /// `KLGameLanguageDefault` und „Sprache des Spiels“). Was im Spiel gewählt ist, gilt danach, auch nach Updates.
+    public static let gameLanguageVariable = "KLEPTON_GAME_LANGUAGE"
+
+    /// Ob diese Toolchain die Sprache als Auswahl hat und eine Installation sie vorgeben kann.
+    public var supportsGameLanguagePreset: Bool {
+        guard let text = try? String(contentsOf: root.appendingPathComponent("visionos/gen_xcodeproj.py"), encoding: .utf8) else { return false }
+        return text.contains(Toolchain.gameLanguageVariable)
+    }
+
     /// Der Name, unter dem eine Installation die Auflösung vorgibt, mit der ein Spiel beginnt (ein Bruchteil wie
     /// `0.75`; im Spiel `KLRenderScaleDefault`, sonst `render_scale` des Targets). Was der Spieler im Spiel einstellt,
     /// gilt danach wie immer (`klepton.renderScale`).
