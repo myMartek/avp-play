@@ -7,8 +7,25 @@ It downloads your purchased Quest games from Meta with your own account, transla
 account and copies them to your headset. No game content is distributed with this project, and nothing is
 downloaded that Meta does not confirm you have purchased.
 
-**New here?** The [user guide](docs/guide/README.md) explains setup and everyday
+**New here?** The [user guide in the wiki](https://github.com/myMartek/avp-play/wiki) explains setup and everyday
 use step by step, in simple words – in English and German.
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/app-games.jpg" alt="AVP Play on the Mac: the list of games with their labels and the Vision Pro at the bottom of the sidebar"></td>
+    <td width="50%"><img src="docs/images/app-game-page.jpg" alt="AVP Play on the Mac: the page of Beat Saber with its version, files and the state on the Vision Pro"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>The games on the Mac – the ones the project tested first</sub></td>
+    <td align="center"><sub>A game's page: version, files, what is on the Vision Pro</sub></td>
+  </tr>
+  <tr>
+    <td colspan="2"><img src="docs/images/vision-pro-beat-saber.jpg" alt="Beat Saber's start window on the Apple Vision Pro with Start, Settings, Measure room and the play-area choices"></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><sub>Beat Saber on the Apple Vision Pro: the start window before the game opens</sub></td>
+  </tr>
+</table>
 
 > AVP Play is made by one person and tested on one Mac with one Vision Pro, plus what other players report.
 > Expect rough edges, and please report what happens on your setup.
