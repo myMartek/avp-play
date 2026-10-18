@@ -1,0 +1,50 @@
+{
+ "files": [
+  {
+   "dest": "",
+   "id": "8443641699090277",
+   "localName": "x2180753588712484.apk",
+   "name": "hypnos-Android-Shipping-arm64.apk",
+   "required": true,
+   "role": "apk",
+   "size": 56364569,
+   "sha256": "3e95e1697a8cd39c79bfe5047bc53cf17790dd362600b64df19836f1e8cc10f0"
+  },
+  {
+   "dest": "@obb",
+   "id": "8443640349090412",
+   "name": "main.38.com.VerticalRobot.RedMatter.obb",
+   "required": true,
+   "role": "main-obb",
+   "size": 2897117124,
+   "sha256": "f26e4a96731b02e7ca6a238126661706c478375d5ee9c53de4d88c33d47e4294"
+  }
+ ],
+ "id": "store-2180753588712484",
+ "package": "com.VerticalRobot.RedMatter",
+ "schema": 1,
+ "status": {
+  "playability": "verified",
+  "download": "proven",
+  "notes": [
+   {
+    "en": "Marked as verified by the project on 2026-10-19. File list as Meta's tool reports it for this build; 2 of 2 checksums recorded from a download.",
+    "de": "Vom Projekt am 2026-10-19 als geprüft markiert. Dateiliste, wie Metas Werkzeug sie für diesen Build nennt; 2 von 2 Prüfsummen aus einem Download erfasst."
+   },
+   {
+    "en": "Red Matter. Played by the author with PlayStation VR2 Sense controllers; about 3 GB.",
+    "de": "Red Matter. Vom Autor mit PlayStation-VR2-Sense-Controllern gespielt; etwa 3 GB."
+   }
+  ]
+ },
+ "store": {
+  "appId": "2180753588712484"
+ },
+ "title": "Red Matter",
+ "toolchain": {
+  "minCommit": "a6e4dcc",
+  "target": "x2180753588712484"
+ },
+ "versionCode": 38,
+ "versionName": "1.0.013"
+}
