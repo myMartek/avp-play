@@ -1,0 +1,50 @@
+{
+ "files": [
+  {
+   "dest": "",
+   "id": "7622990034401121",
+   "localName": "x2401648309868679.apk",
+   "name": "FP2_REL.apk",
+   "required": true,
+   "role": "apk",
+   "size": 56799972,
+   "sha256": "f4a94256337360997f1d9273d6c1e0b0b920cb789f2511fd0ac80628c2c720a1"
+  },
+  {
+   "dest": "@obb",
+   "id": "7622989614401163",
+   "name": "main.250.com.turbobutton.fp2.obb",
+   "required": true,
+   "role": "main-obb",
+   "size": 1779279603,
+   "sha256": "1ed4c212e40bc8ee015be2f9c8d0850b89732ce9c6e29ae84d01ad8281b58377"
+  }
+ ],
+ "id": "store-2401648309868679",
+ "package": "com.turbobutton.fp2",
+ "schema": 1,
+ "status": {
+  "playability": "verified",
+  "download": "proven",
+  "notes": [
+   {
+    "en": "Marked as verified by the project on 2026-10-19. File list as Meta's tool reports it for this build; 2 of 2 checksums recorded from a download.",
+    "de": "Vom Projekt am 2026-10-19 als geprüft markiert. Dateiliste, wie Metas Werkzeug sie für diesen Build nennt; 2 von 2 Prüfsummen aus einem Download erfasst."
+   },
+   {
+    "en": "Floor Plan 2. Tested by the project on an Apple Vision Pro: the game runs, and objects held in the hand stay steady. Starts at 120 Hz with a picture on every second refresh (an even 60 a second) and 4096 pixels an eye; the start window changes each. Needs toolchain 91d403a or newer.",
+    "de": "Floor Plan 2. Vom Projekt auf einer Apple Vision Pro getestet: Das Spiel läuft, Gegenstände in der Hand bleiben ruhig. Startet mit 120 Hz und einem Bild bei jeder zweiten Bildwiederholung (gleichmäßig 60 pro Sekunde) und 4096 Pixeln je Auge; im Startfenster ist jedes davon einstellbar. Braucht Toolchain 91d403a oder neuer."
+   }
+  ]
+ },
+ "store": {
+  "appId": "2401648309868679"
+ },
+ "title": "Floor Plan 2",
+ "toolchain": {
+  "minCommit": "91d403a",
+  "target": "x2401648309868679"
+ },
+ "versionCode": 250,
+ "versionName": "2.0.1.1383"
+}
