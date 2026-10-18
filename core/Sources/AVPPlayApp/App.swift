@@ -142,15 +142,6 @@ struct RootView: View {
             .safeAreaInset(edge: .bottom) {
                 if let notice = model.notice { NoticeBar(text: notice) }
             }
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button { model.refresh() } label: {
-                        if model.refreshing { ProgressView().controlSize(.small) }
-                        else { Label(L("Check Again", "Neu prüfen"), systemImage: "arrow.clockwise") }
-                    }
-                    .help(L("Check the device, the library and the setup again", "Gerät, Bestand und Einrichtung neu prüfen"))
-                }
-            }
         }
         // Die Texte werden beim Zeichnen gewählt; mit der Sprache als Kennung entsteht die Ansicht neu.
         .id(model.language)
@@ -163,6 +154,7 @@ struct RootView: View {
             model.loadCatalog()
             model.reconcileBackgroundService()
             model.startSaveWatch()
+            model.startDeviceWatch()
             await model.checkForUpdate(manual: false)
             await Snapshot.runIfRequested(model: model)
         }
@@ -186,16 +178,31 @@ struct DeviceChip: View {
     @EnvironmentObject var model: AppModel
 
     var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "visionpro")
-                .foregroundStyle(model.device == nil ? Color.secondary : Color.green)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(model.device?.name ?? L("No Vision Pro", "Keine Vision Pro")).font(.callout.weight(.medium)).lineLimit(1)
-                Text(model.device == nil ? L("not reachable", "nicht erreichbar")
-                     : model.device?.transport.map { L("connected over \($0.text)", "verbunden über \($0.text)") } ?? L("connected", "verbunden"))
-                    .font(.caption).foregroundStyle(.secondary)
+        VStack(spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: "visionpro")
+                    .foregroundStyle(model.device == nil ? Color.secondary : Color.green)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(model.device?.name ?? L("No Vision Pro", "Keine Vision Pro")).font(.callout.weight(.medium)).lineLimit(1)
+                    Text(model.device == nil ? L("not reachable", "nicht erreichbar")
+                         : model.device?.transport.map { L("connected over \($0.text)", "verbunden über \($0.text)") } ?? L("connected", "verbunden"))
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
             }
-            Spacer(minLength: 0)
+            // Gleich unter dem, was er neu prüft, und mit Wort: als Pfeil oben in der Werkzeugleiste war er
+            // nicht als Knopf zu erkennen.
+            Button { model.refresh() } label: {
+                HStack(spacing: 6) {
+                    if model.refreshing { ProgressView().controlSize(.mini) }
+                    else { Image(systemName: "arrow.clockwise") }
+                    Text(model.refreshing ? L("Checking …", "Wird geprüft …") : L("Check Again", "Neu prüfen"))
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .controlSize(.small)
+            .disabled(model.refreshing)
+            .help(L("Check the device, the library and the setup again (⌘R)", "Gerät, Bestand und Einrichtung neu prüfen (⌘R)"))
         }
         .padding(10)
         .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 10))

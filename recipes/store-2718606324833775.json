@@ -1,0 +1,42 @@
+{
+  "schema": 1,
+  "id": "store-2718606324833775",
+  "title": "Angry Birds VR: Isle of Pigs",
+  "package": "com.resolutiongames.abvriop.santacruz",
+  "versionName": "3.7.5.278777-release",
+  "versionCode": 307278777,
+  "store": {
+    "appId": "2718606324833775"
+  },
+  "toolchain": {
+    "target": "x2718606324833775",
+    "minCommit": "67f19c8"
+  },
+  "files": [
+    {
+      "dest": "",
+      "id": "9917260651634937",
+      "localName": "x2718606324833775.apk",
+      "name": "angry-birds-vr-isle-of-pigs-3.7.5.278777-release-Android-Quest.apk",
+      "required": true,
+      "role": "apk",
+      "size": 569837664,
+      "sha256": "f01de6d52a25d4c006850dbad16275240791af553dd2922cb149a59d9f148ef4"
+    }
+  ],
+  "status": {
+    "playability": "verified",
+    "download": "listed",
+    "notes": [
+      {
+        "en": "Marked as verified by the project on 2026-10-18. File list as Meta's tool reports it for this build; 1 of 1 checksums recorded from a download.",
+        "de": "Vom Projekt am 2026-10-18 als geprüft markiert. Dateiliste, wie Metas Werkzeug sie für diesen Build nennt; 1 von 1 Prüfsummen aus einem Download erfasst."
+      },
+      {
+        "en": "Angry Birds VR: Isle of Pigs. Tested by the project on an Apple Vision Pro: it starts and plays, and mixed reality puts the island into the room. Needs toolchain 67f19c8 or newer.",
+        "de": "Angry Birds VR: Isle of Pigs. Vom Projekt auf einer Apple Vision Pro getestet: Es startet und lässt sich spielen, und Mixed Reality stellt die Insel in den Raum. Braucht Toolchain 67f19c8 oder neuer."
+      }
+    ]
+  },
+  "mixedReality": true
+}

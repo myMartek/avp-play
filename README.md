@@ -159,8 +159,9 @@ its own.
 
 **Mixed reality.** The overview's *Mixed Reality* filter shows the games whose mixed-reality mode works with AVP
 Play – your own room around the game. At the moment these are TRIANGLE STRATEGY, Demeo, Richie's Plank
-Experience, LES MILLS BODYCOMBAT, DreamSpace and Cubism, and from toolchain 631 Banners & Bastions (community fix
-55).
+Experience, LES MILLS BODYCOMBAT, DreamSpace and Cubism, from toolchain 631 Banners & Bastions (community fix
+55), and from fork commit `67f19c8` LEGO® Bricktales and Angry Birds VR: Isle of Pigs. While a game shows your
+room, the play area's wall and fade stay away.
 
 **Play area.** From toolchain 616 a game knows the room you play in. Before its first start you measure the room
 once: the headset scans it, suggests the largest free floor around you, and you keep it, scan again or draw it
@@ -212,11 +213,13 @@ recipes in [`recipes/`](recipes) are:
 | Cubism | Meta Store | about 150 MB; its mixed-reality mode works – your room shows behind the puzzle; runs with community fix 52; from fork commit `07da7ed` |
 | Gun Club VR | Meta Store | about 3.7 GB; drawn at up to 4000 pixels an eye with a steady frame rate; builds on community fix 44 (stable head movement, gun textures, Exit saves settings, Sense grip); from fork commit `9f12962` |
 | Catan VR | Meta Store | about 220 MB; from toolchain 631 the menu shows instead of a white picture, with the right brightness and eye height, and the hands are drawn |
+| LEGO® Bricktales | Meta Store | about 485 MB; its mixed-reality mode works – your room shows around the dioramas; drawn at up to 4000 pixels an eye; from fork commit `67f19c8` |
+| Angry Birds VR: Isle of Pigs | Meta Store | about 570 MB; its mixed-reality mode works – the island stands in your room; from fork commit `67f19c8` |
 | Counter-Strike (Team Beef's CSVR) | free port + your own Counter-Strike files | the game data is fetched from your Steam account; your own servers can be listed per game |
 | Doom 3 (Doom3Quest) | free port + your own Doom 3 files | `pak000`–`pak008.pk4` from your copy of Doom 3 – fetched from your Steam account, or from a folder you choose |
 | Half-Life: Alyx | your own Steam copy (Linux build) | the game (about 73 GB) is fetched from your Steam account; the app downloads Steam Linux Runtime (from Valve) and xrizer (from this repository) itself; a German fan voice-over from the game's Steam Workshop is an optional tick, and the game's start window on the Vision Pro switches between English and German; from toolchain 478 the eyes of characters no longer flash in solid colours, and on the Vision Pro with the M5 the presets *Balanced* (the default) and *Sharp* in the game's start window draw the largest picture with detailed textures at an even half of the display rate (50 pictures a second), *Balanced* with strong foveated rendering and without bloom and ambient occlusion – found by play on one headset; how warm it gets over a long session is not measured yet. Frame cadence, effects and texture memory are settings under *Custom*, a frame-rate readout can be switched on, and a copy installed earlier keeps a custom set as it was. On the first Vision Pro (M2) the two presets are the same with the picture one size smaller; nobody has run them there yet; from toolchain 595 it gets its icon and start picture from Steam's store artwork (community fix 47) |
 
-These thirty are marked **Verified**: the project has tested them on a Vision Pro. The app also lists every other
+These thirty-two are marked **Verified**: the project has tested them on a Vision Pro. The app also lists every other
 Quest title from the Meta Store – some 17,000, loaded page by page as you scroll. What you see on each is a label:
 
 | Label | Meaning |
@@ -239,7 +242,7 @@ while fixing the game, shown as "(modified)". The game then stays on that toolch
 one, when the game is updated and when its signature is renewed. The app removes older toolchains by itself to
 save disk space; one that is chosen for a game stays, and a switch in Settings turns the tidying off.
 
-All thirty were installed with this app on the author's headset. "Community Verified" means exactly what it
+All thirty-two were installed with this app on the author's headset. "Community Verified" means exactly what it
 says: reports from users, not a guarantee. A recipe is tied to one build of a game; other builds need
 their own recipe.
 

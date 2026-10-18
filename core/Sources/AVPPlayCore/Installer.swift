@@ -176,11 +176,25 @@ public struct InstallProgress: Sendable, Equatable {
     public var total: Int64
     /// Worüber kopiert wird (Kabel oder WLAN), soweit bekannt.
     public var via: Device.Transport?
-    public init(step: InstallStep, done: Int64, total: Int64, via: Device.Transport? = nil) {
+    /// Beim Laden: die wievielte der zu ladenden Dateien gerade dran ist (ab 1), wie viele es sind, ihr Name und
+    /// wie weit sie ist. Die Größe kennt erst die Antwort der Auslieferung; vorher ist sie nil.
+    public var file: FileProgress?
+    public struct FileProgress: Sendable, Equatable {
+        public var index: Int
+        public var count: Int
+        public var name: String
+        public var done: Int64
+        public var total: Int64?
+        public init(index: Int, count: Int, name: String, done: Int64, total: Int64?) {
+            self.index = index; self.count = count; self.name = name; self.done = done; self.total = total
+        }
+    }
+    public init(step: InstallStep, done: Int64, total: Int64, via: Device.Transport? = nil, file: FileProgress? = nil) {
         self.step = step
         self.done = done
         self.total = total
         self.via = via
+        self.file = file
     }
 }
 
@@ -473,6 +487,8 @@ public struct Installer: Sendable {
             if ApkUnpacker.lacksArm64(found) { throw InstallError.wrongArchitecture(title, found.sorted()) }
             try FlatApp.refuse(apk: url, recipe: recipe, store: store)
         }
+        let progress = self.progress
+        fetcher.onProgress = { file in progress(InstallProgress(step: .fetch, done: 0, total: 0, file: file)) }
         let summary = try await fetcher.run(plan, recipe: recipe) { report("  " + $0) }
         report(L("Downloaded: \(summary.downloaded) files, \(summary.kept) were already there"
                  + (summary.adopted > 0 ? ", \(summary.adopted) unchanged ones taken from another version of the game." : "."),
