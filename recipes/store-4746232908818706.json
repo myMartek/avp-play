@@ -1,0 +1,59 @@
+{
+ "files": [
+  {
+   "dest": "",
+   "id": "8246833768758585",
+   "localName": "x4746232908818706.apk",
+   "name": "Grey-Android-Shipping-arm64.apk",
+   "required": true,
+   "role": "apk",
+   "size": 125329927,
+   "sha256": "1f13982c7291dbb1768036dd59fa4835469a8fd07f120d41b2b7c8df07027a3e"
+  },
+  {
+   "dest": "android-files/Android/obb/com.nDreams.Ghostbusters",
+   "id": "8246831312092164",
+   "name": "patch.com.nDreams.Ghostbusters.obb",
+   "required": true,
+   "role": "content-bundle",
+   "size": 3921715376,
+   "sha256": "96cdfb86b021adcfeac69b1bcbe862e88bc786248d38c2120d448247082f1497"
+  },
+  {
+   "dest": "android-files/Android/obb/com.nDreams.Ghostbusters",
+   "id": "8246808085427820",
+   "name": "main.com.nDreams.Ghostbusters.obb",
+   "required": true,
+   "role": "content-bundle",
+   "size": 4264986344,
+   "sha256": "bf8746a7bffce884d97a0069204b7615518ff7b1622133de1c44b20801d08c99"
+  }
+ ],
+ "id": "store-4746232908818706",
+ "package": "com.nDreams.Ghostbusters",
+ "schema": 1,
+ "status": {
+  "playability": "verified",
+  "download": "proven",
+  "notes": [
+   {
+    "en": "Marked as verified by the project on 2026-10-19. File list as Meta's tool reports it for this build; 3 of 3 checksums recorded from a download.",
+    "de": "Vom Projekt am 2026-10-19 als geprüft markiert. Dateiliste, wie Metas Werkzeug sie für diesen Build nennt; 3 von 3 Prüfsummen aus einem Download erfasst."
+   },
+   {
+    "en": "Ghostbusters: Rise of the Ghost Lord. Tested by the project on an Apple Vision Pro: it starts and plays. Its online features (Meta voice chat, the game's EOS services) are not available. Needs toolchain 4437316 or newer.",
+    "de": "Ghostbusters: Rise of the Ghost Lord. Vom Projekt auf einer Apple Vision Pro getestet: Startet und lässt sich spielen. Seine Online-Funktionen (Metas Sprachchat, die EOS-Dienste des Spiels) stehen nicht zur Verfügung. Braucht Toolchain 4437316 oder neuer."
+   }
+  ]
+ },
+ "store": {
+  "appId": "4746232908818706"
+ },
+ "title": "Ghostbusters: Rise of the Ghost Lord",
+ "toolchain": {
+  "minCommit": "4437316",
+  "target": "x4746232908818706"
+ },
+ "versionCode": 3256358,
+ "versionName": "1.325635.prod.shipping"
+}
