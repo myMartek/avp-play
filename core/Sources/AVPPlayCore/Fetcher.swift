@@ -108,6 +108,9 @@ public struct Fetcher: Sendable {
     /// Metas Werkzeug als Ausweg, wenn die direkte Adresse eine Datei des Spiels mit HTTP 404 verweigert.
     /// Ohne ihn endet der Lauf dort wie bisher.
     public var toolFallback: MetaToolDownload?
+    /// Wie weit das Laden ist: die wievielte der zu ladenden Dateien, wie viele es sind, und wie weit die
+    /// aktuelle ist. Am Anfang jeder Datei und dann höchstens viermal in der Sekunde.
+    public var onProgress: (@Sendable (InstallProgress.FileProgress) -> Void)?
 
     public init(client: MetaClient, store: ContentStore, gate: RequestGate = RequestGate()) {
         self.client = client
@@ -122,6 +125,10 @@ public struct Fetcher: Sendable {
         let toolFolder = store.directory(for: recipe).appendingPathComponent(".meta-tool", isDirectory: true)
         try? FileManager.default.removeItem(at: toolFolder)
         defer { try? FileManager.default.removeItem(at: toolFolder) }
+        // Was wirklich geladen wird (nicht das, was schon da ist oder der Nutzer selbst besorgen muss).
+        let count = plan.filter { if case .download = $0.action { return true }; if case .resume = $0.action { return true }; return false }.count
+        var index = 0
+        let report = onProgress
         for item in plan {
             let file = item.file
             let final = store.url(for: file, in: recipe)
@@ -136,11 +143,20 @@ public struct Fetcher: Sendable {
                 continue
             case .download:
                 try? FileManager.default.removeItem(at: partial)
-                if try await adopt(file, recipe: recipe, to: final, summary: &summary, log: log) { continue }
+                if try await adopt(file, recipe: recipe, to: final, summary: &summary, log: log) { index += 1; continue }
             case .resume(let from):
                 offset = from
             }
 
+            index += 1
+            report?(.init(index: index, count: count, name: file.name, done: offset, total: file.size))
+            let tick = ProgressThrottle()
+            let fileProgress: (@Sendable (Int64, Int64?) -> Void)? = report.map { report in
+                let index = index, name = file.name, known = file.size
+                return { done, total in
+                    if tick.due() { report(.init(index: index, count: count, name: name, done: done, total: known ?? total)) }
+                }
+            }
             // Hat das Werkzeug die Datei schon mitgebracht (das Haupt-OBB kommt mit dem APK), wird nichts angefragt.
             var outcome: MetaClient.DownloadOutcome
             if let found = MetaToolDownload.find(file.name, in: toolFolder) {
@@ -152,9 +168,9 @@ public struct Fetcher: Sendable {
                 do {
                     if file.source?.kind == .url, let raw = file.source?.url, let url = URL(string: raw) {
                         // Freier Download: ohne Token, an keinen Meta-Host gebunden.
-                        outcome = try await PublicDownload.fetch(url, to: partial, resumeFrom: offset)
+                        outcome = try await PublicDownload.fetch(url, to: partial, resumeFrom: offset, progress: fileProgress)
                     } else {
-                        outcome = try await client.download(id: file.id, to: partial, resumeFrom: offset)
+                        outcome = try await client.download(id: file.id, to: partial, resumeFrom: offset, progress: fileProgress)
                     }
                 } catch MetaError.denied(status: 404) where Fetcher.mayBeWithheld(file) {
                     // Kein unerwarteter Ausgang, sondern Metas Antwort auf einen Zusatzinhalt, der nicht gekauft ist.
@@ -235,5 +251,18 @@ public struct Fetcher: Sendable {
         try FileManager.default.moveItem(at: found, to: partial)
         let size = ContentStore.fileSize(partial) ?? 0
         return MetaClient.DownloadOutcome(bytesReceived: size, totalSize: nil, resumed: false)
+    }
+}
+
+/// Lässt einen Fortschritt höchstens alle Viertelsekunde durch – der Download meldet jeden Datenblock.
+final class ProgressThrottle: @unchecked Sendable {
+    private let lock = NSLock()
+    private var last = Date.distantPast
+    func due() -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        let now = Date()
+        guard now.timeIntervalSince(last) >= 0.25 else { return false }
+        last = now
+        return true
     }
 }

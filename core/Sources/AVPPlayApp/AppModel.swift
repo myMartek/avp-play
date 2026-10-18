@@ -471,7 +471,11 @@ final class AppModel: ObservableObject {
                                (workspace, NSWorkspace.didUnmountNotification),
                                (workspace, NSWorkspace.didRenameVolumeNotification)] {
             let token = center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
-                MainActor.assumeIsolated { self?.invalidateDerived() }
+                MainActor.assumeIsolated {
+                    self?.invalidateDerived()
+                    // Wer zurück ins Fenster kommt, hat vielleicht gerade das Kabel eingesteckt oder das Headset aufgesetzt.
+                    if name == NSApplication.didBecomeActiveNotification { Task { await self?.checkDevice() } }
+                }
             }
             derivedObservers.append(token)
         }
@@ -1023,6 +1027,43 @@ final class AppModel: ObservableObject {
                 self.refreshing = false
             }
         }
+    }
+
+    var deviceWatch: Task<Void, Never>?
+    private var checkingDevice = false
+    static let deviceWatchInterval: Duration = .seconds(10)
+
+    /// Schaut regelmäßig nach, ob das Headset gekommen, gegangen oder auf einen anderen Weg (Kabel, WLAN)
+    /// gewechselt ist. Sonst bliebe bis zum nächsten „Neu prüfen“ stehen, was beim Start galt.
+    func startDeviceWatch() {
+        guard deviceWatch == nil, Snapshot.directory == nil else { return }
+        deviceWatch = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: AppModel.deviceWatchInterval)
+                await self?.checkDevice()
+            }
+        }
+    }
+
+    /// Fragt nur die Geräteliste ab (`devicectl list devices`, kein Gespräch mit dem Headset selbst). Ist ein
+    /// anderes Headset da, eines dazugekommen oder weggefallen, folgt die volle Prüfung, denn dann gelten auch die
+    /// installierten Spiele nicht mehr; ändert sich nur der Weg, wird nur der neu angezeigt.
+    func checkDevice() async {
+        guard !refreshing, !checkingDevice else { return }
+        checkingDevice = true
+        defer { checkingDevice = false }
+        let wanted = chosenDevice.isEmpty ? nil : chosenDevice
+        guard let listed = await Task.detached(priority: .utility, operation: { try? DeviceControl().devices() }).value,
+              !refreshing else { return }
+        let usable = listed.filter { $0.paired && $0.reachable }
+        let found = usable.first { $0.udid == wanted } ?? (usable.count == 1 ? usable[0] : nil)
+        if found?.udid != device?.udid || found?.developerMode != device?.developerMode
+            || Set(usable.map(\.udid)) != Set(devices.map(\.udid)) {
+            refresh()
+            return
+        }
+        if found != device { device = found }
+        if usable != devices { devices = usable }
     }
 
     private func apply(_ s: Probe.Snapshot) {

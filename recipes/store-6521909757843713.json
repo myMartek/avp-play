@@ -1,0 +1,42 @@
+{
+  "schema": 1,
+  "id": "store-6521909757843713",
+  "title": "LEGO® Bricktales",
+  "package": "com.thunderful.legobricktales",
+  "versionName": "2.1",
+  "versionCode": 201449,
+  "store": {
+    "appId": "6521909757843713"
+  },
+  "toolchain": {
+    "target": "x6521909757843713",
+    "minCommit": "67f19c8"
+  },
+  "files": [
+    {
+      "dest": "",
+      "id": "26917994621141927",
+      "localName": "x6521909757843713.apk",
+      "name": "LEGO_Bricktales_Oculus_v2_1_r449_Release.apk",
+      "required": true,
+      "role": "apk",
+      "size": 485065377,
+      "sha256": "1fb07bdccf06b35881da5a15fd41e84df274573cf50575d8fd29016a80cba2af"
+    }
+  ],
+  "status": {
+    "playability": "verified",
+    "download": "listed",
+    "notes": [
+      {
+        "en": "Marked as verified by the project on 2026-10-18. File list as Meta's tool reports it for this build; 1 of 1 checksums recorded from a download.",
+        "de": "Vom Projekt am 2026-10-18 als geprüft markiert. Dateiliste, wie Metas Werkzeug sie für diesen Build nennt; 1 von 1 Prüfsummen aus einem Download erfasst."
+      },
+      {
+        "en": "LEGO® Bricktales. Tested by the project on an Apple Vision Pro: it starts, both eyes match, fades show in both eyes, mixed reality works, and the clouds in the sky are whole. Needs toolchain 67f19c8 or newer.",
+        "de": "LEGO® Bricktales. Vom Projekt auf einer Apple Vision Pro getestet: Es startet, beide Augen passen zusammen, Überblendungen erscheinen auf beiden Augen, Mixed Reality funktioniert, und die Wolken am Himmel sind ganz. Braucht Toolchain 67f19c8 oder neuer."
+      }
+    ]
+  },
+  "mixedReality": true
+}

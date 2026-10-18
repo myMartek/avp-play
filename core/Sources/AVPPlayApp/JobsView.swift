@@ -222,11 +222,20 @@ struct JobDetail: View {
 
             if phase == .running, job.current == .fetch {
                 // Der Stand kommt aus dem Bestand selbst (vorhandene und angefangene Dateien), alle zwei Sekunden.
+                // Er braucht die Größen aus dem Rezept; ein Entwurf aus dem Store kennt sie nicht.
                 TimelineView(.periodic(from: .now, by: 2)) { _ in
                     if let progress = model.downloadProgress(job) {
                         ProgressLine(done: progress.done, total: progress.total,
                                      verb: L("downloaded", "geladen")).id("fetch-\(job.id)")
+                    } else if let p = model.copyProgress[job.id], p.step == .fetch, p.total > 0 {
+                        // Steam meldet den Stand des ganzen Spiels selbst.
+                        ProgressLine(done: p.done, total: p.total, verb: L("downloaded", "geladen")).id("fetch-steam-\(job.id)")
                     }
+                }
+                // Welche Datei gerade dran ist und wie weit sie ist – das weiß der Download selbst, mit oder ohne
+                // Größen im Rezept.
+                if let p = model.copyProgress[job.id], p.step == .fetch, let file = p.file {
+                    FileProgressLine(file: file).id("fetch-file-\(job.id)-\(file.index)")
                 }
             }
             if phase == .running, job.current == .stage, let progress = model.copyProgress[job.id], progress.total > 0 {
@@ -307,6 +316,33 @@ struct JobDetail: View {
             Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
         } else {
             Image(systemName: "circle").foregroundStyle(.tertiary)
+        }
+    }
+}
+
+/// Die Datei, die gerade geladen wird: „Datei 12 von 117“, ihr Name, und ihr eigener Stand – als Balken, sobald
+/// die Auslieferung ihre Größe genannt hat, sonst als geladene Menge.
+struct FileProgressLine: View {
+    let file: InstallProgress.FileProgress
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                Text(L("File \(file.index) of \(file.count)", "Datei \(file.index) von \(file.count)")).monospacedDigit()
+                Text(file.name).lineLimit(1).truncationMode(.middle).foregroundStyle(.secondary)
+            }
+            .font(.callout)
+            if file.count > 1 {
+                ProgressView(value: Double(file.index - 1), total: Double(file.count)).controlSize(.small)
+            }
+            if let total = file.total, total > 0 {
+                ProgressView(value: Double(min(file.done, total)), total: Double(total)).controlSize(.small)
+                Text("\(Installer.megabytes(file.done)) \(L("of", "von")) \(Installer.megabytes(total))")
+                    .font(.caption).foregroundStyle(.secondary).monospacedDigit()
+            } else if file.done > 0 {
+                Text(L("\(Installer.megabytes(file.done)) loaded", "\(Installer.megabytes(file.done)) geladen"))
+                    .font(.caption).foregroundStyle(.secondary).monospacedDigit()
+            }
         }
     }
 }
