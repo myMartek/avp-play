@@ -1,0 +1,78 @@
+{
+ "files": [
+  {
+   "dest": "",
+   "id": "7790113387750191",
+   "localName": "x3713270985434472.apk",
+   "name": "PowerWashSimulator.apk",
+   "required": true,
+   "role": "apk",
+   "size": 63632191,
+   "sha256": "d3f9ab0bf60bb8f97ade19fc1cbf8e155776251b898046bd0cdb25781c944e97"
+  },
+  {
+   "dest": "@obb",
+   "id": "7790112507750279",
+   "name": "main.3055.com.FuturLab.PowerWashSimulator.obb",
+   "required": true,
+   "role": "main-obb",
+   "size": 2346517691,
+   "sha256": "81333c39b0cd9ab0d644eb53afc5ee6a302312a0fc74c040c15894bc8df8c597"
+  },
+  {
+   "dest": "android-files/Android/obb/com.FuturLab.PowerWashSimulator",
+   "id": "7790113264416870",
+   "name": "DLCCONTENTTEST.obb",
+   "required": true,
+   "role": "content-bundle"
+  },
+  {
+   "dest": "android-files/Android/obb/com.FuturLab.PowerWashSimulator",
+   "id": "7790107384417458",
+   "name": "BTTF.obb",
+   "required": true,
+   "role": "content-bundle"
+  },
+  {
+   "dest": "android-files/Android/obb/com.FuturLab.PowerWashSimulator",
+   "id": "7790107251084138",
+   "name": "AAP.obb",
+   "required": true,
+   "role": "content-bundle"
+  },
+  {
+   "dest": "android-files/Android/obb/com.FuturLab.PowerWashSimulator",
+   "id": "7790106374417559",
+   "name": "SPONGEBOB.obb",
+   "required": true,
+   "role": "content-bundle"
+  }
+ ],
+ "id": "store-3713270985434472",
+ "package": "com.FuturLab.PowerWashSimulator",
+ "schema": 1,
+ "status": {
+  "playability": "verified",
+  "download": "listed",
+  "notes": [
+   {
+    "en": "Marked as verified by the project on 2026-10-19. File list as Meta's tool reports it for this build; 2 of 6 checksums recorded from a download.",
+    "de": "Vom Projekt am 2026-10-19 als geprüft markiert. Dateiliste, wie Metas Werkzeug sie für diesen Build nennt; 2 von 6 Prüfsummen aus einem Download erfasst."
+   },
+   {
+    "en": "PowerWash Simulator VR. Tested by the project on an Apple Vision Pro: the game runs. By default the eye picture is limited to 4000 pixels and a frame is drawn on every second refresh of the display (both can be changed in the start window). Needs toolchain e33aefd or newer.",
+    "de": "PowerWash Simulator VR. Vom Projekt auf einer Apple Vision Pro getestet: Das Spiel läuft. Standardmäßig ist das Bild je Auge auf 4000 Pixel begrenzt, und ein Bild entsteht bei jeder zweiten Bildwiederholung des Displays (beides im Startfenster änderbar). Braucht Toolchain e33aefd oder neuer."
+   }
+  ]
+ },
+ "store": {
+  "appId": "3713270985434472"
+ },
+ "title": "PowerWash Simulator VR",
+ "toolchain": {
+  "minCommit": "e33aefd",
+  "target": "x3713270985434472"
+ },
+ "versionCode": 3055,
+ "versionName": "2.5.0"
+}
