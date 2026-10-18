@@ -1,0 +1,1092 @@
+{
+  "schema": 1,
+  "id": "store-3647259232032222",
+  "title": "Medal of Honor™: Above and Beyond",
+  "package": "com.Virtuos.R6DLM",
+  "versionName": "0.518",
+  "versionCode": 12297,
+  "store": {
+    "appId": "3647259232032222"
+  },
+  "toolchain": {
+    "target": "x3647259232032222",
+    "minCommit": "36a5844"
+  },
+  "files": [
+    {
+      "dest": "",
+      "id": "4501068163317987",
+      "localName": "x3647259232032222.apk",
+      "name": "app-Shipping.apk",
+      "required": true,
+      "role": "apk",
+      "size": 74459144,
+      "sha256": "77ea694cb37b8ea20d87af88d6e07721fa378e9a76d68f03e792a9e364d26e10"
+    },
+    {
+      "dest": "@obb",
+      "id": "4500956129995857",
+      "name": "main.12297.com.Virtuos.R6DLM.obb",
+      "required": true,
+      "role": "main-obb",
+      "size": 2147463041,
+      "sha256": "5ba2cd797f07fcb52a1deafa065d43227bae1e227a9fbbef31bd423b0df3a558"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067869984683",
+      "name": "DLC_Mission3_6.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 178,
+      "sha256": "464f35a96081b4c4a340e4c9b89075aa38881ca6e05bd27973aebad6def9eeee"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067866651350",
+      "name": "DataToDelete",
+      "required": true,
+      "role": "content-bundle"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067863318017",
+      "name": "DLC_Mission3_7.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 178,
+      "sha256": "464f35a96081b4c4a340e4c9b89075aa38881ca6e05bd27973aebad6def9eeee"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067859984684",
+      "name": "DLC_Mission4_4.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 2174,
+      "sha256": "a6b479f369700bd725753828f8f9ddaf4381707fd0c583817c6cce85adc4e5b8"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067856651351",
+      "name": "DLC_Mission2_0.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 2138150849,
+      "sha256": "ac240ff02cc61837721054df70c74673dd7f897bd652d1deae15c9a940626fa0"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067853318018",
+      "name": "DLC_Mission2_4.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 2174,
+      "sha256": "53d774c9df9e6d4d009102f571fcfdbad9ebac251f3f9b8ffc731c3a1723e05d"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067849984685",
+      "name": "DLC_Mission2_7.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 178,
+      "sha256": "464f35a96081b4c4a340e4c9b89075aa38881ca6e05bd27973aebad6def9eeee"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067846651352",
+      "name": "DLC_Multiplayer_7.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 178,
+      "sha256": "464f35a96081b4c4a340e4c9b89075aa38881ca6e05bd27973aebad6def9eeee"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067843318019",
+      "name": "DLC_Mission5_6.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 178,
+      "sha256": "464f35a96081b4c4a340e4c9b89075aa38881ca6e05bd27973aebad6def9eeee"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067839984686",
+      "name": "DLC_Mission4_3.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 2174,
+      "sha256": "a6b479f369700bd725753828f8f9ddaf4381707fd0c583817c6cce85adc4e5b8"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067836651353",
+      "name": "DLC_Mission2_3.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 2174,
+      "sha256": "53d774c9df9e6d4d009102f571fcfdbad9ebac251f3f9b8ffc731c3a1723e05d"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067833318020",
+      "name": "DLC_Mission6_6.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 178,
+      "sha256": "464f35a96081b4c4a340e4c9b89075aa38881ca6e05bd27973aebad6def9eeee"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067829984687",
+      "name": "DLC_Mission5_1.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 1755910198,
+      "sha256": "a910912150363f3c8ef9781edf72b7058107c566ecd841881f736e1645ce2daa"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067826651354",
+      "name": "DLC_Multiplayer_1.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 1923805557,
+      "sha256": "256975417279be605bce9a6f9b7cc6c8e7fb7a62d0901eeff7332bba8ad16bc1"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067823318021",
+      "name": "DLC_Mission2_5.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 178,
+      "sha256": "464f35a96081b4c4a340e4c9b89075aa38881ca6e05bd27973aebad6def9eeee"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067819984688",
+      "name": "DLC_Mission1_7.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 178,
+      "sha256": "464f35a96081b4c4a340e4c9b89075aa38881ca6e05bd27973aebad6def9eeee"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067816651355",
+      "name": "DLC_Mission1_4.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 2174,
+      "sha256": "ee4fbb1256ea5463fbfca42913943983aee25d5bd0d124d1095c9e28e312a589"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067813318022",
+      "name": "DLC_Mission3_4.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 2174,
+      "sha256": "2225e96b879451378f8ca716d3c3c1114504ba32fecda809fd736763fb6d2532"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067809984689",
+      "name": "DLC_Mission4_1.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 1426153443,
+      "sha256": "d472247097c75b7490c9d5f8fc26088ece978583566d20f1aa197f84ec427c89"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067806651356",
+      "name": "DLC_Mission6_5.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 2174,
+      "sha256": "0030cb436f83dc99df2c920776df3d48dd46818c413693da846800fd5046ffc1"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067803318023",
+      "name": "DLC_Mission2_1.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 1999062155,
+      "sha256": "d52a3e0ba335a3495150e0119380cb1ef57ecf4f19f73e03f86f0cde4b034008"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067799984690",
+      "name": "DLC_Mission2_6.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 178,
+      "sha256": "464f35a96081b4c4a340e4c9b89075aa38881ca6e05bd27973aebad6def9eeee"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067793318024",
+      "name": "DLC_Mission5_7.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 178,
+      "sha256": "464f35a96081b4c4a340e4c9b89075aa38881ca6e05bd27973aebad6def9eeee"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067789984691",
+      "name": "DLC_Mission4_7.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 178,
+      "sha256": "464f35a96081b4c4a340e4c9b89075aa38881ca6e05bd27973aebad6def9eeee"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067786651358",
+      "name": "DLC_Mission5_4.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 2174,
+      "sha256": "7440e9a50804393c88cbcdd0567241f3cb288265823eafc02b69e3347577895b"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067783318025",
+      "name": "DLC_Mission1_1.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 1850518636,
+      "sha256": "421d03d5106ef0132e50186e3f66f4a899e3bd93c07ec79c68679f83223cec2c"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067779984692",
+      "name": "DLC_Mission6_7.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 178,
+      "sha256": "464f35a96081b4c4a340e4c9b89075aa38881ca6e05bd27973aebad6def9eeee"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067776651359",
+      "name": "DLC_Mission1_2.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 214386218,
+      "sha256": "ccd2a44f11cbbfca2da099da375e9eb2c961c7bc5f4c7bcafc592b00bf8a4d2c"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067769984693",
+      "name": "DLC_Multiplayer_0.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 1998362446,
+      "sha256": "8221d9105541038ad20cd4cfb4289781184015fbd91084f68a3c776d4e078eda"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067766651360",
+      "name": "DLC_Mission3_2.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 1068317537,
+      "sha256": "c88f98cb304576908f1b5271673699bab89aaf5238b84e2069fdb26fd4692543"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067763318027",
+      "name": "DLC_Mission1_8.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 175,
+      "sha256": "921abea1484034fb7f8b89f71c2ebfd9b95c1c53918d00d1dd22250d27635509"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067759984694",
+      "name": "DLC_Mission2_2.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 2174,
+      "sha256": "53d774c9df9e6d4d009102f571fcfdbad9ebac251f3f9b8ffc731c3a1723e05d"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067756651361",
+      "name": "DLC_Mission3_0.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 2140467219,
+      "sha256": "ab06e49558064eeabf8a5769ce1a4a44c2e356c9574a0a80585553b2a022baea"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067753318028",
+      "name": "DLC_Mission3_1.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 1921850485,
+      "sha256": "1c03d9797ee2ba7a5017fd77f843164912a6160fa621ab80bae44f84f90ce100"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067749984695",
+      "name": "DLC_Mission4_0.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 2147378034,
+      "sha256": "5deb51a90bc0ba01ea189297a1e4df1b7047286440e0c7cc4b5b6632c4bdb937"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067746651362",
+      "name": "DLC_Mission4_2.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 2174,
+      "sha256": "a6b479f369700bd725753828f8f9ddaf4381707fd0c583817c6cce85adc4e5b8"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067743318029",
+      "name": "DLC_Multiplayer_5.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 2273,
+      "sha256": "b81b0f9c3f62356391618d529cafea3d877338d054e2852340cba76168a41801"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067739984696",
+      "name": "DLC_Mission6_0.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 2129318947,
+      "sha256": "eadb77dcd651553f38cd6cfa845b5adaf41646b249b95e9bfe1b84c6246c501c"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067736651363",
+      "name": "DLC_Mission5_5.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 2174,
+      "sha256": "7440e9a50804393c88cbcdd0567241f3cb288265823eafc02b69e3347577895b"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067733318030",
+      "name": "DLC_Mission6_2.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 552439272,
+      "sha256": "9520714142ebf9b972dbb8fc9f435acbba1c5ca2f1acb628863e08dac3bba171"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067729984697",
+      "name": "DLC_Mission5_2.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 816825615,
+      "sha256": "2cf580c4874d1ea570a84ab996853a20c4c298814314914a56f3eb763563226b"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067726651364",
+      "name": "DLC_Multiplayer_4.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 2273,
+      "sha256": "b81b0f9c3f62356391618d529cafea3d877338d054e2852340cba76168a41801"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067723318031",
+      "name": "DLC_Mission5_0.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 2090632401,
+      "sha256": "5b146ca772e1ad80b8a1c56ab1177dc6871cbdf020c2baac0d169cecb2c75685"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067719984698",
+      "name": "DLC_Multiplayer_6.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 2273,
+      "sha256": "b81b0f9c3f62356391618d529cafea3d877338d054e2852340cba76168a41801"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067716651365",
+      "name": "DLC_Mission6_3.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 2174,
+      "sha256": "0030cb436f83dc99df2c920776df3d48dd46818c413693da846800fd5046ffc1"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067713318032",
+      "name": "DLC_Gallery_1.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 3079,
+      "sha256": "6d1ad9faf3c475a7f86154a60c900e8ba93918d2a62a5b3b1ced4990c5fef1ab"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067709984699",
+      "name": "DLC_Mission6_4.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 2174,
+      "sha256": "0030cb436f83dc99df2c920776df3d48dd46818c413693da846800fd5046ffc1"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067706651366",
+      "name": "DLC_Mission5_3.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 2174,
+      "sha256": "7440e9a50804393c88cbcdd0567241f3cb288265823eafc02b69e3347577895b"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067703318033",
+      "name": "DLC_Mission1_3.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 2174,
+      "sha256": "ee4fbb1256ea5463fbfca42913943983aee25d5bd0d124d1095c9e28e312a589"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067699984700",
+      "name": "DLC_Multiplayer_3.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 606672072,
+      "sha256": "66a53621668ffb91f8152994e05930ed8af1f323de445b564f2bf4469e208753"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067696651367",
+      "name": "DLC_Mission3_5.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 2174,
+      "sha256": "2225e96b879451378f8ca716d3c3c1114504ba32fecda809fd736763fb6d2532"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067693318034",
+      "name": "DLC_Gallery_0.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 953217,
+      "sha256": "43d8641cb7e7269fa6f9f23c170ca69f45d0994f127352b091b3f989998286bc"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067689984701",
+      "name": "DLC_Mission1_6.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 178,
+      "sha256": "464f35a96081b4c4a340e4c9b89075aa38881ca6e05bd27973aebad6def9eeee"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067686651368",
+      "name": "DLC_Mission1_0.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 2010814303,
+      "sha256": "0c7ec4c167514b88f4e3e357561e5f778e6bae8af8fe24024a01398effac0bc2"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067683318035",
+      "name": "DLC_Mission1_5.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 2174,
+      "sha256": "ee4fbb1256ea5463fbfca42913943983aee25d5bd0d124d1095c9e28e312a589"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067679984702",
+      "name": "DLC_Multiplayer_2.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 1871501124,
+      "sha256": "a7f379de3ca634ce05d4c3f2164d477138abba552cdd3118baeadb52d4b8e746"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067676651369",
+      "name": "DLC_Mission3_3.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 2174,
+      "sha256": "2225e96b879451378f8ca716d3c3c1114504ba32fecda809fd736763fb6d2532"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067673318036",
+      "name": "DLC_Mission4_6.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 178,
+      "sha256": "464f35a96081b4c4a340e4c9b89075aa38881ca6e05bd27973aebad6def9eeee"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067669984703",
+      "name": "DLC_Mission4_5.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 178,
+      "sha256": "464f35a96081b4c4a340e4c9b89075aa38881ca6e05bd27973aebad6def9eeee"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067666651370",
+      "name": "DLC_Mission6_1.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 1825937100,
+      "sha256": "6a151f3715dd83bc2625f82ef8fbea5ce8d8d45744d5fce35a98ac3c4e0d170e"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501067663318037",
+      "name": "DLC_Gallery_2.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 3079,
+      "sha256": "6d1ad9faf3c475a7f86154a60c900e8ba93918d2a62a5b3b1ced4990c5fef1ab"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501066943318109",
+      "name": "patch.9.12297.com.Virtuos.R6DLM.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 1344980993,
+      "sha256": "7f3b5c613721c5c610a10c64d760ad135a4b50bd1ab6e4895bf721da9292d0aa"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501063843318419",
+      "name": "patch.8.12297.com.Virtuos.R6DLM.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 2066324460,
+      "sha256": "f3418f7d86ea4fc8098d3e00e939b80e7b2e652ec9dc5504e3d806e8e8cfe84c"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501059056652231",
+      "name": "patch.7.12297.com.Virtuos.R6DLM.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 1911286332,
+      "sha256": "7c586b4948af19fb4811f00e3d8ebf85bffdc72116f3aa00d430fa997b4433be"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501055136652623",
+      "name": "patch.6.12297.com.Virtuos.R6DLM.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 1998000770,
+      "sha256": "80b37b1aa773a305c02a943fd8275fbcbfb413b5208f64a2bc30e4c76f81cf26"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501050883319715",
+      "name": "patch.5.12297.com.Virtuos.R6DLM.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 1941840812,
+      "sha256": "4ed645513545ed61ddf540e5a1bd30ed7fe93a9058eeceff4939525c22b31266"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501046259986844",
+      "name": "patch.4.12297.com.Virtuos.R6DLM.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 2781145974,
+      "sha256": "0c427e6effeec2300e37dc3bf25e47007219c241079b2dc224a5677b6d0bb45f"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501040853320718",
+      "name": "patch.3.12297.com.Virtuos.R6DLM.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 65360233,
+      "sha256": "fc07d4c2f3cfd74ecdffc83817bfd6a79500ea9ce018573de35a7634f0e0a32c"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501040186654118",
+      "name": "patch.20.12297.com.Virtuos.R6DLM.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 1952015683,
+      "sha256": "d9fe251de586a095c9184b258450c7259c5a4fe6a24432d3647e4b8187acafb6"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501035863321217",
+      "name": "patch.2.12297.com.Virtuos.R6DLM.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 2152612768,
+      "sha256": "7a188a62b769da2b16798908abafc4e320d258f688bd7c63b6fb69b3a916136a"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501030296655107",
+      "name": "patch.19.12297.com.Virtuos.R6DLM.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 2008261948,
+      "sha256": "00a3e07d3fa3de3b5b29dab42fdd8992a3ef378e2856ee354f44db170d76f181"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501025363322267",
+      "name": "patch.18.12297.com.Virtuos.R6DLM.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 1961610445,
+      "sha256": "fec8e18414a5d5547a105d26a22184730b58e1e452bc0a477e40d137f49ae1e6"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501021139989356",
+      "name": "patch.17.12297.com.Virtuos.R6DLM.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 2064301275,
+      "sha256": "9bae5378c4f1765540870af790b2c33b852a68bfb8040e7e8c401c2a93a3b14d"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501014486656688",
+      "name": "patch.16.12297.com.Virtuos.R6DLM.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 2027893482,
+      "sha256": "057944447528dfa9c16588b874a3f0cbc04f0594054f9534169c0443bd93b6bf"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501008053323998",
+      "name": "patch.15.12297.com.Virtuos.R6DLM.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 1937651619,
+      "sha256": "cc6c63e55006b83802ae7307e932c57e0b7b107ee891cd2d0961b513be0f3afc"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4501003626657774",
+      "name": "patch.14.12297.com.Virtuos.R6DLM.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 2076877040,
+      "sha256": "abe06a0391810a01c26a0ef36f7a386f157cccbe7207fe414d10e1b8a39a9d4d"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4500998669991603",
+      "name": "patch.13.12297.com.Virtuos.R6DLM.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 1916069768,
+      "sha256": "3d520544e6ced8410e2d9eb56fafea0f48a4ee7b2515a2802304823c9fc07c4b"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4500994809991989",
+      "name": "patch.12.12297.com.Virtuos.R6DLM.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 1930749406,
+      "sha256": "60ca81602c4baf5c49bba909e01774ace5171e9c38929f06ad09cf0f2dd17dc7"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4500988959992574",
+      "name": "patch.11.12297.com.Virtuos.R6DLM.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 1974108832,
+      "sha256": "e8bf60f377d6acbf7b27c358fdf619f93fa07843ac36cd11d0b5af5d6575f314"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4500983399993130",
+      "name": "patch.10.12297.com.Virtuos.R6DLM.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 1876938659,
+      "sha256": "001d7c149bd66e6a7760cdc49cb482ad1fe61ff9a433af2bd0e38202d273c34b"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4500978986660238",
+      "name": "patch.1.12297.com.Virtuos.R6DLM.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 1034468305,
+      "sha256": "df6b66555852111f6d1b9640032cc397946aaae63d1b3521d7f29912c8b49e84"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4500976153327188",
+      "name": "patch.0.12297.com.Virtuos.R6DLM.obb",
+      "required": true,
+      "role": "content-bundle",
+      "size": 2080291635,
+      "sha256": "cc6a103c670ab6e26c54f2da8d955144e78f15988640314eefaae557c3390e96"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4500971323327671",
+      "name": "005l_Peenemunde_Ruins5_360_20.11.05_V2.mp4",
+      "required": true,
+      "role": "content-bundle",
+      "size": 122156627,
+      "sha256": "9dfef5691dbbe244a99bb8dc115ced62fa6b145b4ac42e790dafdfcc1d60f60f"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4500970613327742",
+      "name": "005k_Peenemunde_Ruins4_360_20.11.05_V2.mp4",
+      "required": true,
+      "role": "content-bundle",
+      "size": 77788488,
+      "sha256": "2449736db20f36b1641f905cc6c87dde8c75319ec2abfe4b41cfb99399212d6c"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4500970149994455",
+      "name": "005j_Peenemunde_Ruins2_360_2020.11.05_V2.mp4",
+      "required": true,
+      "role": "content-bundle",
+      "size": 138218173,
+      "sha256": "1c597bf61fd495b56c3ddb752e15b113c8b45ce27b2eb56aa8d9f0335ae0eb1a"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4500969529994517",
+      "name": "005i_Peenemunde_Ruins1_360_20.11.05_V2.mp4",
+      "required": true,
+      "role": "content-bundle",
+      "size": 137773032,
+      "sha256": "e0b8c04bb1d79f2d6cd9694fd4de4f30394187da700dc06aa7c7999f27ad8efc"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4500968769994593",
+      "name": "005g_Peenemunde_BombCrater_360_20.11.05_V2.mp4",
+      "required": true,
+      "role": "content-bundle",
+      "size": 146242273,
+      "sha256": "b228a7d0106d4289cd614398129647cbd03be7c3c47b10b9fd1fc549bbd4d19f"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4500968153327988",
+      "name": "005f_TheFlyingCoffin_FranksPond_360_20.11.05_V3.mp4",
+      "required": true,
+      "role": "content-bundle",
+      "size": 55533344,
+      "sha256": "398df76664060c07dc1ae77ac6e53c87b362fc2b944881e28e764bc8b85ef788"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4500967553328048",
+      "name": "005e_Peenemunde_GroundZeroTestSite_360_20.11.05_V3.mp4",
+      "required": true,
+      "role": "content-bundle",
+      "size": 139898988,
+      "sha256": "96c31240cadcfa4e5c15b5750a0d1534daa9d834171d0d342318a4dd68d4e21f"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4500966766661460",
+      "name": "005c_Peenemunde_FireDeflectionPit_360_20.11.05_V2.mp4",
+      "required": true,
+      "role": "content-bundle",
+      "size": 141257538,
+      "sha256": "823d37ce00cf86942fad6cddf85d7fd20a873675091492d340bb19c5c47838fb"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4500966209994849",
+      "name": "004g_U-BoatPens_WetPenAbove_360_20.10.20_V2.mp4",
+      "required": true,
+      "role": "content-bundle",
+      "size": 66035234,
+      "sha256": "6dab4a941f1f00b5ddb2d34826ae1300aacc0f5049a2110e5143ce499ee8a538"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4500965719994898",
+      "name": "004f_TheHealer_ShayMemorial_360_20.11.05_V3.mp4",
+      "required": true,
+      "role": "content-bundle",
+      "size": 90349163,
+      "sha256": "7a90886f674e67e6381f9ef73ada6de67d4385029db59ace693a2594d0307c57"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4500965176661619",
+      "name": "004e_U-BoatPens_WetPenBelow_360_20.10.20_V2.mp4",
+      "required": true,
+      "role": "content-bundle",
+      "size": 65605106,
+      "sha256": "8c85e9286565ffc669f507f1fe64a159ff693d8ba572467cb2d28d75edbb6c14"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4500964739994996",
+      "name": "004c_U-BoatPens_WideShotOfPens_360_20.10.21_V2.mp4",
+      "required": true,
+      "role": "content-bundle",
+      "size": 66336793,
+      "sha256": "87dcd590d20c3f9dccedc480edebb5443491c8b9c4cb226c126ed6a68b695adc"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4500964316661705",
+      "name": "003m_Normandy_Hedgerows_360_20.11.05_V2.mp4",
+      "required": true,
+      "role": "content-bundle",
+      "size": 141258203,
+      "sha256": "3ec9eab0b9dc4788c5d00e6598e57d1ecdac09f30e081374b7192a2d85f4a349"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4500963623328441",
+      "name": "003k_Normandy_InteriorGunEmplacement_360_20.11.05_V2.mp4",
+      "required": true,
+      "role": "content-bundle",
+      "size": 26756467,
+      "sha256": "59702b806aaab931083022402720e7c6d03c79ac45cc063eb0cdf1f5b270abc0"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4500963333328470",
+      "name": "003j_Normandy_InteriorBunkerAtSea_360_20.10.21_V2.mp4",
+      "required": true,
+      "role": "content-bundle",
+      "size": 62204199,
+      "sha256": "8e75803ba26104c8f04d0693732d7e695008127d47922d49564bc8f0ef5ac0e6"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4500962923328511",
+      "name": "003h_Normandy_OmahaBeachWide_360_20.11.05_V2.mp4",
+      "required": true,
+      "role": "content-bundle",
+      "size": 62432080,
+      "sha256": "6d5e575f8587631f1946f3564cc37ca76aa49487e3901dfc23fec65a8dcd60d9"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4500962513328552",
+      "name": "003g_Normandy_OmahaBeachCliff_360_20.11.05_V2.mp4",
+      "required": true,
+      "role": "content-bundle",
+      "size": 47373638,
+      "sha256": "4cc0a1d627e0b83cf220ed95bd1683d9a7b9aa83d9273d334e210bf840ae6fe7"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4500962109995259",
+      "name": "003f_ThePromise_SmittysGrave_360_20.07.23_V3.mp4",
+      "required": true,
+      "role": "content-bundle",
+      "size": 20510452,
+      "sha256": "129a0a0fad6180a98c3e1c446590785c899301dd25e13ada5b4d7b815ed2215b"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4500961879995282",
+      "name": "003e_Normandy_ExteriorGunEmplacement_360_20.11.05_V2.mp4",
+      "required": true,
+      "role": "content-bundle",
+      "size": 23779071,
+      "sha256": "b3c5a71df5c31268a7f90d59282e51a6803bc3c66264b85d18a3dd7ab7964a51"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4500961493328654",
+      "name": "003c_Normandy_ExteriorBunkerAtSea_360_20.11.05_V2.mp4",
+      "required": true,
+      "role": "content-bundle",
+      "size": 64517836,
+      "sha256": "b343d33d1a0c603cfa218d41e311f4e422f3d0e6064f0f968ac136dfe87e8c85"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4500960993328704",
+      "name": "002d_TheReturn_VR3_TheGate_360_20.07.23_V2.mp4",
+      "required": true,
+      "role": "content-bundle",
+      "size": 147863836,
+      "sha256": "d497411decbfe53bd76816b4d9ca2815e43f02b4e1ed0d08b2d68fe536c58da9"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4500960479995422",
+      "name": "002c_TheReturn_VR2_TheBoy_360_20.07.23_V2.mp4",
+      "required": true,
+      "role": "content-bundle",
+      "size": 135939332,
+      "sha256": "d734c5150e1f3791270b14535d4b381ce95f62b5904f5c0caaacd3ee700de162"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4500960029995467",
+      "name": "002c_DRG_LocomotiveMoving_360_20.11.05_V2.mp4",
+      "required": true,
+      "role": "content-bundle",
+      "size": 68532340,
+      "sha256": "ddca0d28da132c0e3a01a04ae5e22669e5b7e37825e1a8c034c1d191357c857a"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4500959673328836",
+      "name": "002b_WWII-MUSEUM_Entrance_360_2020.11.03_FINAL_V2.mp4",
+      "required": true,
+      "role": "content-bundle",
+      "size": 29969449,
+      "sha256": "b6d02125758201870dc8fda288cff4c4073c3fb9157074e2d2bac367606c9eba"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4500959356662201",
+      "name": "002b_WWII-MUSEUM_Balcony_360_2020.11.03_FINAL_V2.mp4",
+      "required": true,
+      "role": "content-bundle",
+      "size": 29213039,
+      "sha256": "f3e4e858cb08afae6a08b5ae5a67faecef7e00d46155c164e333b382c80f8ec9"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4500958996662237",
+      "name": "002b_TheReturn_VR1_TheRoad_360_20.07.12_V3.mp4",
+      "required": true,
+      "role": "content-bundle",
+      "size": 76389297,
+      "sha256": "38c6896a62fab9e20c19e36b7c14b5ec2d95b586f2782d79192fb6e7028c434b"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4500958566662280",
+      "name": "002b_DRG_LocomotiveExterior_360_20.11.05_V2.mp4",
+      "required": true,
+      "role": "content-bundle",
+      "size": 25156405,
+      "sha256": "d7bdf1e77f798e567d2528448152f567783f131d1e23252416f8a045f0e9ff0a"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4500958333328970",
+      "name": "002a_DRG_LocomotiveInterior_360_20.11.05_V3.mp4",
+      "required": true,
+      "role": "content-bundle",
+      "size": 22601339,
+      "sha256": "dd81ab648bb651af17f74aa2b85634a185038cf9790fa21ee6fc9334f76c36f4"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4500958046662332",
+      "name": "001m_Higgins_HigginsOnBoard_360_20.11.05_V2.mp4",
+      "required": true,
+      "role": "content-bundle",
+      "size": 66274925,
+      "sha256": "ae32ac38afcb7a7bae5b7ae7ffd480f2e385b0aab009a74e68b9d1604b09c934"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4500957603329043",
+      "name": "001k_HigginsDocked_360_20.11.05_V2.mp4",
+      "required": true,
+      "role": "content-bundle",
+      "size": 115475439,
+      "sha256": "ab82af52b938d965c8f2162f00fc2ab2721dbabf031839cec580c94d548ff1ec"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4500957173329086",
+      "name": "001i_Higgins_PTBoatOnBoard_360_20.11.05_V2.mp4",
+      "required": true,
+      "role": "content-bundle",
+      "size": 25977231,
+      "sha256": "e2328bd8f5d57e8d34c1afa49a05742cd24561d8285b4c94dca3969a8b72e4de"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4500956853329118",
+      "name": "001e_Higgins_HigginsFactoryExterior_360_20.11.05_V3.mp4",
+      "required": true,
+      "role": "content-bundle",
+      "size": 33339946,
+      "sha256": "3a36a6c590f2f6113ee6670b5b82d8c523bc3332e6830450faafa6fe1cfe4872"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4500956566662480",
+      "name": "001g_Higgins_PTBoatDocked_360_20.11.05_V2.mp4",
+      "required": true,
+      "role": "content-bundle",
+      "size": 61508021,
+      "sha256": "01ea7148673d47b04731da81cdb0da3081b0630d3c88ec24f3e8675b87aaff24"
+    },
+    {
+      "dest": "android-files/Android/obb/com.Virtuos.R6DLM",
+      "id": "4500956356662501",
+      "name": "001c_HigginsFactoryInterior_360_20.11.05_V2.mp4",
+      "required": true,
+      "role": "content-bundle",
+      "size": 22304808,
+      "sha256": "2093aa0d93e045b0c351f87e067efcac58d9cf33c8ea366bdc92f6cdffa4298a"
+    }
+  ],
+  "status": {
+    "playability": "verified",
+    "download": "listed",
+    "notes": [
+      {
+        "en": "Marked as verified by the project on 2026-10-18. File list as Meta's tool reports it for this build; 117 of 118 checksums recorded from a download.",
+        "de": "Vom Projekt am 2026-10-18 als geprüft markiert. Dateiliste, wie Metas Werkzeug sie für diesen Build nennt; 117 von 118 Prüfsummen aus einem Download erfasst."
+      },
+      {
+        "en": "Medal of Honor: Above and Beyond. Tested by the project on an Apple Vision Pro: it starts and plays; drawn at up to 4000 pixels an eye. Needs toolchain 36a5844 or newer.",
+        "de": "Medal of Honor: Above and Beyond. Vom Projekt auf einer Apple Vision Pro getestet: Es startet und lässt sich spielen; gezeichnet mit bis zu 4000 Pixeln je Auge. Braucht Toolchain 36a5844 oder neuer."
+      }
+    ]
+  }
+}
