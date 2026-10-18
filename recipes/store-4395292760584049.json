@@ -1,0 +1,59 @@
+{
+ "files": [
+  {
+   "dest": "",
+   "id": "8551543971625553",
+   "localName": "x4395292760584049.apk",
+   "name": "Moss2-Android-Shipping-arm64.apk",
+   "required": true,
+   "role": "apk",
+   "size": 67142833,
+   "sha256": "c937475b76ef1909af6bbf7acbedcf92131abca58f84886016ab0005cacbfa7f"
+  },
+  {
+   "dest": "@obb",
+   "id": "8551543331625617",
+   "name": "main.149619.com.polyarc.Moss2.obb",
+   "required": true,
+   "role": "main-obb",
+   "size": 3289436150,
+   "sha256": "4dcbddce1d352969d57a8ffe5f35912cc6fa40279051f911ce9e90a450e82706"
+  },
+  {
+   "dest": "android-files/Android/obb/com.polyarc.Moss2",
+   "id": "8551536364959647",
+   "name": "patch.149619.com.polyarc.Moss2.obb",
+   "required": true,
+   "role": "content-bundle",
+   "size": 1540362896,
+   "sha256": "c767794ef81d54380fe9cabcc457ce172788e3b2c23df6ddcdd4ce34352f8a87"
+  }
+ ],
+ "id": "store-4395292760584049",
+ "package": "com.polyarc.Moss2",
+ "schema": 1,
+ "status": {
+  "playability": "verified",
+  "download": "proven",
+  "notes": [
+   {
+    "en": "Marked as verified by the project on 2026-10-18. File list as Meta's tool reports it for this build; 3 of 3 checksums recorded from a download.",
+    "de": "Vom Projekt am 2026-10-18 als geprüft markiert. Dateiliste, wie Metas Werkzeug sie für diesen Build nennt; 3 von 3 Prüfsummen aus einem Download erfasst."
+   },
+   {
+    "en": "Moss: Book II. Tested by the project on an Apple Vision Pro: it starts and plays, with Moss's picture and frame-rate settings (an even 50 or 60 frames a second). The very first start compiles its shaders for about a minute with no picture; later starts do that before the game begins. Needs toolchain 718a186 or newer.",
+    "de": "Moss: Book II. Vom Projekt auf einer Apple Vision Pro getestet: Startet und lässt sich spielen, mit den Bild- und Bildraten-Einstellungen von Moss (gleichmäßig 50 oder 60 Bilder pro Sekunde). Der allererste Start übersetzt etwa eine Minute lang Shader, ohne Bild; spätere Starts erledigen das, bevor das Spiel beginnt. Braucht Toolchain 718a186 oder neuer."
+   }
+  ]
+ },
+ "store": {
+  "appId": "4395292760584049"
+ },
+ "title": "Moss: Book II",
+ "toolchain": {
+  "minCommit": "718a186",
+  "target": "x4395292760584049"
+ },
+ "versionCode": 149619,
+ "versionName": "1.0.3.149619"
+}
