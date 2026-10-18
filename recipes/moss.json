@@ -10,7 +10,7 @@
  },
  "toolchain": {
   "target": "moss",
-  "minCommit": "5cb440a"
+  "minCommit": "dc1a2a8"
  },
  "files": [
   {
