@@ -32,8 +32,8 @@
     "de": "Vom Projekt am 2026-10-18 als geprüft markiert. Dateiliste, wie Metas Werkzeug sie für diesen Build nennt; 2 von 2 Prüfsummen aus einem Download erfasst."
    },
    {
-    "en": "Forest - Oniri tech demo. Tested by the project on an Apple Vision Pro: the tech demo runs. Needs toolchain a459856 (1.3.4) or newer.",
-    "de": "Forest - Oniri tech demo. Vom Projekt auf einer Apple Vision Pro getestet: Die Tech-Demo läuft. Braucht Toolchain a459856 (1.3.4) oder neuer."
+    "en": "Forest - Oniri tech demo. Tested by the project on an Apple Vision Pro: the tech demo runs. The eye picture has no size limit by default (the start window's \"Max resolution per eye\" can set one). Needs toolchain 43fe551 or newer.",
+    "de": "Forest - Oniri tech demo. Vom Projekt auf einer Apple Vision Pro getestet: Die Tech-Demo läuft. Das Bild je Auge hat standardmäßig keine Größengrenze (im Startfenster unter „Maximale Auflösung je Auge“ einstellbar). Braucht Toolchain 43fe551 oder neuer."
    }
   ]
  },
@@ -42,7 +42,7 @@
  },
  "title": "Forest - Oniri tech demo",
  "toolchain": {
-  "minCommit": "a459856",
+  "minCommit": "43fe551",
   "target": "x7611090302277055"
  },
  "versionCode": 27,
