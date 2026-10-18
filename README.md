@@ -30,322 +30,61 @@ use step by step, in simple words – in English and German.
 > AVP Play is made by one person and tested on one Mac with one Vision Pro, plus what other players report.
 > Expect rough edges, and please report what happens on your setup.
 
+## How it works
+
+1. **You pick a game you own.** AVP Play asks Meta (or Steam) whether your account owns it and downloads only
+   what is confirmed – with your own sign-in, straight from the store.
+2. **Your Mac translates it.** The Android build of the game is turned into a visionOS app by the
+   [Klepton](#the-toolchain) toolchain, which comes with AVP Play.
+3. **It is signed with your own Apple account** and copied to your Vision Pro – over Wi-Fi, or much faster over
+   a USB cable on the Developer Strap.
+4. **You play.** Every game opens with the same start window: *Start*, *Settings* for picture, play area and
+   controls, and the room measured once for all games.
+
+Every Quest game of the Meta Store is listed in the app with a label: **Verified** (tested by the project, with
+a recipe in [`recipes/`](recipes)), **Community Verified** (players report it runs, or it runs with a fix a player
+sent in), **Untested** or **Incompatible**. An untested game you own can be tried – most need adjustments before
+they run. Say with one click how it went, or let an AI coding assistant try to fix it and send the fix in for
+review; that is how the list grows.
+
+Along the way the app keeps your saved games on your Mac, can keep the downloads on an external disk, shows
+mixed-reality games in your own room, and updates itself from this repository's releases. The
+[wiki](https://github.com/myMartek/avp-play/wiki) has the details.
+
 ## What you need
 
 | | |
 |---|---|
-| Mac | Apple silicon, macOS 14 or later, with [Xcode](https://apps.apple.com/app/xcode/id497799835) and its visionOS platform installed |
-| Headset | Apple Vision Pro, paired with Xcode, Developer Mode on, on the same Wi-Fi as the Mac |
-| Apple account | An Apple developer team, signed in to Xcode. A free Apple account works, with Apple's limits: a game opens for 7 days after it was installed (installing it again renews it, saved games stay), at most 3 apps from the account can be on the Vision Pro at once, at most 10 new games can be set up within 7 days, and the permission for more address space is missing, so a very large game may not start. A paid [Apple Developer Program](https://developer.apple.com/programs/) membership has none of these limits. |
-| Meta account | Only for games from the Meta Store: the account that owns them, and Meta's own command-line tool [`ovr-platform-util`](https://developers.meta.com/horizon/resources/publish-reference-platform-command-line-utility/) (used to sign in, to look up the files of a game nobody has tested yet, and as a second way to download a file when Meta's direct address refuses it). You download it from Meta's page; the app finds the download and sets it up. |
-| Steam account | Only for the games whose files come from a Steam purchase (Doom 3, Counter-Strike, Half-Life: Alyx) or that you choose to get from Steam. |
-| Controllers | Whatever the game needs – most of these games expect tracked controllers. An ordinary game controller (DualSense, Xbox, …) also works together with your hands: the hands show where they are and pinch to grab, the controller adds both sticks and the buttons. Moss is set up for this. |
-| Disk space | Games are large. Asgard's Wrath 2 alone is about 34 GB on the Mac and again on the headset. |
+| Mac | Apple silicon, macOS 14 or later, [Xcode](https://apps.apple.com/app/xcode/id497799835) with its visionOS platform |
+| Vision Pro | paired with Xcode, Developer Mode on, on the same Wi-Fi as the Mac |
+| Apple account | an Apple developer team signed in to Xcode. A free account works with Apple's limits (a game opens for 7 days after it is installed, installing it again renews it; 3 apps at a time); the paid [Apple Developer Program](https://developer.apple.com/programs/) has none |
+| Meta / Steam account | the account that owns the games – Meta for the Meta Store, Steam for games bought there |
+| Controllers | what the game expects – mostly tracked controllers; an ordinary gamepad works together with your hands |
+| Disk space | games are large, from a few hundred MB to over 70 GB, on the Mac and again on the headset |
 
 ## Install
 
 1. Download `AVP-Play-<version>.dmg` from the [latest release](../../releases/latest), open it and drag
    **AVP Play** into Applications.
-2. Open AVP Play. The **Setup** page checks the four things it needs (Xcode, Vision Pro, Apple developer team,
-   toolchain) and the two accounts that are only needed for their own games (Meta for games from the Meta Store,
-   Steam for games from Steam), and tells you what to do for each one that is missing. The toolchain comes with the
-   app and installs itself.
-   For the Meta account, the app opens Meta's download page for its sign-in tool; once the file is in your
-   Downloads folder the app picks it up by itself – you do not have to move it or make it executable.
-3. Pick a game under **Games** and click **Install**. The **Jobs** page shows the steps. A job can be
-   interrupted at any point and resumed later; nothing that was downloaded or copied is lost. Several jobs
-   run one after another, from the bottom of the list upwards; drag a waiting job to change when its turn is.
+2. Open it. The **Setup** page checks Xcode, the Vision Pro, your Apple team and your store accounts, and says
+   what to do for anything missing.
+3. Pick a game under **Games** and click **Install**. The **Jobs** page shows each step; a job can be stopped
+   and resumed at any time without losing what was downloaded.
 
-Not everything set up yet? A game's files can be downloaded as soon as its account is signed in – **Download
-Only** on the game's page needs neither Xcode nor a developer team nor the headset. Building and installing
-follow once Setup is complete, without downloading again.
+## Your accounts and your data
 
-Every installed game opens with the same start window: its picture, its name, **Start** and **Settings**.
-Settings holds the picture's dials – foveated rendering, resolution, and edge smoothing where a game can take
-it: for a Vulkan game that smooths its edges by itself with fewer than four samples the choice appears after the
-game has run once. A Vulkan game also gets *Foveated rendering* as a choice of five (Off, Light, Medium, Strong, Very strong; from toolchain 485 *Strong* has a smaller sharp middle and a finer edge)
-once it has run: the edge of the picture is drawn more coarsely, the middle stays as it is. Under *Advanced*,
-*Display output* says how finely the finished picture is put on the display;
-it starts at *Light*, which leaves the graphics chip more time for the game. *Frame rate* offers *Up to 100*, the
-default, and *Up to 120*, which is smoother where the game manages it and the Vision Pro's display can do it; when
-a game cannot keep up, the Vision Pro halves the rate for a while (100 to 50, 120 to 60). Mixed-reality games have
-no such choice: their room shows only in the space that runs at up to 100. Where a game shows a player name it
-takes from the headset's account and cannot change itself, Settings has a *Player name* field for it. *Advanced*
-› *Test* holds switches for behaviour that is built in but not the default (for instance the sound block size from
-before toolchain 478, – from toolchain 507 – one head pose for a whole frame of a game that talks to Meta's own
-interface, or – from toolchain 507 – a second implementation of everything between a game's sound interface and
-the output, *Sound: the new audio path*); each one applies from the next start.
-
-**How a game is running** (from toolchain 507). In every game, hold **Create** and **Options** on the controllers
-together for a second: a small panel appears just above the middle of the view, and the same again puts it away.
-It shows the last second in numbers – frames a second and the rate the display runs at, shaders that had to be
-compiled and ones that were only fetched, how busy the graphics chip is and how long it works on one frame of the
-game, the processor's load and its busiest thread, memory, heat, the size of the picture – and the last minute as
-three graphs: frame rate, load, shaders. A dip in the frame rate with a red bar under it was a shader being
-compiled. The panel is in English and is drawn into the game's picture, so it is as sharp as *Display output*
-makes that. Nothing is measured before the panel is first shown. *Advanced* › *Test* › *Show performance in the
-headset from the start* has it there when the game opens. So that a game does not open its menu along with the
-panel, one of the two buttons alone reaches the game a quarter of a second after you press it.
-
-**The new audio and head-pose implementations** are no longer a setting. From version 1.1.15 a setting under
-*Settings › Experimental* switched them on at install; newer toolchains use them in every game (the old audio path
-and the per-query head pose are gone), so the setting was removed. A game built with an older toolchain keeps what
-it was built with, and there the switches stay in the game's *Advanced › Test* group.
-
-**MetalFX upscaling** (from toolchain 563). Below 100% *Resolution* a game draws
-a smaller picture that is stretched to the display. Klepton's compositor can do that stretch with Apple's MetalFX
-spatial scaler instead of a linear one – a sharper picture for a little graphics time – and has a switch for it in
-the game (in the *Picture* box of the game's settings, under *Resolution*; off). *Settings › Experimental › MetalFX* in this app switches
-it on from the start in every game you install or update, the same way as the switch above; off, the default,
-changes nothing. At 100% there is nothing to upscale, so switching it on also sets the resolution a game starts at
-to 75% (a slider below the switch; a value you choose there counts, and switching off brings back the one from before,
-or 100%); what you choose in a game itself counts there, also after an update. It works in every game – Vulkan and GL,
-through Meta's own interface or OpenXR (Half-Life: Alyx, Steam Link, Doom 3, Walkabout, Beat Saber 1.45), with foveated
-rendering on, too; only a picture that cannot be scaled safely keeps the linear stretch, and the game's log says why.
-The metrics panel in the headset (Create + Options held for a second) shows the resolution the game renders at,
-whether MetalFX is upscaling and on which path, and the resolution after it; with the panel shown, a short tap of
-Create + Options together switches MetalFX on and off while the game runs. In mixed reality MetalFX pauses while the
-game shows the room, and the room stays visible behind the picture when it is on.
-
-**Max resolution per eye** (from toolchain 563). A game's settings have a dropdown under *Advanced* that caps the
-size it draws each eye at.
-
-**XR prediction** (in the game's start window under *Settings › Advanced › Test*; from version 1.3.0 no longer on
-the game's page in this app). Newer toolchains give a game its head pose without prediction by default – one pose
-per frame, as it is when the frame starts. The switch brings the old behaviour back for a game that comes through
-OpenXR, which predicts the head to the moment the picture is shown; it applies from the next start.
-`avpplay install --xr-prediction` builds a game with it switched on from the start. Toolchain 507 and older always
-predict.
-
-The app speaks English and German. It follows macOS; you can choose a language in its settings (⌘,).
-
-**Your disk space.** The page *Data* lists what has been downloaded, game by game and down to the file, and
-removes it again. Under Settings › Downloads you can keep the downloads on another disk, for example an external
-one; what is already there moves over, with a progress bar. While that disk is not connected, nothing is
-downloaded or installed. The folders there are named after identifiers; a text file beside them, `AVP Play –
-Index.txt`, says which folder is which game, and a game's page shows its folder in Finder.
-
-**Your saved games.** AVP Play copies what a game has saved from the Vision Pro to your Mac: after you quit the
-game, every few hours while the app is open, and on a button. Each change is kept as a copy of its own, so
-nothing is overwritten, and the copies stay when you remove the game from the headset – which a free Apple
-account, with its three apps at a time, makes you do. Install the game again and it gets its saved games back,
-if it has none on the headset; a button on the game's page puts a copy back on request. The copies never leave
-your Mac: they are kept in `AVP Play Saved Games` next to your downloads folder if you have chosen one, otherwise
-with the app's data. This covers games that come as an Android app – all Meta Store games, Doom 3,
-Counter-Strike – and not yet the ones that run as Linux programs (Half-Life: Alyx, which has Steam Cloud
-instead). Settings › Saved Games turns the automatic part off.
-
-**Cable or Wi-Fi.** Games are copied to the headset over whatever connects it to the Mac. With a USB cable on
-the Developer Strap macOS uses the cable by itself, and copying is many times faster; Setup, the sidebar and the
-progress line of a job say which connection is in use.
-
-**Your list of games.** The games you have downloaded, the ones in your Meta account and your favourites can be
-written to a text file (*Data* › Export Game List, or the list the overview shows with *Installed*, *Downloaded,
-Not Installed*, *Favourites* or *Favourites Not Downloaded* set) – to pass on, for example to this project, so
-that it knows which games people have that do not run yet. It is only a list: no game files, nothing about your
-account or device. *Favourites Not Downloaded* is also the quick way to see what of your favourites is still to
-fetch to this Mac.
-
-**Owned.** The overview's *Owned* filter shows only the games you own: the ones in your Meta account's library
-(the list Meta's Horizon app shows, read with your Meta sign-in at most once an hour while the filter is on) and,
-for games that can also come from Steam, the ones in your Steam account. Where Meta has answered the ownership
-question for a single game, that answer counts. `avpplay library` prints the same list on the command line.
-
-**Horizon+.** The *Horizon+ Games* and *Horizon+ Indie* filters show the games a Meta Horizon+ subscription lets you
-download at any time: the Games Catalog and the Indie Catalog of the Meta Store (not the monthly games). With both on,
-you see both catalogues. The app reads the lists from Meta with your Meta sign-in, the way Meta's Horizon app does, at
-most once a day; a game's page says which catalogue it is in. `avpplay horizonplus` prints the same list on the command line.
-
-**Meta and Steam.** The *Meta* and *Steam* filters show only the games available from the Meta Store or from Steam,
-whichever purchase source is chosen; *Steam* includes games whose files come from a Steam purchase, such as
-Half-Life: Alyx, Doom 3 and Counter-Strike. With a Steam sign-in, *Steam* and *Owned* also show the Steam games in your account that ship an Android
-build (the build Steam makes for its own headset), read with Valve's SteamCMD once a day: no third-party service
-learns which games you own. Such a game without a recipe is untested; **Download from Steam** on its page fetches its
-Android build from your account, checks every file and writes a recipe with checksums, and then it builds and
-installs like any other game. *Steam* also lists the other Steam games with an Android build that the project
-knows, marked as not in your account, with the project's label for the Steam version; reports and fixes for a
-Steam game count for its Steam entry, not for the Meta Store game. On the command line: `avpplay steam library` and
-`avpplay steam prepare <app ID>`.
-
-**Your own filters.** Under *Filters* in the sidebar you make filters of your own, such as “32 Bit” or “For
-Guests”. A game goes into one with the *Filter* button on its page, or select several in the overview and use
-*Filter …* in the bar below it. Above the overview each filter can then show only its games or hide them – click it
-to switch between off, show only these and hide these – so all favourites without the 32-bit ones is two clicks.
-With a filter set to show only its games, the list can be exported as well; *Filters* also exports each filter on
-its own.
-
-**Mixed reality.** The overview's *Mixed Reality* filter shows the games whose mixed-reality mode works with AVP
-Play – your own room around the game. At the moment these are TRIANGLE STRATEGY, Demeo, Richie's Plank
-Experience, LES MILLS BODYCOMBAT, DreamSpace and Cubism, from toolchain 631 Banners & Bastions (community fix
-55), and from toolchain 641 LEGO® Bricktales and Angry Birds VR: Isle of Pigs. While a game shows your
-room, the play area's wall and fade stay away.
-
-**Play area.** From toolchain 616 a game knows the room you play in. Before its first start you measure the room
-once: the headset scans it, suggests the largest free floor around you, and you keep it, scan again or draw it
-yourself with the controller's ray on the floor. Every AVP Play game shares that play area and finds the room again
-by itself – measured in one game, it is known in the next; in a new room you measure again. *Stationary / seated* is the other choice: a circle of 1.5 m around
-your head, centred again whenever you recentre. In the game a faint see-through wall appears as you come close to
-the edge and gets clearer the closer you are; the floor and tables never set it off. *Measure room* in the app's
-settings decides whether newly installed games use it (on by default); each game can switch it on or off at the top
-of *Settings* › *Play area* in its start window. From toolchain 631 the start window has the two choices right under
-*Start*: *Play area* – room scale, stationary or off – and *At the edge* – a wall, or the game fading out so that the
-room shows through (that needs the mixed space; at up to 120 frames a second the wall shows instead). The fade starts
-late: 20 cm before the edge for the head, 10 cm for a hand.
-
-**Updates.** Once a day the app asks GitHub whether a newer release exists and offers to install it. It replaces
-itself only with a version that is signed by the same developer and notarised by Apple. You can turn the check
-off in the settings.
-
-## Games
-
-A game needs a *recipe*: a small JSON file that names the exact build, its files and their checksums. The
-recipes in [`recipes/`](recipes) are:
-
-| Game | Source | Notes |
-|---|---|---|
-| Asgard's Wrath 2 | Meta Store | text and voices follow the headset's language; voice packs are an optional tick; the first start compiles shaders for several minutes, on the game's own screen |
-| Batman: Arkham Shadow | Meta Store | optional voice languages; from toolchain 478 drawn at 4608 pixels an eye and full resolution with foveated rendering at *Strong* (before: 3072 at 70 %) – both are settings in the game's start window, and a copy installed earlier takes the new defaults once; from toolchain 607 a shader the game sees for the first time is compiled behind the picture instead of stopping it for up to a second, and the game draws every second refresh (an even 50 of 100) – both are switches under Advanced › Test that start on for this game |
-| Beat Saber | Meta Store | purchased song packs are downloaded and unlocked; the current version (1.45) is drawn at the display's full resolution with foveated rendering (on by default); edge smoothing (2x/4x) is a setting in the game's start window, off by default |
-| Moss | Meta Store or Steam | from toolchain 485 drawn at the display's own resolution (4608 pixels an eye) with foveated rendering at *Strong*, 16x anisotropic filtering and a frame on every second refresh of the display (an even 60 of 120); before, it ran at about 45 frames a second. A copy installed earlier takes the new picture once. If you bought it on Steam instead, choose **Purchased from: Steam** on its page (from toolchain 507): the app fetches the Android build Steam ships (for Steam Frame, about 2.7 GB) from your Steam account; jump is Cross, attack is Circle or Square. No older versions for the Steam copy, and its saved games are separate; from toolchain 616 a shader the game sees for the first time is compiled behind the picture instead of stopping it, and the shaders of a session are compiled before the next start – a switch under Advanced › Test that starts on for this game; from toolchain 619 the Steam copy also compiles the game's own pipeline list at start, as the Meta Store copy does (another switch there, also on) |
-| Walkabout Mini Golf | Meta Store or Steam | purchased courses and content packs are unlocked; the first start compiles shaders for a few minutes. If you bought it on Steam instead, choose **Purchased from: Steam** on its page: the app then fetches the Android build Steam ships (for Steam Frame) from your Steam account and unlocks the add-ons Steam confirms for it. No older versions for the Steam copy; from toolchain 595 the ball and putt sounds play (community fix 46) and signing in to its game service no longer hangs the loading screen; from toolchain 608 the start window's Settings has **Unlock all putters and balls**: after the game's first start it writes every lost ball and Foxhunt putter of the courses you own, and the two Homestar Runner hole celebrations a bought pack still has to earn, into your saved game (it asks first, as this cannot be undone; Putter Pass and other purchases are not touched); from toolchain 610 the multiplayer voice chat can use the Vision Pro's microphone: turn on **Microphone** in the start window's Settings (off by default; visionOS asks for the microphone once) |
-| SUPERHOT VR | Meta Store | |
-| Steam Link | Meta Store | streams SteamVR from a PC on your network; asks for the local network when it opens – allow it, or the PC waits for a connection (before toolchain 380 a new install was never asked); from 380 its requests to Steam's servers get through and its start window closes once the stream is up, thanks to fixes a user sent in; from toolchain 595 it presents itself to the PC as a Quest 3, so the stream is sharper (2560 pixels an eye), and the sound no longer drops out (community fix 49) |
-| Marvel's Deadpool VR | Meta Store | about 51 GB; the first start compiles shaders for several minutes; edge smoothing at 4x and, from toolchain 478, foveated rendering at *Medium* by default (settings in the game's start window); from toolchain 563 its language packs are loaded from the installation's asset-file list |
-| Alien: Rogue Incursion | Meta Store | about 14 GB; lowers its own resolution a little under load; loading screens flicker; from toolchain 563 no black band under the picture; from toolchain 595 its loading screens are drawn for each eye |
-| Assassin's Creed Nexus VR | Meta Store | about 29 GB; edges shimmer somewhat, passthrough is not supported |
-| Eye of the Temple | Meta Store | the whip is drawn thanks to a fix a user sent in |
-| Resident Evil 4 | Meta Store | about 8.5 GB; runs with a fix a user sent in |
-| Skydance's BEHEMOTH | Meta Store | about 28 GB; runs with fixes users sent in; the first start builds shaders behind the loading screen for several minutes |
-| Maestro | Meta Store | song packs you bought are unlocked (checked with one pack); others are skipped; edge smoothing as a setting, off by default |
-| Star Wars: Tales from the Galaxy's Edge | Meta Store | about 7 GB; runs with a fix a user sent in and the project's own |
-| BattleGlide | Meta Store | early-access build (0.4.1) |
-| TRIANGLE STRATEGY | Meta Store | about 7.5 GB; its mixed-reality mode works – your room shows around the playing field; runs with a fix a user sent in |
-| Demeo | Meta Store | about 4.3 GB; its mixed-reality mode works – your room shows around the board; it cannot sign in to its maker's account service (that needs Meta's own sign-in proof) and plays with a local player, whose name you set in the start window; playing online with others has not been tried |
-| Vampire: The Masquerade – Justice | Meta Store | about 7 GB |
-| Red Matter 2 | Meta Store | about 9 GB; changes its picture's resolution with the load |
-| Tetris Effect: Connected | Meta Store | about 2.2 GB; drawn at the display's own resolution (a setting in the game's start window) |
-| Pistol Whip | Meta Store | about 1.6 GB; runs with fixes users sent in |
-| LES MILLS BODYCOMBAT | Meta Store | about 9.3 GB; its mixed-reality mode works – your room shows around you; the trainer videos play with their sound, smoothest with the display at 120 Hz (at 100 Hz they are shown at 50 pictures a second); from toolchain 595 |
-| Onward | Meta Store | about 8.5 GB; runs with community fix 50; voice chat is switched off; from toolchain 595 |
-| Cubism | Meta Store | about 150 MB; its mixed-reality mode works – your room shows behind the puzzle; runs with community fix 52; from fork commit `07da7ed` |
-| Gun Club VR | Meta Store | about 3.7 GB; drawn at up to 4000 pixels an eye with a steady frame rate; builds on community fix 44 (stable head movement, gun textures, Exit saves settings, Sense grip); from fork commit `9f12962` |
-| Catan VR | Meta Store | about 220 MB; from toolchain 631 the menu shows instead of a white picture, with the right brightness and eye height, and the hands are drawn |
-| LEGO® Bricktales | Meta Store | about 485 MB; its mixed-reality mode works – your room shows around the dioramas; drawn at up to 4000 pixels an eye; from toolchain 641 |
-| Angry Birds VR: Isle of Pigs | Meta Store | about 570 MB; its mixed-reality mode works – the island stands in your room; from toolchain 641 |
-| Medal of Honor™: Above and Beyond | Meta Store | about 76 GB; drawn at up to 4000 pixels an eye; its 360° gallery films are not tested yet; from toolchain 641 |
-| Counter-Strike (Team Beef's CSVR) | free port + your own Counter-Strike files | the game data is fetched from your Steam account; your own servers can be listed per game |
-| Doom 3 (Doom3Quest) | free port + your own Doom 3 files | `pak000`–`pak008.pk4` from your copy of Doom 3 – fetched from your Steam account, or from a folder you choose |
-| Half-Life: Alyx | your own Steam copy (Linux build) | the game (about 73 GB) is fetched from your Steam account; the app downloads Steam Linux Runtime (from Valve) and xrizer (from this repository) itself; a German fan voice-over from the game's Steam Workshop is an optional tick, and the game's start window on the Vision Pro switches between English and German; from toolchain 478 the eyes of characters no longer flash in solid colours, and on the Vision Pro with the M5 the presets *Balanced* (the default) and *Sharp* in the game's start window draw the largest picture with detailed textures at an even half of the display rate (50 pictures a second), *Balanced* with strong foveated rendering and without bloom and ambient occlusion – found by play on one headset; how warm it gets over a long session is not measured yet. Frame cadence, effects and texture memory are settings under *Custom*, a frame-rate readout can be switched on, and a copy installed earlier keeps a custom set as it was. On the first Vision Pro (M2) the two presets are the same with the picture one size smaller; nobody has run them there yet; from toolchain 595 it gets its icon and start picture from Steam's store artwork (community fix 47) |
-
-These thirty-three are marked **Verified**: the project has tested them on a Vision Pro. The app also lists every other
-Quest title from the Meta Store – some 17,000, loaded page by page as you scroll. What you see on each is a label:
-
-| Label | Meaning |
-|---|---|
-| **Verified** | tested by the project, with a recipe in this repository |
-| **Community Verified** | more users report that it runs than that it does not, or it runs with a fix a user sent in that the project has taken over but not tested itself |
-| **Untested** | nobody has reported yet, or the reports are tied |
-| **Incompatible** | more users report that it does not run, or the project has looked at it and knows why it cannot – the game's page then says why |
-
-If you own a game, you can try it: the app looks up its files with your account and builds it – with the
-toolchain's own entry for that game where there is one, otherwise with a generic one that only goes by the
-engine. Each verified game needed its own adjustments before it ran, so expect an untested game not to start.
-Afterwards say how it went with one click (that is what the labels are made of), or let an AI coding assistant
-try to fix it ("Fix with AI") and send the fix in for review.
-
-A game is built with the newest toolchain. From version 1.1.12 its page lets you choose another one for it: an
-older package – one still on your Mac, or one that came with an earlier release, which the app downloads from
-this repository's releases and checks before it installs it – or a working copy that an AI assistant changed
-while fixing the game, shown as "(modified)". The game then stays on that toolchain when the app gets a newer
-one, when the game is updated and when its signature is renewed. The app removes older toolchains by itself to
-save disk space; one that is chosen for a game stays, and a switch in Settings turns the tidying off.
-
-All thirty-three were installed with this app on the author's headset. "Community Verified" means exactly what it
-says: reports from users, not a guarantee. A recipe is tied to one build of a game; other builds need
-their own recipe.
-
-## How it handles your accounts
-
-- **Meta sign-in** runs through Meta's own tool. AVP Play is only the window in front of it: what you type goes
-  to that tool and is not stored. The access token Meta returns is kept in the macOS keychain and nowhere else.
-  It is sent only to Meta, only as a request header, and never appears in logs.
-- **Meta's tool** takes the token only as a command-line argument. While it lists a game's files, or downloads
-  one that Meta's direct address refuses with HTTP 404 (it is tried once, then the job stops with the tool's
-  reason), other programs of the same macOS user could see the token. Its own log goes to a folder that is deleted
-  afterwards. When the tool answers "Cannot find apk with ID" – Meta does that to some accounts after many
-  downloads – the app asks Meta for the build's details instead. That query is not in Meta's developer
-  documentation (it is the one the public library OculusGraphQLApiLib calls `GetBinaryDetails`); only the files'
-  IDs, names and sizes are read from the answer.
-- **Steam sign-in** (optional, for Doom 3, Half-Life: Alyx and a Steam copy of Walkabout Mini Golf) runs through Valve's own tool, SteamCMD. The app
-  downloads it straight from Valve, checks before every start that the program is signed by Valve, and gives it a
-  folder of its own, apart from a Steam you may have installed. Your password and Steam Guard code go to that tool
-  only. SteamCMD remembers the sign-in in that folder – this is the one credential that is not in the keychain,
-  because Valve's tool keeps it itself; "Sign Out" deletes the folder. Before anything is requested the app asks
-  Steam whether your account owns the game, and Steam itself only hands out what it does. You do not need Steam
-  installed. Valve ships SteamCMD as an Intel program, so a Mac that has never run one needs Apple's Rosetta once;
-  the Setup page says so and installs it at the click of a button.
-- **A game bought on Steam instead of at Meta** (Walkabout Mini Golf and, from toolchain 507, Moss). When you open such a game for the
-  first time, or click "Check Purchase", the app asks Meta first and then Steam. Found at Meta: it stays with
-  Meta. Found only on Steam: it switches to Steam by itself. Found nowhere: it stays with Meta. You can also choose
-  yourself under "Purchased from". The two copies are different builds with saves of their own; the app does not
-  install one over the other – remove the installed one first (the headset deletes its saves with it; copies this
-  app has already fetched stay on your Mac).
-- **Steam Cloud saves for Half-Life: Alyx** (optional, new and still rough) are the one sign-in that happens on
-  the headset: in the game's settings there you type your Steam name and password and confirm in the Steam app.
-  The password goes to Steam, encrypted, and is not stored; the session Steam returns stays in the headset's
-  keychain. Nothing of it reaches your Mac, this project or anyone else. At each start the saves on the headset
-  and in your Steam Cloud are brought in step, in both directions, and a save is never replaced without a copy of
-  it being kept. Sign out or switch it off in the same place.
-- **Pictures** of games whose files are not on your Mac yet come from the game's public page in the Meta Store
-  (meta.com): only for games you are looking at, two at a time, without your Meta sign-in or cookies. A small
-  copy is kept in a cache (`~/Library/Caches/AVPPlay`) that the *Data* page can empty; Settings › Pictures turns
-  this off. Steam games without a Meta Store page get their picture from Valve's public image server
-  (steamstatic.com, for newer games via the public store API store.steampowered.com), likewise without any sign-in.
-  An installed Steam game takes its icon and start image from the Steam client's picture cache on this Mac, or
-  else from Valve's library picture and logo on the same server.
-  A few store pages show no picture to a visitor who is not signed in (Richie's Plank Experience);
-  for such a game the picture comes from the project's catalogue service, which is asked only when the catalogue
-  names one. Other games without a picture keep a coloured tile with their name. When a game is installed, its
-  icon and start picture come from the store page too, and from the catalogue service when the page gave none.
-- **Ownership** is asked of Meta before anything is downloaded, and once a day so the app can show which games
-  are yours. With the *Owned* filter on, the app also reads your account's library, the way Meta's Horizon app
-  does, at most once an hour; it keeps the list (app number, name, why it is in the account) on your Mac and
-  forgets it when you sign out. With a *Horizon+* filter on, it reads the two Horizon+ catalogues the same way, at
-  most once a day (app number and name only). A game that counted as not owned is asked about again within the hour, and **Check Purchase** on a
-  game's page asks right away. Add-on content is downloaded only for purchases Meta confirms. Bought
-  something later? **Sync DLCs** on the game's page asks again, downloads what is new and adds it to the installed
-  game without building it again.
-- **Shaders ahead of time.** Where the project has a list of the shader combinations a game uses (Half-Life: Alyx,
-  Walkabout Mini Golf), the Vision Pro compiles them before the game starts – once, with a progress bar – instead
-  of one at a time in the middle of play. Such a list holds no shader code, only where each shader lies in the
-  game's files; your Mac builds the archive from your own copy of the game, and it goes to your own headset only.
-- **Requests to Meta** stop at the first unexpected answer. The app never tries a file to see whether Meta will
-  serve it.
-- **Which version of a game:** a game's page has a menu of versions. At the top are the ones the project has
-  tested and keeps a recipe for – the recommended one, and for some games an earlier one (Beat Saber 1.40.8
-  beside 1.45) – and below them the other versions the Meta Store names for a game you own, marked as untested.
-  For that list the app asks Meta which versions there are – at most once in twenty hours per verified game, and
-  for other games when you open their page – with the query the store's own apps use (it is not a documented
-  developer interface). Nothing changes on the headset until you install. Files that did not change between two
-  versions are taken from the copy on your Mac instead of being downloaded again. Beat Saber's song packs move to
-  another version with it; songs that are newer than the tested version are not fetched until the project has
-  tested a version that has them.
-- **Apple signing** uses the team you are signed in with in Xcode. The app reads the list of teams from Xcode's
-  settings and nothing else. One thing it may add to your Mac: if your signing certificate is there but Apple's
-  intermediate certificate that issued it is not (a key that came from a backup or another Mac), nothing can be
-  signed. The app then fetches that one certificate from apple.com, checks with macOS that it issued yours and
-  leads to Apple's root, and adds it to your login keychain.
-- **The project's own service** (`avpplay.martek.de`) holds the list of further games and what users report about
-  them. The app sends it what you search for and the identifiers of games whose page you open; a report you
-  choose to send says which game and build, and whether it works. It never receives your Meta sign-in or
-  anything about your account or device, and you can turn it off in the settings.
-- **There is a little telemetry**, purely out of curiosity about how much AVP Play is used and which games
-  people actually install with it. Once a day the app tells the project's service that it is in use, with its
-  version number, and once per game that you have installed it. Neither message carries an identifier of you,
-  your Mac or your Vision Pro, and the service keeps nothing but totals per day. You can turn it off under
-  Settings › Online catalogue.
-- There is no account with this project. The only other connection the app makes is the daily question to
-  GitHub about a newer release, which you can turn off as well.
+- **Sign-ins go to the stores' own tools** – Meta's `ovr-platform-util` and Valve's SteamCMD, both downloaded
+  from their makers. What you type goes to those tools and is not stored; Meta's token stays in the macOS keychain
+  and is sent only to Meta. Game pictures come from the stores' public pages, without your sign-in.
+- **Only what you own.** Ownership is asked before anything is downloaded, add-ons only for confirmed purchases.
+  Requests stop at the first unexpected answer; the app never probes what a store might hand out.
+- **Your games stay yours.** Files, builds and saved games live on your Mac and your headset. Nothing is shared
+  with this project.
+- **The project's catalogue service** (`avpplay.martek.de`) knows the list of games and what players report. It
+  gets what you search for, the games whose page you open, the reports you choose to send, and – a little
+  telemetry out of curiosity – once a day that the app is in use and once per game that it was installed, with no
+  identifier of you or your devices. All of it can be turned off in Settings. There is no account with this
+  project.
 
 ## Build it yourself
 
@@ -356,98 +95,29 @@ swift test                      # the library's tests
 tools/make-app.sh               # builds ../dist/AVP Play.app (ad-hoc signed, for this Mac only)
 ```
 
-`make-app.sh` puts the newest `dist/klepton-toolchain-*.tar.gz` (with the `.json` file next to it) into the
-app. Download both from a release and place them in `dist/`, or point `AVPPLAY_TOOLCHAIN_ARCHIVE` at the
-archive. `tools/make-release.sh` builds the disk image; with `AVPPLAY_SIGN_IDENTITY` and
-`AVPPLAY_NOTARY_PROFILE` set it signs and notarises it.
-
-The repository:
-
-| | |
-|---|---|
-| `core/Sources/AVPPlayCore` | the library: recipes, the local library of files, Meta client, device control, install steps, jobs, toolchain packages |
-| `core/Sources/AVPPlayApp` | the Mac app (SwiftUI) |
-| `core/Sources/avpplay` | a command-line tool with the same functions |
-| `recipes/` | the recipes |
-
-A test copy of a game can sit next to the installed one: give it its own identifier and a name to tell it apart,
-for example `avpplay install moss --team <team ID> --bundle-id com.example.test.moss --display-suffix " (Test)"`
-(or `--display-name <name>` for a whole new name). Signatures are remembered per identifier
-(`.signing/<identifier>.json` in the game's folder), so the test copy doesn't replace the game's own; `renew`,
-`saves` and `servers push` without `--bundle-id` keep using the game's own installation (`.signing.json`, as before).
-
-### A test copy next to the installed game (command line only)
-
-The command-line tool can install a second copy of a game under its own bundle ID, with its own name on the
-Vision Pro, without touching the installed game:
-
-```bash
-avpplay install <id> --team <team ID> --bundle-id com.example.test.<target> --display-suffix " (Test)"
-```
-
-`--display-name <name>` replaces the app's name entirely, `--display-suffix <text>` appends to it; both are
-passed to the toolchain as `KLEPTON_DISPLAY_OVERRIDE` / `KLEPTON_DISPLAY_SUFFIX`. Left out, the name stays as
-usual. The signature of each installation is remembered per bundle ID (`.signing/<bundle ID>.json` in the
-game's folder); `.signing.json` stays the record of the installed game itself, so `renew`, `saves` and
-`servers push` without `--bundle-id` keep working on it. The Mac app has no setting for any of this.
-
-The format of the recipes is described in [docs/recipes.md](docs/recipes.md); how to report a problem or
-contribute in [CONTRIBUTING.md](CONTRIBUTING.md). Code comments are mostly German; everything a user sees is in
-English and German.
+`make-app.sh` bundles the newest `dist/klepton-toolchain-*.tar.gz` (with its `.json`) – take both from a release.
+`core/Sources/AVPPlayCore` is the library, `AVPPlayApp` the Mac app, `avpplay` a command-line tool with the same
+functions. The recipe format is in [docs/recipes.md](docs/recipes.md); how to report a problem or contribute is in
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## The toolchain
 
 Games are translated by a fork of [Klepton](https://github.com/shinyquagsire23/Klepton) by Max Thomas (MIT),
-extended for the games above. The toolchain package that ships with the app contains that fork's complete
-source together with prebuilt ANGLE and MoltenVK libraries and their licence texts; see
-[THIRD-PARTY.md](THIRD-PARTY.md).
+extended for the games AVP Play runs. The fork lives at [myMartek/Klepton](https://github.com/myMartek/Klepton)
+(branch `avp-play`, one tag `toolchain-N` per release); changes to the runtime are welcome there as pull
+requests. The package that ships with the app holds the fork's complete source with prebuilt ANGLE and MoltenVK
+and their licences – see [THIRD-PARTY.md](THIRD-PARTY.md).
 
-The fork is also a repository: [myMartek/Klepton](https://github.com/myMartek/Klepton), branch `avp-play`, with one
-commit per toolchain that shipped with a release (tagged `toolchain-N`). Changes to the runtime are welcome there
-as pull requests.
+## Thanks
 
-## Thanks to rebelancap
-
-[rebelancap](https://github.com/rebelancap) keeps a Klepton fork of their own and offered its fixes to this one
-([issue 16](https://github.com/myMartek/avp-play/issues/16)). From toolchain 478 a large part of them is in: fixed
-foveated rendering for Vulkan games, a loader and a translator that cope with very large Unreal libraries, a wider
-Android and Unreal surface for games not seen here yet, fixes to the OpenGL path, controller haptics that no longer
-run on the thread that draws, sound handed over in blocks of 256 frames, sound that stops at once when the Digital
-Crown is pressed, and answers to some 160 calls of Meta's headset interface that stopped a game here before. What changes how a game already listed
-here behaves is a switch under *Test* until it has been seen on a headset. From toolchain 507 the fork's audio path
-is in whole, beside the one that has shipped: the switch *Sound: the new audio path* picks it for a game, and it is
-off unless you turn it on. The rest of the fork's work on head poses and the compositor is to follow. Thank you.
-
-## Thanks to Glovebox
-
-[Glovebox](https://github.com/glovebox-vr/glovebox) brings Half-Life: Alyx to the Apple Vision Pro on its own, and
-its developers published all of it under the MIT licence. A good part of how Half-Life: Alyx runs here was worked
-out there first. Thank you – for the work, and for making it open.
-
-What this project took over from Glovebox, each named in the source where it lives:
-
-- **Shaders prepared before the game starts.** The game's Vulkan pipelines are compiled while the start window is
-  still up, with Valve's [Fossilize](https://github.com/ValveSoftware/Fossilize), instead of one at a time in the
-  middle of play. The method, the recorder and replayer, the recipe format and Glovebox's own pipeline list for
-  the game are theirs. The list holds no shader code, only where each shader is in your own copy of the game;
-  your Mac rebuilds it from that copy.
-- **Steam Cloud saves.** The connection to Steam, the sign-in and the two-way sync of saves are parts of
-  Glovebox's `SteamLauncherKit`, with its rules for never replacing a save by something it did not come from.
-- **Graphics settings that fit those shaders:** its detail settings for the game, a lighter final pass onto the
-  display, and textures that stream in faster.
-- **A frame is handed over when the graphics chip has finished it**, rather than the game waiting for that.
-- **Free Apple accounts.** That a free account is enough for a game this large – Apple grants it the extra
-  memory – is something Glovebox showed.
-- **The eyes of characters no longer flash in solid colours** (toolchain 379). Glovebox found why: the game's eye
-  shader reads past the end of a table, which a PC graphics card answers with zeros and Apple's with whatever lies
-  there. Its rewrite of that shader is used here, widened from the one variant it names to the six the game has.
-- **Smaller things** (toolchain 379): the game's files stay out of the headset's backup, where they would
-  otherwise take their full size – for every game, not only this one; the game's video settings survive a
-  visionOS update; the log of the run before the last is kept; a left-handed player's "Weapon Hand" setting moves
-  the controls to the other controller (with the xrizer build the recipe downloads from then on); and the Mac app fetches a
-  missing Apple intermediate certificate, described under Apple signing above.
-
-These changes are in the toolchain's source and come to the app with its next toolchain release.
+- **Max Thomas** for [Klepton](https://github.com/shinyquagsire23/Klepton), the ground all of this stands on.
+- **[rebelancap](https://github.com/rebelancap)**, who offered the fixes of their own Klepton fork
+  ([issue 16](https://github.com/myMartek/avp-play/issues/16)): foveated rendering for Vulkan games, large Unreal
+  libraries, the OpenGL path, haptics, sound, and some 160 calls of Meta's headset interface.
+- **[Glovebox](https://github.com/glovebox-vr/glovebox)**, which brings Half-Life: Alyx to the Vision Pro and
+  published all of it under the MIT licence: shaders prepared before the game starts, Steam Cloud saves, the fix
+  for flashing eyes and more came from there – each named in the source where it lives.
+- **Everyone who sent in a fix or a report** – the *Community Verified* games are their work.
 
 ## Legal
 
