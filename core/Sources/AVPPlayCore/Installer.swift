@@ -126,6 +126,9 @@ public struct InstallRequest: Codable, Sendable, Equatable {
     /// Die Raumvermessung (Spielbereich) im Spiel von Anfang an einschalten. Ohne Angabe: wie die Einstellung der
     /// App für alle Spiele (`InstallDefaults.roomMeasuring`). Im Spiel lässt sie sich danach umstellen.
     public var roomMeasuring: Bool?
+    /// Die Sprache, mit der das Spiel beginnt (`GameLanguage`; `""`: keine Vorgabe). Ohne Angabe: wie die
+    /// Einstellung der App für alle Spiele (`InstallDefaults.gameLanguage`). Was im Spiel gewählt ist, gilt.
+    public var gameLanguage: String?
 
     public init(toolchain: String) { self.toolchain = toolchain }
 }
@@ -580,6 +583,19 @@ public struct Installer: Sendable {
             if !roomMeasuring {
                 report(L("Measure room: off in this game from the start (it can be switched on in the game under Settings › Play area).",
                          "Raum vermessen: In diesem Spiel von Anfang an aus (im Spiel unter Einstellungen › Spielbereich einschaltbar)."))
+            }
+        }
+        // Die Sprache: keine Vorgabe, außer die Einstellung der App (oder der Auftrag) nennt eine. Im Spiel Gewähltes
+        // gilt weiter – das Spiel bewahrt es selbst, der Bau gibt nur den Anfang vor.
+        if let language = (request.gameLanguage ?? InstallDefaults.gameLanguage()).flatMap({ GameLanguage.isValid($0) ? $0 : nil }) {
+            if toolchain.supportsGameLanguagePreset {
+                extraEnvironment[Toolchain.gameLanguageVariable] = language
+                report(String(format: L("Game language: %@ unless another one was chosen in the game (Settings › Game language).",
+                                        "Sprache des Spiels: %@, sofern im Spiel keine andere gewählt ist (Einstellungen › Sprache des Spiels)."),
+                              GameLanguage.name(language)))
+            } else {
+                report(L("Game language: this toolchain cannot preset it yet; the game keeps its usual one.",
+                         "Sprache des Spiels: Diese Toolchain kann sie noch nicht vorgeben; das Spiel behält seine übliche."))
             }
         }
         try toolchain.buildAndInstall(recipe: recipe, team: team, device: device, bundleId: bundle, log: log,

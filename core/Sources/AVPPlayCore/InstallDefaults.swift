@@ -8,6 +8,8 @@ public enum InstallDefaults {
     private struct Values: Codable {
         /// Die Raumvermessung (Spielbereich) in gebauten Spielen. Fehlt der Eintrag: an.
         var roomMeasuring: Bool?
+        /// Die Sprache, die gebaute Spiele gemeldet bekommen (`GameLanguage`). Fehlt der Eintrag: die des Spiels.
+        var gameLanguage: String?
     }
 
     private static func values(base: URL) -> Values {
@@ -24,9 +26,26 @@ public enum InstallDefaults {
     }
 
     public static func setRoomMeasuring(_ on: Bool, base: URL = DataLocation.base) throws {
-        try FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
         var v = values(base: base)
         v.roomMeasuring = on ? nil : false
+        try write(v, base: base)
+    }
+
+    /// Mit welcher Sprache ein Spiel, das gebaut wird, beginnt (`Toolchain.gameLanguageVariable`, ein Wert aus
+    /// `GameLanguage`). `nil`: keine Vorgabe, das Spiel hält es wie bisher (meist Englisch). Was im Spiel unter
+    /// „Sprache des Spiels“ gewählt ist, gilt dort danach und bleibt bei Updates erhalten.
+    public static func gameLanguage(base: URL = DataLocation.base) -> String? {
+        values(base: base).gameLanguage.flatMap { GameLanguage.isValid($0) ? $0 : nil }
+    }
+
+    public static func setGameLanguage(_ code: String?, base: URL = DataLocation.base) throws {
+        var v = values(base: base)
+        v.gameLanguage = code.flatMap { GameLanguage.isValid($0) ? $0 : nil }
+        try write(v, base: base)
+    }
+
+    private static func write(_ v: Values, base: URL) throws {
+        try FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         try encoder.encode(v).write(to: file(base: base), options: .atomic)

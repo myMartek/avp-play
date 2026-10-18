@@ -156,6 +156,8 @@ avpplay – command line for the AVP Play core library
                                      Settings › Advanced › Test; the game page's option “XR prediction” does the same)
              --room-measuring <on|off>  "Measure room" and the play area in the game from the start (default: the app's
                                      setting for all games, on unless changed; in the game under Settings › Play area)
+             --game-language <code>  the language the game starts with: device, en, a locale like fr_FR, or game (no preset);
+                                     default: the app's setting for all games. A choice made in the game is kept.
              --addons-only           job start: only sync purchased add-on content of an installed game (no build, no --team)
              --download-only         job start: only download the files (needs no Xcode, toolchain, --team or device)
              --build-only            job start: check, download, build and install the app, but do not copy the game data yet
@@ -233,6 +235,8 @@ avpplay – Kommandozeile zur Kern-Bibliothek von AVP Play
                                      Einstellungen › Erweitert › Test; die Option „XR-Vorhersage“ auf der Seite des Spiels tut dasselbe)
              --room-measuring <on|off>  „Raum vermessen“ und der Spielbereich im Spiel von Anfang an (Vorgabe: die Einstellung
                                      der App für alle Spiele, an, solange sie nicht geändert ist; im Spiel unter Einstellungen › Spielbereich)
+             --game-language <Code>  die Sprache, mit der das Spiel beginnt: device, en, eine Sprache wie fr_FR oder game (keine
+                                     Vorgabe); Vorgabe: die Einstellung der App für alle Spiele. Im Spiel Gewähltes bleibt.
              --addons-only           job start: nur gekaufte Zusatzinhalte eines installierten Spiels abgleichen (kein Bau, kein --team)
              --download-only         job start: nur die Dateien laden (braucht weder Xcode noch Toolchain, --team oder Gerät)
              --build-only            job start: prüfen, laden, bauen und die App installieren, aber die Spieldaten noch nicht kopieren
@@ -249,7 +253,7 @@ Allgemein: --account <Name>    Eintrag im Schlüsselbund (Standard: default)
 
 let valued: Set<String> = ["account", "steam-account", "source", "store", "recipes", "locale", "with", "only", "interval", "from", "to", "force", "name",
                            "team", "device", "bundle-id", "display-name", "display-suffix", "toolchain", "controller-mode", "icon", "tool", "jobs", "toolchains", "saves", "resolution",
-                           "room-measuring"]
+                           "room-measuring", "game-language"]
 let o = Options(Array(CommandLine.arguments.dropFirst()), valued: valued)
 guard let command = o.positional.first else { print(usage()); exit(0) }
 OtherSources.use(recipes: recipesDirectory(o))
@@ -346,6 +350,13 @@ func installRequest(_ o: Options, recipe id: String? = nil) -> InstallRequest {
             fail(L("--room-measuring must be on or off", "--room-measuring muss on oder off sein"))
         }
         request.roomMeasuring = value == "on"
+    }
+    if let value = o.value("game-language") {
+        guard value == "game" || GameLanguage.isValid(value) else {
+            fail(L("--game-language must be device, en, a locale like fr_FR, or game",
+                   "--game-language muss device, en, eine Sprache wie fr_FR oder game sein"))
+        }
+        request.gameLanguage = value == "game" ? "" : value
     }
     let resolution = MetalFXResolution.commandLine(metalFX: request.metalFX == true, value: o.value("resolution"))
     request.resolution = resolution.resolution

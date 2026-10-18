@@ -102,6 +102,23 @@ struct SettingsView: View {
                 }
             }
 
+            Section(L("Game language", "Sprache der Spiele")) {
+                Picker(L("Language games start with", "Sprache, mit der Spiele beginnen"), selection: $model.gameLanguageForNewGames) {
+                    Text(L("As each game has it", "Wie im jeweiligen Spiel")).tag("")
+                    Text(GameLanguage.name(GameLanguage.device)).tag(GameLanguage.device)
+                    ForEach(GameLanguage.choices, id: \.code) { Text($0.name).tag($0.code) }
+                }
+                Text(L("What a game is told the Vision Pro is set to, from its first start after it is installed or rebuilt. Games that offer the language use it for text and, where their voice pack is installed, for voices. Each game can choose another one in its Settings › Game language; that choice is kept, also when the game is updated.",
+                       "Was einem Spiel als Sprache der Vision Pro gemeldet wird, ab dem ersten Start nach dem Installieren oder Neubauen. Spiele, die die Sprache anbieten, nutzen sie für Texte und – wenn ihr Sprachpaket installiert ist – für die Stimmen. Jedes Spiel kann in seinen Einstellungen › Sprache des Spiels eine andere wählen; diese Wahl bleibt erhalten, auch wenn das Spiel aktualisiert wird."))
+                    .font(.callout).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                if !model.gameLanguageForNewGames.isEmpty, model.toolchain.map({ !$0.supportsGameLanguagePreset }) == true {
+                    Text(L("The current toolchain cannot preset the language yet; it builds games as before.",
+                           "Die aktuelle Toolchain kann die Sprache noch nicht vorgeben; sie baut Spiele wie bisher."))
+                        .font(.callout).foregroundStyle(.orange)
+                }
+            }
+
             RenewalSettings()
 
             Section(L("Online catalogue", "Online-Katalog")) {

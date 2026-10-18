@@ -308,6 +308,14 @@ final class AppModel: ObservableObject {
             try? InstallDefaults.setRoomMeasuring(roomMeasuringForNewGames)
         }
     }
+    /// Die Sprache, mit der Spiele beim Installieren oder Neubauen beginnen (`InstallDefaults.gameLanguage`; leer:
+    /// keine Vorgabe). In derselben Datei wie die Raumvermessung, aus demselben Grund.
+    @Published var gameLanguageForNewGames = InstallDefaults.gameLanguage() ?? "" {
+        didSet {
+            guard gameLanguageForNewGames != oldValue else { return }
+            try? InstallDefaults.setGameLanguage(gameLanguageForNewGames.isEmpty ? nil : gameLanguageForNewGames)
+        }
+    }
     /// MetalFX: In jedem Spiel, das installiert oder aktualisiert wird, ist das Hochskalieren des Compositors von
     /// Anfang an eingeschaltet (`Toolchain.metalFXSwitch`, Klepton PR #2). Aus ist das bisherige Verhalten: Das Spiel
     /// startet mit dem linearen Strecken, und der Schalter im Spiel entscheidet. Ein Bau, der es anders hält, gilt
