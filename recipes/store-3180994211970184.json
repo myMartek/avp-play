@@ -1,0 +1,50 @@
+{
+ "files": [
+  {
+   "dest": "",
+   "id": "26752528631056744",
+   "localName": "x3180994211970184.apk",
+   "name": "SWP_VR-Android-Shipping-arm64.apk",
+   "required": true,
+   "role": "apk",
+   "size": 55797970,
+   "sha256": "b1e4b5529cdffaae3f27d3b330a59a4360c92e8b59d09f33ca7b1b6f6167d36f"
+  },
+  {
+   "dest": "@obb",
+   "id": "26752524177723856",
+   "name": "main.10765.com.YourCompany.SWP_VR.obb",
+   "required": true,
+   "role": "main-obb",
+   "size": 2435831143,
+   "sha256": "962b5dfd9719d80b88d3dd61c8ce0e85bf6bce3c867d5cb097e5287a429bf279"
+  }
+ ],
+ "id": "store-3180994211970184",
+ "package": "com.YourCompany.SWP_VR",
+ "schema": 1,
+ "status": {
+  "playability": "verified",
+  "download": "proven",
+  "notes": [
+   {
+    "en": "Marked as verified by the project on 2026-10-19. File list as Meta's tool reports it for this build; 2 of 2 checksums recorded from a download.",
+    "de": "Vom Projekt am 2026-10-19 als geprüft markiert. Dateiliste, wie Metas Werkzeug sie für diesen Build nennt; 2 von 2 Prüfsummen aus einem Download erfasst."
+   },
+   {
+    "en": "Star Wars Pinball VR. Tested by the project on an Apple Vision Pro: the game starts and runs. Starts at 120 Hz with a picture on every second refresh (an even 60 a second) and 4608 pixels an eye; the start window changes each. Needs toolchain d28847d or newer.",
+    "de": "Star Wars Pinball VR. Vom Projekt auf einer Apple Vision Pro getestet: Das Spiel startet und läuft. Startet mit 120 Hz und einem Bild bei jeder zweiten Bildwiederholung (gleichmäßig 60 pro Sekunde) und 4608 Pixeln je Auge; im Startfenster ist jedes davon einstellbar. Braucht Toolchain d28847d oder neuer."
+   }
+  ]
+ },
+ "store": {
+  "appId": "3180994211970184"
+ },
+ "title": "Star Wars™ Pinball VR",
+ "toolchain": {
+  "minCommit": "d28847d",
+  "target": "x3180994211970184"
+ },
+ "versionCode": 10765,
+ "versionName": "1.4"
+}
