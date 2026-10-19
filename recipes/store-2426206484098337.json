@@ -1,0 +1,50 @@
+{
+ "files": [
+  {
+   "dest": "",
+   "id": "5779746015411017",
+   "localName": "x2426206484098337.apk",
+   "name": "WKND-Android-Shipping-arm64-es2.apk",
+   "required": true,
+   "role": "apk",
+   "size": 35517920,
+   "sha256": "ad97518bbb29eee1a6a5d5460a5aa8a7f5ffc2faa8eceb96282105fa17181841"
+  },
+  {
+   "dest": "@obb",
+   "id": "5779742822078003",
+   "name": "main.387932.com.ILMxLAB.VaderImmortal.ep3.obb",
+   "required": true,
+   "role": "main-obb",
+   "size": 3887425626,
+   "sha256": "1db1a376f3ca0b00b2afc1443361441dd4b324a750c5f7c1da8843f84c9ba4c4"
+  }
+ ],
+ "id": "store-2426206484098337",
+ "package": "com.ILMxLAB.VaderImmortal.ep3",
+ "schema": 1,
+ "status": {
+  "playability": "untested",
+  "download": "proven",
+  "notes": [
+   {
+    "en": "File list as Meta's tool reports it for this build; 2 of 2 checksums recorded from a download.",
+    "de": "Dateiliste, wie Metas Werkzeug sie für diesen Build nennt; 2 von 2 Prüfsummen aus einem Download erfasst."
+   },
+   {
+    "en": "Not tested yet: the start, picture, hands, menus and logo were fixed and checked on a Mac; nobody has played it on a Vision Pro yet. Reports welcome.",
+    "de": "Noch nicht getestet: Start, Bild, Hände, Menüs und Logo wurden behoben und auf einem Mac geprüft; auf einer Vision Pro hat es noch niemand gespielt. Rückmeldungen willkommen."
+   }
+  ]
+ },
+ "store": {
+  "appId": "2426206484098337"
+ },
+ "title": "Vader Immortal: Episode III",
+ "toolchain": {
+  "minCommit": "d79bf2b",
+  "target": "x2426206484098337"
+ },
+ "versionCode": 387932,
+ "versionName": "3.0.3+667263.cl.387932"
+}
