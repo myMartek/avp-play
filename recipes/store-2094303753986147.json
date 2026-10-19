@@ -1,0 +1,50 @@
+{
+ "files": [
+  {
+   "dest": "",
+   "id": "25159889950334201",
+   "localName": "x2094303753986147.apk",
+   "name": "mission_iss.apk",
+   "required": true,
+   "role": "apk",
+   "size": 64807179,
+   "sha256": "912408a3574b02cbf0a7531cf3df288721a318245d1764881f8ad820907394ae"
+  },
+  {
+   "dest": "@obb",
+   "id": "25159888133667716",
+   "name": "main.218.com.Magnopus.MissionISS.obb",
+   "required": true,
+   "role": "main-obb",
+   "size": 1280942150,
+   "sha256": "0c9385201f71b3c7813f5f45a695d4bdbdded017c087448effb6859e17e28d4d"
+  }
+ ],
+ "id": "store-2094303753986147",
+ "package": "com.Magnopus.MissionISS",
+ "schema": 1,
+ "status": {
+  "playability": "verified",
+  "download": "proven",
+  "notes": [
+   {
+    "en": "Marked as verified by the project on 2026-10-19. File list as Meta's tool reports it for this build; 2 of 2 checksums recorded from a download.",
+    "de": "Vom Projekt am 2026-10-19 als geprüft markiert. Dateiliste, wie Metas Werkzeug sie für diesen Build nennt; 2 von 2 Prüfsummen aus einem Download erfasst."
+   },
+   {
+    "en": "Mission: ISS. Tested by the project on an Apple Vision Pro: the intro plays, the main menu follows, and Training works, with sound and Mission Control's voice. Needs toolchain 54a7e82 or newer.",
+    "de": "Mission: ISS. Vom Projekt auf einer Apple Vision Pro getestet: Das Intro läuft, danach das Hauptmenü, und das Training funktioniert, mit Ton und der Stimme von Mission Control. Braucht Toolchain 54a7e82 oder neuer."
+   }
+  ]
+ },
+ "store": {
+  "appId": "2094303753986147"
+ },
+ "title": "Mission: ISS",
+ "toolchain": {
+  "minCommit": "54a7e82",
+  "target": "x2094303753986147"
+ },
+ "versionCode": 218,
+ "versionName": "2.0.0"
+}
