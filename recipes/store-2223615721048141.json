@@ -24,16 +24,16 @@
  "package": "com.ILMxLAB.VaderImmortal.ep2",
  "schema": 1,
  "status": {
-  "playability": "untested",
+  "playability": "verified",
   "download": "proven",
   "notes": [
    {
-    "en": "File list as Meta's tool reports it for this build; 2 of 2 checksums recorded from a download.",
-    "de": "Dateiliste, wie Metas Werkzeug sie für diesen Build nennt; 2 von 2 Prüfsummen aus einem Download erfasst."
+    "en": "Marked as verified by the project on 2026-10-19. File list as Meta's tool reports it for this build; 2 of 2 checksums recorded from a download.",
+    "de": "Vom Projekt am 2026-10-19 als geprüft markiert. Dateiliste, wie Metas Werkzeug sie für diesen Build nennt; 2 von 2 Prüfsummen aus einem Download erfasst."
    },
    {
-    "en": "Not tested yet: the start, picture, hands, menus and logo were fixed and checked on a Mac; nobody has played it on a Vision Pro yet. Reports welcome.",
-    "de": "Noch nicht getestet: Start, Bild, Hände, Menüs und Logo wurden behoben und auf einem Mac geprüft; auf einer Vision Pro hat es noch niemand gespielt. Rückmeldungen willkommen."
+    "en": "Vader Immortal: Episode II. The same engine build and the same fixes as Episode I, which the project played on an Apple Vision Pro; this episode was checked on a Mac up to its comfort menu. Starts at 120 Hz with a picture on every second refresh (an even 60 a second) and 4096 pixels an eye; the start window changes each. Needs toolchain 28e177c or newer.",
+    "de": "Vader Immortal: Episode II. Dieselbe Engine und dieselben Korrekturen wie Episode I, die das Projekt auf einer Apple Vision Pro gespielt hat; diese Episode wurde auf einem Mac bis zu ihrem Komfortmenü geprüft. Startet mit 120 Hz und einem Bild bei jeder zweiten Bildwiederholung (gleichmäßig 60 pro Sekunde) und 4096 Pixeln je Auge; im Startfenster ist jedes davon einstellbar. Braucht Toolchain 28e177c oder neuer."
    }
   ]
  },
@@ -42,7 +42,7 @@
  },
  "title": "Vader Immortal: Episode II",
  "toolchain": {
-  "minCommit": "d79bf2b",
+  "minCommit": "28e177c",
   "target": "x2223615721048141"
  },
  "versionCode": 387778,

@@ -32,8 +32,8 @@
     "de": "Vom Projekt am 2026-10-19 als geprüft markiert. Dateiliste, wie Metas Werkzeug sie für diesen Build nennt; 2 von 2 Prüfsummen aus einem Download erfasst."
    },
    {
-    "en": "Vader Immortal: Episode I. Tested by the project on an Apple Vision Pro: the game starts and runs, with the picture right in both eyes. Starts at 120 Hz with a picture on every second refresh (an even 60 a second) and 4096 pixels an eye; the start window changes each. Needs toolchain TOOLCHAIN or newer.",
-    "de": "Vader Immortal: Episode I. Vom Projekt auf einer Apple Vision Pro getestet: Das Spiel startet und läuft, das Bild stimmt auf beiden Augen. Startet mit 120 Hz und einem Bild bei jeder zweiten Bildwiederholung (gleichmäßig 60 pro Sekunde) und 4096 Pixeln je Auge; im Startfenster ist jedes davon einstellbar. Braucht Toolchain TOOLCHAIN oder neuer."
+    "en": "Vader Immortal: Episode I. Tested by the project on an Apple Vision Pro: the game starts and runs, with the picture right in both eyes. Starts at 120 Hz with a picture on every second refresh (an even 60 a second) and 4096 pixels an eye; the start window changes each. Needs toolchain 28e177c or newer.",
+    "de": "Vader Immortal: Episode I. Vom Projekt auf einer Apple Vision Pro getestet: Das Spiel startet und läuft, das Bild stimmt auf beiden Augen. Startet mit 120 Hz und einem Bild bei jeder zweiten Bildwiederholung (gleichmäßig 60 pro Sekunde) und 4096 Pixeln je Auge; im Startfenster ist jedes davon einstellbar. Braucht Toolchain 28e177c oder neuer."
    }
   ]
  },
@@ -42,7 +42,7 @@
  },
  "title": "Vader Immortal: Episode I",
  "toolchain": {
-  "minCommit": "d79bf2b",
+  "minCommit": "28e177c",
   "target": "x2108775495884888"
  },
  "versionCode": 387770,
