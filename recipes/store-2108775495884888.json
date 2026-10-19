@@ -24,16 +24,16 @@
  "package": "com.ILMxLAB.VaderImmortal.ep1",
  "schema": 1,
  "status": {
-  "playability": "untested",
+  "playability": "verified",
   "download": "proven",
   "notes": [
    {
-    "en": "File list as Meta's tool reports it for this build; 2 of 2 checksums recorded from a download.",
-    "de": "Dateiliste, wie Metas Werkzeug sie für diesen Build nennt; 2 von 2 Prüfsummen aus einem Download erfasst."
+    "en": "Marked as verified by the project on 2026-10-19. File list as Meta's tool reports it for this build; 2 of 2 checksums recorded from a download.",
+    "de": "Vom Projekt am 2026-10-19 als geprüft markiert. Dateiliste, wie Metas Werkzeug sie für diesen Build nennt; 2 von 2 Prüfsummen aus einem Download erfasst."
    },
    {
-    "en": "Not tested yet: the start, picture, hands, menus and logo were fixed and checked on a Mac; nobody has played it on a Vision Pro yet. Reports welcome.",
-    "de": "Noch nicht getestet: Start, Bild, Hände, Menüs und Logo wurden behoben und auf einem Mac geprüft; auf einer Vision Pro hat es noch niemand gespielt. Rückmeldungen willkommen."
+    "en": "Vader Immortal: Episode I. Tested by the project on an Apple Vision Pro: the game starts and runs, with the picture right in both eyes. Starts at 120 Hz with a picture on every second refresh (an even 60 a second) and 4096 pixels an eye; the start window changes each. Needs toolchain TOOLCHAIN or newer.",
+    "de": "Vader Immortal: Episode I. Vom Projekt auf einer Apple Vision Pro getestet: Das Spiel startet und läuft, das Bild stimmt auf beiden Augen. Startet mit 120 Hz und einem Bild bei jeder zweiten Bildwiederholung (gleichmäßig 60 pro Sekunde) und 4096 Pixeln je Auge; im Startfenster ist jedes davon einstellbar. Braucht Toolchain TOOLCHAIN oder neuer."
    }
   ]
  },
