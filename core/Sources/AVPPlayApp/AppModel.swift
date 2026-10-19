@@ -1655,6 +1655,7 @@ final class AppModel: ObservableObject {
             }
         }
         let metaTool = Probe.metaToolURL
+        let drafts = draftsDirectory
         runningTask = Task.detached {
             var installer = Installer(recipe: job.recipe, request: job.request, store: paths.store,
                                       progress: { p in Task { @MainActor in
@@ -1682,10 +1683,42 @@ final class AppModel: ObservableObject {
                 feed.yield(L("Stopped.", "Angehalten."))
             } catch {
                 feed.yield(L("Stopped: \(error)", "Angehalten: \(error)"))
+                if AccountBuild.isNotEntitled(error) {
+                    await self.retryWithAccountBuild(job, tool: metaTool, drafts: drafts, log: { feed.yield($0) })
+                }
             }
             feed.finish()
             await reader.value
             await MainActor.run { self.finished(id) }
+        }
+    }
+
+    /// Ein Entwurf, dessen Build Metas Werkzeug mit „Not entitled to download“ ablehnt: Nennt Meta dem Konto einen
+    /// anderen Build, wird der Entwurf für ihn neu geschrieben und ein neuer Auftrag mit denselben Schritten angelegt.
+    /// Höchstens einmal je Build – der neue Auftrag lädt den Build des Kontos, für den es keinen anderen mehr gibt.
+    nonisolated private func retryWithAccountBuild(_ job: Job, tool: URL, drafts: URL, log: @escaping @Sendable (String) -> Void) async {
+        guard job.recipe.source != .steam, DraftRecipe.appId(of: job.recipe.id) != nil else { return }
+        do {
+            let token = try TokenStore().read(account: job.request.account)
+            guard let recipe = try await AccountBuild.redraft(job.recipe, tool: tool, token: token, client: MetaClient(token: token),
+                                                              say: { log("    " + $0) }) else {
+                log(L("Meta names no other build of \(job.recipe.title) for your account.",
+                      "Meta nennt deinem Konto keinen anderen Build von \(job.recipe.title)."))
+                return
+            }
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.sortedKeys, .prettyPrinted]
+            try encoder.encode(recipe).write(to: drafts.appendingPathComponent("\(recipe.id).json"), options: .atomic)
+            try await MainActor.run {
+                let next = try self.paths.jobs.enqueue(Job(recipe: recipe, request: job.request, steps: job.steps, toolchainCommit: job.toolchainCommit))
+                self.queued.append(next.id)
+                self.reloadJobs()
+            }
+            log(L("Build \(job.recipe.versionName) isn't delivered to your account. A new job for build \(recipe.versionName), the one Meta names for your account, is queued.",
+                  "Build \(job.recipe.versionName) wird deinem Konto nicht ausgeliefert. Ein neuer Auftrag für Build \(recipe.versionName), den Meta deinem Konto nennt, ist angelegt."))
+        } catch {
+            log(L("Looking up the build of your account didn't work: \(Redaction.redact("\(error)"))",
+                  "Den Build deines Kontos nachzuschlagen hat nicht geklappt: \(Redaction.redact("\(error)"))"))
         }
     }
 

@@ -31,6 +31,18 @@ extension AppModel {
         return try? RecipeStore(directory: recipes).load(id: game.id)
     }
 
+    /// Merkt sich Metas Liste der Fassungen eines Spiels, die außerhalb von `checkStoreVersions` erfragt wurde
+    /// (beim Nachschlagen eines Entwurfs) – so wird sie in dieser halben Stunde nicht noch einmal erfragt.
+    func rememberStoreBuilds(_ builds: [CatalogBuild], for id: String) {
+        guard let newest = builds.first else { return }
+        Self.asked[id] = Date().timeIntervalSince1970
+        storeBuilds[id] = newest
+        storeBuildLists[id] = builds
+        let defaults = UserDefaults.standard
+        if let data = try? JSONEncoder().encode(storeBuilds) { defaults.set(data, forKey: Self.cacheKey) }
+        if let data = try? JSONEncoder().encode(storeBuildLists) { defaults.set(data, forKey: Self.listsKey) }
+    }
+
     /// Der neuere Build aus dem Store, der für dieses Spiel angeboten werden kann – gemessen an der Fassung, die
     /// gerade gilt. `nil`, wenn es keinen gibt, das Spiel bei seiner Fassung bleibt oder noch nicht nachgesehen wurde.
     func storeUpdate(for game: Game) -> CatalogBuild? {
@@ -132,8 +144,8 @@ extension AppModel {
         var store = storeBuildLists[game.id] ?? []
         if store.isEmpty, let one = storeBuilds[game.id] ?? game.catalog?.build { store = [one] }
         var others: [GameVersion] = []
-        // Bei einem Spiel ohne Rezept gilt ohne Wahl der neueste Build, den der Katalog kennt.
-        let draftDefault = game.draft ? game.catalog?.build?.versionCode : nil
+        // Bei einem Spiel ohne Rezept gilt ohne Wahl der neueste Build, den Meta dem Konto nennt, sonst der des Katalogs.
+        let draftDefault = game.draft ? (storeBuildLists[game.id]?.first ?? game.catalog?.build)?.versionCode : nil
         for build in store where known.insert(build.versionCode).inserted {
             others.append(GameVersion(versionCode: build.versionCode, versionName: build.version, kind: .store,
                                       isDefault: build.versionCode == draftDefault))

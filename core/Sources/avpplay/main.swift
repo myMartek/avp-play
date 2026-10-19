@@ -642,6 +642,27 @@ case "store-version":
         }
     } catch { fail("\(error)") }
 
+case "account-build":
+    // Wie die App bei „Not entitled to download“ ausweicht (AccountBuild.redraft): der Entwurf für den Build, den Meta
+    // dem Konto nennt. Mit --to wird er dorthin geschrieben, sonst nur gesagt, welcher Build es wäre.
+    let r = recipe(o)
+    do {
+        let token = try TokenStore().read(account: o.value("account") ?? "default")
+        try MetaTool(url: metaToolURL(o)).verify()
+        guard let draft = try await AccountBuild.redraft(r, tool: metaToolURL(o), token: token, client: MetaClient(token: token),
+                                                         say: { print($0) }) else {
+            print(L("\(r.title): Meta names no other build for this account.", "\(r.title): Meta nennt diesem Konto keinen anderen Build."))
+            break
+        }
+        print(L("\(r.title): build \(draft.versionName) (\(draft.versionCode)) instead of \(r.versionName) (\(r.versionCode)), \(draft.files.count) files.",
+                "\(r.title): Build \(draft.versionName) (\(draft.versionCode)) statt \(r.versionName) (\(r.versionCode)), \(draft.files.count) Dateien."))
+        if let out = o.value("to") {
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.sortedKeys, .prettyPrinted]
+            try encoder.encode(draft).write(to: URL(fileURLWithPath: out), options: .atomic)
+        }
+    } catch { fail("\(error)") }
+
 case "purchases":
     let r = recipe(o)
     guard let app = r.store.appId else { fail("\(MetaError.missingAppId)") }
