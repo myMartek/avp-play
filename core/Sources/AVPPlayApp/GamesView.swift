@@ -37,6 +37,9 @@ struct GamesView: View {
         Toggle(L("Mixed Reality", "Mixed Reality"), isOn: $model.filterMixedReality)
             .help(L("Games with a mixed-reality mode that works with AVP Play: your own room shows around the game.",
                     "Spiele mit einem Mixed-Reality-Modus, der mit AVP Play funktioniert: Der eigene Raum ist um das Spiel herum zu sehen."))
+        Toggle(L("Hand Tracking", "Hand-Tracking"), isOn: $model.filterHandTracking)
+            .help(L("Games you can play with your hands on the Vision Pro, without controllers.",
+                    "Spiele, die sich auf der Vision Pro mit den Händen spielen lassen, ohne Controller."))
     }
 
     /// Die eigenen Filter (Seite „Filter“), in einer Zeile unter den übrigen.
@@ -145,7 +148,8 @@ struct GamesView: View {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 250, maximum: 340), spacing: 18)], spacing: 18) {
                         Section {
                             ForEach(shown) { game in
-                                Button { model.gamePath = [game.id] } label: { GameCard(game: game) }
+                                // Alle Karten einer Zeile so hoch wie die höchste (mehr eigene Filter brechen um).
+                                Button { model.gamePath = [game.id] } label: { GameCard(game: game).frame(maxHeight: .infinity, alignment: .top) }
                                     .buttonStyle(.plain)
                             }
                         } footer: {
@@ -345,7 +349,9 @@ struct FlowLayout: Layout {
         var rows: [(items: [(index: Int, size: CGSize)], height: CGFloat)] = [([], 0)]
         var x: CGFloat = 0
         for (i, view) in subviews.enumerated() {
-            let size = view.sizeThatFits(.unspecified)
+            var size = view.sizeThatFits(.unspecified)
+            // Breiter als die ganze Zeile: auf deren Breite gefragt, ein Text bricht dann in sich um.
+            if size.width > width { size = view.sizeThatFits(ProposedViewSize(width: width, height: nil)) }
             if !rows[rows.count - 1].items.isEmpty, x + size.width > width {
                 rows.append(([], 0))
                 x = 0
@@ -511,16 +517,39 @@ struct GameCard: View {
                 }
                 StatusBadge(status: game.status, busy: model.isBusy(game.id))
                 OwnershipLabel(owned: model.owned(game), checking: model.checkingOwnership, source: game.recipe.source)
+                let filters = model.filters(containing: game.id)
+                if !filters.isEmpty {
+                    FlowLayout(spacing: 4, lineSpacing: 4) {
+                        ForEach(filters) { CardFilterChip(name: $0.name) }
+                    }
+                    .padding(.top, 2)
+                }
             }
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+        // Höher gezogen, wenn eine Nachbarkarte mehr Filter trägt: Der Inhalt bleibt oben, darunter bleibt die Fläche leer.
+        .frame(maxHeight: .infinity, alignment: .top)
         .background(Color(nsColor: .controlBackgroundColor))
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(SelectionBorder(picked: model.picked, id: game.id, hovering: hovering))
         .shadow(color: .black.opacity(hovering ? 0.22 : 0.1), radius: hovering ? 10 : 4, y: 2)
         .onHover { hovering = $0 }
         .animation(.easeOut(duration: 0.15), value: hovering)
+    }
+}
+
+/// Ein eigener Filter, in dem das Spiel steht, als kleines Schild auf seiner Karte. Lange Namen werden nicht
+/// gekürzt: Was nicht in die Zeile passt, beginnt eine neue, und ein Name breiter als die Karte bricht in sich um.
+struct CardFilterChip: View {
+    let name: String
+
+    var body: some View {
+        Text(name)
+            .font(.caption)
+            .padding(.horizontal, 7).padding(.vertical, 2)
+            .foregroundStyle(.secondary)
+            .background(Color.secondary.opacity(0.14), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 }
 

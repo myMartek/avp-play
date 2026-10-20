@@ -39,13 +39,6 @@ extension AppModel {
     /// Die Filter, in denen ein Spiel steht, in der Reihenfolge der Seite „Filter“.
     func filters(containing id: String) -> [CustomFilter] { customFilters.filter { $0.games.contains(id) } }
 
-    /// Zeigt in der Übersicht nur die Spiele dieses Filters (die übrigen Filter bleiben, wie sie sind).
-    func showOnly(_ filter: CustomFilter) {
-        setFilterMode(filter.id, .only)
-        gamePath = []
-        section = .games
-    }
-
     /// Öffnet die Seite eines Spiels in der Übersicht.
     func openGame(_ id: String) {
         section = .games
@@ -189,8 +182,8 @@ struct FiltersView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                Text(L("Group games the way you want – for example “32 Bit”, “For Guests” or “Finished”. Add a game on its page with the “Filter” button, or select several in the game list and use “Filter …” in the bar below it. Above the game list, each filter can then show only its games or hide them – such as all favourites without the 32-bit ones.",
-                       "Spiele so gruppieren, wie du willst – etwa „32 Bit“, „Für Gäste“ oder „Durchgespielt“. Ein Spiel kommt auf seiner Seite über den Knopf „Filter“ hinein, oder du hakst in der Spieleliste mehrere an und wählst in der Leiste darunter „Filter …“. Über der Spieleliste kann dann jeder Filter nur seine Spiele zeigen oder sie ausblenden – etwa alle Favoriten ohne die 32-Bit-Spiele."))
+                Text(L("Group games the way you want – for example “32 Bit”, “For Guests” or “Finished”. Add a game on its page with the “Filter” button, or select several in the game list and use “Set Filter” in the bar below it. Above the game list, each filter can then show only its games or hide them – such as all favourites without the 32-bit ones.",
+                       "Spiele so gruppieren, wie du willst – etwa „32 Bit“, „Für Gäste“ oder „Durchgespielt“. Ein Spiel kommt auf seiner Seite über den Knopf „Filter“ hinein, oder du hakst in der Spieleliste mehrere an und wählst in der Leiste darunter „Filter setzen“. Über der Spieleliste kann dann jeder Filter nur seine Spiele zeigen oder sie ausblenden – etwa alle Favoriten ohne die 32-Bit-Spiele."))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 HStack {
@@ -227,7 +220,7 @@ struct FiltersView: View {
     }
 }
 
-/// Ein Filter auf der Seite „Filter“: Name, Wirkung in der Übersicht, seine Spiele.
+/// Ein Filter auf der Seite „Filter“: Name und seine Spiele. Was er in der Übersicht bewirkt, wird dort geschaltet.
 struct FilterBox: View {
     @EnvironmentObject var model: AppModel
     let filter: CustomFilter
@@ -262,16 +255,6 @@ struct FilterBox: View {
                         Image(systemName: "ellipsis.circle")
                     }
                     .menuStyle(.borderlessButton).fixedSize()
-                }
-                HStack(spacing: 12) {
-                    Picker(L("In the game list", "In der Spieleliste"), selection: Binding(
-                        get: { model.filterMode(filter.id) }, set: { model.setFilterMode(filter.id, $0) })) {
-                        ForEach(CustomFilterMode.allCases, id: \.self) { Text($0.title).tag($0) }
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(maxWidth: 440)
-                    Button(L("Show in Game List", "In der Spieleliste zeigen")) { model.showOnly(filter) }
-                        .disabled(filter.games.isEmpty)
                 }
                 if filter.games.isEmpty {
                     Text(L("No games yet. Add them on the page of a game, or select several in the game list.",

@@ -113,6 +113,7 @@ extension AppModel {
         if filterFavourites { parts.append(L("favourites", "Favoriten")) }
         if filterFavouritesMissing { parts.append(L("favourites not downloaded", "nicht geladene Favoriten")) }
         if filterMixedReality { parts.append(L("mixed reality", "Mixed Reality")) }
+        if filterHandTracking { parts.append(L("hand tracking", "Hand-Tracking")) }
         if filterOwned { parts.append(L("owned", "im Besitz")) }
         if filterHorizonGames { parts.append(L("Horizon+ games", "Horizon+ Spiele")) }
         if filterHorizonIndie { parts.append("Horizon+ Indie") }
