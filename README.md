@@ -10,6 +10,9 @@ downloaded that Meta does not confirm you have purchased.
 **New here?** The [user guide in the wiki](https://github.com/myMartek/avp-play/wiki) explains setup and everyday
 use step by step, in simple words – in English and German.
 
+**Like it?** AVP Play is free and stays free. If it saves you time or brings a game to your headset, you can
+[buy me a coffee](https://buymeacoffee.com/martek).
+
 <table>
   <tr>
     <td width="50%"><img src="docs/images/app-games.jpg" alt="AVP Play on the Mac: the list of games with their labels and the Vision Pro at the bottom of the sidebar"></td>
@@ -107,6 +110,14 @@ extended for the games AVP Play runs. The fork lives at [myMartek/Klepton](https
 (branch `avp-play`, one tag `toolchain-N` per release); changes to the runtime are welcome there as pull
 requests. The package that ships with the app holds the fork's complete source with prebuilt ANGLE and MoltenVK
 and their licences – see [THIRD-PARTY.md](THIRD-PARTY.md).
+
+## Support the project
+
+AVP Play is made in spare time and costs nothing to use. If you would like to say thanks, you can support it here:
+
+<a href="https://buymeacoffee.com/martek"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy me a coffee" height="45"></a>
+
+Reports and fixes from the app help just as much – see *Community Verified* below.
 
 ## Thanks
 
