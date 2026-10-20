@@ -14,6 +14,22 @@ final class AppleTeamsTests: XCTestCase {
         ])
     }
 
+    func testATeamAppleRefusedAsPersonalIsRememberedAndCanBeForgotten() throws {
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: "AppleTeamsTests-\(UUID().uuidString)"))
+        XCTAssertEqual(AppleTeams.refusedAsPaid(defaults: defaults), [])
+        AppleTeams.markFree("A1B2C3D4E5", defaults: defaults)
+        AppleTeams.markFree("A1B2C3D4E5", defaults: defaults)
+        AppleTeams.markFree("Z9Y8X7W6V5", defaults: defaults)
+        XCTAssertEqual(AppleTeams.refusedAsPaid(defaults: defaults), ["A1B2C3D4E5", "Z9Y8X7W6V5"])
+        AppleTeams.forgetFree("A1B2C3D4E5", defaults: defaults)
+        XCTAssertEqual(AppleTeams.refusedAsPaid(defaults: defaults), ["Z9Y8X7W6V5"])
+    }
+
+    func testApplesPersonalTeamRefusalIsTheCapabilityOne() {
+        let log = #"error: Cannot create a iOS App Development provisioning profile for "jane.dev.klepton.target.moss". Personal development teams, including "Jane Appleseed", do not support the Extended Virtual Addressing and Low-Latency Streaming capabilities."#
+        XCTAssertEqual(AppleMessages.refusal(in: log), .capability)
+    }
+
     func testNoTeamsWhenXcodeKnowsNone() {
         XCTAssertEqual(AppleTeams.parse([:]), [])
         XCTAssertEqual(AppleTeams.parse(["IDEProvisioningTeamByIdentifier": [String: Any]()]), [])

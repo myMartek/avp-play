@@ -221,7 +221,8 @@ enum Probe {
     static func teams() -> [Team] {
         let found = AppleTeams.known()
         if !found.isEmpty { return found }
-        return certificateTeams().map { Team(id: $0, name: L("Team \($0)", "Team \($0)"), free: false) }
+        let refused = AppleTeams.refusedAsPaid()
+        return certificateTeams().map { Team(id: $0, name: L("Team \($0)", "Team \($0)"), free: refused.contains($0)) }
     }
 
     /// Team-IDs aus den Entwicklerzertifikaten im Schlüsselbund (das Feld „OU“ des Zertifikats).
