@@ -21,6 +21,8 @@ public struct CatalogGame: Codable, Sendable, Identifiable, Equatable {
     public var target: String?
     /// Das Spiel hat einen Mixed-Reality-Modus, der mit AVP Play funktioniert.
     public var mixedReality: Bool?
+    /// Das Spiel lässt sich hier mit den Händen spielen, ohne Controller – im Katalogdienst vom Projekt gesetzt.
+    public var handTracking: Bool?
     /// Der Dienst hält ein Titelbild für dieses Spiel bereit, weil die Store-Seite des Spiels öffentlich keins zeigt
     /// (Richie's Plank Experience). Nur dann fragt die App dort nach einem – und erst nach der Store-Seite.
     public var cover: Bool?
@@ -64,6 +66,8 @@ public struct SteamCatalogGame: Codable, Sendable, Identifiable, Equatable {
     /// Unter welchem Namen die Toolchain das Spiel kennt; fehlt, wenn sie es nicht kennt.
     public var target: String?
     public var mixedReality: Bool?
+    /// Das Spiel lässt sich hier mit den Händen spielen – wie `CatalogGame.handTracking`.
+    public var handTracking: Bool?
     /// Die Meta-Store-Seite desselben Spiels, wo es eine hat.
     public var metaAppId: String?
     public var works: Int

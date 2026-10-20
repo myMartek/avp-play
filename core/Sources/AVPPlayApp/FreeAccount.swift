@@ -286,7 +286,7 @@ struct SelectionBar: View {
             }
             Spacer()
             FilterMenu(ids: games.map(\.id)) {
-                Label(L("Filter …", "Filter …"), systemImage: "line.3.horizontal.decrease.circle")
+                Label(L("Set Filter", "Filter setzen"), systemImage: "line.3.horizontal.decrease.circle")
             }
             .fixedSize()
             .help(L("Add the selected games to a filter of your own, such as “32 Bit”, or take them out of one.",

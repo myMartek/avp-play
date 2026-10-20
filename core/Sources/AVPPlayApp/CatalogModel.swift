@@ -246,8 +246,9 @@ extension AppModel {
         guard query.isEmpty else { return query == searchedQuery && searchMore }
         // Geprüftes und von Nutzern Bestätigtes steht im Katalog vorn. Ist einer dieser Filter gesetzt, lohnt
         // Nachladen nur, solange die geladenen Seiten noch ganz aus solchen Spielen bestehen. Dasselbe gilt für
-        // Mixed Reality: Die Angabe trägt nur, was das Projekt oder ein eingesandter Fix zum Laufen gebracht hat.
-        if filterVerified || filterCommunity || filterMixedReality {
+        // Mixed Reality und Hand-Tracking: Die Angabe trägt nur, was das Projekt oder ein eingesandter Fix zum Laufen
+        // gebracht hat.
+        if filterVerified || filterCommunity || filterMixedReality || filterHandTracking {
             let labelled = catalog.filter { $0.status == "verified" || $0.status == "community" }.count
             if labelled < catalogNextPage * 60 { return false }
         }

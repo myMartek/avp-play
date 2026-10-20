@@ -38,6 +38,8 @@ struct Game: Identifiable {
     var prepared: Bool { !draft || !recipe.files.isEmpty }
     /// Mixed-Reality-Modus, der hier funktioniert: sagt das Rezept oder der Katalog.
     var mixedReality: Bool { recipe.mixedReality == true || catalog?.mixedReality == true || steamCatalog?.mixedReality == true }
+    /// Mit den Händen spielbar, ohne Controller: sagt der Katalogdienst, für den Meta- oder den Steam-Eintrag.
+    var handTracking: Bool { catalog?.handTracking == true || steamCatalog?.handTracking == true }
     /// Wie weit dem Spiel zu trauen ist. Was der Katalog sagt, gilt – dort legt das Projekt fest oder zählen die
     /// Meldungen. Ohne Katalog (kein Netz, abgeschaltet, Sonderapp) gilt das mitgelieferte Rezept.
     var trust: Trust {
@@ -380,6 +382,8 @@ final class AppModel: ObservableObject {
     @AppStorage("filterFavouritesMissing") var filterFavouritesMissing = false
     /// Nur Spiele mit einem Mixed-Reality-Modus, der mit AVP Play funktioniert.
     @AppStorage("filterMixedReality") var filterMixedReality = false
+    /// Nur Spiele, die sich mit den Händen spielen lassen, ohne Controller.
+    @AppStorage("filterHandTracking") var filterHandTracking = false
     /// Nur Spiele, die dem Nutzer gehören: in der Bibliothek seines Meta-Kontos oder von Steam bestätigt.
     @AppStorage("filterOwned") var filterOwned = false
     /// Nur Spiele, die ein Horizon+-Abo jederzeit laden lässt (nicht die Monatsspiele): aus dem Spielekatalog, aus dem
@@ -650,6 +654,7 @@ final class AppModel: ObservableObject {
                 && (!filterFavourites || favourite)
                 && (!filterFavouritesMissing || (favourite && !downloaded))
                 && (!filterMixedReality || game.mixedReality)
+                && (!filterHandTracking || game.handTracking)
                 && (!filterOwned || ownedAnywhere(game))
                 && (!horizonPlusWanted || inChosenHorizonPlus(game))
                 && ((!filterMeta && !filterSteam) || (filterMeta && game.fromMeta) || (filterSteam && game.fromSteam))
