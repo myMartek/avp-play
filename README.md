@@ -10,7 +10,7 @@ downloaded that Meta does not confirm you have purchased.
 **New here?** The [user guide in the wiki](https://github.com/myMartek/avp-play/wiki) explains setup and everyday
 use step by step, in simple words – in English and German.
 
-**Like it?** AVP Play is free and stays free. If it saves you time or brings a game to your headset, you can
+**Like it?** AVP Play is free and stays free. If you enjoy playing your games on the Vision Pro, you can
 [buy me a coffee](https://buymeacoffee.com/martek).
 
 <table>
