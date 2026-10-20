@@ -73,6 +73,20 @@ struct SetupView: View {
                         }
                     }
                     if model.usesFreeTeam { FreeAccountLimits() }
+                    if AppleTeams.refusedAsPaid().contains(model.teamId) {
+                        // Von Apple beim Bauen als „Personal Team“ gemeldet, obwohl Xcode es als bezahlt führte.
+                        HStack {
+                            Text(L("Apple treated this team as a free “Personal Team” when a game was built, so AVP Play builds for it as for a free one. After renewing the membership:",
+                                   "Apple hat dieses Team beim Bauen eines Spiels als kostenloses „Personal Team“ behandelt; deshalb baut AVP Play dafür wie für ein kostenloses. Nach einer erneuerten Mitgliedschaft:"))
+                                .font(.callout).foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Button(L("Treat as Paid Again", "Wieder als bezahlt behandeln")) {
+                                AppleTeams.forgetFree(model.teamId)
+                                model.refresh()
+                            }
+                            .controlSize(.small)
+                        }
+                    }
                     if model.teamCandidates.isEmpty {
                         Text(L("Xcode does not know a team yet. Sign in with your Apple ID in Xcode under Settings › Accounts, then choose “Check Again” here.", "Xcode kennt noch kein Team. In Xcode unter Einstellungen › Accounts mit der Apple-ID anmelden und hier „Neu prüfen“ wählen."))
                             .font(.callout).foregroundStyle(.secondary)

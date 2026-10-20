@@ -598,13 +598,23 @@ public struct Installer: Sendable {
                          "Sprache des Spiels: Diese Toolchain kann sie noch nicht vorgeben; das Spiel behält seine übliche."))
             }
         }
-        try toolchain.buildAndInstall(recipe: recipe, team: team, device: device, bundleId: bundle, log: log,
-                                      extraEnvironment: extraEnvironment,
-                                      metalFX: metalFX,
-                                      resolution: metalFX ? request.resolution : nil,
-                                      xrPrediction: xrPrediction,
-                                      displayName: request.displayName, displaySuffix: request.displaySuffix,
-                                      controllerMode: request.controllerMode ?? (request.resign == true ? toolchain.builtControllerMode(recipe: recipe) : .standard))
+        do {
+            try toolchain.buildAndInstall(recipe: recipe, team: team, device: device, bundleId: bundle, log: log,
+                                          extraEnvironment: extraEnvironment,
+                                          metalFX: metalFX,
+                                          resolution: metalFX ? request.resolution : nil,
+                                          xrPrediction: xrPrediction,
+                                          displayName: request.displayName, displaySuffix: request.displaySuffix,
+                                          controllerMode: request.controllerMode ?? (request.resign == true ? toolchain.builtControllerMode(recipe: recipe) : .standard))
+        } catch ToolchainError.refused(.capability, free: false, _) {
+            // Xcode führt das Team als bezahlt, Apple als „Personal Team“ (siehe `AppleTeams.markFree`): einmal
+            // neu, wie für ein kostenloses Team. Jetzt gilt es als kostenlos, ein zweites Nein kommt also mit
+            // `free: true` und geht als Absage an den Nutzer.
+            AppleTeams.markFree(team)
+            report(L("Apple treats this team as a free “Personal Team” (Xcode still lists it as paid, as after an expired membership). Building again as for a free team: without the two permissions free teams cannot have, under the app identifier for this team, signed for seven days.",
+                     "Apple behandelt dieses Team als kostenloses „Personal Team“ (Xcode führt es noch als bezahlt, wie nach einer abgelaufenen Mitgliedschaft). Es wird neu gebaut wie für ein kostenloses Team: ohne die beiden Berechtigungen, die es dafür nicht gibt, unter der App-Kennung dieses Teams, sieben Tage signiert."))
+            return try await build()
+        }
         report(String(format: L("Built and installed (%.0f s).", "Gebaut und installiert (%.0f s)."), Date().timeIntervalSince(started)))
         // Womit signiert wurde und bis wann: Daran erinnert die App rechtzeitig vor dem Ablauf.
         var record = SigningRecord(team: team, free: free, installed: Date(), expires: toolchain.signingExpiry(recipe: recipe),
