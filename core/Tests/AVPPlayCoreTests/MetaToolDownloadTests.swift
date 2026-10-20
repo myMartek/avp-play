@@ -146,3 +146,58 @@ final class MegabytesTests: XCTestCase {
         XCTAssertEqual(Installer.megabytes(4_600_000_000), "4600 MB")
     }
 }
+
+/// Der Build des Kontos als Ausweg, wenn Metas Werkzeug den Build eines Entwurfs mit „Not entitled“ ablehnt
+/// (HITMAN 3 VR: Reloaded: Katalog 3645, Konto 3641).
+final class AccountBuildTests: XCTestCase {
+    private let appId = "8012387035448196"
+
+    private func draft(versionCode: Int) throws -> Recipe {
+        let game = CatalogGame(appId: appId, title: "HITMAN 3 VR: Reloaded", package: "com.xrgames.hitman3reloaded", publisher: nil,
+                               status: "untested", noteEn: nil, noteDe: nil, target: nil, works: 0, problems: 0, fails: 0, build: nil)
+        let build = CatalogBuild(buildId: "9179370045416550", version: "0.0.\(versionCode)", versionCode: versionCode, fileName: nil)
+        let files = [ListedFile(name: "apps.engine-retail.apk", id: "9179370045416550", kind: "APK", sizeText: "1GB"),
+                     ListedFile(name: "chunk7.rpkg", id: "9179368442083377", kind: "ASSET", sizeText: "1GB")]
+        return try DraftRecipe.make(game: game, build: build, files: files, target: "x\(appId)", minCommit: "a459856")
+    }
+
+    private func build(_ code: Int, id: String) -> CatalogBuild {
+        CatalogBuild(buildId: id, version: "0.0.\(code)", versionCode: code, fileName: nil)
+    }
+
+    func testOnlyTheToolsNotEntitledCounts() {
+        XCTAssertTrue(AccountBuild.isNotEntitled(ToolDownloadError.refused("❌ ERROR:\nNot entitled to download")))
+        XCTAssertFalse(AccountBuild.isNotEntitled(ToolDownloadError.refused("❌ ERROR:\nCannot find apk with ID: 1")))
+        XCTAssertFalse(AccountBuild.isNotEntitled(ToolDownloadError.missingFile("a.apk")))
+        XCTAssertFalse(AccountBuild.isNotEntitled(ListingError.refused("Not entitled to download")))
+    }
+
+    func testReplacementIsTheAccountsNewestWhenTheDraftsBuildIsNotOffered() throws {
+        let recipe = try draft(versionCode: 3645)
+        let account = [build(3641, id: "9100000000000001"), build(3600, id: "9100000000000002")]
+        XCTAssertEqual(AccountBuild.replacement(for: recipe, accountBuilds: account)?.versionCode, 3641)
+        // Steht die Fassung des Entwurfs in Metas Liste, hilft ein anderer Build nicht.
+        XCTAssertNil(AccountBuild.replacement(for: recipe, accountBuilds: [build(3645, id: "9100000000000003")] + account))
+        XCTAssertNil(AccountBuild.replacement(for: recipe, accountBuilds: []))
+        // Kein Entwurf (ein Rezept des Projekts): nie.
+        var tested = recipe
+        tested.id = "hitman3"
+        XCTAssertNil(AccountBuild.replacement(for: tested, accountBuilds: account))
+    }
+
+    func testRedraftKeepsGameAndToolchainAndTakesTheNewFiles() throws {
+        let old = try draft(versionCode: 3645)
+        let files = [ListedFile(name: "apps.engine-retail.apk", id: "9100000000000001", kind: "APK", sizeText: "1GB"),
+                     ListedFile(name: "chunk6.rpkg", id: "9100000000000009", kind: "ASSET", sizeText: "1GB")]
+        let new = try DraftRecipe.forBuild(old, build: build(3641, id: "9100000000000001"), files: files)
+        XCTAssertEqual(new.id, old.id)
+        XCTAssertEqual(new.title, old.title)
+        XCTAssertEqual(new.package, old.package)
+        XCTAssertEqual(new.versionCode, 3641)
+        XCTAssertEqual(new.toolchain.target, "x\(appId)")
+        XCTAssertEqual(new.toolchain.minCommit, "a459856")
+        XCTAssertEqual(new.files.map(\.id), ["9100000000000001", "9100000000000009"])
+        XCTAssertEqual(new.files[1].dest, "android-files/Android/obb/com.xrgames.hitman3reloaded")
+        XCTAssertEqual(new.status.download, "listed")
+    }
+}

@@ -352,7 +352,9 @@ extension AppModel {
         let chosenCode = latestChoices.versions[game.id]
         let chosen = chosenCode.flatMap { code in (storeBuildLists[game.id] ?? []).first { $0.versionCode == code } }
         if chosenCode != nil, chosen == nil, game.prepared { return }
-        if game.prepared, game.recipe.versionCode == (chosen?.versionCode ?? entry.build?.versionCode ?? game.recipe.versionCode) {
+        // Ohne Wahl gilt der neueste Build, den Meta dem Konto nennt (sobald die App ihn kennt), sonst der des Katalogs.
+        let known = storeBuildLists[game.id]?.first
+        if game.prepared, game.recipe.versionCode == (chosen?.versionCode ?? known?.versionCode ?? entry.build?.versionCode ?? game.recipe.versionCode) {
             // Fertig nachgeschlagen – es sei denn, der Entwurf baut noch mit dem allgemeinen Versuchs-Target und die
             // Toolchain kennt das Spiel inzwischen unter eigenem Namen: dann wird der Entwurf neu geschrieben.
             let named = entry.target.flatMap { $0.isEmpty || toolchain?.targetKind($0) == nil ? nil : $0 }
@@ -384,7 +386,7 @@ extension AppModel {
             var note: String?
             do {
                 let detail = try await client.game(appId: entry.appId)
-                guard let build = chosen ?? detail.build else {
+                guard chosen != nil || known != nil || detail.build != nil else {
                     throw Stop(L("No public build of this game is known yet.", "Zu diesem Spiel ist noch kein öffentlicher Build bekannt."))
                 }
                 await say(L("Asking Meta whether you own this game …", "Meta wird gefragt, ob dir das Spiel gehört …"))
@@ -397,6 +399,17 @@ extension AppModel {
                 guard owned else {
                     throw Stop(L("This game is not in your Meta account. Nothing is looked up or downloaded.",
                                  "Dieses Spiel gehört nicht zu deinem Meta-Konto. Es wird nichts nachgeschlagen oder geladen."))
+                }
+                // Der Katalog kann einen Build kennen, den Meta diesem Konto (noch) nicht ausliefert (HITMAN 3 VR:
+                // Reloaded: Katalog 3645, Konto 3641, Werkzeug „Not entitled to download“). Ohne Wahl gilt deshalb der
+                // neueste Build, den Meta dem Konto nennt – dieselbe eine Abfrage wie für Store-Updates.
+                var accountBuild = known
+                if chosen == nil, accountBuild == nil, let all = try? await meta.builds(appId: entry.appId), !all.isEmpty {
+                    accountBuild = all.first
+                    await MainActor.run { self.rememberStoreBuilds(all, for: id) }
+                }
+                guard let build = chosen ?? accountBuild ?? detail.build else {
+                    throw Stop(L("No public build of this game is known yet.", "Zu diesem Spiel ist noch kein öffentlicher Build bekannt."))
                 }
                 // Kennt die Toolchain das Spiel, gilt ihr Eintrag; sonst wird es mit dem allgemeinen Versuchs-Target
                 // gebaut, das sich nur nach der Engine richtet.

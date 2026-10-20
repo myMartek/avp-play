@@ -255,6 +255,39 @@ private final class OutputTail: @unchecked Sendable {
     }
 }
 
+/// Der Build, den Meta dem angemeldeten Konto für ein Spiel nennt, als Ausweg für einen Entwurf, dessen Build
+/// Metas Werkzeug mit „Not entitled to download“ ablehnt. Der Katalog kann einen Build kennen, der diesem Konto
+/// (noch) nicht ausgeliefert wird – HITMAN 3 VR: Reloaded stand dort mit 3645, das Konto bekam 3641.
+public enum AccountBuild {
+    /// Ob Metas Werkzeug einen Download abgelehnt hat, weil das Konto diesen Build nicht laden darf.
+    public static func isNotEntitled(_ error: Error) -> Bool {
+        guard case ToolDownloadError.refused(let why) = error else { return false }
+        return why.localizedCaseInsensitiveContains("not entitled")
+    }
+
+    /// Der Build, der statt dem des Entwurfs zu laden ist: der neueste, den Metas Antwort für das Konto nennt.
+    /// Nur für Entwürfe, und nur wenn deren Fassung nicht unter den genannten ist – sonst liegt die Absage an
+    /// etwas anderem, und ein anderer Build hilft nicht.
+    public static func replacement(for recipe: Recipe, accountBuilds: [CatalogBuild]) -> CatalogBuild? {
+        guard DraftRecipe.appId(of: recipe.id) != nil, let newest = accountBuilds.first,
+              !accountBuilds.contains(where: { $0.versionCode == recipe.versionCode }) else { return nil }
+        return newest
+    }
+
+    /// Fragt Meta nach den Builds des Kontos (dieselbe eine Abfrage wie für Store-Updates) und schlägt, gibt es
+    /// einen anderen als den des Entwurfs, dessen Dateien nach. `nil`: es gibt keinen anderen.
+    public static func redraft(_ recipe: Recipe, tool: URL, token: String, client: MetaClient,
+                               say: @Sendable (String) async -> Void = { _ in }) async throws -> Recipe? {
+        guard let appId = recipe.store.appId else { return nil }
+        _ = try await client.me()
+        guard let build = replacement(for: recipe, accountBuilds: try await client.builds(appId: appId)) else { return nil }
+        await say(L("Meta names build \(build.version) for your account; asking Meta's tool for its files …",
+                    "Meta nennt deinem Konto Build \(build.version); Metas Werkzeug wird nach dessen Dateien gefragt …"))
+        let files = try await MetaListing.files(buildId: build.buildId, tool: tool, token: token, client: client, say: say)
+        return try DraftRecipe.forBuild(recipe, build: build, files: files)
+    }
+}
+
 /// Ein Rezept für ein Spiel, das noch niemand geprüft hat: gebaut aus dem, was der Katalog und Metas Werkzeug
 /// über den neuesten Build sagen. Es kennt weder genaue Größen noch Prüfsummen und ist entsprechend gekennzeichnet.
 public enum DraftRecipe {
@@ -320,8 +353,21 @@ public enum DraftRecipe {
     /// - Parameter target: der Name des Spiels in der Toolchain – ein Eintrag ihrer Tabelle oder `genericTarget`.
     public static func make(game: CatalogGame, build: CatalogBuild, files: [ListedFile], target: String,
                             minCommit: String) throws -> Recipe {
+        try make(appId: game.appId, title: game.title, package: game.package, build: build, files: files,
+                 target: target, minCommit: minCommit)
+    }
+
+    /// Derselbe Entwurf für einen anderen Build desselben Spiels – Name, Paket und Toolchain bleiben.
+    public static func forBuild(_ recipe: Recipe, build: CatalogBuild, files: [ListedFile]) throws -> Recipe {
+        guard let appId = recipe.store.appId else { throw MetaError.missingAppId }
+        return try make(appId: appId, title: recipe.title, package: recipe.package, build: build, files: files,
+                        target: recipe.toolchain.target, minCommit: recipe.toolchain.minCommit)
+    }
+
+    static func make(appId: String, title: String, package: String, build: CatalogBuild, files: [ListedFile],
+                     target: String, minCommit: String) throws -> Recipe {
         guard let apk = files.first(where: { $0.kind == "APK" }) else { throw ListingError.nothingListed }
-        let androidObb = game.package.isEmpty ? packageFolderPlaceholder : packageFolder(package: game.package)
+        let androidObb = package.isEmpty ? packageFolderPlaceholder : packageFolder(package: package)
         var list = [RecipeFile(name: apk.name, role: "apk", id: apk.id, size: nil, sha256: nil, required: true, dest: "",
                                localName: "\(target).apk", locale: nil, source: nil)]
         var seen: Set<String> = [apk.name]
@@ -333,8 +379,8 @@ public enum DraftRecipe {
             list.append(RecipeFile(name: file.name, role: isMain ? "main-obb" : "content-bundle", id: file.id, size: nil, sha256: nil,
                                    required: true, dest: dest, localName: nil, locale: nil, source: nil))
         }
-        let recipe = Recipe(schema: Recipe.supportedSchema, id: identifier(appId: game.appId), title: game.title, package: game.package,
-                            versionName: build.version, versionCode: build.versionCode, store: .init(appId: game.appId),
+        let recipe = Recipe(schema: Recipe.supportedSchema, id: identifier(appId: appId), title: title, package: package,
+                            versionName: build.version, versionCode: build.versionCode, store: .init(appId: appId),
                             toolchain: .init(target: target, minCommit: minCommit), files: list, addons: nil,
                             status: .init(playability: "untested", download: "listed", notes: nil), icon: nil, trees: nil)
         try recipe.validate()

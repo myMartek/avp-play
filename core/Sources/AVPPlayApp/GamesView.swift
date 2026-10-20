@@ -845,8 +845,9 @@ struct GameDetail: View {
         }
         .navigationTitle(game.recipe.title)
         // Erst wenn jemand die Seite eines ungetesteten Spiels öffnet, wird nachgeschlagen, woraus es besteht.
-        // Sagt der Katalog erst danach, unter welchem Namen die Toolchain das Spiel kennt, wird noch einmal geprüft.
-        .task(id: "\(game.id) \(game.catalog?.target ?? "")") { model.prepare(game) }
+        // Sagt der Katalog erst danach, unter welchem Namen die Toolchain das Spiel kennt, wird noch einmal geprüft –
+        // ebenso, wenn Meta dem Konto einen anderen neuesten Build nennt als bisher bekannt.
+        .task(id: "\(game.id) \(game.catalog?.target ?? "") \(model.storeBuildLists[game.id]?.first?.versionCode ?? 0)") { model.prepare(game) }
         .task(id: game.id) { model.checkStoreVersions(only: game) }
         .task(id: "\(game.id) \(game.recipe.source?.rawValue ?? "")") { model.purchaseOnOpen(game) }
         .confirmationDialog(L("Remove the files of \(game.recipe.title) from this Mac?", "Die Dateien von \(game.recipe.title) von diesem Mac entfernen?"),
