@@ -1,0 +1,145 @@
+{
+ "files": [
+  {
+   "dest": "",
+   "id": "9159011324119089",
+   "localName": "x8012387035448196.apk",
+   "name": "apps.engine-retail.apk",
+   "required": true,
+   "role": "apk",
+   "size": 100197107,
+   "sha256": "49b3b0dc598b5081cf158e1854de58864158e1d8a2bc5a9b7e3ae175d6fa6ff8"
+  },
+  {
+   "dest": "android-files/Android/obb/com.xrgames.hitman3reloaded",
+   "id": "9159010087452546",
+   "name": "packagedefinition.txt",
+   "required": true,
+   "role": "content-bundle",
+   "size": 16715,
+   "sha256": "f3942da339acc0373383f70a6064c9a776ef878db2682dd7e84d4f26d3c2466a"
+  },
+  {
+   "dest": "android-files/Android/obb/com.xrgames.hitman3reloaded",
+   "id": "9159009510785937",
+   "name": "chunk7.rpkg",
+   "required": true,
+   "role": "content-bundle",
+   "size": 1467057719,
+   "sha256": "9447c1002df097ec34a172484aa27d8042b61d8da64a994dd6e9129f5773a04d"
+  },
+  {
+   "dest": "android-files/Android/obb/com.xrgames.hitman3reloaded",
+   "id": "9159005134119708",
+   "name": "chunk6.rpkg",
+   "required": true,
+   "role": "content-bundle",
+   "size": 2065860648,
+   "sha256": "42ded4fb036bb242dc958fd8b5878e4ee2206ece890375c65335fd9bfc421298"
+  },
+  {
+   "dest": "android-files/Android/obb/com.xrgames.hitman3reloaded",
+   "id": "9158999504120271",
+   "name": "chunk5.rpkg",
+   "required": true,
+   "role": "content-bundle",
+   "size": 1676473931,
+   "sha256": "7f505d2acdc7c9bfb7661d2f2187134fa4043efec408be8ce84d6610be8c64a1"
+  },
+  {
+   "dest": "android-files/Android/obb/com.xrgames.hitman3reloaded",
+   "id": "9158993960787492",
+   "name": "chunk4.rpkg",
+   "required": true,
+   "role": "content-bundle",
+   "size": 2563662688,
+   "sha256": "4c1c396eea8f0b894d24a438c6f7bfab65fe10d0a0a1d07ec76491ecd378b826"
+  },
+  {
+   "dest": "android-files/Android/obb/com.xrgames.hitman3reloaded",
+   "id": "9158986134121608",
+   "name": "chunk2.rpkg",
+   "required": true,
+   "role": "content-bundle",
+   "size": 2917351214,
+   "sha256": "94b9da981ae1924671a27cde7d70c44ea6c79131d3f9b206033c592da56c5acd"
+  },
+  {
+   "dest": "android-files/Android/obb/com.xrgames.hitman3reloaded",
+   "id": "9158979410788947",
+   "name": "chunk3.rpkg",
+   "required": true,
+   "role": "content-bundle",
+   "size": 2202533580,
+   "sha256": "37f1fb9332de00005b3d96c1ccfa47d364346d27646f1305f79c70869f040e9c"
+  },
+  {
+   "dest": "android-files/Android/obb/com.xrgames.hitman3reloaded",
+   "id": "9158971940789694",
+   "name": "chunk0overflow2.rpkg",
+   "required": true,
+   "role": "content-bundle",
+   "size": 2988848971,
+   "sha256": "97e82bd4bc9a89ae23782568eb7a07686c76de5c4b2597afc2efb0895fb68f99"
+  },
+  {
+   "dest": "android-files/Android/obb/com.xrgames.hitman3reloaded",
+   "id": "9158962340790654",
+   "name": "chunk1.rpkg",
+   "required": true,
+   "role": "content-bundle",
+   "size": 25,
+   "sha256": "4dc0cf1208b9d5dfbcccbb3326684352b818c6a978aaf90225f58a01ebcb0de0"
+  },
+  {
+   "dest": "android-files/Android/obb/com.xrgames.hitman3reloaded",
+   "id": "9158961687457386",
+   "name": "chunk0overflow1.rpkg",
+   "required": true,
+   "role": "content-bundle",
+   "size": 4006960589,
+   "sha256": "8c5b783d7686c7a1a919559d14f68b1b8bac794c387c3023b2b9fba8c4ad258d"
+  },
+  {
+   "dest": "android-files/Android/obb/com.xrgames.hitman3reloaded",
+   "id": "9158948444125377",
+   "name": "chunk0overflow0.rpkg",
+   "required": true,
+   "role": "content-bundle",
+   "size": 4002409379,
+   "sha256": "5d205a639055485470666fb4b15045b6e9abe74f2432295551d62c4a16c20707"
+  },
+  {
+   "dest": "android-files/Android/obb/com.xrgames.hitman3reloaded",
+   "id": "9158933520793536",
+   "name": "chunk0.rpkg",
+   "required": true,
+   "role": "content-bundle",
+   "size": 3990080316,
+   "sha256": "de7874fa175583e91757837d824f0e1d729234c5ce3b7ea3ed0a6d5c29d50c14"
+  }
+ ],
+ "id": "store-8012387035448196",
+ "package": "com.xrgames.hitman3reloaded",
+ "schema": 1,
+ "status": {
+  "playability": "verified",
+  "download": "proven",
+  "notes": [
+   {
+    "en": "Marked as verified by the project on 2026-10-22. File list as Meta's tool reports it for this build; 13 of 13 checksums recorded from a download.",
+    "de": "Vom Projekt am 2026-10-22 als geprüft markiert. Dateiliste, wie Metas Werkzeug sie für diesen Build nennt; 13 von 13 Prüfsummen aus einem Download erfasst."
+   }
+  ]
+ },
+ "store": {
+  "appId": "8012387035448196"
+ },
+ "title": "HITMAN 3 VR: Reloaded",
+ "toolchain": {
+  "minCommit": "ec26a45",
+  "target": "x8012387035448196"
+ },
+ "versionCode": 3641,
+ "versionName": "0.0.3641 main-f6ab031c7"
+}
