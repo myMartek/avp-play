@@ -399,7 +399,7 @@ struct RenewalSettings: View {
                         HStack {
                             Text(entry.game.recipe.title)
                             Spacer()
-                            Text(RenewalSettings.remaining(entry.record))
+                            Text(RenewalSettings.remaining(entry.record) + RenewalSettings.teamKind(entry.record, currentFree: model.usesFreeTeam))
                                 .foregroundStyle(Renewal.isDue(entry.record, now: Date()) || (entry.record.remindFrom.map { Date() >= $0 } ?? false) ? .orange : .secondary)
                         }
                         .font(.callout)
@@ -430,6 +430,13 @@ struct RenewalSettings: View {
                 : L("Last check \(when): nothing due (\(report.known) known).", "Letzte Prüfung \(when): nichts fällig (\(report.known) bekannt).")
         }
         return L("Last check \(when):", "Letzte Prüfung \(when):")
+    }
+
+    /// Mit welcher Art Team ein Spiel signiert ist – nur, wenn es nicht die des gewählten Teams ist. Sonst steht bei
+    /// einem kostenlosen Konto ein Jahr da, ohne dass man sieht, dass die Installation von einem bezahlten Team stammt.
+    static func teamKind(_ record: SigningRecord, currentFree: Bool) -> String {
+        guard record.free != currentFree else { return "" }
+        return record.free ? L(" · free team", " · kostenloses Team") : L(" · paid team", " · bezahltes Team")
     }
 
     /// „noch 3 Tage (bis 14.10., 18:20)“ oder „abgelaufen seit …“.
