@@ -1,4 +1,8 @@
 {
+ "addons": {
+  "dest": "android-files",
+  "kind": "purchase-list"
+ },
  "files": [
   {
    "dest": "",
