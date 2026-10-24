@@ -33,7 +33,7 @@
  },
  "title": "Elixir",
  "toolchain": {
-  "minCommit": "4614af3",
+  "minCommit": "98e44ec",
   "target": "x3793077684043441"
  },
  "versionCode": 2400,

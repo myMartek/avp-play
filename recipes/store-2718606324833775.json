@@ -35,6 +35,10 @@
       {
         "en": "Angry Birds VR: Isle of Pigs. Tested by the project on an Apple Vision Pro: it starts and plays, and mixed reality puts the island into the room. Needs toolchain 67f19c8 or newer.",
         "de": "Angry Birds VR: Isle of Pigs. Vom Projekt auf einer Apple Vision Pro getestet: Es startet und lässt sich spielen, und Mixed Reality stellt die Insel in den Raum. Braucht Toolchain 67f19c8 oder neuer."
+      },
+      {
+        "en": "Hand tracking: put the controllers aside and your hands take over (a fist grabs the slingshot, a pinch pulls it and presses buttons). With a Sense controller in hand, the controllers are used. Needs toolchain 98e44ec or newer.",
+        "de": "Hand-Tracking: Controller weglegen, dann übernehmen die Hände (Faust greift die Schleuder, Pinch zieht sie und drückt Knöpfe). Mit einem Sense-Controller in der Hand gelten die Controller. Braucht Toolchain 98e44ec oder neuer."
       }
     ]
   },
