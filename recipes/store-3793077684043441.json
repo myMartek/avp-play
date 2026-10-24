@@ -1,0 +1,41 @@
+{
+ "files": [
+  {
+   "dest": "",
+   "id": "8515040021847160",
+   "localName": "x3793077684043441.apk",
+   "name": "Elixir_0.1.2400_Signed.apk",
+   "required": true,
+   "role": "apk",
+   "size": 1144589473,
+   "sha256": "c228cdb6f58f5ee39b63b9f1cf23bce38cf42823aad56e2644b98fc1d6fc4bed"
+  }
+ ],
+ "id": "store-3793077684043441",
+ "package": "com.magnopus.ElixirStore",
+ "schema": 1,
+ "status": {
+  "playability": "verified",
+  "download": "proven",
+  "notes": [
+   {
+    "en": "Marked as verified by the project on 2026-10-24. File list as Meta's tool reports it for this build; 1 of 1 checksums recorded from a download.",
+    "de": "Vom Projekt am 2026-10-24 als geprüft markiert. Dateiliste, wie Metas Werkzeug sie für diesen Build nennt; 1 von 1 Prüfsummen aus einem Download erfasst."
+   },
+   {
+    "en": "Hands only: put the controllers aside. Hold your hands over the rune to calibrate.",
+    "de": "Nur mit Händen: Controller weglegen. Zum Kalibrieren die Hände über die Rune halten."
+   }
+  ]
+ },
+ "store": {
+  "appId": "3793077684043441"
+ },
+ "title": "Elixir",
+ "toolchain": {
+  "minCommit": "4614af3",
+  "target": "x3793077684043441"
+ },
+ "versionCode": 2400,
+ "versionName": "0.1.2400"
+}
