@@ -182,6 +182,8 @@ final class AppModel: ObservableObject {
     @Published var toolPresent = false
     @Published var xcodeText: String?
     @Published var xcodeProblem: String?
+    @Published var xcodeWarning: String?
+    @Published var newerXcode: DeveloperTools.OtherXcode?
     @Published var jobs: [Job] = []
     @Published var selectedJob: String?
     @Published var runningJob: String?
@@ -1096,6 +1098,8 @@ final class AppModel: ObservableObject {
         toolPresent = s.toolPresent
         xcodeText = s.xcodeText
         xcodeProblem = s.xcodeProblem
+        xcodeWarning = s.xcodeWarning
+        newerXcode = s.newerXcode
         teamCandidates = s.teamCandidates
         freeBytes = s.freeBytes
         // Genau ein bezahltes Team: das ist es. Sonst entscheidet der Nutzer.

@@ -12,7 +12,9 @@ extension AppModel {
         var lines: [String] = []
         lines.append("AVP Play \(appVersion) (\(canSelfUpdate ? "release build" : "local build"))")
         lines.append("macOS \(os.majorVersion).\(os.minorVersion).\(os.patchVersion), language \(language.rawValue)")
-        lines.append("Xcode: \(xcodeProblem.map { "PROBLEM – \($0)" } ?? xcodeText ?? "not checked")")
+        lines.append("Xcode: \(xcodeProblem.map { "PROBLEM – \($0)" } ?? xcodeText ?? "not checked")"
+                     + (xcodeProblem == nil && xcodeWarning != nil ? " WARNING – older than Xcode \(DeveloperTools.minimumXcodeMajor)" : "")
+                     + (newerXcode.map { ", \($0.name) \($0.version) installed but not chosen" } ?? ""))
         lines.append("Vision Pro: \(device.map { "reachable, visionOS \($0.osVersion), developer mode \($0.developerMode ? "on" : "off")" } ?? "not reachable")")
         lines.append("Apple team: \(teamValid ? (team?.free == true ? "free team" : "set") : "not set")")
         let accountText: String

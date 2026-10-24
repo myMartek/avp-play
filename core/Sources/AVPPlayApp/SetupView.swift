@@ -16,10 +16,21 @@ struct SetupView: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .foregroundStyle(.secondary)
 
-                CheckCard(title: "Xcode", state: model.xcodeProblem == nil ? (model.xcodeText == nil ? .checking : .ok) : .missing,
-                          detail: model.xcodeProblem ?? model.xcodeText ?? L("Checking …", "Wird geprüft …")) {
-                    if model.xcodeProblem != nil {
+                CheckCard(title: "Xcode", state: model.xcodeProblem != nil ? .missing : model.xcodeText == nil ? .checking : model.xcodeWarning != nil ? .warning : .ok,
+                          detail: model.xcodeProblem ?? model.xcodeText.map { text in model.xcodeWarning.map { "\(text) \($0)" } ?? text } ?? L("Checking …", "Wird geprüft …")) {
+                    if model.xcodeProblem != nil || (model.xcodeWarning != nil && model.newerXcode == nil) {
                         Link(L("Open Xcode in the App Store", "Xcode im App Store öffnen"), destination: URL(string: "macappstore://apps.apple.com/app/xcode/id497799835")!)
+                    }
+                    if model.xcodeProblem == nil, model.xcodeWarning != nil, let newer = model.newerXcode {
+                        Text(newer.selectCommand).font(.callout.monospaced()).textSelection(.enabled)
+                        HStack {
+                            Button(L("Copy Command", "Befehl kopieren")) {
+                                NSPasteboard.general.clearContents()
+                                NSPasteboard.general.setString(newer.selectCommand, forType: .string)
+                            }
+                            Button(L("Check Again", "Neu prüfen")) { model.refresh() }
+                        }
+                        .controlSize(.small)
                     }
                 }
 
