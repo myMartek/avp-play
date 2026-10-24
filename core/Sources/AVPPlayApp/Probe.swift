@@ -15,6 +15,10 @@ enum Probe {
         var toolPresent = false
         var xcodeText: String?
         var xcodeProblem: String?
+        /// Das gewählte Xcode ist älter als `DeveloperTools.minimumXcodeMajor`.
+        var xcodeWarning: String?
+        /// Ein neueres Xcode, das schon auf dem Mac liegt und nur gewählt werden muss.
+        var newerXcode: DeveloperTools.OtherXcode?
         var teamCandidates: [Team] = []
         /// Freier Platz auf dem Laufwerk des Bestands.
         var freeBytes: Int64?
@@ -125,6 +129,18 @@ enum Probe {
             } else {
                 s.xcodeText = String(first)
                 s.xcodeProblem = L("Xcode is missing the visionOS platform. Open Xcode › Settings › Components › download visionOS.", "In Xcode fehlt die visionOS-Plattform. Xcode öffnen › Einstellungen › Components › visionOS laden.")
+            }
+            // Gebaut wird mit dem gewählten Xcode, auch wenn daneben ein neueres liegt (avp-play#81).
+            if let major = DeveloperTools.xcodeMajor(fromVersionLine: String(first)), major < DeveloperTools.minimumXcodeMajor {
+                let minimum = DeveloperTools.minimumXcodeMajor
+                s.newerXcode = DeveloperTools.newerXcodes(chosen: DeveloperTools.directory()).first
+                if let newer = s.newerXcode {
+                    s.xcodeWarning = L("Games are built with this Xcode, and AVP Play needs Xcode \(minimum) or newer: with an older one, building a game can stop with a compiler error. \(newer.name) \(newer.version) is already on this Mac but not chosen. To choose it, run this command in Terminal (it asks for your Mac password), then choose “Check Again”:",
+                                       "Mit diesem Xcode werden die Spiele gebaut, und AVP Play braucht Xcode \(minimum) oder neuer: Mit einem älteren kann der Bau eines Spiels mit einem Compilerfehler abbrechen. \(newer.name) \(newer.version) liegt schon auf diesem Mac, ist aber nicht gewählt. Um es zu wählen, diesen Befehl im Terminal ausführen (er fragt nach dem Mac-Passwort) und dann „Neu prüfen“ wählen:")
+                } else {
+                    s.xcodeWarning = L("Games are built with this Xcode, and AVP Play needs Xcode \(minimum) or newer: with an older one, building a game can stop with a compiler error. Update Xcode in the App Store, open it once, then choose “Check Again”.",
+                                       "Mit diesem Xcode werden die Spiele gebaut, und AVP Play braucht Xcode \(minimum) oder neuer: Mit einem älteren kann der Bau eines Spiels mit einem Compilerfehler abbrechen. Xcode im App Store aktualisieren, einmal starten und dann „Neu prüfen“ wählen.")
+                }
             }
         } else {
             s.xcodeProblem = L("Xcode is not installed or has never been opened. Get Xcode from the App Store and open it once.", "Xcode ist nicht installiert oder noch nie geöffnet worden. Xcode aus dem App Store laden und einmal starten.")
