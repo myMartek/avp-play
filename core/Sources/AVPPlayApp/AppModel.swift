@@ -136,7 +136,7 @@ enum AccountState: Equatable {
 
 enum AppSection: String, CaseIterable, Identifiable {
     /// Die Einstellungen stehen als letzter Punkt in der Seitenleiste, nicht in einem eigenen Fenster.
-    case games, filters, jobs, data, setup, settings
+    case games, filters, jobs, data, setup, remote, settings
     var id: String { rawValue }
     var title: String {
         switch self {
@@ -145,6 +145,7 @@ enum AppSection: String, CaseIterable, Identifiable {
         case .jobs: return L("Jobs", "Aufträge")
         case .data: return L("Data", "Datenverwaltung")
         case .setup: return L("Setup", "Einrichtung")
+        case .remote: return L("Remote Control", "Fernbedienung")
         case .settings: return L("Settings", "Einstellungen")
         }
     }
@@ -155,6 +156,7 @@ enum AppSection: String, CaseIterable, Identifiable {
         case .jobs: return "list.bullet.clipboard"
         case .data: return "externaldrive"
         case .setup: return "checklist"
+        case .remote: return "visionpro"
         case .settings: return "gearshape"
         }
     }

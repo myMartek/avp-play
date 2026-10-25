@@ -15,11 +15,13 @@ enum Launcher {
 struct AVPPlayApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @StateObject private var model = AppDelegate.model
+    @StateObject private var remote = AppDelegate.remote
 
     var body: some Scene {
         Window("AVP Play", id: "main") {
             RootView()
                 .environmentObject(model)
+                .environmentObject(remote)
                 .frame(minWidth: 900, minHeight: 600)
         }
         .defaultSize(width: 1120, height: 760)
@@ -64,6 +66,7 @@ struct AVPPlayApp: App {
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor static let model = AppModel()
+    @MainActor static let remote = RemoteServer()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Auch ohne Programmpaket (beim Entwickeln mit `swift run`) als normales Programm mit Fenster auftreten.
@@ -71,6 +74,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Beim Fotografieren der Ansichten nicht nach vorn drängen: wer gerade am Rechner arbeitet, soll weder
         // ein Fenster vor die Nase bekommen noch versehentlich hineinklicken.
         if Snapshot.directory == nil { NSApp.activate(ignoringOtherApps: true) }
+        MainActor.assumeIsolated { AppDelegate.remote.attach(AppDelegate.model) }
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
@@ -109,6 +113,7 @@ enum AboutPanel {
 
 struct RootView: View {
     @EnvironmentObject var model: AppModel
+    @EnvironmentObject var remote: RemoteServer
 
     var body: some View {
         NavigationSplitView {
@@ -136,6 +141,7 @@ struct RootView: View {
                 case .jobs: JobsView()
                 case .data: DataView()
                 case .setup: SetupView()
+                case .remote: RemoteControlView()
                 case .settings: SettingsView()
                 }
             }
@@ -164,6 +170,8 @@ struct RootView: View {
     private func badge(for section: AppSection) -> Int {
         switch section {
         case .games, .filters, .data, .settings: return 0
+        // Wie viele Vision Pros gerade verbunden sind.
+        case .remote: return remote.connected.count
         // Der laufende und die wartenden: es läuft immer nur einer, also sagt die Zahl, wie viele noch kommen.
         // Abgeschlossene, angehaltene, abgebrochene und unterbrochene zählen nicht mit.
         case .jobs: return model.jobs.filter { [.running, .queued].contains(model.phase(of: $0)) }.count

@@ -112,11 +112,13 @@ struct ToolchainBox: View {
 
     private var pin: ToolchainChoices.Pin? { model.toolchainChoices.games[game.id] }
 
-    private func megabytes(_ bytes: Int64?) -> String {
+    private static func megabytes(_ bytes: Int64?) -> String {
         bytes.map { L(", \(max(1, $0 / 1_000_000)) MB to download", ", \(max(1, $0 / 1_000_000)) MB zu laden") } ?? ""
     }
 
-    private func label(_ o: ToolchainOption) -> String {
+    private func label(_ o: ToolchainOption) -> String { ToolchainBox.label(o, in: options) }
+
+    static func label(_ o: ToolchainOption, in options: ToolchainOptions) -> String {
         let name = Toolchain.name(version: o.version, modified: o.modified)
         switch o.kind {
         case .newest: return L("Always the newest (now \(o.version)) – recommended", "Immer die neueste (jetzt \(o.version)) – empfohlen")
@@ -131,14 +133,18 @@ struct ToolchainBox: View {
         }
     }
 
+    private func folder(_ o: ToolchainOption) -> String { ToolchainBox.folder(o) }
+
     /// Der Ordner einer Arbeitskopie, kurz: mit `~` für den eigenen Benutzerordner.
-    private func folder(_ o: ToolchainOption) -> String {
+    static func folder(_ o: ToolchainOption) -> String {
         guard let path = o.path else { return "" }
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         return path.hasPrefix(home + "/") ? "~" + path.dropFirst(home.count) : path
     }
 
-    private var all: [ToolchainOption] {
+    private var all: [ToolchainOption] { ToolchainBox.all(options) }
+
+    static func all(_ options: ToolchainOptions) -> [ToolchainOption] {
         [options.newest, options.missing].compactMap { $0 } + options.installed + options.copies + options.released
     }
 

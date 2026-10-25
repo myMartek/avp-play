@@ -172,7 +172,7 @@ struct JobDetail: View {
                             .font(.headline).foregroundStyle(.orange)
                         Text(failure).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
                         Divider()
-                        Label(advice(job.failureKind ?? .other), systemImage: "arrow.turn.down.right")
+                        Label(model.jobAdvice(job.failureKind ?? .other), systemImage: "arrow.turn.down.right")
                             .fixedSize(horizontal: false, vertical: true)
                         HStack {
                             switch job.failureKind ?? .other {
@@ -256,49 +256,6 @@ struct JobDetail: View {
             LogView(log: model.logTail(for: job.id))
         }
         .padding(20)
-    }
-
-    /// Der nächste Handgriff zu einer Fehlerart, als Satz.
-    private func advice(_ kind: FailureKind) -> String {
-        switch kind {
-        case .gameRunning:
-            return L("Quit the game on the Vision Pro, then choose “Resume”.", "Beende das Spiel auf der Vision Pro und wähle dann „Fortsetzen“.")
-        case .notOwned:
-            return L("The Meta account you are signed in with does not own this game. If you bought it with another account, sign in with that one under “Setup”.",
-                     "Das angemeldete Meta-Konto besitzt dieses Spiel nicht. Wenn du es mit einem anderen Konto gekauft hast, melde dich unter „Einrichtung“ damit an.")
-        case .signIn:
-            return L("Your sign-in to Meta is missing or no longer valid. Sign in again under “Setup”, then resume.",
-                     "Die Anmeldung bei Meta fehlt oder gilt nicht mehr. Melde dich unter „Einrichtung“ neu an und setze dann fort.")
-        case .device:
-            return L("The Vision Pro did not respond. Turn it on, put it on or unlock it, keep it on the same Wi-Fi as this Mac, then resume.",
-                     "Die Vision Pro hat nicht geantwortet. Einschalten, aufsetzen oder entsperren, im selben WLAN wie dieser Mac lassen und dann fortsetzen.")
-        case .build:
-            return L("Building or installing failed. Most often this is signing: check the team under “Setup” and open Xcode once to confirm any pending prompts. The build log has the details.",
-                     "Bauen oder Installieren ist gescheitert. Meist liegt es an der Signatur: Team unter „Einrichtung“ prüfen und Xcode einmal öffnen, um offene Rückfragen zu bestätigen. Das Bauprotokoll nennt die Einzelheiten.")
-        case .copy:
-            return L("Copying to the Vision Pro was interrupted – usually because the headset went to sleep. Keep it on and awake, then resume; files already copied are skipped.",
-                     "Das Kopieren auf die Vision Pro wurde unterbrochen – meist, weil das Headset eingeschlafen ist. Aufbehalten und wach halten, dann fortsetzen; schon kopierte Dateien werden übersprungen.")
-        case .download:
-            return L("A download did not complete. Check your internet connection, then resume; it continues where it stopped.",
-                     "Ein Download wurde nicht fertig. Internetverbindung prüfen und fortsetzen; es geht dort weiter, wo es aufgehört hat.")
-        case .ownFiles:
-            return L("Files that you provide yourself are missing. The game’s page says which, and lets you choose the folder.",
-                     "Es fehlen Dateien, die du selbst bereitstellst. Die Seite des Spiels nennt sie und lässt dich den Ordner wählen.")
-        case .setup:
-            return L("Something in “Setup” is missing or has changed.", "In der „Einrichtung“ fehlt etwas oder hat sich geändert.")
-        case .apple:
-            return model.team?.free == true
-                ? L("This comes from Apple, not from the game: you are signing with a free Apple account, and it has limits. “Setup” lists them under “Apple Developer Team”.",
-                    "Das kommt von Apple, nicht vom Spiel: Du signierst mit einem kostenlosen Apple-Konto, und das hat Grenzen. Unter „Einrichtung“ stehen sie beim „Apple-Entwicklerteam“.")
-                : L("This comes from Apple, not from the game. The text above says what Apple wants; afterwards “Resume” continues.",
-                    "Das kommt von Apple, nicht vom Spiel. Der Text oben sagt, was Apple verlangt; danach geht es mit „Fortsetzen“ weiter.")
-        case .unsupported:
-            return L("There is nothing to resume: this app cannot run here. Games built on Unity or Unreal are the ones worth trying.",
-                     "Hier gibt es nichts fortzusetzen: Diese App kann hier nicht laufen. Einen Versuch wert sind Spiele, die auf Unity oder Unreal gebaut sind.")
-        case .other:
-            return L("Try “Resume”. If it stops at the same place again, the log below shows what happened.",
-                     "Versuche „Fortsetzen“. Hält es an derselben Stelle wieder an, zeigt der Verlauf unten, was passiert ist.")
-        }
     }
 
     private func reveal(_ name: String) {
@@ -414,6 +371,51 @@ struct LogView: View {
             .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 8))
             .onChange(of: log.total) { proxy.scrollTo(log.total - 1, anchor: .bottom) }
             .onAppear { proxy.scrollTo(log.total - 1, anchor: .bottom) }
+        }
+    }
+}
+
+extension AppModel {
+    /// Der nächste Handgriff zu einer Fehlerart, als Satz.
+    func jobAdvice(_ kind: FailureKind) -> String {
+        switch kind {
+        case .gameRunning:
+            return L("Quit the game on the Vision Pro, then choose “Resume”.", "Beende das Spiel auf der Vision Pro und wähle dann „Fortsetzen“.")
+        case .notOwned:
+            return L("The Meta account you are signed in with does not own this game. If you bought it with another account, sign in with that one under “Setup”.",
+                     "Das angemeldete Meta-Konto besitzt dieses Spiel nicht. Wenn du es mit einem anderen Konto gekauft hast, melde dich unter „Einrichtung“ damit an.")
+        case .signIn:
+            return L("Your sign-in to Meta is missing or no longer valid. Sign in again under “Setup”, then resume.",
+                     "Die Anmeldung bei Meta fehlt oder gilt nicht mehr. Melde dich unter „Einrichtung“ neu an und setze dann fort.")
+        case .device:
+            return L("The Vision Pro did not respond. Turn it on, put it on or unlock it, keep it on the same Wi-Fi as this Mac, then resume.",
+                     "Die Vision Pro hat nicht geantwortet. Einschalten, aufsetzen oder entsperren, im selben WLAN wie dieser Mac lassen und dann fortsetzen.")
+        case .build:
+            return L("Building or installing failed. Most often this is signing: check the team under “Setup” and open Xcode once to confirm any pending prompts. The build log has the details.",
+                     "Bauen oder Installieren ist gescheitert. Meist liegt es an der Signatur: Team unter „Einrichtung“ prüfen und Xcode einmal öffnen, um offene Rückfragen zu bestätigen. Das Bauprotokoll nennt die Einzelheiten.")
+        case .copy:
+            return L("Copying to the Vision Pro was interrupted – usually because the headset went to sleep. Keep it on and awake, then resume; files already copied are skipped.",
+                     "Das Kopieren auf die Vision Pro wurde unterbrochen – meist, weil das Headset eingeschlafen ist. Aufbehalten und wach halten, dann fortsetzen; schon kopierte Dateien werden übersprungen.")
+        case .download:
+            return L("A download did not complete. Check your internet connection, then resume; it continues where it stopped.",
+                     "Ein Download wurde nicht fertig. Internetverbindung prüfen und fortsetzen; es geht dort weiter, wo es aufgehört hat.")
+        case .ownFiles:
+            return L("Files that you provide yourself are missing. The game’s page says which, and lets you choose the folder.",
+                     "Es fehlen Dateien, die du selbst bereitstellst. Die Seite des Spiels nennt sie und lässt dich den Ordner wählen.")
+        case .setup:
+            return L("Something in “Setup” is missing or has changed.", "In der „Einrichtung“ fehlt etwas oder hat sich geändert.")
+        case .apple:
+            return team?.free == true
+                ? L("This comes from Apple, not from the game: you are signing with a free Apple account, and it has limits. “Setup” lists them under “Apple Developer Team”.",
+                    "Das kommt von Apple, nicht vom Spiel: Du signierst mit einem kostenlosen Apple-Konto, und das hat Grenzen. Unter „Einrichtung“ stehen sie beim „Apple-Entwicklerteam“.")
+                : L("This comes from Apple, not from the game. The text above says what Apple wants; afterwards “Resume” continues.",
+                    "Das kommt von Apple, nicht vom Spiel. Der Text oben sagt, was Apple verlangt; danach geht es mit „Fortsetzen“ weiter.")
+        case .unsupported:
+            return L("There is nothing to resume: this app cannot run here. Games built on Unity or Unreal are the ones worth trying.",
+                     "Hier gibt es nichts fortzusetzen: Diese App kann hier nicht laufen. Einen Versuch wert sind Spiele, die auf Unity oder Unreal gebaut sind.")
+        case .other:
+            return L("Try “Resume”. If it stops at the same place again, the log below shows what happened.",
+                     "Versuche „Fortsetzen“. Hält es an derselben Stelle wieder an, zeigt der Verlauf unten, was passiert ist.")
         }
     }
 }

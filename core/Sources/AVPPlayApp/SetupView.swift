@@ -69,7 +69,7 @@ struct SetupView: View {
                     }
                 }
 
-                CheckCard(title: L("Apple Developer Team", "Apple-Entwicklerteam"), state: teamState, detail: teamDetail) {
+                CheckCard(title: L("Apple Developer Team", "Apple-Entwicklerteam"), state: model.setupTeamState, detail: model.setupTeamDetail) {
                     HStack {
                         TextField(L("Team ID", "Team-ID"), text: $model.teamId)
                             .textFieldStyle(.roundedBorder).frame(width: 150)
@@ -104,7 +104,7 @@ struct SetupView: View {
                     }
                 }
 
-                CheckCard(title: L("Meta Account (for Meta Store games)", "Meta-Konto (für Spiele aus dem Meta-Store)"), state: accountState, detail: accountDetail) {
+                CheckCard(title: L("Meta Account (for Meta Store games)", "Meta-Konto (für Spiele aus dem Meta-Store)"), state: model.setupAccountState, detail: model.setupAccountDetail) {
                     HStack {
                         switch model.account {
                         case .signedIn:
@@ -161,42 +161,6 @@ struct SetupView: View {
     }
 
     /// Ein kostenloses Konto ist in Ordnung, aber nicht dasselbe wie ein bezahltes: Das Zeichen sagt es.
-    private var teamState: CheckState {
-        guard model.teamValid else { return .missing }
-        return model.usesFreeTeam ? .warning : .ok
-    }
-
-    private var teamDetail: String {
-        guard model.teamValid else {
-            return L("No team chosen yet. The apps are signed with your Apple developer account; the team ID has ten characters.", "Noch kein Team gewählt. Die Apps werden mit deinem Apple-Entwicklerkonto signiert; die Team-ID hat zehn Zeichen.")
-        }
-        if let team = model.team {
-            return team.free
-                ? L("\(team.name) signs the apps – a free Apple account, not a paid developer membership. Everything works, within the limits listed below.",
-                    "\(team.name) signiert die Apps – ein kostenloses Apple-Konto, keine bezahlte Entwickler-Mitgliedschaft. Alles funktioniert, in den Grenzen, die unten stehen.")
-                : L("\(team.name) (\(team.id)) signs the apps.", "\(team.name) (\(team.id)) signiert die Apps.")
-        }
-        return L("Team \(model.teamId) signs the apps.", "Team \(model.teamId) signiert die Apps.")
-    }
-
-    private var accountState: CheckState {
-        switch model.account {
-        case .signedIn: return .ok
-        case .checking, .unknown: return .checking
-        case .signedOut: return .missing
-        case .problem: return .warning
-        }
-    }
-
-    private var accountDetail: String {
-        switch model.account {
-        case .signedIn: return L("Signed in. The access key is in this Mac’s keychain and nowhere else.", "Angemeldet. Der Zugangsschlüssel liegt im Schlüsselbund dieses Macs und nirgends sonst.")
-        case .checking, .unknown: return L("Checking …", "Wird geprüft …")
-        case .signedOut: return L("Not signed in. Only needed for games from the Meta Store: once you sign in, the app checks which of them you own and downloads only those.", "Nicht angemeldet. Nur für Spiele aus dem Meta-Store nötig: Mit der Anmeldung prüft das Programm, welche davon du gekauft hast, und lädt nur diese.")
-        case .problem(let why): return L("The stored access was not confirmed: \(why)", "Der hinterlegte Zugang wurde nicht bestätigt: \(why)")
-        }
-    }
-
     private func chooseTool() {
         let panel = NSOpenPanel()
         panel.message = L("Choose the file “ovr-platform-util”.", "Die Datei „ovr-platform-util“ auswählen.")
@@ -242,6 +206,46 @@ struct CheckCard<Actions: View>: View {
                 Spacer(minLength: 0)
             }
             .padding(8)
+        }
+    }
+}
+
+// MARK: Was die Einrichtung sagt – auch für die Fernbedienung
+
+extension AppModel {
+    var setupTeamState: CheckState {
+        guard teamValid else { return .missing }
+        return usesFreeTeam ? .warning : .ok
+    }
+
+    var setupTeamDetail: String {
+        guard teamValid else {
+            return L("No team chosen yet. The apps are signed with your Apple developer account; the team ID has ten characters.", "Noch kein Team gewählt. Die Apps werden mit deinem Apple-Entwicklerkonto signiert; die Team-ID hat zehn Zeichen.")
+        }
+        if let team = team {
+            return team.free
+                ? L("\(team.name) signs the apps – a free Apple account, not a paid developer membership. Everything works, within the limits listed below.",
+                    "\(team.name) signiert die Apps – ein kostenloses Apple-Konto, keine bezahlte Entwickler-Mitgliedschaft. Alles funktioniert, in den Grenzen, die unten stehen.")
+                : L("\(team.name) (\(team.id)) signs the apps.", "\(team.name) (\(team.id)) signiert die Apps.")
+        }
+        return L("Team \(teamId) signs the apps.", "Team \(teamId) signiert die Apps.")
+    }
+
+    var setupAccountState: CheckState {
+        switch account {
+        case .signedIn: return .ok
+        case .checking, .unknown: return .checking
+        case .signedOut: return .missing
+        case .problem: return .warning
+        }
+    }
+
+    var setupAccountDetail: String {
+        switch account {
+        case .signedIn: return L("Signed in. The access key is in this Mac’s keychain and nowhere else.", "Angemeldet. Der Zugangsschlüssel liegt im Schlüsselbund dieses Macs und nirgends sonst.")
+        case .checking, .unknown: return L("Checking …", "Wird geprüft …")
+        case .signedOut: return L("Not signed in. Only needed for games from the Meta Store: once you sign in, the app checks which of them you own and downloads only those.", "Nicht angemeldet. Nur für Spiele aus dem Meta-Store nötig: Mit der Anmeldung prüft das Programm, welche davon du gekauft hast, und lädt nur diese.")
+        case .problem(let why): return L("The stored access was not confirmed: \(why)", "Der hinterlegte Zugang wurde nicht bestätigt: \(why)")
         }
     }
 }
