@@ -240,7 +240,7 @@ struct FeedbackBox: View {
                         .font(.callout).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 } else if let sent = model.feedbackSent(game) {
-                    Label(L("You reported: \(label(sent)). Thank you.", "Du hast gemeldet: \(label(sent)). Danke."), systemImage: "checkmark.circle")
+                    Label(L("You reported: \(FeedbackBox.label(sent)). Thank you.", "Du hast gemeldet: \(FeedbackBox.label(sent)). Danke."), systemImage: "checkmark.circle")
                         .foregroundStyle(.secondary)
                 } else {
                     Text(L("Tell everyone how this build runs on your Vision Pro – the label of a game follows these reports. Sent are the game, its build, the versions of app and toolchain, and your answer – nothing about you or your device.",
@@ -272,7 +272,7 @@ struct FeedbackBox: View {
         .sheet(isPresented: $showFix) { FixSheet(game: game).environmentObject(model) }
     }
 
-    private func label(_ result: String) -> String {
+    static func label(_ result: String) -> String {
         switch result {
         case "works": return L("it works", "es läuft")
         case "problems": return L("it starts, with problems", "es startet, mit Problemen")
@@ -414,8 +414,13 @@ struct OwnershipLabel: View {
     var source: Recipe.Source? = .meta
 
     var body: some View {
+        let (text, symbol) = OwnershipLabel.describe(owned: owned, checking: checking, source: source)
+        Label(text, systemImage: symbol).font(compact ? .caption : .callout).foregroundStyle(.secondary)
+    }
+
+    static func describe(owned: Owned, checking: Bool, source: Recipe.Source?) -> (text: String, symbol: String) {
         let store = AppModel.name(source)
-        let (text, symbol): (String, String) = {
+        return {
             switch owned {
             case .yes: return (L("In your \(store) account", "In deinem \(store)-Konto"), "checkmark.seal")
             case .no: return (L("Not in your \(store) account", "Nicht in deinem \(store)-Konto"), "xmark.seal")
@@ -423,7 +428,6 @@ struct OwnershipLabel: View {
             case .notApplicable: return (L("Uses your own game files", "Mit deinen eigenen Spieldateien"), "folder")
             }
         }()
-        Label(text, systemImage: symbol).font(compact ? .caption : .callout).foregroundStyle(.secondary)
     }
 }
 
@@ -605,7 +609,7 @@ struct StoreVersionBox: View {
     @EnvironmentObject var model: AppModel
     let game: Game
 
-    private func label(_ v: GameVersion) -> String {
+    static func label(_ v: GameVersion) -> String {
         switch (v.kind, v.isDefault) {
         case (.verified, true): return L("\(v.versionName) – verified, recommended", "\(v.versionName) – geprüft, empfohlen")
         case (.verified, false): return L("\(v.versionName) – verified", "\(v.versionName) – geprüft")
@@ -629,14 +633,14 @@ struct StoreVersionBox: View {
                             set: { model.chooseVersion(game, versionCode: $0) })) {
                             if !verified.isEmpty {
                                 Section(L("Verified by the project", "Vom Projekt geprüft")) {
-                                    ForEach(verified) { Text(label($0)).tag($0.versionCode) }
+                                    ForEach(verified) { Text(StoreVersionBox.label($0)).tag($0.versionCode) }
                                 }
                             }
                             if !others.isEmpty {
                                 Section(verified.isEmpty ? L("From the Meta Store", "Aus dem Meta-Store")
                                                          : L("Other versions from the Meta Store – not tested with AVP Play",
                                                              "Weitere Fassungen aus dem Meta-Store – mit AVP Play nicht getestet")) {
-                                    ForEach(others) { Text(label($0)).tag($0.versionCode) }
+                                    ForEach(others) { Text(StoreVersionBox.label($0)).tag($0.versionCode) }
                                 }
                             }
                         }
@@ -807,8 +811,8 @@ struct GameDetail: View {
 
                 GroupBox(L("On the Vision Pro", "Auf der Vision Pro")) {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(deviceText)
-                        if let signing = signingText {
+                        Text(model.deviceText(game))
+                        if let signing = model.signingText(game) {
                             Label(signing.text, systemImage: signing.urgent ? "exclamationmark.triangle.fill" : "clock")
                                 .foregroundStyle(signing.urgent ? .orange : .secondary)
                                 .font(.callout)
@@ -846,7 +850,7 @@ struct GameDetail: View {
                                   let page = URL(string: "https://store.steampowered.com/app/\(app)/") {
                             Link(L("View on Steam", "Bei Steam ansehen"), destination: page)
                         }
-                        Text(playability)
+                        Text(model.playabilityText(game))
                         if let app = game.recipe.catalogAppId, let catalogue = model.horizonPlus?.catalogue(of: app) {
                             Label(catalogue == .indie
                                   ? L("In the Horizon+ Indie Catalog: with a Meta Horizon+ subscription it can be downloaded without buying it.",
@@ -883,7 +887,7 @@ struct GameDetail: View {
                             isPresented: $confirmRemove) {
             Button(L("Remove \(Installer.gigabytes(game.storeBytes))", "\(Installer.gigabytes(game.storeBytes)) entfernen"), role: .destructive) { model.removeFiles(game) }
         } message: {
-            Text(removeWarning)
+            Text(model.removeWarning(game))
         }
     }
 
@@ -959,16 +963,6 @@ struct GameDetail: View {
             .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
     }
 
-    /// Was beim Entfernen verloren geht – bei Sonderapps auch Dateien, die sich nicht neu laden lassen.
-    private var removeWarning: String {
-        let device = L("The game on your Vision Pro is not touched.", "Das Spiel auf deiner Vision Pro bleibt unberührt.")
-        if game.fromStore {
-            return L("Everything this app downloaded for the game is deleted. For the next update it has to be downloaded again. ",
-                     "Alles, was dieses Programm für das Spiel geladen hat, wird gelöscht. Für die nächste Aktualisierung muss es neu geladen werden. ") + device
-        }
-        return L("This also deletes the copies of your own game files that this app keeps. For the next update you have to choose the folder with them again. ",
-                 "Dabei werden auch die Kopien deiner eigenen Spieldateien gelöscht, die dieses Programm aufbewahrt. Für die nächste Aktualisierung musst du den Ordner damit neu auswählen. ") + device
-    }
 
     private var actionTitle: String {
         switch game.status.onDevice {
@@ -978,76 +972,14 @@ struct GameDetail: View {
         }
     }
 
-    /// Bis wann sich die Installation öffnen lässt. Bei einem kostenlosen Team immer gezeigt (sieben Tage sind
-    /// kurz), bei einem bezahlten erst, wenn der Ablauf näher rückt.
-    private var signingText: (text: String, urgent: Bool)? {
-        guard game.installed, let record = SigningRecord.load(store: model.paths.store, recipe: game.recipe),
-              let expires = record.expires else { return nil }
-        let now = Date()
-        let urgent = record.remindFrom.map { now >= $0 } ?? false
-        guard record.free || urgent else { return nil }
-        let day = DateFormatter.localizedString(from: expires, dateStyle: .medium, timeStyle: .short)
-        if now >= expires {
-            return (L("The signature ran out on \(day): the game no longer opens. “Update” or “Install” signs it again; saved games and data are kept.",
-                      "Die Signatur ist am \(day) abgelaufen: Das Spiel lässt sich nicht mehr öffnen. „Aktualisieren“ oder „Installieren“ signiert es neu; Spielstände und Daten bleiben."), true)
-        }
-        return (record.free
-                ? L("Signed with a free Apple team: opens until \(day). Install it again before then to renew it; saved games and data are kept.",
-                    "Mit einem kostenlosen Apple-Team signiert: lässt sich bis \(day) öffnen. Installiere es vorher erneut, um es zu erneuern; Spielstände und Daten bleiben.")
-                : L("The signature runs out on \(day). Install the game again before then; saved games and data are kept.",
-                    "Die Signatur läuft am \(day) ab. Installiere das Spiel vorher erneut; Spielstände und Daten bleiben."), urgent)
-    }
 
-    private var deviceText: String {
-        switch game.status.onDevice {
-        case .unknown: return L("The Vision Pro is not reachable right now.", "Die Vision Pro ist gerade nicht erreichbar.")
-        case .notInstalled: return L("Not installed yet.", "Noch nicht installiert.")
-        case .otherSource(let stamp): return L("On the Vision Pro from the other purchase source (\(stamp)).", "Auf der Vision Pro aus der anderen Kaufquelle (\(stamp)).")
-        case .current:
-            // Wo eine Toolchain gewählt ist oder der Bau aus einer bearbeiteten Arbeitskopie stammt, steht sie dabei.
-            if let pin = model.toolchainChoices.games[game.id] {
-                return L("Installed, built with toolchain \(pin.name), which is chosen for this game.", "Installiert, gebaut mit Toolchain \(pin.name), die für dieses Spiel gewählt ist.")
-            }
-            if let built = game.status.builtWith, built.modified {
-                return L("Installed, built with toolchain \(Toolchain.name(version: built.toolchain, modified: true)).", "Installiert, gebaut mit Toolchain \(Toolchain.name(version: built.toolchain, modified: true)).")
-            }
-            return L("Installed and up to date.", "Installiert und auf dem neuesten Stand.")
-        case .olderToolchain:
-            if let pin = model.toolchainChoices.games[game.id] {
-                return L("Installed, but not built with toolchain \(pin.name), which is chosen for this game – “Update” builds it with that one; saved games and data are kept.",
-                         "Installiert, aber nicht mit Toolchain \(pin.name) gebaut, die für dieses Spiel gewählt ist – „Aktualisieren“ baut es mit ihr; Spielstände und Daten bleiben.")
-            }
-            if let built = game.status.builtWith, let wanted = model.metalFXExpected, built.metalFX != wanted,
-               built.toolchain >= (model.toolchainRevision ?? 0) {
-                return wanted
-                    ? L("Installed, without the MetalFX upscaling the setting asks for – “Update” builds it with upscaling on from the start; saved games and data are kept.",
-                        "Installiert, ohne das MetalFX-Hochskalieren, das die Einstellung verlangt – „Aktualisieren“ baut es mit von Anfang an eingeschaltetem Hochskalieren; Spielstände und Daten bleiben.")
-                    : L("Installed with MetalFX upscaling on from the start; the setting is off now – “Update” builds it without; saved games and data are kept.",
-                        "Installiert mit von Anfang an eingeschaltetem MetalFX-Hochskalieren; die Einstellung ist jetzt aus – „Aktualisieren“ baut es ohne; Spielstände und Daten bleiben.")
-            }
-            if let built = game.status.builtWith, built.modified {
-                return L("Installed, built with toolchain \(Toolchain.name(version: built.toolchain, modified: true)). “Update” replaces this build with one from the newest toolchain, without the changes of the modified one (see “Toolchain” below); saved games and data are kept.",
-                         "Installiert, gebaut mit Toolchain \(Toolchain.name(version: built.toolchain, modified: true)). „Aktualisieren“ ersetzt diesen Bau durch einen aus der neuesten Toolchain, ohne die Änderungen der modifizierten (siehe unten unter „Toolchain“); Spielstände und Daten bleiben.")
-            }
-            return L("Installed. The current toolchain produces a newer build – “Update” builds it; saved games and data are kept.", "Installiert. Mit der jetzigen Toolchain gibt es eine neuere Fassung – „Aktualisieren“ baut sie; Spielstände und Daten bleiben.")
-        case .olderGame(let stamp): return L("Installed in an older version of the game (\(stamp)). This app now has version \(game.recipe.versionName) – “Update” downloads what is new and installs it; saved games and data are kept.",
-                                             "Installiert in einer älteren Fassung des Spiels (\(stamp)). Dieses Programm hat jetzt Fassung \(game.recipe.versionName) – „Aktualisieren“ lädt, was neu ist, und installiert sie; Spielstände und Daten bleiben erhalten.")
-        case .unstamped: return L("Installed, but as an older build that was not made by this app. “Update” replaces it; saved games and data are kept.", "Installiert, aber in einer älteren Fassung, die nicht von diesem Programm stammt. „Aktualisieren“ ersetzt sie; Spielstände und Daten bleiben.")
-        }
-    }
 
-    private var playability: String {
-        switch game.trust {
-        case .verified: return L("Verified: the project has tested this game on an Apple Vision Pro.", "Geprüft: Das Projekt hat dieses Spiel auf einer Apple Vision Pro getestet.")
-        case .community: return L("Community Verified: more users report that it runs than that it does not. The project has not tested it.", "Von Nutzern bestätigt: Mehr Nutzer melden, dass es läuft, als dass es nicht läuft. Das Projekt hat es nicht getestet.")
-        case .incompatible: return L("Incompatible: more users report that it does not run than that it does.", "Inkompatibel: Mehr Nutzer melden, dass es nicht läuft, als dass es läuft.")
-        case .untested: return L("Untested: nobody has confirmed yet that this game runs. You can try it.", "Ungetestet: Noch hat niemand bestätigt, dass dieses Spiel läuft. Du kannst es versuchen.")
-        }
-    }
 
     /// Wählbare Dateien, die zu einer Sprache gehören (Sprachausgabe, Sprachpakete), nach Sprache geordnet.
-    private var languageFiles: [(locale: String, bytes: Int64?)] {
-        let files = game.recipe.files.filter { !$0.required && $0.locale != nil }
+    private var languageFiles: [(locale: String, bytes: Int64?)] { GameDetail.languageFiles(of: game.recipe) }
+
+    static func languageFiles(of recipe: Recipe) -> [(locale: String, bytes: Int64?)] {
+        let files = recipe.files.filter { !$0.required && $0.locale != nil }
         return Set(files.compactMap(\.locale)).sorted().map { locale in
             let sizes = files.filter { $0.locale == locale }.map(\.size)
             return (locale, sizes.contains(where: { $0 == nil }) ? nil : sizes.compactMap { $0 }.reduce(0, +))
@@ -1056,7 +988,7 @@ struct GameDetail: View {
 
     private var extras: [RecipeFile] { AppModel.extras(of: game.recipe) }
 
-    private func languageName(_ locale: String) -> String {
+    static func languageName(_ locale: String) -> String {
         L10n.locale.localizedString(forIdentifier: locale) ?? locale
     }
 
@@ -1076,7 +1008,7 @@ struct GameDetail: View {
                                     next.locales = on ? (chosen.locales + [entry.locale]).sorted() : chosen.locales.filter { $0 != entry.locale }
                                     model.setOptions(next, for: game)
                                 })) {
-                                Text(languageName(entry.locale) + (entry.bytes.map { " · \(Installer.gigabytes($0))" } ?? ""))
+                                Text(GameDetail.languageName(entry.locale) + (entry.bytes.map { " · \(Installer.gigabytes($0))" } ?? ""))
                             }
                         }
                     }
@@ -1250,5 +1182,87 @@ struct ExtraContentRow: View {
             }
             .controlSize(.small)
         }
+    }
+}
+
+// MARK: Was die Seite eines Spiels sagt – auch für die Fernbedienung
+
+extension AppModel {
+    func playabilityText(_ game: Game) -> String {
+        switch game.trust {
+        case .verified: return L("Verified: the project has tested this game on an Apple Vision Pro.", "Geprüft: Das Projekt hat dieses Spiel auf einer Apple Vision Pro getestet.")
+        case .community: return L("Community Verified: more users report that it runs than that it does not. The project has not tested it.", "Von Nutzern bestätigt: Mehr Nutzer melden, dass es läuft, als dass es nicht läuft. Das Projekt hat es nicht getestet.")
+        case .incompatible: return L("Incompatible: more users report that it does not run than that it does.", "Inkompatibel: Mehr Nutzer melden, dass es nicht läuft, als dass es läuft.")
+        case .untested: return L("Untested: nobody has confirmed yet that this game runs. You can try it.", "Ungetestet: Noch hat niemand bestätigt, dass dieses Spiel läuft. Du kannst es versuchen.")
+        }
+    }
+
+    func deviceText(_ game: Game) -> String {
+        switch game.status.onDevice {
+        case .unknown: return L("The Vision Pro is not reachable right now.", "Die Vision Pro ist gerade nicht erreichbar.")
+        case .notInstalled: return L("Not installed yet.", "Noch nicht installiert.")
+        case .otherSource(let stamp): return L("On the Vision Pro from the other purchase source (\(stamp)).", "Auf der Vision Pro aus der anderen Kaufquelle (\(stamp)).")
+        case .current:
+            // Wo eine Toolchain gewählt ist oder der Bau aus einer bearbeiteten Arbeitskopie stammt, steht sie dabei.
+            if let pin = toolchainChoices.games[game.id] {
+                return L("Installed, built with toolchain \(pin.name), which is chosen for this game.", "Installiert, gebaut mit Toolchain \(pin.name), die für dieses Spiel gewählt ist.")
+            }
+            if let built = game.status.builtWith, built.modified {
+                return L("Installed, built with toolchain \(Toolchain.name(version: built.toolchain, modified: true)).", "Installiert, gebaut mit Toolchain \(Toolchain.name(version: built.toolchain, modified: true)).")
+            }
+            return L("Installed and up to date.", "Installiert und auf dem neuesten Stand.")
+        case .olderToolchain:
+            if let pin = toolchainChoices.games[game.id] {
+                return L("Installed, but not built with toolchain \(pin.name), which is chosen for this game – “Update” builds it with that one; saved games and data are kept.",
+                         "Installiert, aber nicht mit Toolchain \(pin.name) gebaut, die für dieses Spiel gewählt ist – „Aktualisieren“ baut es mit ihr; Spielstände und Daten bleiben.")
+            }
+            if let built = game.status.builtWith, let wanted = metalFXExpected, built.metalFX != wanted,
+               built.toolchain >= (toolchainRevision ?? 0) {
+                return wanted
+                    ? L("Installed, without the MetalFX upscaling the setting asks for – “Update” builds it with upscaling on from the start; saved games and data are kept.",
+                        "Installiert, ohne das MetalFX-Hochskalieren, das die Einstellung verlangt – „Aktualisieren“ baut es mit von Anfang an eingeschaltetem Hochskalieren; Spielstände und Daten bleiben.")
+                    : L("Installed with MetalFX upscaling on from the start; the setting is off now – “Update” builds it without; saved games and data are kept.",
+                        "Installiert mit von Anfang an eingeschaltetem MetalFX-Hochskalieren; die Einstellung ist jetzt aus – „Aktualisieren“ baut es ohne; Spielstände und Daten bleiben.")
+            }
+            if let built = game.status.builtWith, built.modified {
+                return L("Installed, built with toolchain \(Toolchain.name(version: built.toolchain, modified: true)). “Update” replaces this build with one from the newest toolchain, without the changes of the modified one (see “Toolchain” below); saved games and data are kept.",
+                         "Installiert, gebaut mit Toolchain \(Toolchain.name(version: built.toolchain, modified: true)). „Aktualisieren“ ersetzt diesen Bau durch einen aus der neuesten Toolchain, ohne die Änderungen der modifizierten (siehe unten unter „Toolchain“); Spielstände und Daten bleiben.")
+            }
+            return L("Installed. The current toolchain produces a newer build – “Update” builds it; saved games and data are kept.", "Installiert. Mit der jetzigen Toolchain gibt es eine neuere Fassung – „Aktualisieren“ baut sie; Spielstände und Daten bleiben.")
+        case .olderGame(let stamp): return L("Installed in an older version of the game (\(stamp)). This app now has version \(game.recipe.versionName) – “Update” downloads what is new and installs it; saved games and data are kept.",
+                                             "Installiert in einer älteren Fassung des Spiels (\(stamp)). Dieses Programm hat jetzt Fassung \(game.recipe.versionName) – „Aktualisieren“ lädt, was neu ist, und installiert sie; Spielstände und Daten bleiben erhalten.")
+        case .unstamped: return L("Installed, but as an older build that was not made by this app. “Update” replaces it; saved games and data are kept.", "Installiert, aber in einer älteren Fassung, die nicht von diesem Programm stammt. „Aktualisieren“ ersetzt sie; Spielstände und Daten bleiben.")
+        }
+    }
+
+    /// Bis wann sich die Installation öffnen lässt. Bei einem kostenlosen Team immer gezeigt (sieben Tage sind
+    /// kurz), bei einem bezahlten erst, wenn der Ablauf näher rückt.
+    func signingText(_ game: Game) -> (text: String, urgent: Bool)? {
+        guard game.installed, let record = SigningRecord.load(store: paths.store, recipe: game.recipe),
+              let expires = record.expires else { return nil }
+        let now = Date()
+        let urgent = record.remindFrom.map { now >= $0 } ?? false
+        guard record.free || urgent else { return nil }
+        let day = DateFormatter.localizedString(from: expires, dateStyle: .medium, timeStyle: .short)
+        if now >= expires {
+            return (L("The signature ran out on \(day): the game no longer opens. “Update” or “Install” signs it again; saved games and data are kept.",
+                      "Die Signatur ist am \(day) abgelaufen: Das Spiel lässt sich nicht mehr öffnen. „Aktualisieren“ oder „Installieren“ signiert es neu; Spielstände und Daten bleiben."), true)
+        }
+        return (record.free
+                ? L("Signed with a free Apple team: opens until \(day). Install it again before then to renew it; saved games and data are kept.",
+                    "Mit einem kostenlosen Apple-Team signiert: lässt sich bis \(day) öffnen. Installiere es vorher erneut, um es zu erneuern; Spielstände und Daten bleiben.")
+                : L("The signature runs out on \(day). Install the game again before then; saved games and data are kept.",
+                    "Die Signatur läuft am \(day) ab. Installiere das Spiel vorher erneut; Spielstände und Daten bleiben."), urgent)
+    }
+
+    /// Was beim Entfernen verloren geht – bei Sonderapps auch Dateien, die sich nicht neu laden lassen.
+    func removeWarning(_ game: Game) -> String {
+        let device = L("The game on your Vision Pro is not touched.", "Das Spiel auf deiner Vision Pro bleibt unberührt.")
+        if game.fromStore {
+            return L("Everything this app downloaded for the game is deleted. For the next update it has to be downloaded again. ",
+                     "Alles, was dieses Programm für das Spiel geladen hat, wird gelöscht. Für die nächste Aktualisierung muss es neu geladen werden. ") + device
+        }
+        return L("This also deletes the copies of your own game files that this app keeps. For the next update you have to choose the folder with them again. ",
+                 "Dabei werden auch die Kopien deiner eigenen Spieldateien gelöscht, die dieses Programm aufbewahrt. Für die nächste Aktualisierung musst du den Ordner damit neu auswählen. ") + device
     }
 }

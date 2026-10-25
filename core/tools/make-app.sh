@@ -83,6 +83,8 @@ cat > "$NEW/Contents/Info.plist" <<PLIST
   <key>LSMinimumSystemVersion</key><string>14.0</string>
   <key>LSApplicationCategoryType</key><string>public.app-category.utilities</string>
   <key>NSHighResolutionCapable</key><true/>
+  <key>NSLocalNetworkUsageDescription</key><string>AVP Play shows itself in the local network so that AVP Play Remote on your Apple Vision Pro can find and control it.</string>
+  <key>NSBonjourServices</key><array><string>_avpplay._tcp</string></array>
 </dict>
 </plist>
 PLIST
