@@ -2007,6 +2007,11 @@ final class SteamTests: XCTestCase {
         XCTAssertTrue(SteamRun.loginFailed(refused))
         XCTAssertEqual(SteamRun.failureLine(refused), "FAILED (No cached credentials and @NoPromptForPassword is set)")
         XCTAssertFalse(SteamRun.loginFailed(owned))
+        XCTAssertFalse(SteamRun.storedLoginRejected(refused))
+        // Die gemerkte Anmeldung gilt nicht mehr: sie wird verworfen, und die Anmeldung fragt nach dem Passwort.
+        let stale = "Logging in using cached credentials.\nLogging in user 'name' […] to Steam Public...ERROR (Access Denied)\nUnloading Steam API...OK\n"
+        XCTAssertTrue(SteamRun.storedLoginRejected(stale))
+        XCTAssertFalse(SteamRun.storedLoginRejected("Logging in using cached credentials.\nLogging in user 'name' […] to Steam Public...OK\n"))
 
         let done = #"Depot download complete : "/x/tools/steamcmd\steamapps\content\app_1007\depot_1006" (manifest 4559160656493359681)"#
         XCTAssertTrue(SteamRun.depotComplete("Downloading depot 1006 (4 files, 35 MB) ... \n" + done, depot: "1006"))
