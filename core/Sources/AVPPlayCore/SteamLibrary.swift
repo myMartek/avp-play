@@ -182,7 +182,7 @@ public struct SteamLibraryScan: Sendable {
         try tool.verify()
         let login = ["+@NoPromptForPassword", "1", "+login", account]
         let licences = try tool.run(login + ["+licenses_print", "+quit"], shouldStop: shouldStop)
-        guard licences.status == 0, !SteamRun.loginFailed(licences.output) else { throw SteamError.notSignedIn(SteamRun.failureLine(licences.output)) }
+        guard licences.status == 0, !SteamRun.loginFailed(licences.output) else { throw SteamRun.failure(licences.output) }
         var (apps, truncated) = SteamLibraryRead.licensed(licences.output)
         // Ohne eine einzige Lizenz sieht die Antwort nicht aus wie erwartet: kein Ergebnis statt eines leeren.
         guard !apps.isEmpty else { throw SteamError.unclearOwnership }
@@ -196,7 +196,7 @@ public struct SteamLibraryScan: Sendable {
             if shouldStop() { throw SteamError.stopped }
             let group = ids[start..<min(start + 1000, ids.count)]
             let info = try tool.run(login + group.flatMap { ["+app_info_print", $0] } + ["+quit"], shouldStop: shouldStop)
-            guard info.status == 0, !SteamRun.loginFailed(info.output) else { throw SteamError.notSignedIn(SteamRun.failureLine(info.output)) }
+            guard info.status == 0, !SteamRun.loginFailed(info.output) else { throw SteamRun.failure(info.output) }
             found += SteamLibraryRead.androidApps(SteamKeyValues.blocks(info.output, header: "AppID"))
         }
         return found.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
@@ -432,7 +432,7 @@ public struct SteamDraftMaker: Sendable {
         done.value = true
         if shouldStop() { throw SteamError.stopped }
         for depot in app.depots where !SteamRun.depotComplete(download.output, depot: depot.id) {
-            if SteamRun.loginFailed(download.output) { throw SteamError.notSignedIn(SteamRun.failureLine(download.output)) }
+            if SteamRun.loginFailed(download.output) { throw SteamRun.failure(download.output) }
             throw SteamError.depotFailed(depot: depot.id, detail: SteamRun.failureLine(download.output))
         }
 

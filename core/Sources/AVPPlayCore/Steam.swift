@@ -8,6 +8,8 @@ public enum SteamError: Error, CustomStringConvertible, Equatable {
     case toolDownloadFailed(String)
     case badAccountName
     case notSignedIn(String)
+    /// Steam hat die Anmeldung angenommen, danach aber die Daten des Steam-Clients nicht geliefert.
+    case steamNotAnswering(String)
     case notOwned(String)
     case depotFailed(depot: String, detail: String)
     case notEnoughSpace(needed: Int64, free: Int64)
@@ -32,6 +34,10 @@ public enum SteamError: Error, CustomStringConvertible, Equatable {
                      "Das sieht nicht nach einem Steam-Kontonamen aus (der Name, mit dem du dich anmeldest, nicht dein Profilname).")
         case .notSignedIn(let detail):
             return L("Steam did not accept the stored sign-in. Sign in to Steam again under “Setup”.", "Steam hat die gemerkte Anmeldung nicht angenommen. Melde dich unter „Einrichtung“ neu bei Steam an.")
+                + (detail.isEmpty ? "" : " (\(detail))")
+        case .steamNotAnswering(let detail):
+            return L("Steam accepted the sign-in, which stays saved, but then did not send the Steam client's data in time. That is on Steam's side; try again in a while.",
+                     "Steam hat die Anmeldung angenommen, sie bleibt gespeichert. Danach hat Steam aber die Daten des Steam-Clients nicht rechtzeitig geschickt. Das liegt bei Steam; versuch es in einer Weile noch einmal.")
                 + (detail.isEmpty ? "" : " (\(detail))")
         case .notOwned(let what):
             return L("\(what) is not in this Steam account. Nothing is downloaded.", "\(what) gehört nicht zu diesem Steam-Konto. Es wird nichts geladen.")
@@ -265,8 +271,10 @@ public enum SteamLogin {
             try tool.signOut()
             (code, said) = try attempt(tool: tool, account: account, input: input, output: output)
         }
-        guard code == 0, !SteamRun.loginFailed(said) else {
-            throw SteamError.notSignedIn(SteamRun.failureLine(said))
+        // Hat Steam das Konto angenommen, ist die Anmeldung gespeichert – auch wenn danach die Daten des Clients
+        // nicht kommen. Das meldet erst der nächste Abruf.
+        guard SteamRun.loggedOn(said) || (code == 0 && !SteamRun.loginFailed(said)) else {
+            throw SteamRun.failure(said)
         }
     }
 
@@ -295,9 +303,24 @@ enum SteamRun {
             || output.lowercased().contains("cached credentials not found") || output.lowercased().contains("invalid password")
     }
 
-    /// Hat das Werkzeug es mit der gemerkten Anmeldung versucht, und Steam hat sie abgelehnt?
+    /// Hat das Werkzeug es mit der gemerkten Anmeldung versucht, und Steam hat sie abgelehnt? Was nach einer
+    /// angenommenen Anmeldung schiefgeht, zählt nicht dazu.
     static func storedLoginRejected(_ output: String) -> Bool {
-        output.lowercased().contains("using cached credentials") && loginFailed(output)
+        output.lowercased().contains("using cached credentials") && !loggedOn(output) && loginFailed(output)
+    }
+
+    /// Hat Steam das Konto angenommen? Erst danach wartet das Werkzeug auf die Daten des Clients.
+    static func loggedOn(_ output: String) -> Bool {
+        output.contains("Waiting for client config")
+    }
+
+    /// Der Fehler zu einem gescheiterten Lauf: abgelehnte Anmeldung, oder Steam schickt nach der Anmeldung die
+    /// Daten des Clients nicht („Failed to load platform info“).
+    static func failure(_ output: String) -> SteamError {
+        if loggedOn(output), output.contains("Failed to load platform info") {
+            return .steamNotAnswering(failureLine(output))
+        }
+        return .notSignedIn(failureLine(output))
     }
 
     /// Die Zeile, in der das Werkzeug sagt, was nicht ging – für die Meldung an den Nutzer.
@@ -379,7 +402,7 @@ public struct SteamLicences: Sendable {
             let run = try tool.run(["+@NoPromptForPassword", "1", "+login", account]
                                    + group.flatMap { ["+licenses_for_app", $0] } + ["+quit"], shouldStop: shouldStop)
             guard run.status == 0, !SteamRun.loginFailed(run.output) else {
-                throw SteamError.notSignedIn(SteamRun.failureLine(run.output))
+                throw SteamRun.failure(run.output)
             }
             answers.merge(SteamRun.licences(run.output, apps: group)) { _, new in new }
         }
@@ -462,7 +485,7 @@ public struct SteamFetcher: Sendable {
         for app in apps {
             let answer = try tool.run(["+@NoPromptForPassword", "1", "+login", account, "+licenses_for_app", app, "+quit"], shouldStop: shouldStop)
             guard answer.status == 0, !SteamRun.loginFailed(answer.output) else {
-                throw SteamError.notSignedIn(SteamRun.failureLine(answer.output))
+                throw SteamRun.failure(answer.output)
             }
             switch SteamRun.licence(answer.output, app: app) {
             case .owned: break
@@ -492,7 +515,7 @@ public struct SteamFetcher: Sendable {
         }
         measuring.done = true
         guard !SteamRun.loginFailed(download.output) || depots.allSatisfy({ SteamRun.depotComplete(download.output, depot: $0.depot.id) }) else {
-            throw SteamError.notSignedIn(SteamRun.failureLine(download.output))
+            throw SteamRun.failure(download.output)
         }
         for entry in depots where !SteamRun.depotComplete(download.output, depot: entry.depot.id) {
             throw SteamError.depotFailed(depot: entry.depot.id, detail: SteamRun.failureLine(download.output))
