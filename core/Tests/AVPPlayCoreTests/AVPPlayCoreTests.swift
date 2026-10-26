@@ -2012,6 +2012,12 @@ final class SteamTests: XCTestCase {
         let stale = "Logging in using cached credentials.\nLogging in user 'name' […] to Steam Public...ERROR (Access Denied)\nUnloading Steam API...OK\n"
         XCTAssertTrue(SteamRun.storedLoginRejected(stale))
         XCTAssertFalse(SteamRun.storedLoginRejected("Logging in using cached credentials.\nLogging in user 'name' […] to Steam Public...OK\n"))
+        // Angenommen, danach schickt Steam die Daten des Clients nicht: die Anmeldung bleibt, kein Neuanfang.
+        let slow = "Logging in using cached credentials.\nLogging in user 'name' […] to Steam Public...OK\nWaiting for client config...ERROR! Info request for AppId 7 returned error Timeout.\nOK\nERROR! Failed to load platform info\nUnloading Steam API...OK\n"
+        XCTAssertFalse(SteamRun.storedLoginRejected(slow))
+        XCTAssertTrue(SteamRun.loggedOn(slow))
+        XCTAssertEqual(SteamRun.failure(slow), .steamNotAnswering("ERROR! Failed to load platform info"))
+        XCTAssertEqual(SteamRun.failure(stale), .notSignedIn("Logging in user 'name' […] to Steam Public...ERROR (Access Denied)"))
 
         let done = #"Depot download complete : "/x/tools/steamcmd\steamapps\content\app_1007\depot_1006" (manifest 4559160656493359681)"#
         XCTAssertTrue(SteamRun.depotComplete("Downloading depot 1006 (4 files, 35 MB) ... \n" + done, depot: "1006"))
