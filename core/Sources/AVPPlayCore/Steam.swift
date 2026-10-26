@@ -258,6 +258,19 @@ public enum SteamLogin {
     public static func run(tool: SteamTool = SteamTool(), account: String,
                            input: Int32 = STDIN_FILENO, output: Int32 = STDOUT_FILENO) throws {
         guard SteamTool.isAccountName(account) else { throw SteamError.badAccountName }
+        var (code, said) = try attempt(tool: tool, account: account, input: input, output: output)
+        // Liegt eine gemerkte Anmeldung, versucht das Werkzeug nur sie und fragt nicht nach dem Passwort. Nimmt Steam
+        // sie nicht mehr an, wird sie verworfen und die Anmeldung beginnt von vorn – dann fragt es.
+        if SteamRun.storedLoginRejected(said) {
+            try tool.signOut()
+            (code, said) = try attempt(tool: tool, account: account, input: input, output: output)
+        }
+        guard code == 0, !SteamRun.loginFailed(said) else {
+            throw SteamError.notSignedIn(SteamRun.failureLine(said))
+        }
+    }
+
+    private static func attempt(tool: SteamTool, account: String, input: Int32, output: Int32) throws -> (Int32, String) {
         try tool.prepareHome()
         var said = ""
         var code: Int32 = 42
@@ -271,9 +284,7 @@ public enum SteamLogin {
                                    return Array(text.utf8)
                                })
         }
-        guard code == 0, !SteamRun.loginFailed(said) else {
-            throw SteamError.notSignedIn(SteamRun.failureLine(said))
-        }
+        return (code, said)
     }
 }
 
@@ -282,6 +293,11 @@ enum SteamRun {
     static func loginFailed(_ output: String) -> Bool {
         output.contains("FAILED") || output.contains("ERROR (") || output.contains("ERROR!")
             || output.lowercased().contains("cached credentials not found") || output.lowercased().contains("invalid password")
+    }
+
+    /// Hat das Werkzeug es mit der gemerkten Anmeldung versucht, und Steam hat sie abgelehnt?
+    static func storedLoginRejected(_ output: String) -> Bool {
+        output.lowercased().contains("using cached credentials") && loginFailed(output)
     }
 
     /// Die Zeile, in der das Werkzeug sagt, was nicht ging – für die Meldung an den Nutzer.
