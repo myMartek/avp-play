@@ -4,7 +4,10 @@ import SwiftUI
 /// Die Seite „Fernbedienung“ in der Seitenleiste.
 struct RemoteControlView: View {
     var body: some View {
-        Form { RemoteControlSection() }
+        Form {
+            RemoteControlSection()
+            CompanionSection()
+        }
             .formStyle(.grouped)
             .frame(maxWidth: 760)
             .frame(maxWidth: .infinity)

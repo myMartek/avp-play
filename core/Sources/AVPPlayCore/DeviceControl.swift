@@ -207,6 +207,11 @@ public struct DeviceControl: Sendable {
                      "--domain-identifier", bundle, "--source", local.path, "--destination", destination])
     }
 
+    /// Installiert ein fertig signiertes Programmpaket; eine App mit derselben Kennung wird ersetzt, ihre Daten bleiben.
+    public func install(app: URL, device: Device) throws {
+        _ = try run(["device", "install", "app", "--device", device.udid, app.path])
+    }
+
     /// Holt eine Datei aus dem Datencontainer der App auf den Mac. Auf dem Gerät ändert das nichts.
     public func copy(from device: Device, bundle: String, source: String, to local: URL) throws {
         try FileManager.default.createDirectory(at: local.deletingLastPathComponent(), withIntermediateDirectories: true)

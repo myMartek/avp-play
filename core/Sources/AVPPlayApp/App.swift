@@ -414,6 +414,9 @@ enum Snapshot {
         model.section = .setup
         await pause(1.2)
         capture("4-einrichtung", dir)
+        model.section = .remote
+        await pause(1.2)
+        capture("4-fernbedienung", dir)
         // `--update-now`: nachsehen und einspielen wie per Knopf, aber ohne Neustart; das Ergebnis als Datei.
         if CommandLine.arguments.contains("--update-now") {
             await model.checkForUpdate(manual: true)

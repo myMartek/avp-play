@@ -135,7 +135,7 @@ struct GamesView: View {
                         .padding(.top, 80)
                 } else if model.games.isEmpty {
                     ProgressView(L("Reading games …", "Spiele werden gelesen …")).padding(.top, 120)
-                } else if shown.isEmpty {
+                } else if shown.isEmpty, !model.companionShown {
                     ContentUnavailableView(model.searchText.isEmpty ? L("No Game Matches These Filters", "Kein Spiel passt zu diesen Filtern")
                                                                     : L("Nothing Found for “\(model.searchText)”", "Nichts gefunden zu „\(model.searchText)“"),
                                            systemImage: "line.3.horizontal.decrease.circle",
@@ -147,6 +147,11 @@ struct GamesView: View {
                 } else {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 250, maximum: 340), spacing: 18)], spacing: 18) {
                         Section {
+                            // AVP Play Remote steht vor den Spielen, solange Suche und Filter sie nicht ausblenden.
+                            if model.companionShown {
+                                Button { model.gamePath = [CompanionApp.recipeId] } label: { CompanionCard().frame(maxHeight: .infinity, alignment: .top) }
+                                    .buttonStyle(.plain)
+                            }
                             ForEach(shown) { game in
                                 // Alle Karten einer Zeile so hoch wie die höchste (mehr eigene Filter brechen um).
                                 Button { model.gamePath = [game.id] } label: { GameCard(game: game).frame(maxHeight: .infinity, alignment: .top) }
@@ -188,7 +193,8 @@ struct GamesView: View {
             // Unter „Steam“: welche Steam-Spiele des Kontos eine Android-Fassung haben.
             .onChange(of: model.filterSteam, initial: true) { if model.filterSteam { model.loadSteamLibrary() } }
             .navigationDestination(for: String.self) { id in
-                if let game = model.allGames.first(where: { $0.id == id }) { GameDetail(game: game) }
+                if id == CompanionApp.recipeId { CompanionDetail() }
+                else if let game = model.allGames.first(where: { $0.id == id }) { GameDetail(game: game) }
             }
         }
     }
@@ -331,6 +337,18 @@ struct TrustBadge: View {
                         L("Nobody has confirmed yet that this game runs.", "Noch hat niemand bestätigt, dass dieses Spiel läuft."))
             }
         }()
+        TrustCapsule(text: text, symbol: symbol, color: color, help: help)
+    }
+}
+
+/// Das Schild selbst – auch für Karten, die kein Spiel sind (AVP Play Remote).
+struct TrustCapsule: View {
+    let text: String
+    let symbol: String
+    let color: Color
+    let help: String
+
+    var body: some View {
         Label(text, systemImage: symbol)
             .font(.caption.weight(.semibold))
             .padding(.horizontal, 8).padding(.vertical, 4)

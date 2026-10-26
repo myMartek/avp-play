@@ -57,7 +57,9 @@ mixed-reality games in your own room, and updates itself from this repository's 
 **Remote control from the headset.** Switch on *Remote Control* in the sidebar, and the visionOS app
 **AVP Play Remote** lets you browse your games, install and update them and follow the jobs while you wear the
 Vision Pro – the Mac still does the work. The Mac shows itself on your Wi-Fi, you pair once with a six-digit
-code, and everything between the two stays in your network, encrypted. See
+code, and everything between the two stays in your network, encrypted. AVP Play installs the app itself: the
+*AVP Play Remote* tile under *Games* (or *Install* on the *Remote Control* page) builds the newest release of
+[its source code](https://github.com/myMartek/avp-play-remote) with your Apple team and puts it on the Vision Pro. See
 [Remote Control](https://github.com/myMartek/avp-play/wiki/Remote-Control) in the wiki.
 
 ## What you need
