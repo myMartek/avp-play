@@ -1772,6 +1772,62 @@ final class ToolchainPackageTests: XCTestCase {
         XCTAssertEqual(try packager.install(archive: archive).root, toolchain.root)
     }
 
+    /// Commits, die nur einzelne Spiele betreffen, heben nur deren Schwelle; der erste ohne Angabe gilt für alle.
+    func testPackRecordsWhichGamesLaterChangesAffect() throws {
+        let checkout = try makeCheckout()
+        let out = checkout.deletingLastPathComponent().appendingPathComponent("qi-scope-\(UUID().uuidString)")
+        addTeardownBlock { try? FileManager.default.removeItem(at: out) }
+        let fm = FileManager.default
+        try fm.createDirectory(at: checkout.appendingPathComponent("runtime"), withIntermediateDirectories: true)
+        func change(_ file: String, _ message: String) throws {
+            try "\(file)\n".write(to: checkout.appendingPathComponent(file), atomically: true, encoding: .utf8)
+            try git(checkout, "add", "-A")
+            try git(checkout, "commit", "-q", "-m", message)
+        }
+        try change("runtime/a.c", "drei\n\nAffects-Games: xA")                       // 3
+        try git(checkout, "checkout", "-q", "-b", "seite")
+        try change("runtime/b.c", "vier\n\nAffects-Games: xB, xA")                   // 4 auf dem Zweig
+        try git(checkout, "checkout", "-q", "-")
+        try git(checkout, "merge", "-q", "--no-ff", "-m", "fünf", "seite")            // 5: erst ab hier in der Hauptlinie
+        try change("runtime/c.c", "sechs")                                             // 6, Angabe als Notiz
+        try git(checkout, "notes", "--ref=affects", "add", "-m", "Affects-Games: xC", "HEAD")
+        try change("LIESMICH.md", "sieben")                                            // 7, ändert kein Spiel
+
+        let (archive, m) = try ToolchainPackager.pack(checkout: checkout, to: out.appendingPathComponent("a"))
+        XCTAssertEqual(m.version, 7)
+        XCTAssertEqual(m.allRevision, 2)
+        XCTAssertEqual(m.gameRevisions, ["xA": 5, "xB": 5, "xC": 6])
+        XCTAssertEqual(m.appRevision, 6, "ältere Fassungen der App sehen die höchste Schwelle")
+        XCTAssertEqual(m.revisions.forTarget("xA"), 5)
+        XCTAssertEqual(m.revisions.forTarget("anderes"), 2)
+
+        // Dieselbe Angabe nachträglich erweitert: dasselbe Paket, neu beschrieben, ersetzt nur die Beschreibung.
+        let packager = ToolchainPackager(root: out.appendingPathComponent("installiert"))
+        XCTAssertEqual(try packager.install(archive: archive).manifest?.gameRevisions?["xD"], nil)
+        try git(checkout, "notes", "--ref=affects", "add", "-f", "-m", "Affects-Games: xC xD", "HEAD~1")
+        let (again, m2) = try ToolchainPackager.pack(checkout: checkout, to: out.appendingPathComponent("b"))
+        XCTAssertTrue(m2.sameStateOtherScope(as: m))
+        let reinstalled = try packager.install(archive: again)
+        XCTAssertEqual(reinstalled.manifest?.gameRevisions?["xD"], 6)
+        XCTAssertEqual(reinstalled.appRevisions().forTarget("xD"), 6)
+
+        // Ein Commit ohne Angabe gilt wieder für alle.
+        try change("runtime/d.c", "acht")
+        let m3 = try ToolchainPackager.pack(checkout: checkout, to: out.appendingPathComponent("c")).1
+        XCTAssertEqual(m3.allRevision, 8)
+        XCTAssertNil(m3.gameRevisions)
+        XCTAssertEqual(m3.revisions.forTarget("xA"), 8)
+
+        XCTAssertEqual(ToolchainPackager.affectedTargets(in: "x\n\nAffects-Games: x1, x2\n"), ["x1", "x2"])
+        XCTAssertNil(ToolchainPackager.affectedTargets(in: "Affects-Games:"), "eine leere Angabe gilt nicht")
+        XCTAssertNil(ToolchainPackager.affectedTargets(in: "Affects-Games: x1; rm -rf"), "nur Zielnamen")
+        XCTAssertNil(ToolchainPackager.affectedTargets(in: "ohne Angabe"))
+        // Ältere Pakete ohne die Angabe: eine Schwelle für alle, wie bisher.
+        var old = ToolchainManifest(format: 1, version: 9, commit: "abcdef0", ancestors: ["abcdef0"], created: Date())
+        old.appRevision = 7
+        XCTAssertEqual(old.revisions, AppRevision(all: 7))
+    }
+
     func testPruneKeepsTheNewestAndWhatAnOpenJobHolds() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("qi-prune-\(UUID().uuidString)", isDirectory: true)
         addTeardownBlock { try? FileManager.default.removeItem(at: root) }

@@ -23,7 +23,7 @@ enum Probe {
         /// Freier Platz auf dem Laufwerk des Bestands.
         var freeBytes: Int64?
         var apps: [InstalledApp]?
-        var toolchainRevision: Int?
+        var toolchainRevision: AppRevision?
         /// Was ein aktueller Bau vom MetalFX-Hochskalieren tragen soll (`AppModel.metalFXExpected`).
         var metalFXExpected: Bool?
         var toolchainChoices = ToolchainChoices()
@@ -69,7 +69,7 @@ enum Probe {
         }
 
         s.apps = apps
-        s.toolchainRevision = toolchain?.appRevision()
+        s.toolchainRevision = toolchain?.appRevisions()
         let metalFX = AppModel.metalFXExpected(toolchain: toolchain)
         s.metalFXExpected = metalFX
         OtherSources.use(recipes: paths.recipes)
@@ -79,7 +79,7 @@ enum Probe {
                 let variants = RecipeStore(directory: recipes).loadVariants()
                 // Rezepte für dasselbe Spiel aus einer anderen Kaufquelle (recipes/sources).
                 let sources = RecipeStore(directory: recipes).loadSources()
-                let revision = toolchain?.appRevision()
+                let revision = s.toolchainRevision
                 // Wo für ein Spiel eine Toolchain gewählt ist, gilt die statt der neuesten.
                 let choices = ToolchainChoices.load()
                 s.toolchainChoices = choices
@@ -160,7 +160,7 @@ enum Probe {
     /// zur Wahl steht (weitere geprüfte Fassungen, eine andere Kaufquelle). Für sich aufrufbar, damit ein Wechsel
     /// der Kaufquelle nur dieses eine Spiel neu bestimmen muss und nicht alles.
     static func game(_ r: Recipe, draft: Bool, tested: Recipe?, variants: [Recipe], sources: [Recipe], paths: Paths,
-                     apps: [InstalledApp]?, toolchainRevision: Int?, pin: ToolchainChoices.Pin? = nil, bundlePrefix: String,
+                     apps: [InstalledApp]?, toolchainRevision: AppRevision?, pin: ToolchainChoices.Pin? = nil, bundlePrefix: String,
                      metalFX: Bool? = nil) -> Game {
         // Geprüft ist die Fassung ohne Wahl und jede weitere mit eigenem Rezept; alles andere ist eine
         // ungetestete aus dem Store, und dann nennt das Spiel die, die ohne Wahl gilt.
@@ -173,7 +173,7 @@ enum Probe {
         let foreign = family.filter { $0.source != r.source }.map(\.versionCode)
         let verified = switched || tested.map { $0.versionCode == r.versionCode } ?? true || own.contains { $0.versionCode == r.versionCode }
         var g = Game(recipe: r,
-             status: GameStatus.of(recipe: r, store: paths.store, apps: apps, toolchainVersion: toolchainRevision, pin: pin,
+             status: GameStatus.of(recipe: r, store: paths.store, apps: apps, toolchainVersion: toolchainRevision?.forTarget(r.toolchain.target), pin: pin,
                                     bundlePrefix: bundlePrefix, otherSourceBuilds: Set(foreign),
                                     metalFX: metalFX),
              // Das Titelbild gehört zum Spiel, nicht zur Kaufquelle: Fehlt es bei dieser, gilt das der anderen.

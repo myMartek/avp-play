@@ -307,7 +307,7 @@ extension AppModel {
         for entry in catalog where !known.contains(entry.appId) {
             let recipe = DraftRecipe.placeholder(game: entry)
             out.append(Game(recipe: recipe,
-                            status: GameStatus.of(recipe: recipe, store: paths.store, apps: installedApps, toolchainVersion: toolchainRevision,
+                            status: GameStatus.of(recipe: recipe, store: paths.store, apps: installedApps, toolchainVersion: toolchainRevision?.forTarget(recipe.toolchain.target),
                                                   pin: toolchainChoices.games[recipe.id], bundlePrefix: prefix,
                                                   metalFX: metalFXExpected),
                             cover: nil, catalog: entry, draft: true))
@@ -321,7 +321,7 @@ extension AppModel {
         for app in steamPlaceholders(known: games) {
             let recipe = SteamDraft.placeholder(app: app)
             var game = Game(recipe: recipe,
-                            status: GameStatus.of(recipe: recipe, store: paths.store, apps: installedApps, toolchainVersion: toolchainRevision,
+                            status: GameStatus.of(recipe: recipe, store: paths.store, apps: installedApps, toolchainVersion: toolchainRevision?.forTarget(recipe.toolchain.target),
                                                   pin: toolchainChoices.games[recipe.id], bundlePrefix: prefix, metalFX: metalFXExpected),
                             cover: nil, catalog: nil, draft: true)
             game.ownershipKeys = ["steam:\(app.appId)"]

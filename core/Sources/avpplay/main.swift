@@ -1126,7 +1126,7 @@ case "status":
         }
         let pins = ToolchainChoices.load().games
         for r in try RecipeStore(directory: recipesDirectory(o)).loadAll() {
-            let st = GameStatus.of(recipe: r, store: store, apps: apps, toolchainVersion: toolchain?.appRevision(), pin: pins[r.id])
+            let st = GameStatus.of(recipe: r, store: store, apps: apps, toolchainVersion: toolchain?.appRevisions().forTarget(r.toolchain.target), pin: pins[r.id])
             var bestand = L("\(st.filesPresent)/\(st.filesRequired) files", "\(st.filesPresent)/\(st.filesRequired) Dateien")
             if st.treesRequired > 0 {
                 bestand += L(", \(st.treesPresent)/\(st.treesRequired) folders", ", \(st.treesPresent)/\(st.treesRequired) Ordner")

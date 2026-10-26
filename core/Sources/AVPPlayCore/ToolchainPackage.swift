@@ -20,15 +20,50 @@ public struct ToolchainManifest: Codable, Sendable, Equatable {
     /// oder einem späteren Stand gebaut wurde, ist aktuell – auch wenn die Toolchain seither neuere Nummern
     /// bekommen hat, etwa für ein geändertes Bauskript. Fehlt bei älteren Paketen; dann gilt `version`.
     public var appRevision: Int?
+    /// Die Nummer des letzten Stands, der an allen Spielen etwas geändert hat. Was danach kam, betraf nach Angabe
+    /// seiner Commits nur einzelne Spiele (`gameRevisions`). Fehlt bei älteren Paketen; dann gilt `appRevision` für
+    /// alle.
+    public var allRevision: Int?
+    /// Je Ziel (`toolchain.target` eines Rezepts) die Nummer der letzten Änderung nach `allRevision`, die nur
+    /// bestimmte Spiele betraf und dieses dabei nannte.
+    public var gameRevisions: [String: Int]?
     /// Gesetzt bei einer Arbeitskopie, an der jemand etwas geändert hat (etwa eine KI beim Reparieren eines Spiels):
     /// kein Stand des Projekts mehr, auch wenn Nummer und Commit die des Pakets sind, aus dem sie entstand. Überall,
     /// wo der Stand genannt wird, steht dann „(modified)“ dabei.
     public var modified: Bool?
 
+    /// Ab welchen Nummern ein gebautes Spiel als aktuell gilt.
+    public var revisions: AppRevision {
+        if let all = allRevision { return AppRevision(all: all, games: gameRevisions ?? [:]) }
+        return AppRevision(all: appRevision ?? version)
+    }
+
+    /// Derselbe Stand, nur mit anderer Angabe, welche Spiele seine letzten Änderungen betreffen.
+    public func sameStateOtherScope(as other: ToolchainManifest) -> Bool {
+        commit == other.commit && version == other.version
+            && (allRevision != other.allRevision || gameRevisions != other.gameRevisions)
+    }
+
     public func contains(commit wanted: String) -> Bool {
         guard wanted.count >= 7, wanted.allSatisfy({ $0.isHexDigit }) else { return false }
         return ancestors.contains { $0.hasPrefix(wanted) || wanted.hasPrefix($0) }
     }
+}
+
+/// Ab welcher Toolchain-Nummer ein gebautes Spiel als aktuell gilt. Eine Änderung, die nur einzelne Spiele betrifft,
+/// hebt nur deren Schwelle; die übrigen bleiben bei `all`.
+public struct AppRevision: Sendable, Equatable {
+    public var all: Int
+    public var games: [String: Int]
+
+    public init(all: Int, games: [String: Int] = [:]) {
+        self.all = all
+        self.games = games.filter { $0.value > all }
+    }
+
+    public func forTarget(_ target: String) -> Int { max(all, games[target] ?? 0) }
+    /// Die höchste Schwelle – was ein Paket als `appRevision` nennt, damit ältere Fassungen der App vorsichtig bleiben.
+    public var newest: Int { games.values.max().map { max($0, all) } ?? all }
 }
 
 public enum PackageError: Error, CustomStringConvertible, Equatable {
@@ -112,7 +147,11 @@ public struct ToolchainPackager: Sendable {
         let ancestors = try git(["rev-list", "--abbrev-commit", "--abbrev=7", "HEAD"]).split(separator: "\n").map(String.init)
         var manifest = ToolchainManifest(format: ToolchainManifest.currentFormat, version: version, commit: head,
                                          ancestors: ancestors, created: now, archive: nil, sha256: nil, size: nil)
-        manifest.appRevision = ToolchainPackager.appRevision(checkout: checkout)
+        if let revisions = ToolchainPackager.revisions(checkout: checkout) {
+            manifest.appRevision = revisions.newest
+            manifest.allRevision = revisions.all
+            manifest.gameRevisions = revisions.games.isEmpty ? nil : revisions.games
+        }
 
         let stage = fm.temporaryDirectory.appendingPathComponent("qi-toolchain-\(UUID().uuidString)", isDirectory: true)
         try fm.createDirectory(at: stage, withIntermediateDirectories: true)
@@ -157,6 +196,60 @@ public struct ToolchainPackager: Sendable {
         return Int(count)
     }
 
+    /// Die Zeile, mit der ein Commit des Forks sagt, welche Spiele er betrifft: `Affects-Games: <Ziel>, <Ziel>`.
+    /// Sie steht in der Commit-Nachricht oder, für einen schon veröffentlichten Commit, in einer Notiz unter
+    /// `refs/notes/affects`. Gesetzt wird sie nur, wenn der Diff es eindeutig zeigt (jede Änderung hinter einem
+    /// Vergleich mit diesen Zielen); ohne sie betrifft ein Commit alle Spiele.
+    public static let affectsTrailer = "Affects-Games:"
+
+    /// Die Ziele, die eine Commit-Nachricht oder Notiz nennt; `nil`, wenn sie keine gültige Angabe enthält.
+    public static func affectedTargets(in text: String) -> Set<String>? {
+        var found: Set<String>?
+        for line in text.split(whereSeparator: \.isNewline) {
+            let line = line.trimmingCharacters(in: .whitespaces)
+            guard line.hasPrefix(affectsTrailer) else { continue }
+            let names = line.dropFirst(affectsTrailer.count).split(whereSeparator: { $0 == "," || $0 == " " }).map(String.init)
+            guard !names.isEmpty, names.allSatisfy({ n in n.count <= 64 && n.allSatisfy { $0.isASCII && ($0.isLetter || $0.isNumber || "_.-".contains($0)) } })
+            else { return nil }
+            found = (found ?? []).union(names)
+        }
+        return found
+    }
+
+    /// Liest aus der Geschichte, ab welchen Nummern gebaute Spiele als aktuell gelten: rückwärts über die Stände der
+    /// Hauptlinie, die etwas an den Spielen ändern (wie `appRevision`), bis zum ersten, dessen Commits nicht alle
+    /// sagen, welche Spiele sie betreffen. Dessen Nummer gilt für alle; die späteren heben nur die Schwelle der
+    /// genannten Spiele. Ein zusammengeführter Zweig zählt mit der Nummer seines Merge-Commits, denn erst ab dem
+    /// steckt er in der Hauptlinie.
+    public static func revisions(checkout: URL) -> AppRevision? {
+        func git(_ args: [String]) -> String? {
+            (try? run(["/usr/bin/git", "-C", checkout.path] + args))?.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        let spec = ["."] + pathsWithoutEffectOnApps.map { ":(exclude,glob)\($0)" } + pathsWithoutEffectOnApps.map { ":(exclude,glob)\($0)/**" }
+        guard let list = git(["log", "--first-parent", "--format=%H %P", "--"] + spec), !list.isEmpty else { return nil }
+        var games: [String: Int] = [:]
+        for entry in list.split(separator: "\n").prefix(500) {
+            let ids = entry.split(separator: " ").map(String.init)
+            guard let commit = ids.first, let number = git(["rev-list", "--count", commit]).flatMap({ Int($0) }) else { return nil }
+            // Bei einem Merge alle Commits, die er in die Hauptlinie bringt und die etwas an den Spielen ändern.
+            let changes = ids.count > 2
+                ? (git(["log", "--format=%H", "\(ids[1])..\(commit)", "--"] + spec) ?? "").split(separator: "\n").map(String.init)
+                : [commit]
+            var targets: Set<String> = []
+            var scoped = !changes.isEmpty
+            for change in changes {
+                let message = git(["log", "-1", "--format=%B", change]) ?? ""
+                let note = git(["notes", "--ref=affects", "show", change]) ?? ""
+                guard let named = affectedTargets(in: message) ?? affectedTargets(in: note) else { scoped = false; break }
+                targets.formUnion(named)
+            }
+            if !scoped { return AppRevision(all: number, games: games) }
+            for t in targets { games[t] = max(games[t] ?? 0, number) }
+        }
+        // So weit zurück reicht keine Angabe: sicherheitshalber gilt der neueste Stand für alle.
+        return git(["rev-list", "--count", "HEAD"]).flatMap { Int($0) }.map { AppRevision(all: $0) }
+    }
+
     /// Die Beschreibung liegt neben dem Archiv: `<Archiv>.json`.
     public static func sidecar(for archive: URL) -> URL { archive.appendingPathExtension("json") }
 
@@ -173,7 +266,15 @@ public struct ToolchainPackager: Sendable {
         guard try Hashing.sha256(of: archive) == expected.lowercased() else { throw PackageError.checksumMismatch }
 
         let target = directory(for: manifest)
-        if let existing = try? Toolchain(root: target), existing.manifest?.commit == manifest.commit { return existing }
+        if let existing = try? Toolchain(root: target), let installed = existing.manifest, installed.commit == manifest.commit {
+            // Derselbe Stand, neu beschrieben (welche Spiele seine Änderungen betreffen): nur die Beschreibung ersetzen.
+            guard installed.sameStateOtherScope(as: manifest) else { return existing }
+            var inner = manifest
+            inner.archive = nil; inner.sha256 = nil; inner.size = nil
+            inner.modified = installed.modified
+            try ToolchainPackager.encoder.encode(inner).write(to: target.appendingPathComponent("toolchain.json"), options: .atomic)
+            return try Toolchain(root: target)
+        }
         try fm.createDirectory(at: root, withIntermediateDirectories: true)
         let fresh = root.appendingPathComponent(".\(target.lastPathComponent).new", isDirectory: true)
         try? fm.removeItem(at: fresh)

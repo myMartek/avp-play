@@ -361,7 +361,7 @@ final class AppModel: ObservableObject {
     /// Was das Gerät zuletzt als installiert gemeldet hat, und ab welcher Toolchain-Nummer ein Bau aktuell ist.
     /// Nicht `@Published`, fließt aber in `derived` ein – daher verwirft jede Änderung es selbst.
     var installedApps: [InstalledApp]? { didSet { invalidateDerived() } }
-    var toolchainRevision: Int? { didSet { invalidateDerived() } }
+    var toolchainRevision: AppRevision? { didSet { invalidateDerived() } }
     /// Was ein aktueller Bau vom MetalFX-Hochskalieren tragen soll; `nil`, solange keine Toolchain da ist, die das
     /// kann – dann wird nicht verglichen.
     var metalFXExpected: Bool? { didSet { invalidateDerived() } }
@@ -860,7 +860,7 @@ final class AppModel: ObservableObject {
     /// Bestimmt den Stand eines Spiels neu, mit dem, was gerade bekannt ist (Gerät, Toolchain, Einstellungen).
     func refreshStatus(of id: String) {
         guard var fresh = allGames.first(where: { $0.id == id }) ?? games.first(where: { $0.id == id }) else { return }
-        fresh.status = GameStatus.of(recipe: fresh.recipe, store: paths.store, apps: installedApps, toolchainVersion: toolchainRevision,
+        fresh.status = GameStatus.of(recipe: fresh.recipe, store: paths.store, apps: installedApps, toolchainVersion: toolchainRevision?.forTarget(fresh.recipe.toolchain.target),
                                      pin: toolchainChoices.games[id], bundlePrefix: bundlePrefix,
                                      otherSourceBuilds: Set(fresh.otherSourceBuilds),
                                      metalFX: metalFXExpected)
@@ -1285,7 +1285,9 @@ final class AppModel: ObservableObject {
         let paths = paths
         Task.detached {
             guard let bundled = Paths.manifest(beside: archive) else { return }
-            if let installed = paths.packager.installed().first?.manifest, installed.version >= bundled.version {
+            // Derselbe Stand mit neuer Angabe, welche Spiele er betrifft, wird übernommen (nur die Beschreibung).
+            if let installed = paths.packager.installed().first?.manifest, installed.version >= bundled.version,
+               !installed.sameStateOtherScope(as: bundled) {
                 await MainActor.run { self.removeOlderToolchainsAutomatically() }
                 return
             }

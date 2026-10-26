@@ -85,6 +85,13 @@ public struct Toolchain: Sendable {
         return ToolchainPackager.appRevision(checkout: root) ?? version()
     }
 
+    /// Dasselbe je Spiel: Änderungen, die nach Angabe ihrer Commits nur einzelne Spiele betreffen, heben nur deren
+    /// Schwelle.
+    public func appRevisions() -> AppRevision {
+        if let m = manifest { return m.revisions }
+        return ToolchainPackager.revisions(checkout: root) ?? AppRevision(all: appRevision())
+    }
+
     /// Die fortlaufende Nummer des Stands (Zahl der Commits); 0, wenn sie sich nicht ermitteln lässt.
     public func version() -> Int {
         if let m = manifest { return m.version }
