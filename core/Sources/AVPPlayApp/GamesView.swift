@@ -1217,7 +1217,7 @@ extension AppModel {
                          "Installiert, aber nicht mit Toolchain \(pin.name) gebaut, die für dieses Spiel gewählt ist – „Aktualisieren“ baut es mit ihr; Spielstände und Daten bleiben.")
             }
             if let built = game.status.builtWith, let wanted = metalFXExpected, built.metalFX != wanted,
-               built.toolchain >= (toolchainRevision ?? 0) {
+               built.toolchain >= (toolchainRevision?.forTarget(game.recipe.toolchain.target) ?? 0) {
                 return wanted
                     ? L("Installed, without the MetalFX upscaling the setting asks for – “Update” builds it with upscaling on from the start; saved games and data are kept.",
                         "Installiert, ohne das MetalFX-Hochskalieren, das die Einstellung verlangt – „Aktualisieren“ baut es mit von Anfang an eingeschaltetem Hochskalieren; Spielstände und Daten bleiben.")
