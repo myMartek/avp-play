@@ -369,6 +369,10 @@ final class AppModel: ObservableObject {
     @Published var copyProgress: [String: InstallProgress] = [:]
     /// Eine neuere veröffentlichte Fassung, falls es eine gibt.
     @Published var update: AppRelease?
+    /// Die neueste Fassung von AVP Play Remote auf GitHub (siehe `Companion.swift`) und was ihrer Suche im Weg stand.
+    @Published var companionRelease: CompanionApp.Release?
+    @Published var companionProblem: String?
+    var companionChecked: Date?
     @Published var updateState: UpdateState = .idle
     @AppStorage("autoUpdateCheck") var autoUpdateCheck = true
     @AppStorage("lastUpdateCheck") var lastUpdateCheck: Double = 0
@@ -1648,7 +1652,7 @@ final class AppModel: ObservableObject {
     }
 
     /// Es läuft immer nur ein Auftrag: alle bauen im selben Toolchain-Ordner und sprechen dasselbe Gerät an.
-    private func pump() {
+    func pump() {
         guard runningTask == nil, let id = queued.first else { return }
         queued.removeFirst()
         guard let job = try? paths.jobs.load(id) else { closeLog(id); return pump() }
@@ -1669,6 +1673,9 @@ final class AppModel: ObservableObject {
         }
         let metaTool = Probe.metaToolURL
         let drafts = draftsDirectory
+        // AVP Play Remote baut sich aus ihrem Quellcode, nicht mit der Toolchain.
+        let companion = CompanionApp.isCompanion(job.recipe)
+            ? CompanionInstaller(recipe: job.recipe, request: job.request, report: { feed.yield("    " + $0) }) : nil
         runningTask = Task.detached {
             var installer = Installer(recipe: job.recipe, request: job.request, store: paths.store,
                                       progress: { p in Task { @MainActor in
@@ -1679,11 +1686,12 @@ final class AppModel: ObservableObject {
                                       } },
                                       report: { feed.yield("    " + $0) })
             installer.metaTool = metaTool
-            let now = (try? Toolchain(root: URL(fileURLWithPath: job.request.toolchain)).commit()) ?? "unbekannt"
+            let now = companion != nil ? job.toolchainCommit
+                : (try? Toolchain(root: URL(fileURLWithPath: job.request.toolchain)).commit()) ?? "unbekannt"
             do {
                 _ = try await JobRunner(store: paths.jobs).run(job, currentToolchain: now, log: { feed.yield($0) }) { step, _ in
                     try Task.checkCancellation()
-                    try await installer.perform(step)
+                    if let companion { try await companion.perform(step) } else { try await installer.perform(step) }
                 }
                 feed.yield(job.isDownloadOnly
                     ? L("Done: the files of \(job.recipe.title) are on this Mac. Once everything under “Setup” is in place, “Install” builds the game and puts it on the Vision Pro – without downloading again.",
@@ -1744,7 +1752,7 @@ final class AppModel: ObservableObject {
         copyProgress[id] = nil
         if !cancelled, let job = try? paths.jobs.load(id) {
             notify(job)
-            if job.state == .finished, !job.isDownloadOnly, !job.isAddonSync { reportInstall(job.recipe) }
+            if job.state == .finished, !job.isDownloadOnly, !job.isAddonSync, !CompanionApp.isCompanion(job.recipe) { reportInstall(job.recipe) }
         }
         reportUsage()
         refresh()
