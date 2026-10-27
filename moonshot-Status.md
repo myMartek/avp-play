@@ -13,7 +13,7 @@ Stand: 27. Oktober 2026.
 | CI | **verworfen** (27.10.): kein CI; geprüft wird lokal mit Xcode 27 und vor jedem Release mit `make check` | nein |
 | `d30-fingerprint` | **Extraktor fertig, getestet, auf 59 APKs gelaufen**, erste Abdeckungskarte da | Entscheidung: als PR nach `main`? |
 | `d30-host` | **erreicht**: Beat Saber 1.45 ohne Headset auf dem Mac bis ins Hauptmenü, mit Bildern, per Skript | nein |
-| `d30-remote` | **Spike gebaut**, SDK-Antwort da; Test braucht Mac + Vision Pro | **ja: Test in der Brille** |
+| `d30-remote` | **in der Brille gesehen** (27.10.): Würfel steht im Raum; offen: schwarze Kacheln am Rand | **ja: Kacheln mit zwei Umschaltern prüfen** |
 | `s2-coverage` | **Prognose fertig** (Kern, CLI, Spielseite), auf geprüften Spielen gegengeprüft | **ja: Spielseite ansehen** |
 | `s2-fingerprint` | **Teilen per Opt-in fertig** (App + Katalogdienst-Endpunkt, privat, nicht ausgerollt) | **ja: Freigabe + Rollout** |
 | `s2-unlock` | **Roadmap fertig** (`avpplay unlock`), lokal mit 59 Fingerabdrücken durchgespielt | hängt an Rollout |
@@ -159,7 +159,16 @@ Grenzen und was für `s1-headless` noch fehlt:
 ## `d30-remote`: der Mac rendert, die Vision Pro zeigt
 
 **Stand:** Spike gebaut (`spikes/d30-remote` auf `moonshot/d30-remote`), baut mit Xcode 27, startet auf dem Mac
-(„Entfernte Räume: unterstützt“). **Nicht in der Brille getestet.**
+(„Entfernte Räume: unterstützt“). **Erster Test in der Brille am 27.10.** (`b1e7b49`):
+- Würfel erscheint und steht fest im Raum, Kopfposition läuft. Zwei Fehler dabei gefunden und behoben: die
+  Foveation-Karte fehlte im Render-Durchgang (Würfel verzerrt, wirkte 1 cm nah), und die Krone ließ die Mac-App
+  abstürzen (`endSubmission` ohne Ziel).
+- PS-VR2-Controller: der Mac sieht nichts davon – bestätigt.
+- **Offen:** schwarze Kacheln am Rand des Würfels, obwohl durchsichtig gelöscht wird (auf der Brille selbst hat
+  genau das bei Triangle Strategy geholfen, Klepton `6c8b7c3`). Vermutung: beim Bild vom Mac geht das Alpha
+  unterwegs verloren, der Raum erscheint nur in Kacheln ganz ohne Tiefe. Für Spiele in voller Immersion egal, für
+  Mixed-Reality-Spiele über den Mac ein Problem.
+- Auf macOS gibt es für den entfernten Raum nur „stufenlos“ (Krone) und „voll“, kein „gemischt“.
 
 Die wichtigste Antwort kommt schon aus dem macOS-27-SDK:
 - **Geht vom Mac aus:** Bild in die Brille (`RemoteImmersiveSpace` + Compositor Services), Kopfposition
@@ -170,8 +179,10 @@ Die wichtigste Antwort kommt schon aus dem macOS-27-SDK:
   Hände liest und an den Mac schickt (passt in AVP Play Remote). Das Limit „3 Apps, 7 Tage“ fiele für das Bild
   trotzdem, weil auf der Brille nur diese eine App läuft.
 
-**Muss Marcel testen:** `spikes/d30-remote/README.md` hat die Liste (Würfel steht im Raum, Bildabstand,
-Vorlauf, Pinch zählt, gefühlte Latenz).
+**Muss Marcel testen:** im Mac-Fenster „Farbe 16 Bit mit Alpha“ an (schließen, neu öffnen): Kacheln weg?
+Dann „Voll (ohne Raum)“. Außerdem noch offen aus der Liste in `spikes/d30-remote/README.md`: Bildabstand und
+Vorlauf ablesen, Pinch zählt, gefühlte Latenz beim schnellen Kopfdrehen. App: `spikes/d30-remote/make-app.sh`,
+dann `.build/D30Remote.app`.
 
 ## `s2-coverage`: Prognose für ungetestete Spiele
 
