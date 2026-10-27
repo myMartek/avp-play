@@ -13,6 +13,7 @@ Stand: 27. Oktober 2026.
 | CI | **verworfen** (27.10.): kein CI; geprüft wird lokal mit Xcode 27 und vor jedem Release mit `make check` | nein |
 | `d30-fingerprint` | **Extraktor fertig, getestet, auf 59 APKs gelaufen**, erste Abdeckungskarte da | Entscheidung: als PR nach `main`? |
 | `d30-host` | **erreicht**: Beat Saber 1.45 ohne Headset auf dem Mac bis ins Hauptmenü, mit Bildern, per Skript | nein |
+| `s1-remote` | **Beat Saber vom Mac in die Brille gebaut** (`KleptonRemote.app` + `KleptonRelay` auf der Brille); auf dem Mac ohne Brille durchgeprüft bis ins Hauptmenü | **ja: heute Abend in der Brille testen** (Anleitung unten) |
 | `d30-remote` | **in der Brille gesehen** (27.10.): Würfel steht im Raum; schwarze Kacheln am Rand im Mixed-Modus (Grenze des Mac-Wegs) | ja: einmal kurz öffnen für Bildabstand/Vorlauf |
 | `s2-coverage` | **Prognose fertig** (Kern, CLI, Spielseite), auf geprüften Spielen gegengeprüft | **ja: Spielseite ansehen** |
 | `s2-fingerprint` | **Teilen per Opt-in fertig** (App + Katalogdienst-Endpunkt, privat, nicht ausgerollt) | **ja: Freigabe + Rollout** |
@@ -34,6 +35,7 @@ Stand: 27. Oktober 2026.
 | `moonshot/s2-fingerprint` | Teilen der Fingerabdrücke + `avpplay unlock` (auf `moonshot/s2-coverage`) |
 | privates Repo: `moonshot/s2-fingerprint` (Worktree `BeatSaberVR/qi-s2-fingerprint`) | Katalogdienst: `POST /api/v1/fingerprints`, `GET /api/v1/fingerprints/summary`; nicht in `main`, nicht ausgerollt |
 | ~~`ci/macos-build`~~ | gelöscht (lokal und auf GitHub, samt aller Läufe) |
+| Klepton-Fork (privat): `moonshot/s1-remote` (auf `moonshot/d30-host`, Worktree `QuestInstaller/klepton-fork-d30`) | `KleptonRemote.app` (`mains/KleptonRemote.swift`, `runtime/gfx/kl_remote_mtl.m`, `tools/remote/`), Relay-App `spikes/relay`; Sicherung in myMartek/klepton-fork |
 | Klepton-Fork (privat): `moonshot/d30-host` | `tools/lab_run.sh` + `tools/lab/beatsaber145-menu.txt`; Sicherung in myMartek/klepton-fork |
 | `claude/charming-hypatia-bk0hrt` | alter Stand der Cloud-Session; kann gelöscht werden |
 
@@ -155,6 +157,44 @@ Grenzen und was für `s1-headless` noch fehlt:
   (das Log sagt „never had a controller“); Unreal- und native Spiele brauchen einen anderen Weg.
 - Bildzeiten pro Frame werden noch nicht ausgegeben.
 - Kein Netz (absichtlich), keine Foveation, kein Headset-Compositor: Schärfe und Anzeige bleiben Brillensache.
+
+## `s1-remote`: Beat Saber vom Mac in die Brille
+
+**Stand (27.10.):** gebaut und auf dem Mac ohne Brille durchgeprüft, **noch nicht in der Brille**.
+- `KleptonRemote.app` = Kleptons Mac-Programm (`m_boot`) mit `KL_REMOTE=1`: eine SwiftUI-App öffnet einen
+  `RemoteImmersiveSpace` (voll) in der gekoppelten Brille, gibt Kopfposition und Augengeometrie der Brille an das
+  Spiel und zeichnet dessen Bild mit derselben Umrechnung wie auf der Brille (`kl_reproject`) in den Raum. Das Spiel
+  startet erst, wenn die Brille vermessen ist (wie `primeDisplay` auf dem Gerät).
+- Beat Saber 1.45 läuft über OpenXR; das Bild kommt als Projektionsebene. Foveation im Spiel ist auf dem Mac aus
+  (`KL_VRR=0`), die Brille foveiert selbst.
+- **Eingabe:** macOS bekommt keine Controller und kein Handskelett. Deshalb:
+  - **KleptonRelay** (auf der Brille installiert): liest die Sense-Controller per GameController, auch im
+    Hintergrund, und schickt Knöpfe, Abzüge und Sticks per UDP an den Mac (Bonjour `_klrelay._udp`).
+  - Ohne Posen hängen beide Controller vor dem Kopf und zeigen dahin, wo du hinschaust: Menüs gehen per Blick +
+    Abzug.
+  - **Hinschauen + Pinch** = rechter Abzug auf dem Blickstrahl (ohne Relay).
+  - Posen gibt ARKit nur einer App mit eigenem immersiven Raum. Der „Posen-Test“ im Relay öffnet einen – was dann
+    mit dem Mac-Raum passiert, ist die offene Frage (vermutlich schließt er sich).
+- **Selbsttest ohne Brille** (`KL_REMOTE_SELFTEST=<ordner> tools/remote/run.sh` + `python3
+  tools/remote/relay_test.py`): Bild kommt im Compositor an; ein Relay-Abzug drückt „Continue“ im
+  Sicherheitshinweis, Beat Saber zeigt das Hauptmenü mit rechtem Controller und Laserpointer.
+- Spielstand: `build/remote/bs-state` (Sprache, Region, EULA usw. per `lab_run` weggeklickt); den
+  Sicherheitshinweis zeigt Beat Saber bei jedem Start.
+
+**Muss Marcel testen (heute Abend):**
+1. Auf der Brille **Klepton Relay** öffnen (Lokales-Netzwerk-Abfrage erlauben). Zeigt es „Links/Rechts“ mit
+   Werten und unter „Mac“ „Klepton Remote“?
+2. Am Mac im Fenster **Klepton Remote – beatsaber140** auf „In der Vision Pro öffnen“ (läuft schon; sonst in
+   `QuestInstaller/klepton-fork-d30`: `tools/remote/run.sh`). Brille vorher wie für „Mac Virtual Display“ koppeln.
+3. Nach ~1 s Vermessung startet Beat Saber (Sicherheitshinweis). Mit Kopf zielen, Abzug drücken (oder hinschauen +
+   pinchen) → Hauptmenü.
+4. Berichten: Bild stabil beim Kopfdrehen? Gefühlte Verzögerung? Kommen Abzug/Stick an, obwohl das Relay im
+   Hintergrund ist (Zeile „Im Hintergrund“ im Relay)? Werte im Mac-Fenster (Bilder Brille / Spielbilder / Vorlauf).
+5. Danach im Relay „Posen-Test“: Was passiert mit dem Mac-Raum? Kommen Posen an (Zeile „Posen“)?
+
+**Was fehlt:** Controller-Posen neben dem Mac-Raum (der Kern für Lieder spielen), Ton (läuft auf dem Mac, nicht in
+der Brille), Haptik, ein Startweg aus AVP Play. **Alyx:** auf dem Mac nicht machbar ohne großes Projekt – Kleptons
+Linux-Pfad ist auf dem Mac nur bis zum glibc-Loader erprobt, Alyx lief dort nie (72 GB, Source 2, xrizer).
 
 ## `d30-remote`: der Mac rendert, die Vision Pro zeigt
 
