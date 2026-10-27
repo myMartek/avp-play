@@ -16,6 +16,7 @@ struct AVPPlayApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @StateObject private var model = AppDelegate.model
     @StateObject private var remote = AppDelegate.remote
+    @AppStorage(MenuBarPreferences.showKey) private var menuBarShow = true
 
     var body: some Scene {
         Window("AVP Play", id: "main") {
@@ -61,6 +62,13 @@ struct AVPPlayApp: App {
                 }
             }
         }
+
+        MenuBarExtra(isInserted: $menuBarShow) {
+            MenuBarPanel().environmentObject(model).environmentObject(remote).environment(\.locale, L10n.locale)
+        } label: {
+            MenuBarLabel().environmentObject(model).environmentObject(remote)
+        }
+        .menuBarExtraStyle(.window)
     }
 }
 
@@ -75,9 +83,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // ein Fenster vor die Nase bekommen noch versehentlich hineinklicken.
         if Snapshot.directory == nil { NSApp.activate(ignoringOtherApps: true) }
         MainActor.assumeIsolated { AppDelegate.remote.attach(AppDelegate.model) }
+        // Bleibt das Programm nach dem Schließen des Fensters in der Menüleiste, verschwindet es aus dem Dock und
+        // kehrt dorthin zurück, sobald das Fenster wieder da ist.
+        let center = NotificationCenter.default
+        center.addObserver(forName: NSWindow.willCloseNotification, object: nil, queue: .main) { note in
+            guard AppDelegate.isMain(note.object), MenuBarPreferences.load().staysInMenuBar else { return }
+            NSApp.setActivationPolicy(.accessory)
+        }
+        center.addObserver(forName: NSWindow.didBecomeKeyNotification, object: nil, queue: .main) { note in
+            guard AppDelegate.isMain(note.object), NSApp.activationPolicy() != .regular else { return }
+            NSApp.setActivationPolicy(.regular)
+        }
     }
 
-    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
+    /// Das Hauptfenster; SwiftUI gibt ihm die Kennung der Szene („main“), wie `Snapshot.capture` sie sucht.
+    static func isMain(_ object: Any?) -> Bool {
+        (object as? NSWindow)?.identifier?.rawValue.contains("main") == true
+    }
+
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        MenuBarPreferences.load().terminatesWithLastWindow
+    }
 
     @MainActor
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
@@ -87,6 +113,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         alert.informativeText = L("If you quit now, it will be interrupted. You can resume it under “Jobs” the next time you open the app; files already downloaded are kept.", "Wenn du jetzt beendest, wird er unterbrochen. Beim nächsten Start lässt er sich unter „Aufträge“ fortsetzen; schon geladene Dateien bleiben erhalten.")
         alert.addButton(withTitle: L("Keep Running", "Weiterlaufen lassen"))
         alert.addButton(withTitle: L("Quit", "Beenden"))
+        // Aus der Menüleiste beendet, läge die Rückfrage sonst hinter den Fenstern anderer Programme.
+        NSApp.activate(ignoringOtherApps: true)
         return alert.runModal() == .alertSecondButtonReturn ? .terminateNow : .terminateCancel
     }
 
@@ -153,6 +181,10 @@ struct RootView: View {
         .id(model.language)
         .sheet(isPresented: $model.showReport) { ReportSheet(job: model.reportJob).environmentObject(model) }
         .task {
+            // Aus der Menüleiste wieder geöffnet, entsteht diese Ansicht neu; der Start soll nur einmal laufen,
+            // sonst würden Katalog, Suche und Filter neu geladen.
+            guard !model.launched else { model.refresh(); return }
+            model.launched = true
             model.installBundledToolchainIfNewer()
             Task.detached(priority: .background) { CoverCache().prune() }
             model.refresh()
@@ -485,6 +517,21 @@ enum Snapshot {
         model.section = .settings
         await pause(1.3)
         capture("5-einstellungen", dir)
+        // Das Fenster der Menüleiste geht nur per Klick auf; für das Bild wird es unsichtbar abseits gezeichnet.
+        let panel = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 340, height: 300), styleMask: [.borderless], backing: .buffered, defer: false)
+        panel.contentView = NSHostingView(rootView: MenuBarPanel().environmentObject(model).environmentObject(AppDelegate.remote)
+            .background(Color(nsColor: .windowBackgroundColor)))
+        panel.setContentSize(panel.contentView?.fittingSize ?? panel.frame.size)
+        panel.alphaValue = 0
+        panel.orderFront(nil)
+        await pause(1)
+        capture("5-menueleiste", dir, window: panel)
+        // Ihr Abschnitt in den Einstellungen steht weit unten; für das Bild allein.
+        panel.contentView = NSHostingView(rootView: Form { MenuBarSettings() }.formStyle(.grouped).frame(width: 640))
+        panel.setContentSize(panel.contentView?.fittingSize ?? panel.frame.size)
+        await pause(1)
+        capture("5-menueleiste-einstellungen", dir, window: panel)
+        panel.orderOut(nil)
         // `--switch-language`: die Sprache im laufenden Programm wechseln, beide Fenster zeigen, zurückstellen.
         if CommandLine.arguments.contains("--switch-language") {
             let before = model.languageChoice

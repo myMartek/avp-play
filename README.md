@@ -62,6 +62,11 @@ code, and everything between the two stays in your network, encrypted. AVP Play 
 [its source code](https://github.com/myMartek/avp-play-remote) with your Apple team and puts it on the Vision Pro. See
 [Remote Control](https://github.com/myMartek/avp-play/wiki/Remote-Control) in the wiki.
 
+**In the menu bar.** An icon in the menu bar shows the running job with its progress, whether the Vision Pro and
+AVP Play Remote are connected and, with a free Apple account, when the next game runs out. With *Keep running in the
+menu bar when the window is closed* (Settings › Menu Bar) you can close the window: jobs keep going, AVP Play Remote
+stays connected, and the Dock icon comes back when you open the window again.
+
 ## What you need
 
 | | |
