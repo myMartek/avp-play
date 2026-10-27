@@ -28,6 +28,7 @@ extension AppModel {
 struct MenuBarLabel: View {
     @EnvironmentObject var model: AppModel
     @EnvironmentObject var remote: RemoteServer
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         let status = model.menuBarStatus(remote: remote)
@@ -35,6 +36,9 @@ struct MenuBarLabel: View {
             Image(systemName: status.needsAttention ? "exclamationmark.triangle" : "visionpro")
             if let percent = status.percent { Text("\(percent) %").monospacedDigit() }
         }
+        // Das Symbol ist auch bei geschlossenem Fenster da: von hier aus kann der Klick aufs Programmsymbol
+        // (`applicationShouldHandleReopen`) das Fenster wieder öffnen.
+        .onAppear { AppDelegate.openMain = { openWindow(id: "main") } }
     }
 }
 

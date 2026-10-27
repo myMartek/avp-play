@@ -173,6 +173,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         (object as? NSWindow)?.identifier?.rawValue.contains("main") == true
     }
 
+    /// Öffnet das Hauptfenster; gesetzt vom Symbol in der Menüleiste, das SwiftUIs `openWindow` kennt.
+    @MainActor static var openMain: (() -> Void)?
+
+    /// Klick aufs Programmsymbol (Dock, Finder), während AVP Play in der Menüleiste weiterläuft: Das Fenster der
+    /// Szene „main“ ist dann geschlossen, und von selbst öffnet SwiftUI es nicht wieder – der Punkt unter dem
+    /// Symbol erschien, ein Fenster nicht (1.5.7).
+    @MainActor
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        guard !NSApp.windows.contains(where: { AppDelegate.isMain($0) && $0.isVisible }) else { return true }
+        NSApp.setActivationPolicy(.regular)
+        AppDelegate.openMain?()
+        NSApp.activate(ignoringOtherApps: true)
+        return false
+    }
+
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         MenuBarPreferences.load().terminatesWithLastWindow
     }
