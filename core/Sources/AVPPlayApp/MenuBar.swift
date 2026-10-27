@@ -114,8 +114,8 @@ struct MenuBarSettings: View {
             Toggle(L("Keep running in the menu bar when the window is closed", "In der Menüleiste weiterlaufen, wenn das Fenster geschlossen ist"),
                    isOn: $menuBarKeepRunning)
                 .disabled(!menuBarShow)
-            Text(L("With the window closed, jobs keep going, AVP Play Remote can still reach this Mac, and the Dock icon goes away until you open the window again from the menu bar. Without this, closing the window quits AVP Play, as before. Background renewal of signatures works either way.",
-                   "Bei geschlossenem Fenster laufen Aufträge weiter, AVP Play Remote erreicht diesen Mac weiterhin, und das Symbol im Dock verschwindet, bis du das Fenster aus der Menüleiste wieder öffnest. Ohne das beendet das Schließen des Fensters AVP Play, wie bisher. Die Erneuerung der Signaturen im Hintergrund läuft so oder so."))
+            Text(L("With the window closed, jobs keep going, AVP Play Remote can still reach this Mac, and the Dock icon goes away until you open the window again from the menu bar. Without this, closing the window quits AVP Play, as before. Background renewal of signatures works either way. With this and “Open at login” on, AVP Play starts in the menu bar only, without its window.",
+                   "Bei geschlossenem Fenster laufen Aufträge weiter, AVP Play Remote erreicht diesen Mac weiterhin, und das Symbol im Dock verschwindet, bis du das Fenster aus der Menüleiste wieder öffnest. Ohne das beendet das Schließen des Fensters AVP Play, wie bisher. Die Erneuerung der Signaturen im Hintergrund läuft so oder so. Ist zusätzlich „Bei der Anmeldung öffnen“ an, startet AVP Play bei der Anmeldung nur in der Menüleiste, ohne Fenster."))
                 .font(.callout).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             Toggle(L("Open at login", "Bei der Anmeldung öffnen"), isOn: Binding(get: { loginOn }, set: { on in

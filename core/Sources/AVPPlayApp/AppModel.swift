@@ -181,6 +181,21 @@ final class AppModel: ObservableObject {
     @Published var refreshing = false
     /// Ob der Start (Katalog, Watcher, Update-Check) schon gelaufen ist; das Fenster kann aus der Menüleiste neu entstehen.
     var launched = false
+
+    /// Was beim Start einmal geschieht – aus dem Fenster heraus oder, bei einem Start nur in der Menüleiste, ohne es.
+    func startUp() async {
+        guard !launched else { return }
+        launched = true
+        installBundledToolchainIfNewer()
+        Task.detached(priority: .background) { CoverCache().prune() }
+        refresh()
+        checkAccount()
+        loadCatalog()
+        reconcileBackgroundService()
+        startSaveWatch()
+        startDeviceWatch()
+        await checkForUpdate(manual: false)
+    }
     @Published var toolchainText: String?
     @Published var account: AccountState = .unknown
     @Published var toolPresent = false
