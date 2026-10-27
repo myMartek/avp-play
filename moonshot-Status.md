@@ -13,7 +13,7 @@ Stand: 27. Oktober 2026.
 | CI | **verworfen** (27.10.): kein CI; geprüft wird lokal mit Xcode 27 und vor jedem Release mit `make check` | nein |
 | `d30-fingerprint` | **Extraktor fertig, getestet, auf 59 APKs gelaufen**, erste Abdeckungskarte da | Entscheidung: als PR nach `main`? |
 | `d30-host` | **erreicht**: Beat Saber 1.45 ohne Headset auf dem Mac bis ins Hauptmenü, mit Bildern, per Skript | nein |
-| `s1-remote` | **in der Brille getestet (27.10.): Bild ja, Knöpfe ja (Controller per Bluetooth am Mac), Position nein.** Beat Saber vom Mac steht im Raum (~48 ms Vorlauf), Pinch kommt an; über die Brille erreichen die Controller den Mac-Raum nicht | offen: Ruckeln beim zweiten Öffnen; Entscheidung, ob weiter (nur Menüs per Pinch) |
+| `s1-remote` | **in der Brille getestet (27.10.): Bild ja, Knöpfe + Drehung ja (Controller per Bluetooth am Mac, Gyro), echte Position nein.** Beat Saber vom Mac steht im Raum (~48 ms Vorlauf), Pinch kommt an; über die Brille erreichen die Controller den Mac-Raum nicht | offen: Ruckeln beim zweiten Öffnen; Entscheidung, ob weiter (nur Menüs per Pinch) |
 | `d30-remote` | **abgeschlossen** (27.10.): Würfel steht im Raum, 100 Hz ohne Aussetzer, ~48 ms Vorlauf; schwarze Kacheln am Rand im Mixed-Modus (Grenze des Mac-Wegs) | nein |
 | `s2-coverage` | **Prognose fertig** (Kern, CLI, Spielseite), auf geprüften Spielen gegengeprüft | **ja: Spielseite ansehen** |
 | `s2-fingerprint` | **Teilen per Opt-in fertig** (App + Katalogdienst-Endpunkt, privat, nicht ausgerollt) | **ja: Freigabe + Rollout** |
@@ -171,7 +171,12 @@ Grenzen und was für `s1-headless` noch fehlt:
 - **Controller per Bluetooth direkt am Mac: Knöpfe ja.** macOS 26 erkennt beide Sense-Controller als Spatial
   Controller (A, B, Menü, Griff, Abzug, Stick); Klepton Remote liest sie selbst (`MacControllers`) und Beat Saber
   reagiert. Keine Position (die kommt nur aus dem Kameratracking der Brille für dort gekoppelte Controller);
-  gezielt wird mit dem Kopf. Danach müssen die Controller wieder mit der Vision Pro gekoppelt werden.
+  Danach müssen die Controller wieder mit der Vision Pro gekoppelt werden.
+- **Drehung aus dem Gyro (Fork `3beba2a`): klappt**, „nicht so gut wie auf der AVP direkt“ (Marcel). macOS liefert
+  Drehrate und Beschleunigung der Sense; Klepton Remote rechnet daraus die Drehung (Mahony-Filter, Schwerkraft
+  hält Neigung und Rollen), die Position schätzt ein Armmodell (Schulter neben dem Kopf). Links/rechts driftet,
+  **Griff + Stick-Klick** richtet neu aus. Falle: der Beschleunigungssensor meldet in Ruhe „oben“ – als „unten“
+  gelesen waren Kippen und Drehen gespiegelt. Reicht für Menüs; für Beat Saber fehlt echte Armbewegung.
 - **Controller kommen im Mac-Raum nicht an:** visionOS gibt die Sense-Controller nur der App im Vordergrund. Das
   Relay bekommt sie, solange sein Fenster vorne ist; hinter dem Mac-Raum liefert GameController nichts, auch mit
   `shouldMonitorBackgroundEvents` und stillem Audio (das Relay läuft weiter und sendet, aber nur Nullen). Am Mac
