@@ -10,7 +10,7 @@ Stand: 27. Oktober 2026.
 | Kennung | Stand | Wartet auf Marcel? |
 |---|---|---|
 | Schritt 0 (Menüleiste) | **veröffentlicht in AVP Play 1.5.5** | Test der offenen Punkte unten |
-| CI (`ci/macos-build`) | **blockiert**: Runner hat nur Xcode 26.6, Swift 6.3 hängt in `AVPPlayCore`; dritter Diagnose-Lauf läuft | **ja: Weg wählen** |
+| CI | **verworfen** (27.10.): kein CI; geprüft wird lokal mit Xcode 27 und vor jedem Release mit `make check` | nein |
 | `d30-fingerprint` | **Extraktor fertig, getestet, auf 59 APKs gelaufen**, erste Abdeckungskarte da | Entscheidung: als PR nach `main`? |
 | `d30-host` | **erreicht**: Beat Saber 1.45 ohne Headset auf dem Mac bis ins Hauptmenü, mit Bildern, per Skript | nein |
 | `d30-remote` | **Spike gebaut**, SDK-Antwort da; Test braucht Mac + Vision Pro | **ja: Test in der Brille** |
@@ -33,7 +33,7 @@ Stand: 27. Oktober 2026.
 | `moonshot/s4-appliance` | Start nur in der Menüleiste (auf `main`) |
 | `moonshot/s2-fingerprint` | Teilen der Fingerabdrücke + `avpplay unlock` (auf `moonshot/s2-coverage`) |
 | privates Repo: `moonshot/s2-fingerprint` (Worktree `BeatSaberVR/qi-s2-fingerprint`) | Katalogdienst: `POST /api/v1/fingerprints`, `GET /api/v1/fingerprints/summary`; nicht in `main`, nicht ausgerollt |
-| `ci/macos-build` | `.github/workflows/build.yml`: `swift build` + `swift test` auf `macos-26` |
+| ~~`ci/macos-build`~~ | gelöscht (lokal und auf GitHub, samt aller Läufe) |
 | Klepton-Fork (privat): `moonshot/d30-host` | `tools/lab_run.sh` + `tools/lab/beatsaber145-menu.txt`; Sicherung in myMartek/klepton-fork |
 | `claude/charming-hypatia-bk0hrt` | alter Stand der Cloud-Session; kann gelöscht werden |
 
@@ -76,17 +76,12 @@ Bekannte Lücke: Beim Start über die Anmeldung öffnet sich das Fenster. Ein St
 
 ## CI
 
-- Drei Läufe auf `macos-26`: der Runner hat als neuestes **Xcode 26.6 (Swift 6.3.3)**. `swift build` hängt jedes Mal
-  in `AVPPlayCore` (nach `Updater.swift` im Stapel) bis zum Zeitlimit von 40 Minuten. Mit Xcode 27 (Swift 6.4) baut
-  dasselbe hier in Sekunden.
-- Eine Zeitgrenze für den Typprüfer (`-solver-expression-time-threshold=60`) hat nichts gemeldet: es ist **nicht**
-  ein langsamer Ausdruck, sondern etwas anderes im Compiler 6.3.
-- Läuft gerade: ein Lauf, der die Dateien einzeln und nacheinander übersetzt (`-j 1 -disable-batch-mode`); die letzte
-  Zeile „Compiling …“ nennt dann die Datei.
-- AVP Play braucht für seine Spiele ohnehin Xcode 27 (die App warnt bei älterem). **Entscheidung für Marcel:**
-  - [ ] (a) warten, bis GitHub Xcode 27 auf die Runner bringt, und bis dahin ohne CI,
-  - [ ] (b) einen selbst gehosteten Runner auf deinem Mac (läuft mit Xcode 27, kostet nichts, Mac muss an sein),
-  - [ ] (c) die hängende Stelle für Swift 6.3 umschreiben (sobald der Lauf die Datei nennt) – dann geht CI mit 26.6.
+- **Verworfen am 27.10. (Marcels Entscheidung).** Die Cloud-Session hatte den Workflow angelegt, weil sie keinen Mac
+  hat. Auf GitHubs `macos-26`-Runner gab es nur Xcode 26.6, und Swift 6.3 blieb im Bau von `AVPPlayCore` hängen.
+  Nutzen zu gering: Rezepte und Klepton prüft der Lauf nicht, gebaut und getestet wird lokal mit Xcode 27, vor
+  jedem Release läuft `make check`.
+- Branch `ci/macos-build`, Worktree und alle sechs Läufe sind gelöscht; auf GitHub gibt es keinen Workflow mehr.
+- Folge für Cloud-Sessions: sie können nicht selbst bauen; ihr Stand muss hier auf dem Mac gebaut und getestet werden.
 
 ## `d30-fingerprint`: Fingerabdruck-Extraktor und erste Abdeckungskarte
 
