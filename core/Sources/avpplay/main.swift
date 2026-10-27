@@ -128,6 +128,8 @@ avpplay – command line for the AVP Play core library
                                                frame times and a summary in one folder (default: the game's library, lab/)
   avpplay lab pack --from <Fork> --to <folder>  build the lab pack (ANGLE and MoltenVK for the Mac) from a fork checkout
   avpplay lab install <archive>                check and install the lab pack
+  avpplay lab judge <folder>                   judge a lab run from its pictures: no picture, black, one colour, magenta,
+                                               standing still, or stopped (writes judge.json)
   avpplay toolchain mark <folder>              mark a working copy of a toolchain as modified; it is then listed as “(modified)”
   avpplay toolchain use <id> --toolchain <folder> | --newest
                                                build this game with that toolchain from now on (an installed package or a
@@ -1048,6 +1050,11 @@ case "lab":
                 "Laborlauf: \(r.title) mit Toolchain \(toolchain.name), nach \(folder.path)"))
         do {
             let status = try LabRun.run(recipe: r, store: store, toolchain: toolchain, settings: settings, folder: folder) { print($0) }
+            // Ohne Zusammenfassung lief nichts: Dann gibt es auch nichts zu beurteilen.
+            if FileManager.default.fileExists(atPath: folder.appendingPathComponent("summary.txt").path) {
+                let verdict = try LabJudge.write(folder: folder)
+                print(L("judgement: ", "Urteil: ") + LabJudge.describe(verdict))
+            }
             if status != 0 { exit(status) }
         } catch { fail("\(error.localizedDescription)") }
     case "pack":
@@ -1068,6 +1075,17 @@ case "lab":
             try LabRun.install(archive: URL(fileURLWithPath: o.positional[2]))
             print(L("Lab pack installed in \(LabRun.packFolder.path).", "Laborpaket installiert in \(LabRun.packFolder.path)."))
         } catch { fail(error.localizedDescription) }
+    case "judge":
+        guard o.positional.count >= 3 else {
+            fail(L("Give the folder of a lab run: avpplay lab judge <folder>", "Ordner eines Laborlaufs angeben: avpplay lab judge <Ordner>"))
+        }
+        do {
+            let verdict = try LabJudge.write(folder: URL(fileURLWithPath: o.positional[2]))
+            for f in verdict.frames {
+                print(String(format: "  %@  %@  mean %.3f  spread %.3f  magenta %.2f  %@", f.name, f.look.rawValue, f.mean, f.spread, f.magenta, f.color))
+            }
+            print(LabJudge.describe(verdict))
+        } catch { fail("\(error)") }
     default:
         fail(L("Unknown: avpplay lab \(o.positional[1])", "Unbekannt: avpplay lab \(o.positional[1])"))
     }
