@@ -22,6 +22,7 @@ final class CubeRenderer: @unchecked Sendable {
     private var frames = 0
     private var lastReport: CFTimeInterval = 0
     private var tracked = 0
+    private var described = false
 
     init(layer: LayerRenderer, device remote: RemoteDeviceIdentifier?) {
         self.layer = layer
@@ -86,7 +87,13 @@ final class CubeRenderer: @unchecked Sendable {
         frame.startSubmission()
         // Auf dem Mac gibt es nur die Liste (eine Ebene kann mehrere Ziele haben); jedes wird gleich gezeichnet.
         let drawables = frame.queryDrawables()
-        guard let first = drawables.first, let commands = queue.makeCommandBuffer() else { frame.endSubmission(); return }
+        // Ohne Ziel (Raum pausiert, etwa nach der Krone) endet das Bild ohne endSubmission – sonst bricht
+        // Compositor Services das Programm ab.
+        guard let first = drawables.first, let commands = queue.makeCommandBuffer() else { return }
+        if !described {
+            described = true
+            report(state: "Ziele: \(drawables.count), Ansichten: \(first.views.count), Farbtexturen: \(first.colorTextures.count), Foveation-Karten: \(first.rasterizationRateMaps.count)")
+        }
 
         let clock = LayerRenderer.Clock()
         let presentation = first.frameTiming.presentationTime
@@ -110,6 +117,11 @@ final class CubeRenderer: @unchecked Sendable {
                 pass.depthAttachment.loadAction = .clear
                 pass.depthAttachment.clearDepth = 0
                 pass.depthAttachment.storeAction = .store
+                // Mit Foveation ist die Textur ungleichmäßig aufgelöst; ohne die Karte im Durchgang wird das Bild
+                // verzerrt angezeigt (gekrümmte Kanten, schwarze Kacheln am Rand).
+                if i < drawable.rasterizationRateMaps.count {
+                    pass.rasterizationRateMap = drawable.rasterizationRateMaps[i]
+                }
                 guard let encoder = commands.makeRenderCommandEncoder(descriptor: pass) else { continue }
                 let viewMatrix = (head * view.transform).inverse
                 var mvp = drawable.computeProjection(viewIndex: i) * viewMatrix * model

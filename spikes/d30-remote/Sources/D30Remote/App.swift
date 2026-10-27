@@ -86,6 +86,7 @@ struct CubeConfiguration: CompositorLayerConfiguration {
         configuration.depthFormat = .depth32Float
         configuration.colorFormat = .bgra8Unorm_srgb
         configuration.layout = .dedicated
+        configuration.isFoveationEnabled = capabilities.supportsFoveation
     }
 }
 
