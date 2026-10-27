@@ -53,4 +53,4 @@ Vorher: die Vision Pro mit dem Mac koppeln (wie für „Mac Virtual Display“) 
 - [ ] Gefühlte Latenz beim schnellen Kopfdrehen: bleibt der Würfel ruhig?
 - [x] Ein PS-VR2-Controller in der Brille: sieht der Mac irgendetwas davon? (Nein.)
 - [x] Schwarze Kacheln: mit „Farbe 16 Bit mit Alpha“ weg? **Nein** (27.10.). „Voll (ohne Raum)“ öffnet.
-- [ ] Schwarze Kacheln mit „Foveation aus“?
+- [x] Schwarze Kacheln mit „Foveation aus“? **Identisch** – der Raum erscheint beim Bild vom Mac nur in Kacheln ganz ohne Inhalt, Alpha innerhalb einer Kachel zählt nicht.
