@@ -15,19 +15,36 @@ extension AppModel {
         let root = toolchain.root
         let cached = runtimeInterfaces[root.path]
         Task.detached(priority: .utility) {
+            let fingerprint = try? Fingerprint.cached(apk: apk)
             let result: (Prognosis, RuntimeInterface)? = {
-                guard let fingerprint = try? Fingerprint.cached(apk: apk),
-                      let runtime = cached ?? (try? RuntimeInterface.scan(klepton: root)) else { return nil }
+                guard let fingerprint, let runtime = cached ?? (try? RuntimeInterface.scan(klepton: root)) else { return nil }
                 let references = ReferenceFingerprint.bundled(recipes: recipes)
                 guard !references.isEmpty else { return nil }
                 return (Prognosis.make(fingerprint, runtime: runtime, references: references), runtime)
             }()
             await MainActor.run {
                 self.prognosisRunning.remove(game.id)
+                if let fingerprint { self.shareFingerprint(fingerprint, of: game.recipe) }
                 guard let (prognosis, runtime) = result else { return }
                 self.runtimeInterfaces[root.path] = runtime
                 self.prognoses[game.id] = prognosis
             }
+        }
+    }
+}
+
+extension AppModel {
+    /// Schickt den Fingerabdruck eines Builds einmal an den Katalogdienst – nur mit eingeschaltetem Teilen.
+    func shareFingerprint(_ fingerprint: Fingerprint, of recipe: Recipe) {
+        let key = "sharedFingerprints"
+        guard shareFingerprints, onlineCatalog,
+              let game = UsagePing.gameKey(appId: recipe.catalogAppId, recipe: recipe.id) else { return }
+        let build = "\(game)@\(recipe.versionCode)"
+        guard !(UserDefaults.standard.stringArray(forKey: key) ?? []).contains(build) else { return }
+        let client = catalogClient, versionCode = Int64(recipe.versionCode)
+        Task {
+            guard (try? await client.share(SharedFingerprint(fingerprint), game: game, versionCode: versionCode)) != nil else { return }
+            UserDefaults.standard.set((UserDefaults.standard.stringArray(forKey: key) ?? []) + [build], forKey: key)
         }
     }
 }

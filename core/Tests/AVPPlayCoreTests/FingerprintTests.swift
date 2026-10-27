@@ -116,7 +116,7 @@ final class FingerprintTests: XCTestCase {
         let text = """
         <manifest package="com.example.game">
             <uses-feature android:glEsVersion="0x00030002" android:required="true">
-            <uses-feature android:name="oculus.software.handtracking" android:required="false">
+            <uses-feature android:name="oculus.software.handtracking " android:required="false">
             <uses-permission android:name="android.permission.INTERNET">
             <meta-data android:name="com.oculus.supportedDevices" android:value="quest2|quest3">
             <meta-data android:name="com.oculus.ossplash" android:value="true">
@@ -283,5 +283,31 @@ final class PrognosisTests: XCTestCase {
         XCTAssertEqual(ref.features, ["engine:unity", "gfx:vulkan", "mw:FMOD", "scripting:il2cpp", "unity:2021", "xr:ovrplugin"])
         XCTAssertEqual(ref.imported, ["ovrplugin": ["ovrp_GetVersion"]])
         XCTAssertEqual(ref.extensions, ["XR_FB_space_warp"])
+    }
+}
+
+final class SharedFingerprintTests: XCTestCase {
+    /// Der Katalogdienst lehnt jedes unbekannte Feld ab (`DisallowUnknownFields`); was die App schickt, muss genau
+    /// diese Schlüssel haben – und keinen Paketnamen, keine Berechtigungen, keine Java-Pakete.
+    func testKeysAreExactlyWhatTheServiceAccepts() throws {
+        var fp = Fingerprint()
+        fp.package = "com.example.secret"
+        fp.engine = .unity
+        fp.engineVersion = "2021.3.16f1"
+        fp.permissions = ["android.permission.INTERNET"]
+        fp.javaPackages = ["com.example.game"]
+        fp.jniClasses = ["com/example/game/Main"]
+        fp.functions = ["platform": ["ovr_User_GetLoggedInUser"]]
+        fp.imported = ["ovrplugin": ["ovrp_GetVersion"]]
+        fp.interfaces = [.ovrplugin]
+        fp.graphics = .init(vulkan: true, gles: true, glesVersion: "0x00030002")
+        let data = try JSONEncoder().encode(SharedFingerprint(fp))
+        let object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(Set(object.keys), ["format", "engine", "engineVersion", "graphics", "interfaces", "imported",
+                                          "openxrExtensions", "middleware", "features"])
+        XCTAssertEqual(Set((object["graphics"] as? [String: Any])?.keys ?? [:].keys), ["vulkan", "gles", "glesVersion"])
+        let text = String(decoding: data, as: UTF8.self)
+        XCTAssertFalse(text.contains("com.example"), "kein Paketname, keine Java-Pakete")
+        XCTAssertFalse(text.contains("ovr_User_GetLoggedInUser"), "nur fest eingebundene Funktionen")
     }
 }

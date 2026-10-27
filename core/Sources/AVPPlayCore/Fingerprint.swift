@@ -6,7 +6,7 @@ import Foundation
 /// was die Runtime für ein Spiel können muss, bevor es geladen und gebaut ist (moonshot.md, `s2-fingerprint`).
 public struct Fingerprint: Codable, Equatable, Sendable {
     /// Wird erhöht, wenn sich ändert, was ein Fingerabdruck enthält; alte gelten dann als neu zu erstellen.
-    public static let currentFormat = 1
+    public static let currentFormat = 2
 
     public enum Engine: String, Codable, Sendable {
         case unity, unreal, godot, native
@@ -285,7 +285,8 @@ struct Manifest {
     init(_ text: String) {
         for line in text.split(separator: "\n") {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
-            let name = Manifest.attribute("android:name", in: trimmed)
+            // Manche Manifeste haben Leerzeichen am Ende eines Namens (`android.hardware.xr.input.controller `).
+            let name = Manifest.attribute("android:name", in: trimmed)?.trimmingCharacters(in: .whitespaces)
             if trimmed.hasPrefix("<uses-feature") {
                 if let name { features.append(name) }
                 if let gl = Manifest.attribute("android:glEsVersion", in: trimmed) { glesVersion = gl }
@@ -511,5 +512,34 @@ enum DexStrings {
             }
             return Array(found)
         }
+    }
+}
+
+/// Was vom Fingerabdruck an den Katalogdienst geht, wenn der Nutzer das Teilen einschaltet: Engine, Grafik,
+/// Schnittstellen, fest eingebundene Funktionen, Erweiterungen, Middleware, Gerätemerkmale. Ohne Paketnamen,
+/// Berechtigungen, Java-Pakete und alles, was nur genannt wird. Der Dienst nimmt nichts anderes an.
+public struct SharedFingerprint: Codable, Equatable, Sendable {
+    public var format: Int
+    public var engine: String
+    public var engineVersion: String?
+    public var scripting: String?
+    public var graphics: Fingerprint.Graphics
+    public var interfaces: [String]
+    public var imported: [String: [String]]
+    public var openxrExtensions: [String]
+    public var middleware: [String]
+    public var features: [String]
+
+    public init(_ fp: Fingerprint) {
+        format = fp.format
+        engine = fp.engine.rawValue
+        engineVersion = fp.engineVersion
+        scripting = fp.scripting
+        graphics = fp.graphics
+        interfaces = fp.interfaces.map(\.rawValue)
+        imported = fp.imported
+        openxrExtensions = fp.openxrExtensions
+        middleware = fp.middleware
+        features = fp.features
     }
 }
