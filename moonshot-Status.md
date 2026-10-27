@@ -19,6 +19,7 @@ Stand: 27. Oktober 2026.
 | `s2-unlock` | **Roadmap fertig** (`avpplay unlock`), lokal mit 59 Fingerabdrücken durchgespielt | hängt an Rollout |
 | `s4-appliance` | **Start nur in der Menüleiste** bei der Anmeldung gebaut | **ja: Test mit Ab-/Anmelden** |
 | `s1-headless` | Laborlauf-Skript mit Methoden-Aufrufen, Tastendrücken, Einstellungen (Fork) | nein |
+| `s2-engines` | **Analyse**: 94 Schalter sind pro Spiel gesetzt, Kandidaten für Engine-Regeln benannt | nein (Umsetzung braucht Brillen-Tests) |
 | übrige `s1-*`, `s2-*`, `s3-*`, `s4-*` | nicht begonnen | – |
 
 ## Branches
@@ -265,3 +266,24 @@ daraus, Toolchain 778:
 **Muss Marcel entscheiden:**
 - [ ] Ob die Endpunkte so in den Katalogdienst dürfen; dann privaten Branch nach `main` und beim nächsten Rollout mit.
 - [ ] Der Text der Einstellung (DE/EN) und dass sie aus ist, bis man sie einschaltet.
+
+## `s2-engines`: welche Anpassungen eigentlich Engine-Regeln sind
+
+**Stand:** nur Analyse, kein Code. Ein Skript hat die Runtime (Toolchain 778) nach Schaltern durchsucht, die für
+bestimmte Spiele von selbst an sind: **94 solche Schalter**. Gegen die Fingerabdrücke der betroffenen Spiele
+gelegt, sehen einige nach einer Regel für eine ganze Engine-Generation aus statt nach Einzelfällen:
+
+| Schalter | Spiele | was sie gemeinsam haben | mögliche Regel |
+|---|---|---|---|
+| `KL_GLFB_COPYIMAGE_EMU` | 9 | alle bekannten: Unreal | Unreal auf GLES |
+| `KL_OVRP_GL_ARRAY` | 5 | alle: Unreal | Unreal auf GLES mit OVRPlugin |
+| `KL_GLFB_SHARED_MIGRATE` | 6 | alle bekannten: Unreal | Unreal auf GLES |
+| `KL_OVRP_PASSTHROUGH` | 9 | überwiegend Unity 6, Mixed Reality | Manifest verlangt Passthrough |
+| `KL_OVRP_ADAPTER_PHYS` + `KL_VK_PARK_INSTANCE` | 6 | Unity 6 mit OculusXR (Walkabout, Demeo, Arkham …) | Unity 6 + OculusXR-Plugin + Vulkan |
+| `KL_OVRP_VERSION` | 7 | Unity 6 / 2022 | aus der OVRPlugin-Fassung des Spiels (die liest `targets.py` schon) |
+| `KL_ELF_TLSDESC` | 7 | – | aus den ELF-Relokationen des Spiels ablesbar |
+
+Nächster Schritt (braucht Tests auf dem Mac **und** in der Brille, deshalb nicht allein gemacht): je Regel die
+Erkennung in `_generic_row()` (`targets.py`) bzw. in der Runtime, dann alle geprüften Spiele dieser Engine auf dem
+Mac durchlaufen lassen (`tools/lab_run.sh`) und mindestens zwei in der Brille ansehen. So bekäme ein neues Spiel
+dieser Generation die Anpassungen, ohne eine eigene Zeile.
