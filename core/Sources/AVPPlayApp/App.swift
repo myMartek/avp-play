@@ -92,11 +92,41 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Ob macOS das Programm bei der Anmeldung geöffnet hat (Anmeldeobjekt, auch über `SMAppService`).
     @MainActor static var launchedAtLogin = false
 
+    /// Die Kennung „als Anmeldeobjekt geöffnet“ im Öffnen-Ereignis, solange es noch das aktuelle ist.
+    private var loginMarker = false
+
     func applicationWillFinishLaunching(_ notification: Notification) {
         let event = NSAppleEventManager.shared().currentAppleEvent
-        let login = event?.eventID == kAEOpenApplication
+        loginMarker = event?.eventID == kAEOpenApplication
             && event?.paramDescriptor(forKeyword: keyAEPropData)?.enumCodeValue == keyAELaunchedAsLogInItem
-        MainActor.assumeIsolated { AppDelegate.launchedAtLogin = login }
+    }
+
+    /// Über `SMAppService` gestartet fehlt die Kennung (Neustart am 27.10.: Start 7 s nach dem Finder, Fenster
+    /// trotzdem offen). Dann gilt als Anmeldestart: Anmeldeobjekt an und kurz nach dem Dock gestartet, das mit jeder
+    /// Anmeldung neu startet. Was entschieden wurde, steht in ~/Library/Logs/AVP Play/start.txt.
+    @MainActor
+    private func detectLoginStart() -> Bool {
+        // Die Startzeit vom System: `NSRunningApplication.launchDate` ist beim Dock leer (launchd startet es).
+        func started(_ pid: pid_t) -> Double? {
+            var info = kinfo_proc(), size = MemoryLayout<kinfo_proc>.size
+            var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, pid]
+            guard sysctl(&mib, 4, &info, &size, nil, 0) == 0, size > 0 else { return nil }
+            let t = info.kp_proc.p_starttime
+            return Double(t.tv_sec) + Double(t.tv_usec) / 1e6
+        }
+        let dock = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.dock").first
+            .flatMap { started($0.processIdentifier) }
+        let me = started(getpid())
+        let gap = dock.flatMap { d in me.map { $0 - d } }
+        let login = loginMarker || (LoginItem.isOn && (gap ?? .infinity) < 90)
+        let line = "\(Date()) Kennung \(loginMarker), Anmeldeobjekt \(LoginItem.isOn), "
+            + "nach dem Dock \(gap.map { String(format: "%.1f s", $0) } ?? "?"), Anmeldestart \(login)\n"
+        let dir = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/AVP Play")
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let file = dir.appendingPathComponent("start.txt")
+        if let h = try? FileHandle(forWritingTo: file) { h.seekToEndOfFile(); h.write(Data(line.utf8)); try? h.close() }
+        else { try? Data(line.utf8).write(to: file) }
+        return login
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -106,14 +136,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // ein Fenster vor die Nase bekommen noch versehentlich hineinklicken.
         if Snapshot.directory == nil { NSApp.activate(ignoringOtherApps: true) }
         MainActor.assumeIsolated {
+            AppDelegate.launchedAtLogin = detectLoginStart()
             AppDelegate.remote.attach(AppDelegate.model)
             // Bei der Anmeldung gestartet und „In der Menüleiste weiterlaufen“ an: nur das Symbol, kein Fenster.
             // Der Start läuft trotzdem, damit AVP Play Remote die Spiele sieht und Aufträge laufen können.
             if AppDelegate.launchedAtLogin, MenuBarPreferences.load().staysInMenuBar, Snapshot.directory == nil {
                 NSApp.setActivationPolicy(.accessory)
                 Task { @MainActor in
-                    // Das Fenster legt SwiftUI erst nach diesem Aufruf an; einen Durchlauf später ist es da.
-                    for window in NSApp.windows where AppDelegate.isMain(window) { window.close() }
+                    // Das Fenster legt SwiftUI erst nach diesem Aufruf an, wann genau, ist nicht zugesagt: bis zu
+                    // 3 s lang jedes Hauptfenster schließen, das auftaucht.
+                    Task { @MainActor in
+                        for _ in 0..<30 {
+                            for window in NSApp.windows where AppDelegate.isMain(window) && window.isVisible { window.close() }
+                            try? await Task.sleep(for: .milliseconds(100))
+                        }
+                    }
                     await AppDelegate.model.startUp()
                 }
             }
