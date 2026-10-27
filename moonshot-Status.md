@@ -13,7 +13,7 @@ Stand: 27. Oktober 2026.
 | CI | **verworfen** (27.10.): kein CI; geprüft wird lokal mit Xcode 27 und vor jedem Release mit `make check` | nein |
 | `d30-fingerprint` | **Extraktor fertig, getestet, auf 59 APKs gelaufen**, erste Abdeckungskarte da | Entscheidung: als PR nach `main`? |
 | `d30-host` | **erreicht**: Beat Saber 1.45 ohne Headset auf dem Mac bis ins Hauptmenü, mit Bildern, per Skript | nein |
-| `s1-remote` | **Beat Saber vom Mac in die Brille gebaut** (`KleptonRemote.app` + `KleptonRelay` auf der Brille); auf dem Mac ohne Brille durchgeprüft bis ins Hauptmenü | **ja: heute Abend in der Brille testen** (Anleitung unten) |
+| `s1-remote` | **in der Brille getestet (27.10.): Bild ja, Controller nein.** Beat Saber vom Mac steht im Raum (~48 ms Vorlauf, Kopf verfolgt), Pinch kommt an; die Sense-Controller erreichen im Mac-Raum weder Relay noch Mac (Grenze von visionOS) | offen: Ruckeln beim zweiten Öffnen; Entscheidung, ob weiter (nur Menüs per Pinch) |
 | `d30-remote` | **in der Brille gesehen** (27.10.): Würfel steht im Raum; schwarze Kacheln am Rand im Mixed-Modus (Grenze des Mac-Wegs) | ja: einmal kurz öffnen für Bildabstand/Vorlauf |
 | `s2-coverage` | **Prognose fertig** (Kern, CLI, Spielseite), auf geprüften Spielen gegengeprüft | **ja: Spielseite ansehen** |
 | `s2-fingerprint` | **Teilen per Opt-in fertig** (App + Katalogdienst-Endpunkt, privat, nicht ausgerollt) | **ja: Freigabe + Rollout** |
@@ -163,7 +163,20 @@ Grenzen und was für `s1-headless` noch fehlt:
 
 ## `s1-remote`: Beat Saber vom Mac in die Brille
 
-**Stand (27.10.):** gebaut und auf dem Mac ohne Brille durchgeprüft, **noch nicht in der Brille**.
+**Stand (27.10., abends in der Brille):** **Bild ja, Controller nein.**
+- Bild: Beat Saber vom Mac steht im voll immersiven Raum, Kopf wird verfolgt, Vorlauf bis zur Anzeige ~48 ms,
+  Brille 100 Hz, Spiel 90 Hz. „Bild passt“ (Marcel). Beim zweiten Öffnen (frisch gestarteter Klepton Remote)
+  ruckelte es – Ursache offen (Shader-Laden beim ersten Start? Relay-„Posen-Test“-Raum gleichzeitig offen?).
+- **Hinschauen + Pinch kommt an** (Marcel: „touch kommen“) → Menüs sind bedienbar.
+- **Controller kommen im Mac-Raum nicht an:** visionOS gibt die Sense-Controller nur der App im Vordergrund. Das
+  Relay bekommt sie, solange sein Fenster vorne ist; hinter dem Mac-Raum liefert GameController nichts, auch mit
+  `shouldMonitorBackgroundEvents` und stillem Audio (das Relay läuft weiter und sendet, aber nur Nullen). Am Mac
+  selbst taucht während des offenen Raums kein Controller auf (Klepton Remote horcht jetzt darauf und loggt es).
+- Unterwegs behoben (Fork `2d06a72`, `55929bf`): die Relay-Schleife blockierte Bonjour und Verbindung; „nichts
+  Neues“ las sich als „losgelassen“; `GCSupportsControllerUserInteraction` machte die Knöpfe zum Zeiger; Relay
+  verbindet sich nach Abriss neu, hat eine Mac-Adresse als Ersatz für Bonjour und hält sich mit stillem Audio wach.
+
+So war es gebaut:
 - `KleptonRemote.app` = Kleptons Mac-Programm (`m_boot`) mit `KL_REMOTE=1`: eine SwiftUI-App öffnet einen
   `RemoteImmersiveSpace` (voll) in der gekoppelten Brille, gibt Kopfposition und Augengeometrie der Brille an das
   Spiel und zeichnet dessen Bild mit derselben Umrechnung wie auf der Brille (`kl_reproject`) in den Raum. Das Spiel
@@ -184,18 +197,10 @@ Grenzen und was für `s1-headless` noch fehlt:
 - Spielstand: `build/remote/bs-state` (Sprache, Region, EULA usw. per `lab_run` weggeklickt); den
   Sicherheitshinweis zeigt Beat Saber bei jedem Start.
 
-**Muss Marcel testen (heute Abend):**
-1. Auf der Brille **Klepton Relay** öffnen (Lokales-Netzwerk-Abfrage erlauben). Zeigt es „Links/Rechts“ mit
-   Werten und unter „Mac“ „Klepton Remote“?
-2. Am Mac im Fenster **Klepton Remote – beatsaber140** auf „In der Vision Pro öffnen“. Die App läuft schon; ob ihr
-   Fenster aufging, konnte ich bei gesperrtem Mac nicht sehen. Fehlt es: App beenden und in
-   `QuestInstaller/klepton-fork-d30` neu starten mit `tools/remote/run.sh`. Brille vorher wie für „Mac Virtual
-   Display“ koppeln. Log: `build/remote/beatsaber140.log`.
-3. Nach ~1 s Vermessung startet Beat Saber (Sicherheitshinweis). Mit Kopf zielen, Abzug drücken (oder hinschauen +
-   pinchen) → Hauptmenü.
-4. Berichten: Bild stabil beim Kopfdrehen? Gefühlte Verzögerung? Kommen Abzug/Stick an, obwohl das Relay im
-   Hintergrund ist (Zeile „Im Hintergrund“ im Relay)? Werte im Mac-Fenster (Bilder Brille / Spielbilder / Vorlauf).
-5. Danach im Relay „Posen-Test“: Was passiert mit dem Mac-Raum? Kommen Posen an (Zeile „Posen“)?
+**Offen:**
+- Ruckeln beim zweiten Öffnen: einmal bei warmem Spiel und geschlossenem Relay-Raum wiederholen.
+- Entscheidung: Ohne Controller ist Beat Saber über den Mac nicht spielbar, nur per Pinch bedienbar. Möglicher
+  Weg wäre ein Handskelett über ARKit am Mac (falls `RemoteImmersiveSpace` Handtracking liefert) – ungeprüft.
 
 **Was fehlt:** Controller-Posen neben dem Mac-Raum (der Kern für Lieder spielen), Ton (läuft auf dem Mac, nicht in
 der Brille), Haptik, ein Startweg aus AVP Play. **Alyx:** auf dem Mac nicht machbar ohne großes Projekt – Kleptons
