@@ -21,7 +21,7 @@ Stand: 27. Oktober 2026.
 | `s4-appliance` | **Start nur in der Menüleiste** bei der Anmeldung gebaut | **ja: Test mit Ab-/Anmelden** |
 | `s1-headless` | **fertig**: `avpplay lab run <spiel>` mit Eingabeskript (Aufrufe, Drücke, **Posen**), Bildzeiten pro Frame, Laborpaket (ANGLE + MoltenVK für den Mac) | nein (Freigabe für das Laborpaket als Download erst beim Release) |
 | `s2-judge` | **Bildprüfung fertig** (`avpplay lab judge`): schwarz, einfarbig, magenta, ein Auge, Stillstand, angehalten; an Beat Saber und Demeo gegengeprüft | nein (Urteil per Bildmodell offen, braucht einen API-Schlüssel) |
-| `s2-engines` | **Analyse**: 94 Schalter sind pro Spiel gesetzt, Kandidaten für Engine-Regeln benannt | nein (Umsetzung braucht Brillen-Tests) |
+| `s2-engines` | **Regel „Unreal auf GLES“ gebaut** (Profil für ungetestete Spiele), an 19 Unreal-Spielen auf dem Mac geprüft; Unity-Regeln waren schon im Profil | ja: ein ungetestetes Unreal-GL-Spiel in der Brille, sobald eins da ist |
 | übrige `s1-*`, `s2-*`, `s3-*`, `s4-*` | nicht begonnen | – |
 
 ## Branches
@@ -362,21 +362,42 @@ daraus, Toolchain 778:
 
 ## `s2-engines`: welche Anpassungen eigentlich Engine-Regeln sind
 
-**Stand:** nur Analyse, kein Code. Ein Skript hat die Runtime (Toolchain 778) nach Schaltern durchsucht, die für
-bestimmte Spiele von selbst an sind: **94 solche Schalter**. Gegen die Fingerabdrücke der betroffenen Spiele
-gelegt, sehen einige nach einer Regel für eine ganze Engine-Generation aus statt nach Einzelfällen:
+**Stand (27.10.):** erste Regel gebaut und auf dem Mac geprüft, Fork-Branch `moonshot/s1-headless` (`31ca800`). Nicht
+in `release-538`, nicht in einem Release.
 
-| Schalter | Spiele | was sie gemeinsam haben | mögliche Regel |
+Ausgangspunkt war die Analyse: 94 Schalter sind pro Spiel gesetzt; einige sehen nach einer Regel für eine
+Engine-Generation aus. Wohin solche Regeln gehören, gab es schon: das **Profil für ungetestete Spiele**
+(`KL_UNTESTED`, seit Toolchain 778 in `release-538`). Es gilt nur für Store-Spiele ohne eigene Zeile; geprüfte
+Spiele (`kl_tuned.h`) behalten genau ihre Einstellungen. Die Unity-Regeln (`KL_OVRP_ADAPTER_PHYS`,
+`KL_VK_PARK_INSTANCE`, OVRPlugin-Fassung des Spiels, TLSDESC) stecken dort schon.
+
+**Neu: Unreal auf GLES** bekommt im Profil `KL_GLFB_COPYIMAGE_EMU` (Kopie komprimierter Texturen nachgebildet) und
+`KL_GLFB_SHARED_MIGRATE` (geteilter GL-Kontext wandert mit). Alle Spiele, die einen der beiden tragen, sind Unreal 4.19
+bis 4.27 auf GLES.
+
+Geprüft mit Laborläufen auf dem Mac (19 geprüfte Unreal-Spiele aus deiner Bibliothek, je ohne und mit den Schaltern,
+70 s, beurteilt mit `avpplay lab judge`, die auffälligen Bilder angesehen):
+
+| Spiel (GL) | ohne | mit | |
 |---|---|---|---|
-| `KL_GLFB_COPYIMAGE_EMU` | 9 | alle bekannten: Unreal | Unreal auf GLES |
-| `KL_OVRP_GL_ARRAY` | 5 | alle: Unreal | Unreal auf GLES mit OVRPlugin |
-| `KL_GLFB_SHARED_MIGRATE` | 6 | alle bekannten: Unreal | Unreal auf GLES |
-| `KL_OVRP_PASSTHROUGH` | 9 | überwiegend Unity 6, Mixed Reality | Manifest verlangt Passthrough |
-| `KL_OVRP_ADAPTER_PHYS` + `KL_VK_PARK_INSTANCE` | 6 | Unity 6 mit OculusXR (Walkabout, Demeo, Arkham …) | Unity 6 + OculusXR-Plugin + Vulkan |
-| `KL_OVRP_VERSION` | 7 | Unity 6 / 2022 | aus der OVRPlugin-Fassung des Spiels (die liest `targets.py` schon) |
-| `KL_ELF_TLSDESC` | 7 | – | aus den ELF-Relokationen des Spiels ablesbar |
+| Tetris Effect | schwarz | Fotosensibilitäts-Hinweis | trägt beide schon – braucht sie |
+| Galaxy's Edge | schwarz | Menü | trägt beide schon – braucht sie |
+| Star Wars Pinball | Bild (2×) | Bild (2×) | trägt keinen; mit den zwei Schaltern unverändert |
+| Vader II, III | Titel | Titel | gleich |
+| Vader I | Absturz → nach Fix Titel | Titel | Mac-Fehler gefunden (siehe unten) |
+| Maestro | schwarz | schwarz | auf dem Mac generell ohne Bild |
 
-Nächster Schritt (braucht Tests auf dem Mac **und** in der Brille, deshalb nicht allein gemacht): je Regel die
-Erkennung in `_generic_row()` (`targets.py`) bzw. in der Runtime, dann alle geprüften Spiele dieser Engine auf dem
-Mac durchlaufen lassen (`tools/lab_run.sh`) und mindestens zwei in der Brille ansehen. So bekäme ein neues Spiel
-dieser Generation die Anpassungen, ohne eine eigene Zeile.
+Die 13 Vulkan-Spiele (Red Matter 1/2, RE4, Moss II, Medal of Honor, …) berühren die Schalter nicht; ihre Unterschiede
+zwischen zwei Läufen sind Streuung (der erste Lauf ist oft langsam, Shader).
+
+- **`KL_OVRP_GL_ARRAY` ist bewusst nicht in der Regel:** allein eingeschaltet macht er Star Wars Pinball schwarz. Er
+  hängt daran, wie ein Projekt gebaut wurde (`vr.MobileMultiView`), nicht an der Engine – so steht es auch im Code.
+- **Probe des Profils:** Pinball mit `KL_UNTESTED=1` und ohne gesetzte Schalter: Kopier-Nachbildung an, Bild da.
+- **Nebenbei behoben** (`bf84066`): ein APK ohne `assets`-Ordner versteckte sein Manifest; Vader I (UE 4.19) bekam
+  dadurch die Aufrufform von 4.26 und stürzte ab. Gilt auch für die Brille.
+
+**Was fehlt:**
+- In der Brille gesehen ist nichts davon. Sinnvoll erst mit einem **ungetesteten** Unreal-Spiel auf GLES – geprüfte
+  Spiele ändert die Regel nicht.
+- Weitere Kandidaten: `KL_OVRP_PASSTHROUGH` aus dem Manifest (wirkt nur in der Brille), `KL_OVRP_UNIFY_FRUSTUM` für
+  Unity 6 + OculusXR (Augenausrichtung, nur in der Brille zu beurteilen).
