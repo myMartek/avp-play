@@ -14,7 +14,10 @@ Stand: 27. Oktober 2026.
 | `d30-fingerprint` | **Extraktor fertig, getestet, auf 59 APKs gelaufen**, erste Abdeckungskarte da | Entscheidung: als PR nach `main`? |
 | `d30-host` | **erreicht**: Beat Saber 1.45 ohne Headset auf dem Mac bis ins Hauptmenü, mit Bildern, per Skript | nein |
 | `d30-remote` | **Spike gebaut**, SDK-Antwort da; Test braucht Mac + Vision Pro | **ja: Test in der Brille** |
-| alle `s1-*`, `s2-*`, `s3-*`, `s4-*` | nicht begonnen | – |
+| `s2-coverage` | **Prognose fertig** (Kern, CLI, Spielseite), auf geprüften Spielen gegengeprüft | **ja: Spielseite ansehen** |
+| `s4-appliance` | **Start nur in der Menüleiste** bei der Anmeldung gebaut | **ja: Test mit Ab-/Anmelden** |
+| `s1-headless` | Laborlauf-Skript mit Methoden-Aufrufen, Tastendrücken, Einstellungen (Fork) | nein |
+| übrige `s1-*`, `s2-*`, `s3-*`, `s4-*` | nicht begonnen | – |
 
 ## Branches
 
@@ -23,6 +26,8 @@ Stand: 27. Oktober 2026.
 | `moonshot/main` | der Plan, diese Datei, die Abdeckungskarte; führt fertige Punkte zusammen |
 | `moonshot/d30-fingerprint` | Fingerabdruck-Extraktor und Abdeckungskarte (Code + Tests) |
 | `moonshot/d30-remote` | Spike `spikes/d30-remote` (Mac-App mit `RemoteImmersiveSpace`) |
+| `moonshot/s2-coverage` | Prognose für ungetestete Spiele (auf `moonshot/d30-fingerprint`) |
+| `moonshot/s4-appliance` | Start nur in der Menüleiste (auf `main`) |
 | `ci/macos-build` | `.github/workflows/build.yml`: `swift build` + `swift test` auf `macos-26` |
 | Klepton-Fork (privat): `moonshot/d30-host` | `tools/lab_run.sh` + `tools/lab/beatsaber145-menu.txt`; Sicherung in myMartek/klepton-fork |
 | `claude/charming-hypatia-bk0hrt` | alter Stand der Cloud-Session; kann gelöscht werden |
@@ -163,3 +168,59 @@ Die wichtigste Antwort kommt schon aus dem macOS-27-SDK:
 
 **Muss Marcel testen:** `spikes/d30-remote/README.md` hat die Liste (Würfel steht im Raum, Bildabstand,
 Vorlauf, Pinch zählt, gefühlte Latenz).
+
+## `s2-coverage`: Prognose für ungetestete Spiele
+
+**Stand:** fertig auf `moonshot/s2-coverage`, `swift test` 351 grün. Nicht in einem Release.
+
+Die rohe Lückenzahl aus `d30-fingerprint` täuscht (geprüfte Spiele haben dieselben Lücken). Die Prognose vergleicht
+darum mit den **geprüften Spielen**:
+- `ReferenceFingerprint`: Merkmale (Engine, Hauptfassung, il2cpp/Mono, Vulkan/GLES, XR-Schnittstellen, Middleware),
+  fest eingebundene Funktionen, Quest-Erweiterungen. Die 46 geprüften Spiele aus deinem Bestand liegen als
+  `recipes/fingerprints/verified.json` bei (190 KB, nur Namen); `make-app.sh` packt sie ins Programm.
+- `Prognosis`: die drei ähnlichsten geprüften Spiele (Jaccard); **ungewöhnlich** ist, was das Spiel fest einbindet
+  oder erfragt und weder die Runtime noch ein geprüftes Spiel kennt (OVRPlugin, OpenXR, VrApi, Erweiterungen).
+  Daraus „gute Aussichten“ / „möglich“ / „eher nicht“. Unbekannte Plattform-Aufrufe ändern die Aussicht nicht,
+  sie werden als „Online-Funktionen können fehlen (Leaderboard, …)“ genannt. Nur 32-Bit oder VrApi direkt = läuft nicht.
+- **Gegenprobe** (jedes geprüfte Spiel gegen die übrigen 45): 34 gute Aussichten, 12 möglich, **0 „eher nicht“**.
+- Deine ungetesteten Spiele: 8 von 9 „gute Aussichten“, Eleven Table Tennis „möglich“. **Grenze:** Gods of Gravity
+  (inkompatibel wegen Metas Nutzernachweis) und VRChat (Anti-Cheat) kommen auch auf „gute Aussichten“ – solche
+  Server-Sperren sieht man im APK nicht. Für als inkompatibel gemeldete Spiele zeigt die Seite keine Prognose.
+- Spielseite: im Kasten „Dieses Spiel hat noch niemand getestet“ steht die Prognose, sobald das APK auf dem Mac
+  liegt; aufklappbar die ähnlichen Spiele und was der Toolchain unbekannt ist. Der Fingerabdruck wird neben dem APK
+  zwischengespeichert (`<apk>.fingerprint.json`), die Namen der Toolchain einmal aus ihren Quellen gelesen.
+- CLI: `avpplay references --out <datei>`, `avpplay prognosis --klepton <ordner> --references <datei> <apk>…`.
+
+**Muss Marcel testen/entscheiden:**
+- [ ] Die Prognose auf der Seite eines geladenen, ungetesteten Spiels ansehen (Text, Farben, Aufklappen). Ich habe
+      die Ansicht nicht mit deinem Bestand gestartet, weil ein Testbau dabei mit deinem Meta-Zugang Besitzabfragen
+      stellen und nach dem Schlüsselbund fragen würde. Gebaut und mit CLI/Tests geprüft ist sie.
+- [ ] Ob die Fingerabdrücke der geprüften Spiele (nur Namen) so im öffentlichen Repo liegen dürfen. Der Plan erlaubt
+      das ausdrücklich; der Branch ist schon gepusht.
+
+## `s4-appliance`: Start nur in der Menüleiste
+
+**Stand:** gebaut auf `moonshot/s4-appliance` (auf `main` mit 1.5.5). Nicht in einem Release.
+
+- Öffnet macOS AVP Play bei der Anmeldung (Anmeldeobjekt, auch über `SMAppService`) und ist „In der Menüleiste
+  weiterlaufen“ an, startet es ohne Fenster und ohne Dock-Symbol. Erkannt am Öffnen-Ereignis
+  (`keyAELaunchedAsLogInItem`).
+- Der Startblock (Katalog, Geräte- und Spielstandwache, Update-Check) liegt jetzt in `AppModel.startUp()` und
+  läuft auch ohne Fenster – damit AVP Play Remote die Spiele sieht.
+- Geprüft: normaler Start und `--snapshot` unverändert.
+
+**Muss Marcel testen:**
+- [ ] „Bei der Anmeldung öffnen“ + „Weiterlaufen“ an, abmelden, anmelden: nur das Symbol erscheint, kein Fenster;
+      AVP Play Remote verbindet sich und sieht die Spiele; „AVP Play öffnen“ zeigt das Fenster mit geladenem Katalog.
+- [ ] Dasselbe mit „Weiterlaufen“ aus: Fenster erscheint wie bisher.
+
+Offen in `s4-appliance`: Wake-on-LAN aus der Brille (in AVP Play Remote), Erneuerung aus der Menüleiste steuern.
+
+## `s1-headless`: Laborlauf
+
+- `tools/lab_run.sh` (Fork, `moonshot/d30-host`) kann jetzt drei Arten von Schritten: Aufrufe in das C# des Spiels,
+  **Controller-Drücke** (`poke <zeit>:<TASTE>`, über das vorhandene `KL_OVRP_POKE`, geht für jede Engine) und
+  Einstellungen (`env KL_OVRP_HEAD=…`). Kopfpose für Läufe ohne Brille gibt es schon (`KL_OVRP_HEAD`).
+- Fund: `poke f<bild>` zählt Vulkan-Bilder; bei GL-Spielen (Beat Saber 1.45) greift es nie – dort Sekunden angeben.
+- Noch offen: `avpplay lab run <spiel>` in AVP Play. Dafür fehlt im Toolchain-Paket die Mac-Fassung von ANGLE (es
+  bringt nur die visionOS-Teile mit); Bildzeiten pro Frame im Ergebnis; Controller-**Posen** über die Zeit.
