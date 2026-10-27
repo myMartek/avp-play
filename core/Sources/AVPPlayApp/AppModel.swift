@@ -179,6 +179,8 @@ final class AppModel: ObservableObject {
     @AppStorage("deviceUDID") var chosenDevice = ""
     @Published var deviceProblem: String?
     @Published var refreshing = false
+    /// Ob der Start (Katalog, Watcher, Update-Check) schon gelaufen ist; das Fenster kann aus der Menüleiste neu entstehen.
+    var launched = false
     @Published var toolchainText: String?
     @Published var account: AccountState = .unknown
     @Published var toolPresent = false

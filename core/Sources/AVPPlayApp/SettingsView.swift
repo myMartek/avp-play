@@ -121,6 +121,8 @@ struct SettingsView: View {
 
             RenewalSettings()
 
+            MenuBarSettings()
+
             Section(L("Online catalogue", "Online-Katalog")) {
                 Toggle(L("Show more games from the online catalogue and allow feedback", "Weitere Spiele aus dem Online-Katalog zeigen und Rückmeldungen erlauben"),
                        isOn: Binding(get: { model.onlineCatalog }, set: { model.onlineCatalog = $0; model.loadCatalog() }))
