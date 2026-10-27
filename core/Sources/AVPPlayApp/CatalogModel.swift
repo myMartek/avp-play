@@ -36,6 +36,8 @@ extension AppModel {
                 loadOwnedCatalogEntries()
             } catch {
                 catalogProblem = "\(error)"
+                // Ohne Netz gestartet: noch einmal, sobald es da ist (AppModel.retryAfterOffline).
+                scheduleOfflineRetry()
             }
         }
         loadSteamCatalog()
