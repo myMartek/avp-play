@@ -137,8 +137,11 @@ public enum LabJudge {
     }
 
     static func verdict(frames: [Frame], pixels: [[UInt8]], summary: String) -> Result {
-        let stop = summary.split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces) }
-            .first { $0.hasPrefix("STOPPED:") || $0.hasPrefix("FAULT") }
+        let lines = summary.split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces) }
+        // A named stop that the game ran past is a call it did without, not the end: Red Matter names one Java method
+        // it lacks and plays on for a minute (Mac, 2026-10-27). It counts when the run failed, or as a fault.
+        let failed = lines.first { $0.hasPrefix("time:") }.map { !$0.hasSuffix("exit 0") } ?? true
+        let stop = lines.first { $0.hasPrefix("FAULT") || ($0.hasPrefix("STOPPED:") && failed) }
         let first = frames.first { $0.look == .picture }?.name
         var result = Result(verdict: .picture, frames: frames, firstPicture: first, stop: stop)
         // Das Ende zählt: ein Ladebildschirm am Anfang ist schwarz, ein Absturz am Ende nicht zu übersehen.

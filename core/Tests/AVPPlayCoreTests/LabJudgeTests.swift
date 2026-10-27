@@ -42,7 +42,13 @@ final class LabJudgeTests: XCTestCase {
         XCTAssertEqual(verdict([frame("frame_000.png", picture()), frame("frame_001.png", picture()),
                                 frame("frame_002.png", picture())]), .frozen)
         XCTAssertEqual(verdict([frame("frame_000.png", picture())],
-                               summary: "how it ended:\n    STOPPED: called unresolved import AAudio_x\n"), .stopped)
+                               summary: "time:     12 s, exit 1\nhow it ended:\n    STOPPED: called unresolved import AAudio_x\n"), .stopped)
+        XCTAssertEqual(verdict([frame("frame_000.png", picture())],
+                               summary: "time:     8 s, exit 1\nhow it ended:\n  FAULT:\n"), .stopped)
+        // Named, but the game played on and the run ended normally.
+        XCTAssertEqual(verdict([frame("frame_000.png", picture(shift: 0)), frame("frame_001.png", picture(shift: 50)),
+                                frame("frame_002.png", picture(shift: 99))],
+                               summary: "time:     75 s, exit 0\nhow it ended:\n  STOPPED: [jni] no host implementation for a/B.c()V\n"), .picture)
     }
 
     func testVulkanPicturesPairTheEyesAndPreferTheNamedStage() {
