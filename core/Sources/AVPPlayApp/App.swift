@@ -76,13 +76,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor static let model = AppModel()
     @MainActor static let remote = RemoteServer()
 
+    /// Ob macOS das Programm bei der Anmeldung geöffnet hat (Anmeldeobjekt, auch über `SMAppService`).
+    @MainActor static var launchedAtLogin = false
+
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        let event = NSAppleEventManager.shared().currentAppleEvent
+        let login = event?.eventID == kAEOpenApplication
+            && event?.paramDescriptor(forKeyword: keyAEPropData)?.enumCodeValue == keyAELaunchedAsLogInItem
+        MainActor.assumeIsolated { AppDelegate.launchedAtLogin = login }
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Auch ohne Programmpaket (beim Entwickeln mit `swift run`) als normales Programm mit Fenster auftreten.
         NSApp.setActivationPolicy(.regular)
         // Beim Fotografieren der Ansichten nicht nach vorn drängen: wer gerade am Rechner arbeitet, soll weder
         // ein Fenster vor die Nase bekommen noch versehentlich hineinklicken.
         if Snapshot.directory == nil { NSApp.activate(ignoringOtherApps: true) }
-        MainActor.assumeIsolated { AppDelegate.remote.attach(AppDelegate.model) }
+        MainActor.assumeIsolated {
+            AppDelegate.remote.attach(AppDelegate.model)
+            // Bei der Anmeldung gestartet und „In der Menüleiste weiterlaufen“ an: nur das Symbol, kein Fenster.
+            // Der Start läuft trotzdem, damit AVP Play Remote die Spiele sieht und Aufträge laufen können.
+            if AppDelegate.launchedAtLogin, MenuBarPreferences.load().staysInMenuBar, Snapshot.directory == nil {
+                NSApp.setActivationPolicy(.accessory)
+                Task { @MainActor in
+                    // Das Fenster legt SwiftUI erst nach diesem Aufruf an; einen Durchlauf später ist es da.
+                    for window in NSApp.windows where AppDelegate.isMain(window) { window.close() }
+                    await AppDelegate.model.startUp()
+                }
+            }
+        }
         // Bleibt das Programm nach dem Schließen des Fensters in der Menüleiste, verschwindet es aus dem Dock und
         // kehrt dorthin zurück, sobald das Fenster wieder da ist.
         let center = NotificationCenter.default
@@ -184,16 +206,7 @@ struct RootView: View {
             // Aus der Menüleiste wieder geöffnet, entsteht diese Ansicht neu; der Start soll nur einmal laufen,
             // sonst würden Katalog, Suche und Filter neu geladen.
             guard !model.launched else { model.refresh(); return }
-            model.launched = true
-            model.installBundledToolchainIfNewer()
-            Task.detached(priority: .background) { CoverCache().prune() }
-            model.refresh()
-            model.checkAccount()
-            model.loadCatalog()
-            model.reconcileBackgroundService()
-            model.startSaveWatch()
-            model.startDeviceWatch()
-            await model.checkForUpdate(manual: false)
+            await model.startUp()
             await Snapshot.runIfRequested(model: model)
         }
     }
