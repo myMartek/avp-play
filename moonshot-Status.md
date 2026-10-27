@@ -10,11 +10,13 @@ Stand: 27. Oktober 2026.
 | Kennung | Stand | Wartet auf Marcel? |
 |---|---|---|
 | Schritt 0 (Menüleiste) | **veröffentlicht in AVP Play 1.5.5** | Test der offenen Punkte unten |
-| CI (`ci/macos-build`) | Workflow da; erster Lauf blieb mit Xcode 26.6 im Compiler hängen, Diagnose-Lauf läuft | nein |
+| CI (`ci/macos-build`) | **blockiert**: Runner hat nur Xcode 26.6, Swift 6.3 hängt in `AVPPlayCore`; dritter Diagnose-Lauf läuft | **ja: Weg wählen** |
 | `d30-fingerprint` | **Extraktor fertig, getestet, auf 59 APKs gelaufen**, erste Abdeckungskarte da | Entscheidung: als PR nach `main`? |
 | `d30-host` | **erreicht**: Beat Saber 1.45 ohne Headset auf dem Mac bis ins Hauptmenü, mit Bildern, per Skript | nein |
 | `d30-remote` | **Spike gebaut**, SDK-Antwort da; Test braucht Mac + Vision Pro | **ja: Test in der Brille** |
 | `s2-coverage` | **Prognose fertig** (Kern, CLI, Spielseite), auf geprüften Spielen gegengeprüft | **ja: Spielseite ansehen** |
+| `s2-fingerprint` | **Teilen per Opt-in fertig** (App + Katalogdienst-Endpunkt, privat, nicht ausgerollt) | **ja: Freigabe + Rollout** |
+| `s2-unlock` | **Roadmap fertig** (`avpplay unlock`), lokal mit 59 Fingerabdrücken durchgespielt | hängt an Rollout |
 | `s4-appliance` | **Start nur in der Menüleiste** bei der Anmeldung gebaut | **ja: Test mit Ab-/Anmelden** |
 | `s1-headless` | Laborlauf-Skript mit Methoden-Aufrufen, Tastendrücken, Einstellungen (Fork) | nein |
 | übrige `s1-*`, `s2-*`, `s3-*`, `s4-*` | nicht begonnen | – |
@@ -28,6 +30,8 @@ Stand: 27. Oktober 2026.
 | `moonshot/d30-remote` | Spike `spikes/d30-remote` (Mac-App mit `RemoteImmersiveSpace`) |
 | `moonshot/s2-coverage` | Prognose für ungetestete Spiele (auf `moonshot/d30-fingerprint`) |
 | `moonshot/s4-appliance` | Start nur in der Menüleiste (auf `main`) |
+| `moonshot/s2-fingerprint` | Teilen der Fingerabdrücke + `avpplay unlock` (auf `moonshot/s2-coverage`) |
+| privates Repo: `moonshot/s2-fingerprint` (Worktree `BeatSaberVR/qi-s2-fingerprint`) | Katalogdienst: `POST /api/v1/fingerprints`, `GET /api/v1/fingerprints/summary`; nicht in `main`, nicht ausgerollt |
 | `ci/macos-build` | `.github/workflows/build.yml`: `swift build` + `swift test` auf `macos-26` |
 | Klepton-Fork (privat): `moonshot/d30-host` | `tools/lab_run.sh` + `tools/lab/beatsaber145-menu.txt`; Sicherung in myMartek/klepton-fork |
 | `claude/charming-hypatia-bk0hrt` | alter Stand der Cloud-Session; kann gelöscht werden |
@@ -71,13 +75,17 @@ Bekannte Lücke: Beim Start über die Anmeldung öffnet sich das Fenster. Ein St
 
 ## CI
 
-- Erster Lauf (Run 40421259702): Runner `macos-26` nimmt **Xcode 26.6 (Swift 6.3.3)**; `swift build` hing nach
-  `[46/72] Compiling AVPPlayCore Updater.swift` bis zum Zeitlimit von 40 Minuten. Mit Xcode 27 (Swift 6.4) auf dem
-  Mac baut dasselbe in Sekunden. Vermutlich ein Ausdruck, an dem der ältere Typprüfer endlos rechnet – das trifft
-  auch jeden, der AVP Play mit Xcode 26 aus dem Quellcode baut.
-- Diagnose-Lauf auf `ci/macos-build` (Commit `37e62b8`): `-solver-expression-time-threshold=60` lässt den
-  Typprüfer nach einer Minute mit Datei und Zeile abbrechen. Ergebnis: siehe unten, sobald da.
-- Danach: die Stelle so umschreiben, dass Swift 6.3 sie schnell prüft, und CI als eigenen PR nach `main`.
+- Drei Läufe auf `macos-26`: der Runner hat als neuestes **Xcode 26.6 (Swift 6.3.3)**. `swift build` hängt jedes Mal
+  in `AVPPlayCore` (nach `Updater.swift` im Stapel) bis zum Zeitlimit von 40 Minuten. Mit Xcode 27 (Swift 6.4) baut
+  dasselbe hier in Sekunden.
+- Eine Zeitgrenze für den Typprüfer (`-solver-expression-time-threshold=60`) hat nichts gemeldet: es ist **nicht**
+  ein langsamer Ausdruck, sondern etwas anderes im Compiler 6.3.
+- Läuft gerade: ein Lauf, der die Dateien einzeln und nacheinander übersetzt (`-j 1 -disable-batch-mode`); die letzte
+  Zeile „Compiling …“ nennt dann die Datei.
+- AVP Play braucht für seine Spiele ohnehin Xcode 27 (die App warnt bei älterem). **Entscheidung für Marcel:**
+  - [ ] (a) warten, bis GitHub Xcode 27 auf die Runner bringt, und bis dahin ohne CI,
+  - [ ] (b) einen selbst gehosteten Runner auf deinem Mac (läuft mit Xcode 27, kostet nichts, Mac muss an sein),
+  - [ ] (c) die hängende Stelle für Swift 6.3 umschreiben (sobald der Lauf die Datei nennt) – dann geht CI mit 26.6.
 
 ## `d30-fingerprint`: Fingerabdruck-Extraktor und erste Abdeckungskarte
 
@@ -224,3 +232,36 @@ Offen in `s4-appliance`: Wake-on-LAN aus der Brille (in AVP Play Remote), Erneue
 - Fund: `poke f<bild>` zählt Vulkan-Bilder; bei GL-Spielen (Beat Saber 1.45) greift es nie – dort Sekunden angeben.
 - Noch offen: `avpplay lab run <spiel>` in AVP Play. Dafür fehlt im Toolchain-Paket die Mac-Fassung von ANGLE (es
   bringt nur die visionOS-Teile mit); Bildzeiten pro Frame im Ergebnis; Controller-**Posen** über die Zeit.
+
+## `s2-fingerprint` und `s2-unlock`: Teilen und Roadmap
+
+**Stand:** fertig auf `moonshot/s2-fingerprint` (App, öffentlich) und auf dem privaten Branch `moonshot/s2-fingerprint`
+(Katalogdienst). **Nicht ausgerollt, nicht veröffentlicht.**
+
+App:
+- Einstellungen › Online-Katalog: **„Fingerabdrücke ungetesteter Spiele mit dem Projekt teilen“**, aus, solange
+  niemand es einschaltet (wie die Telemetrie). Ist es an, schickt die App den Fingerabdruck eines Builds einmal,
+  wenn die Seite eines ungetesteten Spiels die Prognose rechnet.
+- Was geht: Engine, Grafik, Schnittstellen, fest eingebundene Funktionen, Erweiterungen, Middleware, Gerätemerkmale
+  (`SharedFingerprint`). Was nie geht: Paketname, Berechtigungen, Java-Pakete, bloß genannte Namen, etwas über den
+  Nutzer. Ein Test hält die Schlüssel fest.
+- `avpplay unlock --klepton <ordner>` holt die Summen vom Dienst und listet, was der Runtime fehlt, nach Zahl der
+  Spiele; `avpplay fingerprint --shared <apk>` zeigt, was das Teilen schicken würde.
+
+Katalogdienst (privat, Go):
+- `POST /api/v1/fingerprints`: ein Build einmal; nur Namen aus festem Zeichenvorrat, bekannte Familien und Engines,
+  unbekannte Felder abgelehnt, Middleware nur aus der Liste der App, 60 pro Stunde und Absender.
+- `GET /api/v1/fingerprints/summary`: pro Funktion und Erweiterung die Zahl der Spiele (neuester Build je Spiel),
+  ohne Spielnamen. Tests grün.
+
+Durchgespielt (lokal, Dienst auf 127.0.0.1, nichts nach außen): alle 59 Fingerabdrücke von deiner Platte
+angenommen (einer erst nach einer Korrektur: Leerzeichen am Ende eines Namens im Manifest des Spiels). Die Roadmap
+daraus, Toolchain 778:
+- Erweiterungen: `XR_EXT_hand_tracking` (14 Spiele), `XR_EXT_eye_gaze_interaction` (10), `XR_EXT_palm_pose` (8),
+  `XR_OCULUS_audio_device_guid` (8), `XR_META_foveation_eye_tracked` (7) …
+- Funktionen: VrApi-Reste in 3 Spielen, Kamera-Funktionen von OVRPlugin in einem.
+- Plattform-Bereiche (Online): Leaderboard (23), Achievement, User, Voip (22), CloudStorage, DataStore, Net (21) …
+
+**Muss Marcel entscheiden:**
+- [ ] Ob die Endpunkte so in den Katalogdienst dürfen; dann privaten Branch nach `main` und beim nächsten Rollout mit.
+- [ ] Der Text der Einstellung (DE/EN) und dass sie aus ist, bis man sie einschaltet.
