@@ -65,7 +65,9 @@ code, and everything between the two stays in your network, encrypted. AVP Play 
 **In the menu bar.** An icon in the menu bar shows the running job with its progress, whether the Vision Pro and
 AVP Play Remote are connected and, with a free Apple account, when the next game runs out. With *Keep running in the
 menu bar when the window is closed* (Settings › Menu Bar) you can close the window: jobs keep going, AVP Play Remote
-stays connected, and the Dock icon comes back when you open the window again.
+stays connected, and the Dock icon comes back when you open the window again. ⌘Q then also puts AVP Play back into
+the menu bar; **Quit** in the menu bar quits it. Together with *Open at login* AVP Play starts as the menu bar icon
+only, without its window.
 
 ## What you need
 
