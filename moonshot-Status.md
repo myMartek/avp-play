@@ -14,7 +14,7 @@ Stand: 27. Oktober 2026.
 | `d30-fingerprint` | **Extraktor fertig, getestet, auf 59 APKs gelaufen**, erste Abdeckungskarte da | Entscheidung: als PR nach `main`? |
 | `d30-host` | **erreicht**: Beat Saber 1.45 ohne Headset auf dem Mac bis ins Hauptmenü, mit Bildern, per Skript | nein |
 | `s1-remote` | **in der Brille getestet (27.10.): Bild ja, Controller nein.** Beat Saber vom Mac steht im Raum (~48 ms Vorlauf, Kopf verfolgt), Pinch kommt an; die Sense-Controller erreichen im Mac-Raum weder Relay noch Mac (Grenze von visionOS) | offen: Ruckeln beim zweiten Öffnen; Entscheidung, ob weiter (nur Menüs per Pinch) |
-| `d30-remote` | **in der Brille gesehen** (27.10.): Würfel steht im Raum; schwarze Kacheln am Rand im Mixed-Modus (Grenze des Mac-Wegs) | ja: einmal kurz öffnen für Bildabstand/Vorlauf |
+| `d30-remote` | **abgeschlossen** (27.10.): Würfel steht im Raum, 100 Hz ohne Aussetzer, ~48 ms Vorlauf; schwarze Kacheln am Rand im Mixed-Modus (Grenze des Mac-Wegs) | nein |
 | `s2-coverage` | **Prognose fertig** (Kern, CLI, Spielseite), auf geprüften Spielen gegengeprüft | **ja: Spielseite ansehen** |
 | `s2-fingerprint` | **Teilen per Opt-in fertig** (App + Katalogdienst-Endpunkt, privat, nicht ausgerollt) | **ja: Freigabe + Rollout** |
 | `s2-unlock` | **Roadmap fertig** (`avpplay unlock`), lokal mit 59 Fingerabdrücken durchgespielt | hängt an Rollout |
@@ -237,9 +237,10 @@ Die wichtigste Antwort kommt schon aus dem macOS-27-SDK:
 
 - Bild beim schnellen Kopfdrehen stabil, Pinch wird gezählt (Marcel, 27.10.).
 
-**Muss Marcel testen:** nur noch Bildabstand und Vorlauf – die App schreibt sie jetzt alle 5 s ins Protokoll,
-ein Öffnen von ein paar Sekunden reicht. App: `spikes/d30-remote/make-app.sh`,
-dann `.build/D30Remote.app`.
+- **Bildabstand und Vorlauf gemessen (27.10. abends, 16 s offen):** gleichmäßig 10,0 ms (100 Hz), ~500 Bilder
+  je 5 s ohne Aussetzer, Vorlauf bis zur Anzeige 46,5–48,2 ms (erstes Bild 64,5 ms), Kopf in jedem Bild
+  verfolgt. Beat Saber über `s1-remote` hatte denselben Vorlauf (47,6 ms) – der Weg selbst kostet also rund
+  48 ms, nicht das Spiel. **Spike abgeschlossen**, nichts mehr zu testen.
 
 ## `s2-coverage`: Prognose für ungetestete Spiele
 
