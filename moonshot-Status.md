@@ -19,7 +19,8 @@ Stand: 27. Oktober 2026.
 | `s2-fingerprint` | **Teilen per Opt-in fertig** (App + Katalogdienst-Endpunkt, privat, nicht ausgerollt) | **ja: Freigabe + Rollout** |
 | `s2-unlock` | **Roadmap fertig** (`avpplay unlock`), lokal mit 59 Fingerabdrücken durchgespielt | hängt an Rollout |
 | `s4-appliance` | **Start nur in der Menüleiste** bei der Anmeldung gebaut | **ja: Test mit Ab-/Anmelden** |
-| `s1-headless` | Laborlauf-Skript mit Methoden-Aufrufen, Tastendrücken, Einstellungen (Fork) | nein |
+| `s1-headless` | **fertig**: `avpplay lab run <spiel>` mit Eingabeskript (Aufrufe, Drücke, **Posen**), Bildzeiten pro Frame, Laborpaket (ANGLE + MoltenVK für den Mac) | nein (Freigabe für das Laborpaket als Download erst beim Release) |
+| `s2-judge` | **Bildprüfung fertig** (`avpplay lab judge`): schwarz, einfarbig, magenta, ein Auge, Stillstand, angehalten; an Beat Saber und Demeo gegengeprüft | nein (Urteil per Bildmodell offen, braucht einen API-Schlüssel) |
 | `s2-engines` | **Analyse**: 94 Schalter sind pro Spiel gesetzt, Kandidaten für Engine-Regeln benannt | nein (Umsetzung braucht Brillen-Tests) |
 | übrige `s1-*`, `s2-*`, `s3-*`, `s4-*` | nicht begonnen | – |
 
@@ -37,6 +38,8 @@ Stand: 27. Oktober 2026.
 | ~~`ci/macos-build`~~ | gelöscht (lokal und auf GitHub, samt aller Läufe) |
 | Klepton-Fork (privat): `moonshot/s1-remote` (auf `moonshot/d30-host`, Worktree `QuestInstaller/klepton-fork-d30`) | `KleptonRemote.app` (`mains/KleptonRemote.swift`, `runtime/gfx/kl_remote_mtl.m`, `tools/remote/`), Relay-App `spikes/relay`; Sicherung in myMartek/klepton-fork |
 | Klepton-Fork (privat): `moonshot/d30-host` | `tools/lab_run.sh` + `tools/lab/beatsaber145-menu.txt`; Sicherung in myMartek/klepton-fork |
+| Klepton-Fork (privat): `moonshot/s1-headless` (auf `moonshot/s1-remote`, Worktree `QuestInstaller/klepton-fork-d30`) | Bildzeiten (`KL_FRAME_TIMES`), Posen (`KL_OVRP_POSE`), `lab_run.sh` mit `pose`, `--link`, Vulkan-Augen; Sicherung in myMartek/klepton-fork |
+| `moonshot/s1-headless` (auf `main` mit 1.5.5, Worktree `QuestInstaller/avp-play-s1headless`) | `avpplay lab run/pack/install/judge` (`LabRun.swift`, `LabJudge.swift`, 9 Tests) |
 | `claude/charming-hypatia-bk0hrt` | alter Stand der Cloud-Session; kann gelöscht werden |
 
 **Abweichung vom Plan:** Der Plan nennt den Sammelbranch `moonshot` und die Punkte `moonshot/<kennung>`. Git erlaubt
@@ -282,12 +285,47 @@ Offen in `s4-appliance`: Wake-on-LAN aus der Brille (in AVP Play Remote), Erneue
 
 ## `s1-headless`: Laborlauf
 
-- `tools/lab_run.sh` (Fork, `moonshot/d30-host`) kann jetzt drei Arten von Schritten: Aufrufe in das C# des Spiels,
-  **Controller-Drücke** (`poke <zeit>:<TASTE>`, über das vorhandene `KL_OVRP_POKE`, geht für jede Engine) und
-  Einstellungen (`env KL_OVRP_HEAD=…`). Kopfpose für Läufe ohne Brille gibt es schon (`KL_OVRP_HEAD`).
-- Fund: `poke f<bild>` zählt Vulkan-Bilder; bei GL-Spielen (Beat Saber 1.45) greift es nie – dort Sekunden angeben.
-- Noch offen: `avpplay lab run <spiel>` in AVP Play. Dafür fehlt im Toolchain-Paket die Mac-Fassung von ANGLE (es
-  bringt nur die visionOS-Teile mit); Bildzeiten pro Frame im Ergebnis; Controller-**Posen** über die Zeit.
+**Stand (27.10.):** fertig, auf dem Mac geprüft. Nicht in einem Release.
+
+So geht es (in AVP Play, ohne Brille):
+
+```bash
+avpplay lab install klepton-lab-mac.tar.gz
+avpplay lab run beatsaber140 --script tools/lab/beatsaber145-menu.txt
+```
+
+- **Eingabeskript** (`tools/lab_run.sh` im Fork), eine Zeile je Schritt: Aufrufe in das C# des Spiels
+  (`<bild>:<Klasse>::<Methode>`), Controller-Drücke (`poke <zeit>:<TASTE>`), **Controller-Posen über die Zeit**
+  (`pose <zeit>:<L|R>:x,y,z[,gieren,nicken,rollen]`, neu: `KL_OVRP_POSE`, die Hand fährt geradlinig zum nächsten
+  Schlüsselbild, mit Geschwindigkeit) und Einstellungen (`env NAME=WERT`).
+- **Ergebnisordner:** Protokoll, Bilder (GL: ein Auge; Vulkan: beide), `frames.csv` mit jedem Frame des Spiels
+  (neu: `KL_FRAME_TIMES`, gezählt an `xrEndFrame`, OVRPlugins `EndFrame` und `eglSwapBuffers`) und eine
+  Zusammenfassung mit Rate, Median, p95, p99, längster Lücke und Hängern. Frames, in die ein gespeichertes PNG fiel,
+  zählen nicht mit (ein PNG kostet bis zu einer Sekunde).
+- **Laborpaket:** ANGLE und MoltenVK für den Mac, ohne Symbole und neu signiert, 18,5 MB
+  (`avpplay lab pack --from <Fork> --to <Ordner>`). Es steckt bewusst nicht im Toolchain-Paket (das wüchse bei
+  jedem Update um zwei Drittel für eine Funktion, die wenige brauchen). **Offen:** wo es zum Herunterladen liegt
+  (z. B. als Datei einer GitHub-Veröffentlichung); bis dahin von Hand installieren.
+- **Nur Toolchains ab diesem Stand** haben `tools/lab_run.sh`; eine ältere sagt das, bevor etwas läuft.
+- **Geprüft:** Beat Saber 1.45 über `avpplay lab run` vom Sprachbildschirm ins Hauptmenü (3296 Frames, Median
+  5,1 ms); Demeo (Vulkan, Store-Spiel) bis zum Datenschutzhinweis; Posen sichtbar (der Laser zieht über das Menü).
+- **Was es nicht kann:** Netz (immer offline), Bildschärfe und alles am Display der Brille; Unreal-Spiele zählen
+  keine Bilder, für sie gilt `--seconds`.
+
+## `s2-judge`: Bildprüfung
+
+**Stand (27.10.):** fertig ohne Bildmodell. `avpplay lab run` schreibt nach jedem Lauf `judge.json`,
+`avpplay lab judge <ordner>` beurteilt einen früheren.
+
+- Jedes Bild wird auf 64 × 64 gemessen: **schwarz**, **einfarbig** (ein Löschen ohne Zeichnen, weiß, rosa),
+  **magenta** (fehlende Texturen oder Shader) oder Inhalt; bei Vulkan beide Augen.
+- Das Urteil sieht auf das letzte Drittel: angehalten (fehlender Aufruf, Absturz), kein Bild, kaputtes Bild,
+  **ein Auge**, Stillstand (ruhiges Menü oder Hänger), Bild.
+- **Gegengeprüft** mit dem, was ich auf den Bildern sehe: Beat Saber ins Menü → Bild; Beat Saber mit
+  `KL_GL_MSRTT=0` → kein Bild (wirklich schwarz); Demeo am Datenschutzhinweis → Stillstand (stimmt: es wartet auf
+  eine Eingabe).
+- **Offen:** ob ein Menü erreicht ist oder das Bild verzerrt ist, kann nur ein Bildmodell sagen. Das braucht einen
+  API-Schlüssel und schickt Bilder des Spiels nach außen – deine Entscheidung, nicht gebaut.
 
 ## `s2-fingerprint` und `s2-unlock`: Teilen und Roadmap
 
