@@ -1,6 +1,7 @@
 import AppKit
 import AVPPlayCore
 import Combine
+import Network
 import SwiftUI
 import UserNotifications
 
@@ -194,7 +195,45 @@ final class AppModel: ObservableObject {
         reconcileBackgroundService()
         startSaveWatch()
         startDeviceWatch()
+        startNetworkWatch()
         await checkForUpdate(manual: false)
+    }
+
+    // MARK: Ohne Netz gestartet
+
+    /// Bei der Anmeldung am Mac startet AVP Play oft, bevor das Netz steht (Neustart am 27.10.: „Meta nicht
+    /// angemeldet“, obwohl der Zugang gültig war). Ein Verbindungsfehler ist kein Urteil über den Zugang: Die Prüfung
+    /// läuft dann nach 3, 10, 30, 60 und 120 s noch einmal und zusätzlich, sobald macOS das Netz als verfügbar meldet.
+    /// Der Katalog wird dabei mit nachgeladen.
+    private var pathMonitor: NWPathMonitor?
+    private var accountOffline = false
+    private var offlineRetries = 0
+    private static let offlineDelays: [Double] = [3, 10, 30, 60, 120]
+
+    private func startNetworkWatch() {
+        guard pathMonitor == nil else { return }
+        let monitor = NWPathMonitor()
+        monitor.pathUpdateHandler = { [weak self] path in
+            guard path.status == .satisfied else { return }
+            Task { @MainActor in self?.retryAfterOffline() }
+        }
+        monitor.start(queue: DispatchQueue(label: "avpplay.network", qos: .utility))
+        pathMonitor = monitor
+    }
+
+    private func retryAfterOffline() {
+        if accountOffline { checkAccount() }
+        if onlineCatalog, catalogProblem != nil { loadCatalog() }
+    }
+
+    func scheduleOfflineRetry() {
+        guard offlineRetries < Self.offlineDelays.count else { return }
+        let delay = Self.offlineDelays[offlineRetries]
+        offlineRetries += 1
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(delay))
+            if self.accountOffline || self.catalogProblem != nil { self.retryAfterOffline() }
+        }
     }
     @Published var toolchainText: String?
     @Published var account: AccountState = .unknown
@@ -1161,18 +1200,28 @@ final class AppModel: ObservableObject {
         account = .checking
         Task.detached {
             let state: AccountState
+            let offline: Bool
             do {
                 let token = try TokenStore().read()
                 do {
                     _ = try await MetaClient(token: token).me()
                     state = .signedIn
+                    offline = false
+                } catch MetaError.transport(let why) {
+                    state = .problem(L("No connection to Meta yet (\(why)). AVP Play tries again by itself.",
+                                       "Noch keine Verbindung zu Meta (\(why)). AVP Play versucht es von selbst noch einmal."))
+                    offline = true
                 } catch {
                     state = .problem(Redaction.redact("\(error)"))
+                    offline = false
                 }
             } catch {
                 state = .signedOut
+                offline = false
             }
             await MainActor.run {
+                self.accountOffline = offline
+                if offline { self.scheduleOfflineRetry() } else { self.offlineRetries = 0 }
                 self.account = state
                 self.checkOwnership()
                 if self.filterOwned { self.loadLibrary() }
