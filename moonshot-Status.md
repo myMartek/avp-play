@@ -12,8 +12,8 @@ Stand: 27. Oktober 2026.
 | Schritt 0 (Menüleiste) | **veröffentlicht in AVP Play 1.5.5** | Test der offenen Punkte unten |
 | CI (`ci/macos-build`) | Workflow da; erster Lauf blieb mit Xcode 26.6 im Compiler hängen, Diagnose-Lauf läuft | nein |
 | `d30-fingerprint` | **Extraktor fertig, getestet, auf 59 APKs gelaufen**, erste Abdeckungskarte da | Entscheidung: als PR nach `main`? |
-| `d30-host` | nicht begonnen | nein |
-| `d30-remote` | nicht begonnen | braucht Vision Pro |
+| `d30-host` | **erreicht**: Beat Saber 1.45 ohne Headset auf dem Mac bis ins Hauptmenü, mit Bildern, per Skript | nein |
+| `d30-remote` | **Spike gebaut**, SDK-Antwort da; Test braucht Mac + Vision Pro | **ja: Test in der Brille** |
 | alle `s1-*`, `s2-*`, `s3-*`, `s4-*` | nicht begonnen | – |
 
 ## Branches
@@ -22,7 +22,9 @@ Stand: 27. Oktober 2026.
 |---|---|
 | `moonshot/main` | der Plan, diese Datei, die Abdeckungskarte; führt fertige Punkte zusammen |
 | `moonshot/d30-fingerprint` | Fingerabdruck-Extraktor und Abdeckungskarte (Code + Tests) |
+| `moonshot/d30-remote` | Spike `spikes/d30-remote` (Mac-App mit `RemoteImmersiveSpace`) |
 | `ci/macos-build` | `.github/workflows/build.yml`: `swift build` + `swift test` auf `macos-26` |
+| Klepton-Fork (privat): `moonshot/d30-host` | `tools/lab_run.sh` + `tools/lab/beatsaber145-menu.txt`; Sicherung in myMartek/klepton-fork |
 | `claude/charming-hypatia-bk0hrt` | alter Stand der Cloud-Session; kann gelöscht werden |
 
 **Abweichung vom Plan:** Der Plan nennt den Sammelbranch `moonshot` und die Punkte `moonshot/<kennung>`. Git erlaubt
@@ -121,3 +123,43 @@ Nächste Schritte (für `s2-fingerprint`/`s2-coverage`/`s2-unlock`):
 - Hochladen nur mit Zustimmung (Einstellung, wie die Telemetrie) – braucht den Katalogdienst, nicht in diesem Repo.
 - Prognose auf der Spielseite eines ungetesteten Spiels (`s2-coverage`).
 - Die echten Aufrufe aus Laufprotokollen dazunehmen, sobald `s1-headless` steht; dann wird aus „genannt“ „gerufen“.
+
+## `d30-host`: Beat Saber ohne Headset auf dem Mac bis ins Hauptmenü
+
+**Stand:** erreicht am 27.10. Die Frage „Ist Säule 1 machbar?“ ist beantwortet: **ja, und vieles davon gibt es
+schon.** Klepton hat seit Langem einen macOS-Wirt (`build_run_host.sh`, ANGLE und MoltenVK für macOS); frühere
+Sitzungen haben damit Demeo bis in die Lobby und Premium Bowling bis ins Menü gebracht.
+
+Gemacht:
+- Beat Saber 1.45 (deine Kopie, Ziel `beatsaber140`) in einem eigenen Fork-Worktree `klepton-fork-d30`,
+  Branch `moonshot/d30-host` (auf `release-538` = Toolchain 778).
+- Über die Managed-Probe (`KL_PROBE_SCRIPT`, ruft die C#-Methoden des Spiels auf) klickt ein Skript die
+  Erststart-Bildschirme durch: Sprache, Region, Datenschutz, EULA, Gesundheitswarnung, Hinweis auf explizite
+  Inhalte. Nach **38 Sekunden** steht das Hauptmenü (Solo, Online, Kampagne, Party), offline, ohne Headset, ohne
+  Mensch. 4200 Bilder gepumpt, kein unimplementierter Aufruf.
+- `tools/lab_run.sh <ziel> <skript> <ordner>`: ein Laborlauf mit Eingabeskript; legt `run.txt`, `guest.log`,
+  verkleinerte Bilder und `summary.txt` in einen Ordner. Das ist der erste Baustein von `s1-headless`
+  (Plan: `avpplay lab run <spiel>`).
+
+Grenzen und was für `s1-headless` noch fehlt:
+- Eingaben gehen nur über C#-Methoden (Unity/IL2CPP). **Synthetische Kopf- und Controllerposen** fehlen noch
+  (das Log sagt „never had a controller“); Unreal- und native Spiele brauchen einen anderen Weg.
+- Bildzeiten pro Frame werden noch nicht ausgegeben.
+- Kein Netz (absichtlich), keine Foveation, kein Headset-Compositor: Schärfe und Anzeige bleiben Brillensache.
+
+## `d30-remote`: der Mac rendert, die Vision Pro zeigt
+
+**Stand:** Spike gebaut (`spikes/d30-remote` auf `moonshot/d30-remote`), baut mit Xcode 27, startet auf dem Mac
+(„Entfernte Räume: unterstützt“). **Nicht in der Brille getestet.**
+
+Die wichtigste Antwort kommt schon aus dem macOS-27-SDK:
+- **Geht vom Mac aus:** Bild in die Brille (`RemoteImmersiveSpace` + Compositor Services), Kopfposition
+  (`WorldTrackingProvider`), Schauen + Pinch mit Strahl und Handpose (`onSpatialEvent`).
+- **Geht nicht vom Mac aus:** Handskelett (`HandTrackingProvider` ist auf macOS gesperrt) und
+  **PS-VR2-Controller** (`AccessoryTrackingProvider` ebenso).
+- Folge: Spiele mit Controllern brauchen für `s1-remote` eine Gegenstelle auf der Brille, die Controller und
+  Hände liest und an den Mac schickt (passt in AVP Play Remote). Das Limit „3 Apps, 7 Tage“ fiele für das Bild
+  trotzdem, weil auf der Brille nur diese eine App läuft.
+
+**Muss Marcel testen:** `spikes/d30-remote/README.md` hat die Liste (Würfel steht im Raum, Bildabstand,
+Vorlauf, Pinch zählt, gefühlte Latenz).
