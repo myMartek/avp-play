@@ -149,7 +149,7 @@ public struct CoverageMatrix: Codable, Equatable, Sendable {
         var parts = name.dropFirst("ovr_".count).split(separator: "_").map(String.init)
         guard var area = parts.first else { return name }
         if area == "Message", parts.count > 1, parts[1].hasPrefix("Get") { area = String(parts[1].dropFirst(3)); parts = [area] }
-        let suffixes = ["Array", "Entry", "Definition", "Progress", "Update", "Options", "Metadata", "Data", "Details", "Result", "s"]
+        let suffixes = ["Array", "Entry", "Definition", "Progress", "Update", "Options", "Metadata", "Data", "Details", "Result"]
         var changed = true
         while changed {
             changed = false
@@ -157,6 +157,8 @@ public struct CoverageMatrix: Codable, Equatable, Sendable {
                 area.removeLast(suffix.count); changed = true
             }
         }
+        // Mehrzahl einmal weg (`Achievements` → `Achievement`), aber nicht `Status` oder `Progress`.
+        if area.hasSuffix("s"), !area.hasSuffix("ss"), !area.hasSuffix("us"), area.count > 4 { area.removeLast() }
         return area
     }
 

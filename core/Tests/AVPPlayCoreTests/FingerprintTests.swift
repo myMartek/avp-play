@@ -200,6 +200,8 @@ final class FingerprintTests: XCTestCase {
         XCTAssertEqual(CoverageMatrix.platformArea("ovr_Message_GetCloudStorageData"), "CloudStorage")
         XCTAssertEqual(CoverageMatrix.platformArea("ovr_Achievements_Unlock"), "Achievement")
         XCTAssertEqual(CoverageMatrix.platformArea("ovr_Voip_Start"), "Voip")
+        XCTAssertEqual(CoverageMatrix.platformArea("ovr_AppDownloadProgressResult_GetStatusCode"), "AppDownload")
+        XCTAssertEqual(CoverageMatrix.platformArea("ovr_LeaderboardUpdateStatus_GetDidUpdate"), "LeaderboardUpdateStatus")
     }
 
     func testRuntimeScan() throws {
@@ -216,5 +218,70 @@ final class FingerprintTests: XCTestCase {
         XCTAssertEqual(runtime.functions(.openxr), ["xrCreateSession"])
         XCTAssertEqual(runtime.openxrExtensions, ["XR_FB_space_warp"])
         XCTAssertThrowsError(try RuntimeInterface.scan(klepton: dir.appendingPathComponent("nothing")))
+    }
+}
+
+final class PrognosisTests: XCTestCase {
+    override func setUp() { L10n.language = .en }
+
+    func fingerprint(engine: Fingerprint.Engine = .unreal, imported: [String: [String]], extensions: [String] = [],
+                     interfaces: [Fingerprint.Family] = [.ovrplugin], architectures: [String] = ["arm64-v8a"]) -> Fingerprint {
+        var fp = Fingerprint()
+        fp.engine = engine
+        fp.imported = imported
+        fp.functions = imported
+        fp.openxrExtensions = extensions
+        fp.interfaces = interfaces
+        fp.architectures = architectures
+        fp.graphics.vulkan = true
+        return fp
+    }
+
+    func testOutlooks() {
+        let runtime = RuntimeInterface(functions: ["ovrplugin": ["ovrp_GetVersion", "ovrp_BeginFrame4"]], openxrExtensions: ["XR_FB_space_warp"])
+        let verified = ReferenceFingerprint(id: "a", title: "A", fingerprint: fingerprint(imported: [
+            "ovrplugin": ["ovrp_GetVersion", "ovrp_BeginFrame4", "ovrp_GetHandState"],
+            "platform": ["ovr_Voip_Start"]]))
+        let other = ReferenceFingerprint(id: "b", title: "B", fingerprint: fingerprint(engine: .unity, imported: [:]))
+
+        // Wie A, nur was A auch braucht (ovrp_GetHandState fehlt der Runtime, aber A läuft damit).
+        let twin = Prognosis.make(fingerprint(imported: ["ovrplugin": ["ovrp_GetVersion", "ovrp_GetHandState"]]), runtime: runtime, references: [verified, other])
+        XCTAssertEqual(twin.outlook, .likely)
+        XCTAssertEqual(twin.neighbours.first?.id, "a")
+        XCTAssertEqual(twin.unusualFunctions, [])
+
+        // Etwas Neues bei OVRPlugin und eine unbekannte Erweiterung: möglich, mit Namen.
+        let odd = Prognosis.make(fingerprint(imported: ["ovrplugin": ["ovrp_GetVersion", "ovrp_NewThing"]],
+                                             extensions: ["XR_FB_new_feature", "XR_VARJO_quad_views", "XR_FB_space_warp"]),
+                                 runtime: runtime, references: [verified])
+        XCTAssertEqual(odd.outlook, .possible)
+        XCTAssertEqual(odd.unusualFunctions, ["ovrplugin:ovrp_NewThing"])
+        XCTAssertEqual(odd.unusualExtensions, ["XR_FB_new_feature"])
+
+        // Unbekannte Plattform-Funktionen ändern die Aussicht nicht, sie werden als Bereiche genannt.
+        let online = Prognosis.make(fingerprint(imported: ["ovrplugin": ["ovrp_GetVersion"], "platform": ["ovr_LeaderboardEntryArray_GetSize", "ovr_Voip_Start"]]),
+                                    runtime: runtime, references: [verified])
+        XCTAssertEqual(online.outlook, .likely)
+        XCTAssertEqual(online.missingPlatformAreas, ["Leaderboard"])
+        XCTAssertTrue(online.summary.contains("Online features may be missing (Leaderboard)"))
+
+        // Nur 32-Bit-Code, oder VrApi direkt, das niemand nachbildet: läuft nicht.
+        let old = Prognosis.make(fingerprint(imported: [:], architectures: ["armeabi-v7a"]), runtime: runtime, references: [verified])
+        XCTAssertEqual(old.outlook, .unlikely)
+        let vrapi = Prognosis.make(fingerprint(imported: ["vrapi": ["vrapi_SubmitFrame2"]], interfaces: [.vrapi]), runtime: runtime, references: [verified])
+        XCTAssertEqual(vrapi.outlook, .unlikely)
+        XCTAssertTrue(vrapi.summary.hasPrefix("Will not run"))
+    }
+
+    func testReferenceKeepsOnlyWhatComparisonNeeds() {
+        var fp = fingerprint(engine: .unity, imported: ["ovrplugin": ["ovrp_GetVersion"]], extensions: ["XR_FB_space_warp", "XR_VARJO_quad_views"])
+        fp.engineVersion = "2021.3.16f1"
+        fp.scripting = "il2cpp"
+        fp.middleware = ["FMOD"]
+        fp.functions["platform"] = ["ovr_User_GetLoggedInUser"] // nur genannt: gehört nicht in die Referenz
+        let ref = ReferenceFingerprint(id: "x", title: "X", fingerprint: fp)
+        XCTAssertEqual(ref.features, ["engine:unity", "gfx:vulkan", "mw:FMOD", "scripting:il2cpp", "unity:2021", "xr:ovrplugin"])
+        XCTAssertEqual(ref.imported, ["ovrplugin": ["ovrp_GetVersion"]])
+        XCTAssertEqual(ref.extensions, ["XR_FB_space_warp"])
     }
 }

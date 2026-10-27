@@ -98,6 +98,8 @@ avpplay – command line for the AVP Play core library
   avpplay recipes                              list the recipes
   avpplay fingerprint <apk>…                   compatibility fingerprint of an APK as JSON (names only)
   avpplay coverage --klepton <folder> <apk|folder>… [--markdown <file>] [--json <file>]   what the runtime lacks per game, gaps by unlock value
+  avpplay references --out <file>              fingerprints of the verified games in the library (comparison basis)
+  avpplay prognosis --klepton <folder> --references <file> <apk>…   outlook for an untested game: closest verified games, unusual needs
   avpplay show <id>                            files of a recipe
   avpplay login                                sign in to Meta (starts ovr-platform-util; --tool <path>, default ~/Downloads)
   avpplay logout                               delete the stored Meta token
@@ -177,6 +179,8 @@ avpplay – Kommandozeile zur Kern-Bibliothek von AVP Play
   avpplay recipes                              Rezepte auflisten
   avpplay fingerprint <apk>…                   Kompatibilitäts-Fingerabdruck eines APKs als JSON (nur Namen)
   avpplay coverage --klepton <Ordner> <apk|Ordner>… [--markdown <Datei>] [--json <Datei>]   was der Runtime pro Spiel fehlt, Lücken nach Unlock-Wert
+  avpplay references --out <Datei>             Fingerabdrücke der geprüften Spiele im Bestand (Vergleichsbasis)
+  avpplay prognosis --klepton <Ordner> --references <Datei> <apk>…   Aussicht für ein ungetestetes Spiel: nächste geprüfte Spiele, Ungewöhnliches
   avpplay show <id>                            Dateien eines Rezepts
   avpplay login                                bei Meta anmelden (startet ovr-platform-util; --tool <Pfad>, Standard ~/Downloads)
   avpplay logout                               hinterlegten Meta-Token löschen
@@ -257,7 +261,7 @@ Allgemein: --account <Name>    Eintrag im Schlüsselbund (Standard: default)
 
 let valued: Set<String> = ["account", "steam-account", "source", "store", "recipes", "locale", "with", "only", "interval", "from", "to", "force", "name",
                            "team", "device", "bundle-id", "display-name", "display-suffix", "toolchain", "controller-mode", "icon", "tool", "jobs", "toolchains", "saves", "resolution",
-                           "room-measuring", "game-language", "klepton", "markdown", "json"]
+                           "room-measuring", "game-language", "klepton", "markdown", "json", "references", "out", "leave-out"]
 let o = Options(Array(CommandLine.arguments.dropFirst()), valued: valued)
 guard let command = o.positional.first else { print(usage()); exit(0) }
 OtherSources.use(recipes: recipesDirectory(o))
@@ -884,6 +888,51 @@ case "coverage":
         do { try matrix.markdown().write(to: URL(fileURLWithPath: markdown), atomically: true, encoding: .utf8) } catch { fail("\(error)") }
     } else {
         print(matrix.markdown())
+    }
+
+case "references":
+    // Die geprüften Spiele als Vergleichsbasis: Fingerabdrücke (gekürzt) aus den geladenen APKs aller Rezepte mit
+    // Spielbarkeit „verified“. Nur Namen.
+    guard let out = o.value("out") else { fail(L("Give the output file with --out <file>.", "Die Zieldatei mit --out <Datei> angeben.")) }
+    let store = contentStore(o)
+    var refs: [ReferenceFingerprint] = []
+    do {
+        for r in try RecipeStore(directory: recipesDirectory(o)).loadAll() where r.status.playability == "verified" {
+            guard let apk = r.files.first(where: { $0.role == "apk" }) else { continue }
+            let url = store.url(for: apk, in: r)
+            guard FileManager.default.fileExists(atPath: url.path) else { continue }
+            do {
+                refs.append(ReferenceFingerprint(id: r.id, title: r.title, fingerprint: try Fingerprint.make(apk: url)))
+                FileHandle.standardError.write(Data("  \(r.title)\n".utf8))
+            } catch { warn("\(r.title): \(error)") }
+        }
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        try encoder.encode(refs.sorted { $0.id < $1.id }).write(to: URL(fileURLWithPath: out))
+        print(L("\(refs.count) verified games written to \(out).", "\(refs.count) geprüfte Spiele nach \(out) geschrieben."))
+    } catch { fail("\(error)") }
+
+case "prognosis":
+    guard let klepton = o.value("klepton"), let refsPath = o.value("references") else {
+        fail(L("Give --klepton <folder> and --references <file>.", "--klepton <Ordner> und --references <Datei> angeben."))
+    }
+    let runtime: RuntimeInterface
+    let refs: [ReferenceFingerprint]
+    do {
+        runtime = try RuntimeInterface.scan(klepton: URL(fileURLWithPath: klepton))
+        refs = try JSONDecoder().decode([ReferenceFingerprint].self, from: Data(contentsOf: URL(fileURLWithPath: refsPath)))
+    } catch { fail("\(error)") }
+    // --leave-out <id>: dieses Spiel nicht als Vergleich nehmen (um geprüfte Spiele gegen die übrigen zu prüfen).
+    let leaveOut = Set(o.values["leave-out"] ?? [])
+    for path in o.positional.dropFirst() {
+        do {
+            let p = Prognosis.make(try Fingerprint.make(apk: URL(fileURLWithPath: path)), runtime: runtime,
+                                   references: refs.filter { !leaveOut.contains($0.id) })
+            print("\(path)\n  \(p.outlook.rawValue): \(p.summary)")
+            for n in p.neighbours { print(String(format: "    ~ %@ %.0f %%", n.title, n.similarity * 100)) }
+            for name in (p.unusualFunctions + p.unusualExtensions).prefix(20) { print("    ! \(name)") }
+            for b in p.blockers { print("    ✗ \(b)") }
+        } catch { warn("\(path): \(error)") }
     }
 
 case "unpack":
