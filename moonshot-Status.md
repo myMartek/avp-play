@@ -18,7 +18,7 @@ Stand: 27. Oktober 2026.
 | `s2-coverage` | **Prognose fertig** (Kern, CLI, Spielseite), auf geprüften Spielen gegengeprüft | **ja: Spielseite ansehen** |
 | `s2-fingerprint` | **Teilen per Opt-in fertig** (App + Katalogdienst-Endpunkt, privat, nicht ausgerollt) | **ja: Freigabe + Rollout** |
 | `s2-unlock` | **Roadmap fertig** (`avpplay unlock`), lokal mit 59 Fingerabdrücken durchgespielt | hängt an Rollout |
-| `s4-appliance` | **Start nur in der Menüleiste** bei der Anmeldung gebaut | **ja: Test mit Ab-/Anmelden** |
+| `s4-appliance` | **veröffentlicht in AVP Play 1.5.6** (27.10.): bei der Anmeldung nur das Symbol, ⌘Q legt in die Menüleiste; von Marcel getestet | nein (offen: Wake-on-LAN, Erneuerung aus der Menüleiste) |
 | `s1-headless` | **fertig**: `avpplay lab run <spiel>` mit Eingabeskript (Aufrufe, Drücke, **Posen**), Bildzeiten pro Frame, Laborpaket (ANGLE + MoltenVK für den Mac) | nein (Freigabe für das Laborpaket als Download erst beim Release) |
 | `s2-judge` | **Bildprüfung fertig** (`avpplay lab judge`): schwarz, einfarbig, magenta, ein Auge, Stillstand, angehalten; an Beat Saber und Demeo gegengeprüft | nein (Urteil per Bildmodell offen, braucht einen API-Schlüssel) |
 | `s2-engines` | **Regel „Unreal auf GLES“ gebaut** (Profil für ungetestete Spiele), an 19 Unreal-Spielen auf dem Mac geprüft; Unity-Regeln waren schon im Profil | ja: ein ungetestetes Unreal-GL-Spiel in der Brille, sobald eins da ist |
@@ -282,7 +282,14 @@ darum mit den **geprüften Spielen**:
 
 ## `s4-appliance`: Start nur in der Menüleiste
 
-**Stand:** gebaut auf `moonshot/s4-appliance` (auf `main` mit 1.5.5). Nicht in einem Release.
+**Stand (27.10. abends): veröffentlicht in AVP Play 1.5.6** (avp-play #93, `63ed354`), von Marcel mit einem Testbau
+als Anmeldeobjekt getestet: nach Neustart nur das Symbol, ⌘Q behält das Symbol.
+- Dabei gefunden: `SMAppService` schickt die Kennung „als Anmeldeobjekt gestartet“ nicht, und das Dock hat keine
+  `launchDate`. Erkannt wird jetzt über „Anmeldeobjekt an und < 90 s nach dem Dock“ (Startzeiten per `sysctl`);
+  die Entscheidung steht in `~/Library/Logs/AVP Play/start.txt`.
+- ⌘Q mit „Weiterlaufen“ an = „In die Menüleiste legen“; „Beenden“ in der Menüleiste beendet ganz.
+
+Ursprünglicher Stand:
 
 - Öffnet macOS AVP Play bei der Anmeldung (Anmeldeobjekt, auch über `SMAppService`) und ist „In der Menüleiste
   weiterlaufen“ an, startet es ohne Fenster und ohne Dock-Symbol. Erkannt am Öffnen-Ereignis
