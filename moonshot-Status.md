@@ -13,7 +13,7 @@ Stand: 27. Oktober 2026.
 | CI | **verworfen** (27.10.): kein CI; geprüft wird lokal mit Xcode 27 und vor jedem Release mit `make check` | nein |
 | `d30-fingerprint` | **Extraktor fertig, getestet, auf 59 APKs gelaufen**, erste Abdeckungskarte da | Entscheidung: als PR nach `main`? |
 | `d30-host` | **erreicht**: Beat Saber 1.45 ohne Headset auf dem Mac bis ins Hauptmenü, mit Bildern, per Skript | nein |
-| `d30-remote` | **in der Brille gesehen** (27.10.): Würfel steht im Raum; offen: schwarze Kacheln am Rand | **ja: Kacheln mit zwei Umschaltern prüfen** |
+| `d30-remote` | **in der Brille gesehen** (27.10.): Würfel steht im Raum; schwarze Kacheln am Rand im Mixed-Modus (Grenze des Mac-Wegs) | ja: Latenz, Bildabstand, Pinch |
 | `s2-coverage` | **Prognose fertig** (Kern, CLI, Spielseite), auf geprüften Spielen gegengeprüft | **ja: Spielseite ansehen** |
 | `s2-fingerprint` | **Teilen per Opt-in fertig** (App + Katalogdienst-Endpunkt, privat, nicht ausgerollt) | **ja: Freigabe + Rollout** |
 | `s2-unlock` | **Roadmap fertig** (`avpplay unlock`), lokal mit 59 Fingerabdrücken durchgespielt | hängt an Rollout |
@@ -179,9 +179,13 @@ Die wichtigste Antwort kommt schon aus dem macOS-27-SDK:
   Hände liest und an den Mac schickt (passt in AVP Play Remote). Das Limit „3 Apps, 7 Tage“ fiele für das Bild
   trotzdem, weil auf der Brille nur diese eine App läuft.
 
-- 16-Bit-Farbe mit Alpha ändert an den Kacheln nichts; alle drei Varianten öffnen (`1b88278`).
+- 16-Bit-Farbe mit Alpha ändert an den Kacheln nichts, Foveation aus (0 Karten im Protokoll) auch nicht; alle
+  Varianten öffnen (`1b88278`). **Ergebnis:** beim Bild vom Mac zeigt die Brille den Raum nur in Kacheln ohne
+  jeden Inhalt, das Alpha innerhalb einer Kachel zählt nicht. Aus der App heraus nicht zu beheben, soweit
+  getestet. Folge für `s1-remote`: Spiele in voller Immersion gehen, Mixed-Reality-Spiele über den Mac bekommen
+  schwarze Kacheln an den Rändern.
 
-**Muss Marcel testen:** im Mac-Fenster „Foveation aus“ an (schließen, neu öffnen): Kacheln weg? Außerdem noch offen aus der Liste in `spikes/d30-remote/README.md`: Bildabstand und
+**Muss Marcel testen:** noch offen aus der Liste in `spikes/d30-remote/README.md`: Bildabstand und
 Vorlauf ablesen, Pinch zählt, gefühlte Latenz beim schnellen Kopfdrehen. App: `spikes/d30-remote/make-app.sh`,
 dann `.build/D30Remote.app`.
 
