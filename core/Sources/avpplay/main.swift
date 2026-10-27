@@ -123,6 +123,11 @@ avpplay – command line for the AVP Play core library
   avpplay toolchain get <number>               download one of those from GitHub, check it and install it next to the others
   avpplay toolchain pack --from <Fork> --to <folder>      build a package from a committed state of the fork
   avpplay toolchain install <archive>          check and install a package
+  avpplay lab run <id> [--script <file>] [--frames N] [--every N] [--seconds S] [--out <folder>] [--keep-files]
+                                               run the game on this Mac without the headset: input script, log, pictures,
+                                               frame times and a summary in one folder (default: the game's library, lab/)
+  avpplay lab pack --from <Fork> --to <folder>  build the lab pack (ANGLE and MoltenVK for the Mac) from a fork checkout
+  avpplay lab install <archive>                check and install the lab pack
   avpplay toolchain mark <folder>              mark a working copy of a toolchain as modified; it is then listed as “(modified)”
   avpplay toolchain use <id> --toolchain <folder> | --newest
                                                build this game with that toolchain from now on (an installed package or a
@@ -253,7 +258,7 @@ Allgemein: --account <Name>    Eintrag im Schlüsselbund (Standard: default)
 
 let valued: Set<String> = ["account", "steam-account", "source", "store", "recipes", "locale", "with", "only", "interval", "from", "to", "force", "name",
                            "team", "device", "bundle-id", "display-name", "display-suffix", "toolchain", "controller-mode", "icon", "tool", "jobs", "toolchains", "saves", "resolution",
-                           "room-measuring", "game-language"]
+                           "room-measuring", "game-language", "script", "frames", "every", "seconds", "out"]
 let o = Options(Array(CommandLine.arguments.dropFirst()), valued: valued)
 guard let command = o.positional.first else { print(usage()); exit(0) }
 OtherSources.use(recipes: recipesDirectory(o))
@@ -1019,6 +1024,53 @@ case "saves":
         print("\(r.title): \(r.detail)\(r.kind == .saved ? where_ : "")")
     }
     if results.isEmpty { print(L("None of these games is on the Vision Pro.", "Keines dieser Spiele ist auf der Vision Pro.")) }
+
+case "lab":
+    guard o.positional.count >= 2 else {
+        fail(L("Usage: avpplay lab run <id> [--script <file>] [--frames N] [--every N] [--seconds S] [--out <folder>] [--keep-files] | avpplay lab pack --from <Fork> --to <folder> | avpplay lab install <archive>",
+               "Aufruf: avpplay lab run <id> [--script <Datei>] [--frames N] [--every N] [--seconds S] [--out <Ordner>] [--keep-files] | avpplay lab pack --from <Fork> --to <Ordner> | avpplay lab install <Archiv>"))
+    }
+    switch o.positional[1] {
+    case "run":
+        let r = recipe(o, at: 2)
+        let store = contentStore(o)
+        let request = installRequest(o, recipe: r.id)
+        let toolchain: Toolchain
+        do { toolchain = try Toolchain(root: URL(fileURLWithPath: request.toolchain)) } catch { fail("\(error)") }
+        var settings = LabRun.Settings()
+        settings.script = o.value("script").map { URL(fileURLWithPath: $0) }
+        if let v = o.value("frames") { settings.frames = Int(v) ?? settings.frames }
+        if let v = o.value("every") { settings.every = Int(v) ?? settings.every }
+        settings.seconds = o.value("seconds").flatMap(Int.init)
+        settings.keepFiles = o.flags.contains("keep-files")
+        let folder = o.value("out").map { URL(fileURLWithPath: $0) } ?? LabRun.outputFolder(store: store, recipe: r)
+        print(L("Lab run: \(r.title) with toolchain \(toolchain.name), into \(folder.path)",
+                "Laborlauf: \(r.title) mit Toolchain \(toolchain.name), nach \(folder.path)"))
+        do {
+            let status = try LabRun.run(recipe: r, store: store, toolchain: toolchain, settings: settings, folder: folder) { print($0) }
+            if status != 0 { exit(status) }
+        } catch { fail("\(error.localizedDescription)") }
+    case "pack":
+        guard let from = o.value("from"), let to = o.value("to") else {
+            fail(L("Give the fork and the destination: avpplay lab pack --from <Fork> --to <folder>",
+                   "Fork und Ziel angeben: avpplay lab pack --from <Fork> --to <Ordner>"))
+        }
+        do {
+            let archive = try LabRun.pack(checkout: URL(fileURLWithPath: from), to: URL(fileURLWithPath: to))
+            print(L("Lab pack: \(archive.path) (\(Installer.megabytes(ContentStore.fileSize(archive) ?? 0)))",
+                    "Laborpaket: \(archive.path) (\(Installer.megabytes(ContentStore.fileSize(archive) ?? 0)))"))
+        } catch { fail("\(error)") }
+    case "install":
+        guard o.positional.count >= 3 else {
+            fail(L("Give the archive: avpplay lab install <archive>", "Archiv angeben: avpplay lab install <Archiv>"))
+        }
+        do {
+            try LabRun.install(archive: URL(fileURLWithPath: o.positional[2]))
+            print(L("Lab pack installed in \(LabRun.packFolder.path).", "Laborpaket installiert in \(LabRun.packFolder.path)."))
+        } catch { fail(error.localizedDescription) }
+    default:
+        fail(L("Unknown: avpplay lab \(o.positional[1])", "Unbekannt: avpplay lab \(o.positional[1])"))
+    }
 
 case "toolchain":
     guard o.positional.count >= 2 else {
