@@ -369,6 +369,11 @@ final class AppModel: ObservableObject {
     var metalFXExpected: Bool? { didSet { invalidateDerived() } }
     /// Wie weit das Kopieren aufs Gerät im laufenden Auftrag ist.
     @Published var copyProgress: [String: InstallProgress] = [:]
+    /// Prognosen für ungetestete Spiele (Kennung → Prognose) und welche gerade gerechnet werden.
+    @Published var prognoses: [String: Prognosis] = [:]
+    @Published var prognosisRunning: Set<String> = []
+    /// Die Namen, die eine Toolchain kennt, je Ordner der Toolchain – einmal gelesen.
+    var runtimeInterfaces: [String: RuntimeInterface] = [:]
     /// Eine neuere veröffentlichte Fassung, falls es eine gibt.
     @Published var update: AppRelease?
     /// Die neueste Fassung von AVP Play Remote auf GitHub (siehe `Companion.swift`) und was ihrer Suche im Weg stand.

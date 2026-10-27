@@ -156,3 +156,31 @@ public struct Prognosis: Codable, Equatable, Sendable {
         }
     }
 }
+
+extension ReferenceFingerprint {
+    /// Die mitgelieferten Fingerabdrücke der geprüften Spiele (`recipes/fingerprints/verified.json`); leer, wenn es
+    /// die Datei nicht gibt.
+    public static func bundled(recipes: URL) -> [ReferenceFingerprint] {
+        let file = recipes.appendingPathComponent("fingerprints/verified.json")
+        guard let data = try? Data(contentsOf: file) else { return [] }
+        return (try? JSONDecoder().decode([ReferenceFingerprint].self, from: data)) ?? []
+    }
+}
+
+extension Fingerprint {
+    /// Der Fingerabdruck eines APKs, zwischengespeichert in `<apk>.fingerprint.json` daneben. Neu erstellt, wenn
+    /// das APK neuer ist oder das Format sich geändert hat.
+    public static func cached(apk: URL) throws -> Fingerprint {
+        let cache = apk.appendingPathExtension("fingerprint.json")
+        let fm = FileManager.default
+        if let data = try? Data(contentsOf: cache), let fp = try? JSONDecoder().decode(Fingerprint.self, from: data),
+           fp.format == Fingerprint.currentFormat,
+           let cacheDate = (try? fm.attributesOfItem(atPath: cache.path))?[.modificationDate] as? Date,
+           let apkDate = (try? fm.attributesOfItem(atPath: apk.path))?[.modificationDate] as? Date, cacheDate >= apkDate {
+            return fp
+        }
+        let fp = try make(apk: apk)
+        if let data = try? JSONEncoder().encode(fp) { try? data.write(to: cache, options: .atomic) }
+        return fp
+    }
+}

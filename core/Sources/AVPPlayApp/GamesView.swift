@@ -934,6 +934,7 @@ struct GameDetail: View {
                 if let note = game.recipe.source == .steam ? game.steamCatalog?.note : game.catalog?.note {
                     Label(note, systemImage: "text.bubble").font(.callout)
                 }
+                if !game.incompatible { PrognosisRow(game: game) }
                 if game.prepared, DraftRecipe.isGeneric(game.recipe.toolchain.target) {
                     Label(L("The toolchain has no entry of its own for this game. It is built with general settings for its engine – the least certain kind of attempt.",
                             "Die Toolchain hat für dieses Spiel keinen eigenen Eintrag. Es wird mit allgemeinen Einstellungen für seine Engine gebaut – die unsicherste Art von Versuch."),
