@@ -17,6 +17,7 @@ struct AVPPlayApp: App {
     @StateObject private var model = AppDelegate.model
     @StateObject private var remote = AppDelegate.remote
     @AppStorage(MenuBarPreferences.showKey) private var menuBarShow = true
+    @AppStorage(MenuBarPreferences.keepRunningKey) private var menuBarKeepRunning = false
 
     var body: some Scene {
         Window("AVP Play", id: "main") {
@@ -51,6 +52,18 @@ struct AVPPlayApp: App {
             }
             CommandGroup(after: .toolbar) {
                 Button(L("Check Again", "Neu prüfen")) { model.refresh() }.keyboardShortcut("r")
+            }
+            // Bleibt AVP Play in der Menüleiste, legt ⌘Q es dorthin zurück wie das Schließen des Fensters; ganz
+            // beendet wird es dann über „Beenden“ in der Menüleiste.
+            CommandGroup(replacing: .appTermination) {
+                if menuBarShow && menuBarKeepRunning {
+                    Button(L("Close to Menu Bar", "In die Menüleiste legen")) {
+                        for window in NSApp.windows where AppDelegate.isMain(window) { window.close() }
+                    }
+                    .keyboardShortcut("q")
+                } else {
+                    Button(L("Quit AVP Play", "AVP Play beenden")) { NSApp.terminate(nil) }.keyboardShortcut("q")
+                }
             }
             CommandGroup(replacing: .help) {
                 Button(L("AVP Play on GitHub", "AVP Play auf GitHub")) {
