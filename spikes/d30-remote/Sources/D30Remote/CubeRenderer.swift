@@ -167,6 +167,10 @@ final class CubeRenderer: @unchecked Sendable {
             stats.frames = frames
             stats.interval = meanInterval > 0 ? String(format: "%.1f ms (%.0f Hz)", meanInterval * 1000, 1 / meanInterval) : "–"
             stats.lead = String(format: "%.1f ms", meanLead * 1000)
+            if now - stats.lastLogged > 5 {
+                stats.lastLogged = now
+                stats.note("Bilder \(frames), Bildabstand \(stats.interval), Vorlauf \(stats.lead), Kopf verfolgt in \(tracked), Pinch \(stats.pinches)")
+            }
             stats.head = isTracked ? String(format: "%.2f %.2f %.2f (verfolgt in %d Bildern)", position.x, position.y, position.z, tracked)
                                    : "nicht verfolgt"
         }

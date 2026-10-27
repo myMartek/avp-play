@@ -122,6 +122,7 @@ final class LabStats: ObservableObject {
     @Published var full = false
     @Published var wideColor = false
     @Published var noFoveation = false
+    var lastLogged: CFTimeInterval = 0
 
     func note(_ line: String) {
         let entry = "\(Date().formatted(date: .omitted, time: .standard))  \(line)"
