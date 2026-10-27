@@ -22,6 +22,7 @@ Stand: 27. Oktober 2026.
 | `s1-headless` | **fertig**: `avpplay lab run <spiel>` mit Eingabeskript (Aufrufe, Drücke, **Posen**), Bildzeiten pro Frame, Laborpaket (ANGLE + MoltenVK für den Mac) | nein (Freigabe für das Laborpaket als Download erst beim Release) |
 | `s2-judge` | **Bildprüfung fertig** (`avpplay lab judge`): schwarz, einfarbig, magenta, ein Auge, Stillstand, angehalten; an Beat Saber und Demeo gegengeprüft | nein (Urteil per Bildmodell offen, braucht einen API-Schlüssel) |
 | `s2-engines` | **Regel „Unreal auf GLES“ gebaut** (Profil für ungetestete Spiele), an 19 Unreal-Spielen auf dem Mac geprüft; Unity-Regeln waren schon im Profil | ja: ein ungetestetes Unreal-GL-Spiel in der Brille, sobald eins da ist |
+| `s3-framegen` | **begonnen (28.10.):** Zwischenbild-Generator `KLFrameGen` (Metal, Mac + visionOS) und Messung im Labor an Beat Saber (50 → 100 Hz). Im Menü gleichauf mit dem heutigen Ausgleich, nicht besser; noch nicht im Compositor | nein (nächster Schritt: Messung im Spiel mit Säbeln und Blöcken) |
 | übrige `s1-*`, `s2-*`, `s3-*`, `s4-*` | nicht begonnen | – |
 
 ## Branches
@@ -39,6 +40,7 @@ Stand: 27. Oktober 2026.
 | Klepton-Fork (privat): `moonshot/s1-remote` (auf `moonshot/d30-host`, Worktree `QuestInstaller/klepton-fork-d30`) | `KleptonRemote.app` (`mains/KleptonRemote.swift`, `runtime/gfx/kl_remote_mtl.m`, `tools/remote/`), Relay-App `spikes/relay`; Sicherung in myMartek/klepton-fork |
 | Klepton-Fork (privat): `moonshot/d30-host` | `tools/lab_run.sh` + `tools/lab/beatsaber145-menu.txt`; Sicherung in myMartek/klepton-fork |
 | Klepton-Fork (privat): `moonshot/s1-headless` (auf `moonshot/s1-remote`, Worktree `QuestInstaller/klepton-fork-d30`) | Bildzeiten (`KL_FRAME_TIMES`), Posen (`KL_OVRP_POSE`), `lab_run.sh` mit `pose`, `--link`, Vulkan-Augen; Sicherung in myMartek/klepton-fork |
+| Klepton-Fork (privat): `moonshot/s3-framegen` (auf `moonshot/s1-headless`, Worktree `QuestInstaller/klepton-fork-d30`) | `KLFrameGen` (`visionos/Sources/KleptonFrameGen.swift`), `tools/framegen`, feste Laboruhr `KL_LAB_DT_MS`, Kopf-Posen, Aufnahmefenster, Posen neben den Bildern; Sicherung in myMartek/klepton-fork |
 | `moonshot/s1-headless` (auf `main` mit 1.5.5, Worktree `QuestInstaller/avp-play-s1headless`) | `avpplay lab run/pack/install/judge` (`LabRun.swift`, `LabJudge.swift`, 9 Tests) |
 | `claude/charming-hypatia-bk0hrt` | alter Stand der Cloud-Session; kann gelöscht werden |
 
@@ -423,3 +425,39 @@ zwischen zwei Läufen sind Streuung (der erste Lauf ist oft langsam, Shader).
   Spiele ändert die Regel nicht.
 - Weitere Kandidaten: `KL_OVRP_PASSTHROUGH` aus dem Manifest (wirkt nur in der Brille), `KL_OVRP_UNIFY_FRUSTUM` für
   Unity 6 + OculusXR (Augenausrichtung, nur in der Brille zu beurteilen).
+
+## `s3-framegen`: Zwischenbilder
+
+**Stand (28.10.):** Generator gebaut und im Labor gemessen. Nicht im Compositor, nicht in der Brille, nicht in
+einem Release.
+
+- **Warum nicht MetalFX:** Apples Zwischenbilder (`MTLFXFrameInterpolator`) gibt es auf macOS, auf visionOS nicht.
+  Deshalb ein eigener Metal-Generator, derselbe Code für Mac und Brille.
+- **Wie:** aus den zwei neuesten Spielbildern die Bewegung schätzen (Blocksuche auf einer Helligkeitspyramide, grob
+  bei 1/8, fein bei 1/2, 8×8-Blöcke, Median), das neueste Bild um die Hälfte davon weiterschieben → ein Bild ohne
+  zusätzliche Verzögerung. Die **Kopfdrehung** wird schon in der Suche herausgerechnet, denn die korrigiert der
+  Timewarp des Compositors ohnehin. Bewegungsvektoren oder Tiefe vom Spiel braucht er nicht (AppSpaceWarp liefern
+  die Spiele hier praktisch nie).
+- **Labor:** feste Uhr `KL_LAB_DT_MS=10` (Unitys `captureDeltaTime`, Posen, OpenXR-Zeit laufen pro Bild genau 10 ms
+  weiter, egal wie lang das Speichern dauert), Kopf im Posenskript (`pose <t>:H:…`), Aufnahmefenster
+  `KL_GLFB_OUT_FROM/UNTIL`, Render-Pose neben jedem Bild (`KL_GLFB_OUT_POSE`). Skript
+  `tools/lab/beatsaber145-framegen.txt`, Messung `tools/framegen/build.sh && build/framegen <bilder> <aus>`.
+- **Gemessen (Beat Saber, Hauptmenü, Kopf ±15° in 0,5 s + Hand, jedes 2. Bild weggelassen):**
+
+  | Vergleich mit dem echten Bild | wiederholt | generiert |
+  |---|---|---|
+  | ohne Timewarp | 23,1 dB | 27,4 dB |
+  | wie in der Brille (mit Timewarp) | **35,9 dB** | **35,9 dB** |
+
+  Der große Gewinn ohne Timewarp ist die Kopfdrehung – die gleicht die Brille schon heute aus. Danach bewegt sich im
+  Menü fast nichts mehr (1,2 % des Bildes, im Wesentlichen der dünne Laser), und dort hilft der Generator noch nicht.
+  Er schadet aber auch nicht mehr (erste Fassung: −4 dB, behoben durch die Drehung in der Suche).
+- **Kosten:** 3,5 ms GPU pro Bild bei 858×900 auf dem M4 – für die Brille (zwei Augen, viel größer) zu viel; die
+  Pyramide pro Spielbild nur einmal zu rechnen ist eingebaut, schneller muss die Suche werden.
+
+**Was fehlt:**
+- Messung **im Spiel** (fliegende Blöcke, Säbel, Wände): dort entsteht das Ruckeln, das man sieht. Dafür im Labor
+  ein Lied starten (Probe-Aufrufe ins Menü).
+- Dünne, schnelle Dinge (Laser, Säbel) findet die Blocksuche noch nicht.
+- Einbau in den Compositor (Vordurchgang wie bei MetalFX, nur in Bildern ohne neues Spielbild), Schalter im
+  Startfenster, Spiel auf halbe Rate mit `KL_GUEST_PACE_DIV=2`; dann Test in der Brille.
