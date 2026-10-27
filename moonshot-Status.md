@@ -179,8 +179,9 @@ Die wichtigste Antwort kommt schon aus dem macOS-27-SDK:
   Hände liest und an den Mac schickt (passt in AVP Play Remote). Das Limit „3 Apps, 7 Tage“ fiele für das Bild
   trotzdem, weil auf der Brille nur diese eine App läuft.
 
-**Muss Marcel testen:** im Mac-Fenster „Farbe 16 Bit mit Alpha“ an (schließen, neu öffnen): Kacheln weg?
-Dann „Voll (ohne Raum)“. Außerdem noch offen aus der Liste in `spikes/d30-remote/README.md`: Bildabstand und
+- 16-Bit-Farbe mit Alpha ändert an den Kacheln nichts; alle drei Varianten öffnen (`1b88278`).
+
+**Muss Marcel testen:** im Mac-Fenster „Foveation aus“ an (schließen, neu öffnen): Kacheln weg? Außerdem noch offen aus der Liste in `spikes/d30-remote/README.md`: Bildabstand und
 Vorlauf ablesen, Pinch zählt, gefühlte Latenz beim schnellen Kopfdrehen. App: `spikes/d30-remote/make-app.sh`,
 dann `.build/D30Remote.app`.
 
