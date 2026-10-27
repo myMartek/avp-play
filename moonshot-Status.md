@@ -13,7 +13,7 @@ Stand: 27. Oktober 2026.
 | CI | **verworfen** (27.10.): kein CI; geprüft wird lokal mit Xcode 27 und vor jedem Release mit `make check` | nein |
 | `d30-fingerprint` | **Extraktor fertig, getestet, auf 59 APKs gelaufen**, erste Abdeckungskarte da | Entscheidung: als PR nach `main`? |
 | `d30-host` | **erreicht**: Beat Saber 1.45 ohne Headset auf dem Mac bis ins Hauptmenü, mit Bildern, per Skript | nein |
-| `d30-remote` | **in der Brille gesehen** (27.10.): Würfel steht im Raum; schwarze Kacheln am Rand im Mixed-Modus (Grenze des Mac-Wegs) | ja: Latenz, Bildabstand, Pinch |
+| `d30-remote` | **in der Brille gesehen** (27.10.): Würfel steht im Raum; schwarze Kacheln am Rand im Mixed-Modus (Grenze des Mac-Wegs) | ja: einmal kurz öffnen für Bildabstand/Vorlauf |
 | `s2-coverage` | **Prognose fertig** (Kern, CLI, Spielseite), auf geprüften Spielen gegengeprüft | **ja: Spielseite ansehen** |
 | `s2-fingerprint` | **Teilen per Opt-in fertig** (App + Katalogdienst-Endpunkt, privat, nicht ausgerollt) | **ja: Freigabe + Rollout** |
 | `s2-unlock` | **Roadmap fertig** (`avpplay unlock`), lokal mit 59 Fingerabdrücken durchgespielt | hängt an Rollout |
@@ -185,8 +185,10 @@ Die wichtigste Antwort kommt schon aus dem macOS-27-SDK:
   getestet. Folge für `s1-remote`: Spiele in voller Immersion gehen, Mixed-Reality-Spiele über den Mac bekommen
   schwarze Kacheln an den Rändern.
 
-**Muss Marcel testen:** noch offen aus der Liste in `spikes/d30-remote/README.md`: Bildabstand und
-Vorlauf ablesen, Pinch zählt, gefühlte Latenz beim schnellen Kopfdrehen. App: `spikes/d30-remote/make-app.sh`,
+- Bild beim schnellen Kopfdrehen stabil, Pinch wird gezählt (Marcel, 27.10.).
+
+**Muss Marcel testen:** nur noch Bildabstand und Vorlauf – die App schreibt sie jetzt alle 5 s ins Protokoll,
+ein Öffnen von ein paar Sekunden reicht. App: `spikes/d30-remote/make-app.sh`,
 dann `.build/D30Remote.app`.
 
 ## `s2-coverage`: Prognose für ungetestete Spiele
