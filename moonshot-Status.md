@@ -184,8 +184,10 @@ Grenzen und was für `s1-headless` noch fehlt:
 **Muss Marcel testen (heute Abend):**
 1. Auf der Brille **Klepton Relay** öffnen (Lokales-Netzwerk-Abfrage erlauben). Zeigt es „Links/Rechts“ mit
    Werten und unter „Mac“ „Klepton Remote“?
-2. Am Mac im Fenster **Klepton Remote – beatsaber140** auf „In der Vision Pro öffnen“ (läuft schon; sonst in
-   `QuestInstaller/klepton-fork-d30`: `tools/remote/run.sh`). Brille vorher wie für „Mac Virtual Display“ koppeln.
+2. Am Mac im Fenster **Klepton Remote – beatsaber140** auf „In der Vision Pro öffnen“. Die App läuft schon; ob ihr
+   Fenster aufging, konnte ich bei gesperrtem Mac nicht sehen. Fehlt es: App beenden und in
+   `QuestInstaller/klepton-fork-d30` neu starten mit `tools/remote/run.sh`. Brille vorher wie für „Mac Virtual
+   Display“ koppeln. Log: `build/remote/beatsaber140.log`.
 3. Nach ~1 s Vermessung startet Beat Saber (Sicherheitshinweis). Mit Kopf zielen, Abzug drücken (oder hinschauen +
    pinchen) → Hauptmenü.
 4. Berichten: Bild stabil beim Kopfdrehen? Gefühlte Verzögerung? Kommen Abzug/Stick an, obwohl das Relay im
