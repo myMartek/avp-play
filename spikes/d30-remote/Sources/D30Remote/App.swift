@@ -16,6 +16,11 @@ struct D30RemoteApp: App {
         RemoteImmersiveSpace(id: "cube") {
             CubeSpace()
         }
+        // Auf dem Mac gibt es nur stufenlos (Krone, Raum sichtbar) und voll; voll zeigt den Würfel auf Schwarz (schwarze Kacheln am Rand: ob es sie
+        // ohne Passthrough auch gibt).
+        .immersionStyle(selection: Binding<any ImmersionStyle>(
+            get: { stats.full ? FullImmersionStyle.full as any ImmersionStyle : ProgressiveImmersionStyle.progressive },
+            set: { stats.full = $0 is FullImmersionStyle }), in: .progressive, .full)
     }
 }
 
@@ -42,6 +47,12 @@ struct LabWindow: View {
                 .buttonStyle(.borderedProminent)
                 Button("Schließen") { Task { await dismissImmersiveSpace() } }
             }
+            HStack(spacing: 16) {
+                Toggle("Voll (ohne Raum)", isOn: $stats.full)
+                Toggle("Farbe 16 Bit mit Alpha", isOn: $stats.wideColor)
+            }
+            Text("Umschalter gelten beim nächsten Öffnen: erst „Schließen“, dann neu öffnen.")
+                .font(.caption).foregroundStyle(.secondary)
             Divider()
             Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 6) {
                 GridRow { Text("Zustand"); Text(stats.state) }
@@ -68,12 +79,12 @@ struct CubeSpace: CompositorContent {
     @Environment(\.remoteDeviceIdentifier) private var device
 
     var body: some CompositorContent {
-        CompositorLayer(configuration: CubeConfiguration()) { @MainActor layer in
-            LabStats.shared.note("Ebene da, Gerät: \(device.map { "\($0)" } ?? "keins")")
+        CompositorLayer(configuration: CubeConfiguration(wideColor: LabStats.shared.wideColor)) { @MainActor layer in
+            LabStats.shared.note("Ebene da, Gerät: \(device.map { "\($0)" } ?? "keins"), \(LabStats.shared.full ? "voll" : "gemischt"), Farbe \(layer.configuration.colorFormat == .rgba16Float ? "16 Bit" : "8 Bit")")
             layer.onSpatialEvent = { events in
                 for event in events { LabStats.shared.spatial(event) }
             }
-            let renderer = CubeRenderer(layer: layer, device: device)
+            let renderer = CubeRenderer(layer: layer, device: device, opaque: LabStats.shared.full)
             let thread = Thread { renderer.run() }
             thread.name = "d30-remote render"
             thread.start()
@@ -82,9 +93,12 @@ struct CubeSpace: CompositorContent {
 }
 
 struct CubeConfiguration: CompositorLayerConfiguration {
+    var wideColor = false
+
     func makeConfiguration(capabilities: LayerRenderer.Capabilities, configuration: inout LayerRenderer.Configuration) {
         configuration.depthFormat = .depth32Float
-        configuration.colorFormat = .bgra8Unorm_srgb
+        let wide = wideColor && capabilities.supportedColorFormats(options: []).contains(.rgba16Float)
+        configuration.colorFormat = wide ? .rgba16Float : .bgra8Unorm_srgb
         configuration.layout = .dedicated
         configuration.isFoveationEnabled = capabilities.supportsFoveation
     }
@@ -102,6 +116,8 @@ final class LabStats: ObservableObject {
     @Published var pinches = 0
     @Published var lastEvent = "–"
     @Published var log: [String] = []
+    @Published var full = false
+    @Published var wideColor = false
 
     func note(_ line: String) {
         log.append("\(Date().formatted(date: .omitted, time: .standard))  \(line)")

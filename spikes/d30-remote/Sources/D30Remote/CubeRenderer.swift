@@ -24,8 +24,12 @@ final class CubeRenderer: @unchecked Sendable {
     private var tracked = 0
     private var described = false
 
-    init(layer: LayerRenderer, device remote: RemoteDeviceIdentifier?) {
+    /// Voll eingetaucht: Schwarz statt durchsichtig löschen.
+    let opaque: Bool
+
+    init(layer: LayerRenderer, device remote: RemoteDeviceIdentifier?, opaque: Bool = false) {
         self.layer = layer
+        self.opaque = opaque
         device = layer.device
         queue = device.makeCommandQueue()!
         session = remote.map { ARKitSession(device: $0) }
@@ -111,7 +115,7 @@ final class CubeRenderer: @unchecked Sendable {
                 let pass = MTLRenderPassDescriptor()
                 pass.colorAttachments[0].texture = drawable.colorTextures[i]
                 pass.colorAttachments[0].loadAction = .clear
-                pass.colorAttachments[0].clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 0)
+                pass.colorAttachments[0].clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: opaque ? 1 : 0)
                 pass.colorAttachments[0].storeAction = .store
                 pass.depthAttachment.texture = drawable.depthTextures[i]
                 pass.depthAttachment.loadAction = .clear
