@@ -16,11 +16,12 @@ struct D30RemoteApp: App {
         RemoteImmersiveSpace(id: "cube") {
             CubeSpace()
         }
-        // Auf dem Mac gibt es nur stufenlos (Krone, Raum sichtbar) und voll; voll zeigt den Würfel auf Schwarz (schwarze Kacheln am Rand: ob es sie
-        // ohne Passthrough auch gibt).
-        .immersionStyle(selection: Binding<any ImmersionStyle>(
-            get: { stats.full ? FullImmersionStyle.full as any ImmersionStyle : ProgressiveImmersionStyle.progressive },
-            set: { stats.full = $0 is FullImmersionStyle }), in: .progressive, .full)
+        // Derselbe Raum fest auf „voll“ (Würfel auf Schwarz): ob es die schwarzen Kacheln am Rand ohne Raum auch gibt.
+        // Ein Umschalter am ersten Raum ließ openImmersiveSpace scheitern, daher ein eigener Raum.
+        RemoteImmersiveSpace(id: "cube-full") {
+            CubeSpace()
+        }
+        .immersionStyle(selection: .constant(FullImmersionStyle.full), in: .full)
     }
 }
 
@@ -40,7 +41,7 @@ struct LabWindow: View {
             HStack {
                 Button("In der Vision Pro öffnen") {
                     Task {
-                        let result = await openImmersiveSpace(id: "cube")
+                        let result = await openImmersiveSpace(id: stats.full ? "cube-full" : "cube")
                         stats.note("openImmersiveSpace: \(result)")
                     }
                 }
@@ -50,6 +51,7 @@ struct LabWindow: View {
             HStack(spacing: 16) {
                 Toggle("Voll (ohne Raum)", isOn: $stats.full)
                 Toggle("Farbe 16 Bit mit Alpha", isOn: $stats.wideColor)
+                Toggle("Foveation aus", isOn: $stats.noFoveation)
             }
             Text("Umschalter gelten beim nächsten Öffnen: erst „Schließen“, dann neu öffnen.")
                 .font(.caption).foregroundStyle(.secondary)
@@ -79,8 +81,8 @@ struct CubeSpace: CompositorContent {
     @Environment(\.remoteDeviceIdentifier) private var device
 
     var body: some CompositorContent {
-        CompositorLayer(configuration: CubeConfiguration(wideColor: LabStats.shared.wideColor)) { @MainActor layer in
-            LabStats.shared.note("Ebene da, Gerät: \(device.map { "\($0)" } ?? "keins"), \(LabStats.shared.full ? "voll" : "gemischt"), Farbe \(layer.configuration.colorFormat == .rgba16Float ? "16 Bit" : "8 Bit")")
+        CompositorLayer(configuration: CubeConfiguration(wideColor: LabStats.shared.wideColor, foveation: !LabStats.shared.noFoveation)) { @MainActor layer in
+            LabStats.shared.note("Ebene da, Gerät: \(device.map { "\($0)" } ?? "keins"), \(LabStats.shared.full ? "voll" : "gemischt"), Farbe \(layer.configuration.colorFormat == .rgba16Float ? "16 Bit" : "8 Bit"), Foveation \(layer.configuration.isFoveationEnabled ? "an" : "aus")")
             layer.onSpatialEvent = { events in
                 for event in events { LabStats.shared.spatial(event) }
             }
@@ -94,13 +96,14 @@ struct CubeSpace: CompositorContent {
 
 struct CubeConfiguration: CompositorLayerConfiguration {
     var wideColor = false
+    var foveation = true
 
     func makeConfiguration(capabilities: LayerRenderer.Capabilities, configuration: inout LayerRenderer.Configuration) {
         configuration.depthFormat = .depth32Float
         let wide = wideColor && capabilities.supportedColorFormats(options: []).contains(.rgba16Float)
         configuration.colorFormat = wide ? .rgba16Float : .bgra8Unorm_srgb
         configuration.layout = .dedicated
-        configuration.isFoveationEnabled = capabilities.supportsFoveation
+        configuration.isFoveationEnabled = foveation && capabilities.supportsFoveation
     }
 }
 
@@ -118,9 +121,13 @@ final class LabStats: ObservableObject {
     @Published var log: [String] = []
     @Published var full = false
     @Published var wideColor = false
+    @Published var noFoveation = false
 
     func note(_ line: String) {
-        log.append("\(Date().formatted(date: .omitted, time: .standard))  \(line)")
+        let entry = "\(Date().formatted(date: .omitted, time: .standard))  \(line)"
+        log.append(entry)
+        print(entry)
+        fflush(stdout)
         if log.count > 200 { log.removeFirst(log.count - 200) }
     }
 

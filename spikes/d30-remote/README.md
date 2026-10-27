@@ -52,4 +52,5 @@ Vorher: die Vision Pro mit dem Mac koppeln (wie für „Mac Virtual Display“) 
 - [ ] Pinch (Daumen und Zeigefinger) zählt „Pinch-Ereignisse“ hoch; „Letztes Ereignis“ zeigt Hand und Position.
 - [ ] Gefühlte Latenz beim schnellen Kopfdrehen: bleibt der Würfel ruhig?
 - [x] Ein PS-VR2-Controller in der Brille: sieht der Mac irgendetwas davon? (Nein.)
-- [ ] Schwarze Kacheln: mit „Farbe 16 Bit mit Alpha“ weg? Mit „Voll (ohne Raum)“ unsichtbar (schwarz auf schwarz)?
+- [x] Schwarze Kacheln: mit „Farbe 16 Bit mit Alpha“ weg? **Nein** (27.10.). „Voll (ohne Raum)“ öffnet.
+- [ ] Schwarze Kacheln mit „Foveation aus“?
