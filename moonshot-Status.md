@@ -500,8 +500,8 @@ bei 50 Hz (visionOS stellt es so ein) „merke keinen Unterschied“ – es fül
 - **Was der Tipp tut** (sein Wunsch, unter dem Schalter der Leistungsanzeige): Automatisch / Zwischenbilder /
   MetalFX / Nichts, pro Spiel gespeichert (`klepton.tapAction`, `KleptonTapAction`); unter Erweitert › Test direkt
   unter „Leistungsanzeige … von Anfang an“, bei Alyx unter „Weiteres“. Automatisch = wie oben.
-- Commits `5202619` + `c40009e` auf `feat/framegen-trials` (gesichert). Installiert: Alyx mit beidem (Standard
-  „Dazwischen“); Beat Saber (halber Takt) mit `5202619`, die Tipp-Einstellung folgt, sobald es geschlossen ist.
+- Commits `5202619` + `c40009e` auf `feat/framegen-trials` (gesichert). Installiert: Alyx (Standard „Dazwischen“) und
+  Beat Saber (halber Takt), beide mit `c40009e`.
   In der Brille ungesehen.
 
 **Was fehlt:**
