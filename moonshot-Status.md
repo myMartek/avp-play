@@ -512,6 +512,26 @@ bei 50 Hz (visionOS stellt es so ein) „merke keinen Unterschied“ – es fül
 - **Veröffentlicht in AVP Play 1.6.0 (28.10.)**, seine Worte „ja genau so und dann den release machen“: Einstellung in
   allen Spielen außer Mixed Reality (ohne „nicht getestet“-Text, sein Wunsch), Hinweis bei MetalFX. Toolchain **785**
   (`aa7ebc4`, für alle Spiele), Klepton #93 → `83f0d2d`, Tag toolchain-785, Wiki `6fd48f2`, Fakten F402.
+- **Zwischenbilder aus den Bewegungsvektoren des Spiels** (28.10., seine Wahl „AppSW-Vektoren“; privater Fork,
+  Branch `moonshot/s3-appsw`, `c5532c8` + `5c5ed01`, gesichert):
+  - Wer sie liefert: in den Fingerabdrücken steht `XR_FB_space_warp` bei 6 von 46 geprüften Spielen, das sagt
+    aber nur, dass die Bibliothek den Namen kennt. Wirklich gezeichnet werden sie von **HITMAN 3 VR: Reloaded**
+    (OpenXR, Vektoren 572×600 = ein Viertel des Auges, Tiefe gleich groß, D24S8). Über OVRPlugin zeichnen sie
+    AC Nexus, Arizona Sunshine 2 und Ghost Town (Texturen gibt es schon, gelesen werden sie noch nicht).
+  - Laufzeit: `xrEndFrame` liest die `XrCompositionLayerSpaceWarpInfoFB` jeder Augenansicht und gibt die
+    Vektortextur mit der Projektionsebene an den Compositor (`kl_ovrp_proj_layer.sw_*`). Hat eine Ebene Vektoren,
+    entsteht das Feld direkt daraus (`KLFrameGen.motionField`): keine Pyramide, keine Suche, nur der Warp.
+    `KL_FRAMEGEN_MV=0` sucht wie bisher.
+  - **Einheit gemessen** (Mac, HITMAN, Kopf schwenkt per `KL_OVRP_HEAD_SWEEP`): Änderung der NDC-Position, y nach
+    oben, Kopfdrehung enthalten. Ein Bild, mit seinen Vektoren verschoben, trifft das nächste bei genau
+    (0,5, −0,5) × Bildgröße am besten: Fehler 0,0017 gegen 0,0202 unverschoben.
+  - **Ergebnis** (`tools/framegen/mv`, 16 Bildpaare im dunklen VR-Tutorialraum; das ältere Bild aus dem neueren
+    zurückgerechnet): Spielvektoren **54–68 dB**, Wiederholung 41–60 dB, also +10 bis +13 dB. Unsere Suche findet
+    in dem dunklen, kontrastarmen Raum nichts (gleich der Wiederholung).
+  - Labor dazu: `KL_XR_SPACEWARP_OUT` (Vektoren roh), `KL_VK_OUT_RUN` (Bildpaare), `KL_OVRP_HEAD_SWEEP`, und
+    Knopfdrücke nach Bildnummer (`f<n>:A`) gehen jetzt auch bei OpenXR-Spielen. Mac-Weg in HITMANs Tutorial:
+    frischer Ordner, `f4700:A,f5300:LRIGHT,f5450:LRIGHT,f5600:LRIGHT,f5800:LLEFT,f6100:A,f6600:LDOWN,f6800:A`.
+  - In der Brille ungesehen.
 
 **Was fehlt:**
 - Messung **im Spiel** (fliegende Blöcke, Säbel, Wände): dort entsteht das Ruckeln, das man sieht. Dafür im Labor
