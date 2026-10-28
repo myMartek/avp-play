@@ -22,7 +22,7 @@ Stand: 27. Oktober 2026.
 | `s1-headless` | **fertig**: `avpplay lab run <spiel>` mit Eingabeskript (Aufrufe, Drücke, **Posen**), Bildzeiten pro Frame, Laborpaket (ANGLE + MoltenVK für den Mac) | nein (Freigabe für das Laborpaket als Download erst beim Release) |
 | `s2-judge` | **Bildprüfung fertig** (`avpplay lab judge`): schwarz, einfarbig, magenta, ein Auge, Stillstand, angehalten; an Beat Saber und Demeo gegengeprüft | nein (Urteil per Bildmodell offen, braucht einen API-Schlüssel) |
 | `s2-engines` | **Regel „Unreal auf GLES“ gebaut** (Profil für ungetestete Spiele), an 19 Unreal-Spielen auf dem Mac geprüft; Unity-Regeln waren schon im Profil | ja: ein ungetestetes Unreal-GL-Spiel in der Brille, sobald eins da ist |
-| `s3-framegen` | **in der Brille (28.10.):** Zwischenbilder im Compositor; Interpolation „Dazwischen“ bei Alyx „fühlt sich auch besser an“. Runde 2 auf `feat/framegen-trials`: drei Stufen im Startfenster (Alyx Standard „Dazwischen“), Tipp reihum, Anzeige mit gezeigter Rate, keine ungezeigten Bilder, verformte Pfeile im Mac-Test behoben. Stabiler Stand **Klepton PR #93** (alt, nicht gemergt) | ja: Runde 2 in Beat Saber (mit/ohne Foveation) und Alyx ansehen |
+| `s3-framegen` | **in der Brille (28.10.):** Zwischenbilder im Compositor; Interpolation „Dazwischen“ bei Alyx „fühlt sich auch besser an“. Runde 2 auf `feat/framegen-trials`: drei Stufen im Startfenster (Alyx Standard „Dazwischen“), Tipp reihum, Anzeige mit gezeigter Rate, keine ungezeigten Bilder, verformte Pfeile im Mac-Test behoben. **Veröffentlicht in AVP Play 1.6.0** (Toolchain 785, Klepton #93) | Zwischenbilder in weiteren Spielen ausprobieren |
 | übrige `s1-*`, `s2-*`, `s3-*`, `s4-*` | nicht begonnen | – |
 
 ## Branches
@@ -509,6 +509,9 @@ bei 50 Hz (visionOS stellt es so ein) „merke keinen Unterschied“ – es fül
   Sprache · Spielbereich. Leistungsanzeige + Tipp unter Erweitert › Leistungsanzeige, Tiefenwerte unter Erweitert ›
   Bild im Einzelnen; die allgemeine „Sprache des Spiels“ fehlt bei Alyx (wirkte dort nicht, Alyx hat seine eigene).
   Gespeicherte Werte unverändert. Commit `1f15198` (784), Alyx damit installiert, ungesehen.
+- **Veröffentlicht in AVP Play 1.6.0 (28.10.)**, seine Worte „ja genau so und dann den release machen“: Einstellung in
+  allen Spielen außer Mixed Reality (ohne „nicht getestet“-Text, sein Wunsch), Hinweis bei MetalFX. Toolchain **785**
+  (`aa7ebc4`, für alle Spiele), Klepton #93 → `83f0d2d`, Tag toolchain-785, Wiki `6fd48f2`, Fakten F402.
 
 **Was fehlt:**
 - Messung **im Spiel** (fliegende Blöcke, Säbel, Wände): dort entsteht das Ruckeln, das man sieht. Dafür im Labor
