@@ -22,7 +22,7 @@ Stand: 27. Oktober 2026.
 | `s1-headless` | **fertig**: `avpplay lab run <spiel>` mit Eingabeskript (Aufrufe, Drücke, **Posen**), Bildzeiten pro Frame, Laborpaket (ANGLE + MoltenVK für den Mac) | nein (Freigabe für das Laborpaket als Download erst beim Release) |
 | `s2-judge` | **Bildprüfung fertig** (`avpplay lab judge`): schwarz, einfarbig, magenta, ein Auge, Stillstand, angehalten; an Beat Saber und Demeo gegengeprüft | nein (Urteil per Bildmodell offen, braucht einen API-Schlüssel) |
 | `s2-engines` | **Regel „Unreal auf GLES“ gebaut** (Profil für ungetestete Spiele), an 19 Unreal-Spielen auf dem Mac geprüft; Unity-Regeln waren schon im Profil | ja: ein ungetestetes Unreal-GL-Spiel in der Brille, sobald eins da ist |
-| `s3-framegen` | **begonnen (28.10.):** Zwischenbild-Generator `KLFrameGen` (Metal, Mac + visionOS) und Messung im Labor an Beat Saber (50 → 100 Hz). Im Menü gleichauf mit dem heutigen Ausgleich, nicht besser; noch nicht im Compositor | nein (nächster Schritt: Messung im Spiel mit Säbeln und Blöcken) |
+| `s3-framegen` | **in der Brille (28.10.):** Zwischenbilder im Compositor, Test-Schalter; Beat Saber „sieht sehr gut aus“, Alyx bei 50-Hz-Display kaum spürbar. Stabiler Stand als **Klepton PR #93** (nicht gemergt); Versuch Interpolation auf `feat/framegen-trials` | ja: Interpolation (Beat Saber, Alyx) vergleichen |
 | übrige `s1-*`, `s2-*`, `s3-*`, `s4-*` | nicht begonnen | – |
 
 ## Branches
@@ -454,6 +454,18 @@ einem Release.
   Er schadet aber auch nicht mehr (erste Fassung: −4 dB, behoben durch die Drehung in der Suche).
 - **Kosten:** 3,5 ms GPU pro Bild bei 858×900 auf dem M4 – für die Brille (zwei Augen, viel größer) zu viel; die
   Pyramide pro Spielbild nur einmal zu rechnen ist eingebaut, schneller muss die Suche werden.
+
+**In der Brille (28.10.):** als `fgPrepass` im Compositor (nach MetalFX), Test-Schalter unter Erweitert › Test,
+umschaltbar per kurzem Tipp auf Create + Options bei eingeblendeter Leistungsanzeige, Zeile „Frame gen“ (an/aus,
+Bilder pro Sekunde). Unterwegs behoben: Kosten (100 ms → unter 1 ms pro Auge), foveiertes Auge (nur der beschriebene
+Teil, Drehung über die Rate-Map; vorher Stückelung beim Kopfdrehen), Speicherleck beim Neuanlegen der Texturen
+(Absturz beim Verlassen eines Levels), Neuaufbau von Ausgabe und Raster in jedem Bild (70 Hz, schwarzes Flackern).
+Alyx: Zeitpunkt aus den Anzeigezeiten, Bildausschnitt von Source 2. Urteil: Beat Saber „sieht sehr gut aus“; Alyx
+bei 50 Hz (visionOS stellt es so ein) „merke keinen Unterschied“ – es füllt nur die verpassten Bilder.
+- Stabiler Stand: privat `feat/framegen` `f26ac36` auf 779, öffentlich **Klepton PR #93** (nicht gemergt).
+- Versuch, verwerfbar: `feat/framegen-trials` `ea96787` – Interpolation wie DLSS (`KL_FRAMEGEN_INTERP`): die Mitte
+  zwischen den beiden neuesten Bildern, das neueste ein Displaybild später. Installiert: Beat Saber (mit halbem Takt)
+  und Alyx. Ungesehen.
 
 **Was fehlt:**
 - Messung **im Spiel** (fliegende Blöcke, Säbel, Wände): dort entsteht das Ruckeln, das man sieht. Dafür im Labor
