@@ -22,7 +22,7 @@ Stand: 27. Oktober 2026.
 | `s1-headless` | **fertig**: `avpplay lab run <spiel>` mit Eingabeskript (Aufrufe, Drücke, **Posen**), Bildzeiten pro Frame, Laborpaket (ANGLE + MoltenVK für den Mac) | nein (Freigabe für das Laborpaket als Download erst beim Release) |
 | `s2-judge` | **Bildprüfung fertig** (`avpplay lab judge`): schwarz, einfarbig, magenta, ein Auge, Stillstand, angehalten; an Beat Saber und Demeo gegengeprüft | nein (Urteil per Bildmodell offen, braucht einen API-Schlüssel) |
 | `s2-engines` | **Regel „Unreal auf GLES“ gebaut** (Profil für ungetestete Spiele), an 19 Unreal-Spielen auf dem Mac geprüft; Unity-Regeln waren schon im Profil | ja: ein ungetestetes Unreal-GL-Spiel in der Brille, sobald eins da ist |
-| `s3-framegen` | **in der Brille (28.10.):** Zwischenbilder im Compositor, Test-Schalter; Beat Saber „sieht sehr gut aus“, Alyx bei 50-Hz-Display kaum spürbar. Stabiler Stand als **Klepton PR #93** (nicht gemergt); Versuch Interpolation auf `feat/framegen-trials` | ja: Interpolation (Beat Saber, Alyx) vergleichen |
+| `s3-framegen` | **in der Brille (28.10.):** Zwischenbilder im Compositor; Interpolation „Dazwischen“ bei Alyx „fühlt sich auch besser an“. Runde 2 auf `feat/framegen-trials`: drei Stufen im Startfenster (Alyx Standard „Dazwischen“), Tipp reihum, Anzeige mit gezeigter Rate, keine ungezeigten Bilder, verformte Pfeile im Mac-Test behoben. Stabiler Stand **Klepton PR #93** (alt, nicht gemergt) | ja: Runde 2 in Beat Saber (mit/ohne Foveation) und Alyx ansehen |
 | übrige `s1-*`, `s2-*`, `s3-*`, `s4-*` | nicht begonnen | – |
 
 ## Branches
@@ -465,7 +465,44 @@ bei 50 Hz (visionOS stellt es so ein) „merke keinen Unterschied“ – es fül
 - Stabiler Stand: privat `feat/framegen` `f26ac36` auf 779, öffentlich **Klepton PR #93** (nicht gemergt).
 - Versuch, verwerfbar: `feat/framegen-trials` `ea96787` – Interpolation wie DLSS (`KL_FRAMEGEN_INTERP`): die Mitte
   zwischen den beiden neuesten Bildern, das neueste ein Displaybild später. Installiert: Beat Saber (mit halbem Takt)
-  und Alyx. Ungesehen.
+  und Alyx. Urteil: „Bei HL Alyx funktioniert es sehr sehr gut und fühlt sich auch besser an als ohne.“
+
+**Runde 2 (28.10., `feat/framegen-trials`), seine Wünsche:**
+- **Drei Stufen** Aus / Vorausberechnet / Dazwischen: Einstellung „Zwischenbilder“ im Startfenster bei den
+  Haupteinstellungen (nicht unter Erweitert), gespeichert pro Spiel; Standard pro Spiel aus `targets.py`
+  `"framegen"` (`KLFrameGenDefault`): **Alyx „Dazwischen“**, alle anderen aus – wer nie gewählt hat, bekommt das mit
+  dem Update. Die beiden Test-Schalter sind weg; `KL_FRAMEGEN=0/1/2` bleibt für das Labor.
+- **Tipp auf Create + Options** wechselt reihum zwischen den drei Stufen (nicht gespeichert) – in jedem Spiel, außer
+  wo Zwischenbilder aus sind und MetalFX etwas umzuschalten hat (dann wie bisher MetalFX).
+- **Leistungsanzeige:** die große Zahl ist, was gezeigt wird (Spielbilder + Zwischenbilder), die Zeile „Frame gen“
+  nennt Stufe und die Bildrate des Spiels; der Verlauf hat drei Linien: Hz, Game, Shown.
+- **Keine Bilder mehr, die nie gezeigt werden:** bei 50 Hz Display und 50 Bildern des Spiels machte „Dazwischen“
+  50 Mitten pro Sekunde, das neueste Bild kam nie dran. Jetzt nur, wenn ein Spielbild zwei Displaybilder oder mehr
+  dauert (Displaytakt aus den Anzeigezeiten); sonst „same rate“.
+- **Verformte Pfeile** (Beat Saber, vor allem mit Foveation): nachgestellt mit einem künstlichen Test auf dem Mac
+  (`tools/framegen/synthetic`, rote Box mit weißem Pfeil über dem groben Rand einer Rate-Map wie in der Brille) –
+  genau das Bild: der Pfeil verbogen, die Kanten der Box stehen. Ursachen und Abhilfen:
+  - der 3×3-Median machte die Randblöcke von allem, was nur ein paar Blöcke breit ist, zu „steht still“ (im
+    gestauchten Rand einer Foveation ist eine Box noch weniger Blöcke) → ein Block behält seinen Vektor, wenn zwei
+    Nachbarn ihm zustimmen; geglättet wird nur die feinste Stufe (sonst verlor die grobe Stufe schnelle Bewegung);
+  - die Verschiebung las den Vektor am Ausgabepixel statt dort, wo er hinzeigt → jeder der vier Blöcke ringsum bietet
+    seinen Vektor an, genommen wird der, der dort noch gilt, bei mehreren der größte (das Ding im Vordergrund);
+  - „Dazwischen“ hält jetzt auch die Farben des älteren Bildes: ein Vektor gilt pro Pixel, wo neues und altes Bild
+    dasselbe zeigen, das Ergebnis ist die Mischung; was das neue Bild schon verdeckt hat, kommt aus dem alten.
+
+  | Mitte zwischen zwei Bildern, Box 40 px/Bild | wiederholt | vorher | jetzt |
+  |---|---|---|---|
+  | ohne Foveation | 29,2 dB | 29,6 dB | **37,3 dB** |
+  | mit Foveation | 29,9 dB | 31,0 dB | **38,7 dB** |
+
+  Suche im gleichmäßigen Bildschirmraum statt im gestauchten (`KL_FRAMEGEN_SCREEN=1`) kostet ein Drittel, findet
+  schnelle Dinge am Rand aber schlechter (80 px: 32,9 gegen 36,6 dB) – nur ein Hebel zum Vergleichen.
+- **Was der Tipp tut** (sein Wunsch, unter dem Schalter der Leistungsanzeige): Automatisch / Zwischenbilder /
+  MetalFX / Nichts, pro Spiel gespeichert (`klepton.tapAction`, `KleptonTapAction`); unter Erweitert › Test direkt
+  unter „Leistungsanzeige … von Anfang an“, bei Alyx unter „Weiteres“. Automatisch = wie oben.
+- Commits `5202619` + `c40009e` auf `feat/framegen-trials` (gesichert). Installiert: Alyx mit beidem (Standard
+  „Dazwischen“); Beat Saber (halber Takt) mit `5202619`, die Tipp-Einstellung folgt, sobald es geschlossen ist.
+  In der Brille ungesehen.
 
 **Was fehlt:**
 - Messung **im Spiel** (fliegende Blöcke, Säbel, Wände): dort entsteht das Ruckeln, das man sieht. Dafür im Labor
