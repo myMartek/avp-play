@@ -503,6 +503,12 @@ bei 50 Hz (visionOS stellt es so ein) „merke keinen Unterschied“ – es fül
 - Commits `5202619` + `c40009e` auf `feat/framegen-trials` (gesichert). Installiert: Alyx (Standard „Dazwischen“) und
   Beat Saber (halber Takt), beide mit `c40009e`.
   In der Brille ungesehen.
+- **Alyx-Einstellungen aufgeräumt** (sein Wunsch „viel zu krass fragmentiert“, Steam Cloud zuerst): fünf Kästen statt
+  zwölf – Steam Cloud · Bild (Grafik-Preset, Zwischenbilder, Bildrate; Auflösung, MetalFX und Bildtakt unter
+  „Eigene“) · Steuerung (Controller, Laufgeschwindigkeit, „Nach dem Laden auf den Trigger warten“, Gamecontroller) ·
+  Sprache · Spielbereich. Leistungsanzeige + Tipp unter Erweitert › Leistungsanzeige, Tiefenwerte unter Erweitert ›
+  Bild im Einzelnen; die allgemeine „Sprache des Spiels“ fehlt bei Alyx (wirkte dort nicht, Alyx hat seine eigene).
+  Gespeicherte Werte unverändert. Commit `1f15198` (784), Alyx damit installiert, ungesehen.
 
 **Was fehlt:**
 - Messung **im Spiel** (fliegende Blöcke, Säbel, Wände): dort entsteht das Ruckeln, das man sieht. Dafür im Labor
