@@ -531,6 +531,17 @@ bei 50 Hz (visionOS stellt es so ein) „merke keinen Unterschied“ – es fül
   - Labor dazu: `KL_XR_SPACEWARP_OUT` (Vektoren roh), `KL_VK_OUT_RUN` (Bildpaare), `KL_OVRP_HEAD_SWEEP`, und
     Knopfdrücke nach Bildnummer (`f<n>:A`) gehen jetzt auch bei OpenXR-Spielen. Mac-Weg in HITMANs Tutorial:
     frischer Ordner, `f4700:A,f5300:LRIGHT,f5450:LRIGHT,f5600:LRIGHT,f5800:LLEFT,f6100:A,f6600:LDOWN,f6800:A`.
+  - **In der Brille (29.10., HITMAN):** Spielvektoren werden genutzt. Mit Zwischenbildern für beide Ebenen brauchte
+    der Compositor 10 ms von 10 ms, und visionOS senkte zum Missionsstart auf 50 Hz → Ebenen ohne Vektoren (HITMANs
+    Oberfläche) bleiben jetzt stehen (`aba40cc`): danach 0 verpasste Termine, 3–10 ms. visionOS lief trotzdem meist
+    mit 50 Hz (Start bei 50, eine Minute 100, dann wieder 50) – ohne dass wir zu spät waren; dann entsteht nichts.
+  - **AC Nexus (29.10. nachts, seine Bitte „während ich schlafe“):** OVRPlugin-Vektoren aus den SpaceWarp-Texturen
+    der gezeigten Stufe (`kl_vulkan_spacewarp_mtl`, `0cdc04a`). Mac: offline über den Ubisoft-Dialog in den Animus
+    (`KL_OVRP_POKE="f15000:RTRIG,f15300:A,f16500:RTRIG,f16800:A,f18000:X,f18300:LTRIG"`), Kopf schwenkt:
+    gleiche Einheit wie HITMAN; eigene Schwelle 0,25 px statt 1,5 → **+6 bis +10 dB** über der Wiederholung
+    (bewegte Punkte +6 bis +13), die Suche findet dort nichts. `make check` grün auf 791.
+  - Installiert mit Toolchain **791** (`426ef5c`), „Dazwischen“ + „jedes zweite Bild“ ab Installation
+    (`KLEPTON_FRAMEGEN`, `KLEPTON_TEST_ON_EXTRA=KL_GUEST_PACE_DIV`): HITMAN, AC Nexus, Beat Saber, Alyx.
   - In der Brille ungesehen.
 
 **Was fehlt:**
