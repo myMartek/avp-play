@@ -22,7 +22,7 @@ Stand: 27. Oktober 2026.
 | `s1-headless` | **fertig**: `avpplay lab run <spiel>` mit Eingabeskript (Aufrufe, Drücke, **Posen**), Bildzeiten pro Frame, Laborpaket (ANGLE + MoltenVK für den Mac) | nein (Freigabe für das Laborpaket als Download erst beim Release) |
 | `s2-judge` | **Bildprüfung fertig** (`avpplay lab judge`): schwarz, einfarbig, magenta, ein Auge, Stillstand, angehalten; an Beat Saber und Demeo gegengeprüft | nein (Urteil per Bildmodell offen, braucht einen API-Schlüssel) |
 | `s2-engines` | **Regel „Unreal auf GLES“ gebaut** (Profil für ungetestete Spiele), an 19 Unreal-Spielen auf dem Mac geprüft; Unity-Regeln waren schon im Profil | ja: ein ungetestetes Unreal-GL-Spiel in der Brille, sobald eins da ist |
-| `s3-framegen` | **in der Brille (28.10.):** Zwischenbilder im Compositor; Interpolation „Dazwischen“ bei Alyx „fühlt sich auch besser an“. Runde 2 auf `feat/framegen-trials`: drei Stufen im Startfenster (Alyx Standard „Dazwischen“), Tipp reihum, Anzeige mit gezeigter Rate, keine ungezeigten Bilder, verformte Pfeile im Mac-Test behoben. **Veröffentlicht in AVP Play 1.6.0** (Toolchain 785, Klepton #93) | Zwischenbilder in weiteren Spielen ausprobieren |
+| `s3-framegen` | **in der Brille (28.10.):** Zwischenbilder im Compositor; Interpolation „Dazwischen“ bei Alyx „fühlt sich auch besser an“. Runde 2 auf `feat/framegen-trials`: drei Stufen im Startfenster (Alyx Standard „Dazwischen“), Tipp reihum, Anzeige mit gezeigter Rate, keine ungezeigten Bilder, verformte Pfeile im Mac-Test behoben. **Veröffentlicht in AVP Play 1.6.0** (Toolchain 785, Klepton #93); eigene Spielvektoren (HITMAN, AC Nexus, LEGO) **in 1.7.0** (Toolchain 809, Klepton #98) | visionOS' eigene 50 Hz klären |
 | übrige `s1-*`, `s2-*`, `s3-*`, `s4-*` | nicht begonnen | – |
 
 ## Branches
@@ -542,7 +542,15 @@ bei 50 Hz (visionOS stellt es so ein) „merke keinen Unterschied“ – es fül
     (bewegte Punkte +6 bis +13), die Suche findet dort nichts. `make check` grün auf 791.
   - Installiert mit Toolchain **791** (`426ef5c`), „Dazwischen“ + „jedes zweite Bild“ ab Installation
     (`KLEPTON_FRAMEGEN`, `KLEPTON_TEST_ON_EXTRA=KL_GUEST_PACE_DIV`): HITMAN, AC Nexus, Beat Saber, Alyx.
-  - In der Brille ungesehen.
+  - **Seine Runden am 29.10.:** HITMAN, Beat Saber, Alyx „sehr gut“; AC Nexus flackerte → vier Runden in der Brille:
+    792 gemeinsamer Ausgang bei 2-Ebenen-Augenbild (linkes Auge zeigte eine nie beschriebene Ebene, auch in 1.6.0),
+    793 Zellen in x/y getrennt + Kopfdrehung im Sichtkegel des Viewports (Mac mit `KL_OVRP_EYE_TAN=vision`: Rest 11–16 px
+    → 0,13–0,22 px), 794 Nullvektoren (Himmel) bleiben null, Schwelle 0,75 px, nur sichtbare Spalten (M4: 2,3 → 0,7 ms
+    je Auge), 795 „Dazwischen“ nur bei dauerhaft langsamerem Spiel – er: „funktioniert“. Danach LEGO Bricktales
+    (eigene Vektoren, auch in MR, Sperre für MR-Spiele weg, 796) und PowerWash (fordert Vektorbilder an, zeichnet
+    nichts hinein → Suche, 797).
+  - **Veröffentlicht in AVP Play 1.7.0** (29.10., Toolchain 809, Klepton #98, mit Community-Fixes 73–79 und
+    Surreal Touch #94–#97).
 
 **Was fehlt:**
 - Messung **im Spiel** (fliegende Blöcke, Säbel, Wände): dort entsteht das Ruckeln, das man sieht. Dafür im Labor
