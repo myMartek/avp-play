@@ -279,7 +279,16 @@ public struct Toolchain: Sendable {
         return .standard
     }
 
-    public func controllerEnvironment(_ mode: ControllerMode) throws -> [String: String] {
+    /// Ob diese Toolchain ein Spiel ganz ohne Surreal Touch bauen kann (`KLEPTON_SURREAL_SUPPORT=0`). Eine ältere
+    /// baut dann wie für Standard-Controller, nur bleibt die Wahl im Spiel stehen.
+    public var supportsSurrealSwitch: Bool {
+        guard let text = try? String(contentsOf: root.appendingPathComponent("visionos/gen_xcodeproj.py"), encoding: .utf8) else { return false }
+        return text.contains("KLEPTON_SURREAL_SUPPORT")
+    }
+
+    public func controllerEnvironment(_ mode: ControllerMode, surrealSupport: Bool = true) throws -> [String: String] {
+        // Ohne Surreal-Touch-Unterstützung: immer Standard, und die Toolchain lässt die Wahl im Spiel weg.
+        guard surrealSupport else { return ["KLEPTON_CONTROLLER_MODE": "standard", "KLEPTON_SURREAL_SUPPORT": "0"] }
         if mode == .surreal && !supportsSurrealControllers {
             throw RecipeError.invalid(L("this toolchain does not include Surreal Touch. Select a compatible custom toolchain; your current toolchain choice has not been changed",
                                         "diese Toolchain enthält Surreal Touch nicht. Eine kompatible eigene Toolchain auswählen; die aktuelle Wahl wurde nicht geändert"))
@@ -384,11 +393,11 @@ public struct Toolchain: Sendable {
                                 extraEnvironment: [String: String] = [:],
                                 metalFX: Bool = false, resolution: Int? = nil, xrPrediction: Bool = false,
                                 displayName: String? = nil, displaySuffix: String? = nil,
-                                controllerMode: ControllerMode = .standard) throws {
+                                controllerMode: ControllerMode = .standard, surrealSupport: Bool = true) throws {
         guard team.count == 10, team.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber) }) else {
             throw RecipeError.invalid(L("team ID '\(team)' (expected: 10 characters)", "Team-ID '\(team)' (erwartet: 10 Zeichen)"))
         }
-        let controllerEnvironment = try controllerEnvironment(controllerMode)
+        let controllerEnvironment = try controllerEnvironment(controllerMode, surrealSupport: surrealSupport)
         var env = ProcessInfo.processInfo.environment
         // Nur was macOS und Xcode mitbringen – auf jedem Mac dasselbe, ob dort Homebrew oder ein anderes
         // Python liegt oder nicht. Sonst baut es beim einen mit Werkzeugen, die dem anderen fehlen.

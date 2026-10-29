@@ -2,6 +2,8 @@
 
 The controller preference is in Settings → Controllers. Standard Controllers remains the default. The global choice becomes the initial mode in newly built games; each game can override it in its Vision Pro launcher without another rebuild. Pairing happens on Vision Pro.
 
+**Surreal Touch support** (Settings → Controllers, on by default) decides whether newly built games offer Surreal Touch at all. On, every game is built with Surreal Interactive's SDK (fetched once by the toolchain, pinned and checked) and can be switched to Surreal Touch in its launcher. Off, the job passes `KLEPTON_SURREAL_SUPPORT=0` and Standard mode: the game is built for standard controllers only, without the SDK and without a controller type in its launcher. `--no-surreal` does the same from the CLI. A toolchain without the switch (before 812) builds Standard as before, but keeps the choice in the launcher.
+
 The matching runtime change is in `myMartek/Klepton`, branch `avp-play`. This Mac app requires that modified runtime for Surreal mode. It detects the generator option and all backend files and rejects an incompatible toolchain instead of silently producing a Standard-only game. It never changes a custom toolchain choice for you.
 
 ## Build this Mac app

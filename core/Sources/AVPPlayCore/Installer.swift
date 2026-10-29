@@ -123,6 +123,9 @@ public struct InstallRequest: Codable, Sendable, Equatable {
     public var xrPrediction: Bool?
     /// Initial launcher mode; an existing per-game headset preference always wins.
     public var controllerMode: ControllerMode?
+    /// `false`: the game is built for standard controllers only (`ControllerMode.supportKey`,
+    /// `KLEPTON_SURREAL_SUPPORT=0`). Without it: Surreal Touch stays a choice in the game.
+    public var surrealSupport: Bool?
     /// Die Raumvermessung (Spielbereich) im Spiel von Anfang an einschalten. Ohne Angabe: wie die Einstellung der
     /// App für alle Spiele (`InstallDefaults.roomMeasuring`). Im Spiel lässt sie sich danach umstellen.
     public var roomMeasuring: Bool?
@@ -605,7 +608,8 @@ public struct Installer: Sendable {
                                           resolution: metalFX ? request.resolution : nil,
                                           xrPrediction: xrPrediction,
                                           displayName: request.displayName, displaySuffix: request.displaySuffix,
-                                          controllerMode: request.controllerMode ?? (request.resign == true ? toolchain.builtControllerMode(recipe: recipe) : .standard))
+                                          controllerMode: request.controllerMode ?? (request.resign == true ? toolchain.builtControllerMode(recipe: recipe) : .standard),
+                                          surrealSupport: request.surrealSupport ?? true)
         } catch ToolchainError.refused(.capability, free: false, _) {
             // Xcode führt das Team als bezahlt, Apple als „Personal Team“ (siehe `AppleTeams.markFree`): einmal
             // neu, wie für ein kostenloses Team. Jetzt gilt es als kostenlos, ein zweites Nein kommt also mit
