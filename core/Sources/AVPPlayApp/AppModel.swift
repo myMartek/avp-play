@@ -362,6 +362,7 @@ final class AppModel: ObservableObject {
     @AppStorage("autoRemoveOldToolchains") var autoRemoveOldToolchains = true
     /// Initial controller mode for newly built games; the headset preference wins later.
     @AppStorage(ControllerMode.preferenceKey) var controllerMode: ControllerMode = .standard
+    @AppStorage(ControllerMode.supportKey) var surrealSupport = true
     /// „Raum vermessen“ in Spielen, die gebaut werden (`InstallDefaults.roomMeasuring`) – in einer Datei, nicht in den
     /// Einstellungen der App, damit die Kommandozeile und das Erneuern der Signaturen dasselbe bauen.
     @Published var roomMeasuringForNewGames = InstallDefaults.roomMeasuring() {
@@ -1580,7 +1581,10 @@ final class AppModel: ObservableObject {
         request.addons = addons ?? chosen.addons
         // Nur eine Installation spielt Spielstände zurück; ein Abgleich von Inhalten rührt sie nicht an.
         if steps.contains(.build) { request.restoreSaves = chosen.restoreSaves ?? true }
-        if steps.contains(.build) { request.controllerMode = controllerMode }
+        if steps.contains(.build) {
+            request.controllerMode = surrealSupport ? controllerMode : .standard
+            if !surrealSupport { request.surrealSupport = false }
+        }
         if steps.contains(.build), metalFXUpscaling {
             request.metalFX = true
             request.resolution = metalFXResolution

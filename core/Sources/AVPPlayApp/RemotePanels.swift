@@ -491,9 +491,12 @@ extension AppModel {
             Item(id: "autoUpdateCheck", kind: .toggle, title: L("Check for new versions once a day", "Einmal am Tag nach neuen Fassungen sehen"), on: autoUpdateCheck),
             Item(id: "version", kind: .fact, title: L("Version", "Version"), value: appVersion),
         ]))
-        var controllers = [Item(id: "controllerMode", kind: .choice, title: L("Controller Type", "Controllertyp"), value: controllerMode.rawValue,
-                                choices: ControllerMode.allCases.map { RemoteChoice(id: $0.rawValue, title: $0.title) })]
-        if controllerMode == .surreal, toolchain?.supportsSurrealControllers != true {
+        var controllers = [Item(id: "surrealSupport", kind: .toggle, title: L("Surreal Touch support", "Surreal-Touch-Unterstützung"), on: surrealSupport)]
+        if surrealSupport {
+            controllers.append(Item(id: "controllerMode", kind: .choice, title: L("Controller Type", "Controllertyp"), value: controllerMode.rawValue,
+                                    choices: ControllerMode.allCases.map { RemoteChoice(id: $0.rawValue, title: $0.title) }))
+        }
+        if surrealSupport, controllerMode == .surreal, toolchain?.supportsSurrealControllers != true {
             controllers.append(Item(id: "surreal-note", kind: .text, title: "", detail: L("The selected toolchain does not include Surreal Touch yet.", "Die ausgewählte Toolchain enthält Surreal Touch noch nicht."), style: .warning))
         }
         sections.append(RemoteSection(id: "controllers", title: L("Controllers", "Controller"),
@@ -588,6 +591,7 @@ extension AppModel {
             case "language": if let value, let choice = LanguageChoice(rawValue: value) { languageChoice = choice }
             case "autoUpdateCheck": autoUpdateCheck = on
             case "controllerMode": if let value, let mode = ControllerMode(rawValue: value) { controllerMode = mode }
+            case "surrealSupport": surrealSupport = on
             case "roomMeasuring": roomMeasuringForNewGames = on
             case "gameLanguage": if let value { gameLanguageForNewGames = value }
             case "renewInBackground":

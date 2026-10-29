@@ -149,6 +149,7 @@ avpplay – command line for the AVP Play core library
              --no-store-art          don't fetch the cover image from the store page (the icon from the APK is used instead)
              --replace-running       install even if the game is running (it will be quit)
              --controller-mode <standard|surreal>  initial controller mode (pair on Vision Pro)
+             --no-surreal            build for standard controllers only (no Surreal Touch choice in the game)
              --metalfx               build with the compositor's MetalFX upscaling switched on from the start (sharpens the picture
                                      when the game's resolution is below 100%; off in the game under Settings › Rendering)
              --resolution <percent>  with --metalfx: the resolution the game starts at (default 75; 100: the game's own)
@@ -228,6 +229,7 @@ avpplay – Kommandozeile zur Kern-Bibliothek von AVP Play
              --replace-running       auch installieren, wenn das Spiel gerade läuft (es wird dabei beendet)
              --restore-saves         nach dem Kopieren die Spielstände vom Mac zurückspielen, wenn das Spiel auf dem Gerät noch keine hat
              --controller-mode <standard|surreal>  anfänglicher Controllermodus (auf Vision Pro koppeln)
+             --no-surreal            nur für Standard-Controller bauen (im Spiel keine Surreal-Touch-Wahl)
              --metalfx               mit von Anfang an eingeschaltetem MetalFX-Hochskalieren des Compositors bauen (schärft das Bild,
                                      wenn die Auflösung des Spiels unter 100 % steht; im Spiel abschaltbar unter Einstellungen › Rendering)
              --resolution <Prozent>  mit --metalfx: die Auflösung, mit der das Spiel beginnt (Vorgabe 75; 100: die des Spiels)
@@ -366,6 +368,10 @@ func installRequest(_ o: Options, recipe id: String? = nil) -> InstallRequest {
             fail(L("--controller-mode must be standard or surreal", "--controller-mode muss standard oder surreal sein"))
         }
         request.controllerMode = mode
+    }
+    if o.flags.contains("no-surreal") {
+        request.surrealSupport = false
+        request.controllerMode = .standard
     }
     request.interval = Double(o.value("interval") ?? "") ?? 0
     return request

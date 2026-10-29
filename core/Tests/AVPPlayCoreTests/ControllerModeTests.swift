@@ -41,6 +41,28 @@ final class ControllerModeTests: XCTestCase {
         XCTAssertTrue(tc.supportsSurrealControllers)
         XCTAssertEqual(try tc.controllerEnvironment(.surreal), ["KLEPTON_CONTROLLER_MODE": "surreal"])
     }
+    func testSurrealSupportOffBuildsStandardOnly() throws {
+        let suite = "surreal-support-\(UUID())", defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        XCTAssertTrue(ControllerMode.supportEnabled(defaults: defaults), "on unless switched off")
+        defaults.set(false, forKey: ControllerMode.supportKey)
+        XCTAssertFalse(ControllerMode.supportEnabled(defaults: defaults))
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("surreal-off-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: dir) }
+        try FileManager.default.createDirectory(at: dir.appendingPathComponent("visionos"), withIntermediateDirectories: true)
+        try "#!/bin/sh".write(to: dir.appendingPathComponent("visionos/run.sh"), atomically: true, encoding: .utf8)
+        let tc = try Toolchain(root: dir)
+        XCTAssertFalse(tc.supportsSurrealSwitch)
+        // Off: Standard whatever was asked, never refused – even by a toolchain without Surreal Touch.
+        XCTAssertEqual(try tc.controllerEnvironment(.surreal, surrealSupport: false),
+                       ["KLEPTON_CONTROLLER_MODE": "standard", "KLEPTON_SURREAL_SUPPORT": "0"])
+        try "KLEPTON_CONTROLLER_MODE KLEPTON_SURREAL_SUPPORT".write(to: dir.appendingPathComponent("visionos/gen_xcodeproj.py"), atomically: true, encoding: .utf8)
+        XCTAssertTrue(tc.supportsSurrealSwitch)
+        var request = InstallRequest(toolchain: "/t")
+        XCTAssertFalse(String(decoding: try JSONEncoder().encode(request), as: UTF8.self).contains("surrealSupport"))
+        request.surrealSupport = false
+        XCTAssertEqual(try JSONDecoder().decode(InstallRequest.self, from: JSONEncoder().encode(request)).surrealSupport, false)
+    }
 }
 
 extension ToolchainPackageTests {
