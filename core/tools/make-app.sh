@@ -48,6 +48,11 @@ if ls "$ROOT"/recipes/sources/*.json >/dev/null 2>&1; then
   mkdir -p "$NEW/Contents/Resources/recipes/sources"
   cp "$ROOT"/recipes/sources/*.json "$NEW/Contents/Resources/recipes/sources/"
 fi
+# Die Fingerabdrücke der geprüften Spiele, für die Prognose ungetesteter Spiele (nur Namen).
+if ls "$ROOT"/recipes/fingerprints/*.json >/dev/null 2>&1; then
+  mkdir -p "$NEW/Contents/Resources/recipes/fingerprints"
+  cp "$ROOT"/recipes/fingerprints/*.json "$NEW/Contents/Resources/recipes/fingerprints/"
+fi
 # Die Toolchain kommt mit: das neueste Paket aus dist/ samt Beschreibung (oder AVPPLAY_TOOLCHAIN_ARCHIVE).
 # Die App installiert es beim ersten Start – geprüft gegen die Beschreibung wie jedes andere Paket.
 # Ohne Archiv in dist/ scheitert das `ls` – unter `set -e` samt pipefail würde die Zuweisung das Skript stillschweigend
