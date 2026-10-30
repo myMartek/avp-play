@@ -15,4 +15,12 @@ public enum ControllerMode: String, Codable, CaseIterable, Sendable, Identifiabl
         defaults.string(forKey: preferenceKey).flatMap(Self.init(rawValue:)) ?? .standard
     }
     public func save(defaults: UserDefaults = .standard) { defaults.set(rawValue, forKey: Self.preferenceKey) }
+
+    /// Settings › Controllers › "Surreal Touch support". On (the default), games are built with Surreal
+    /// Touch as a choice in their start window; off, for standard controllers only – no controller type
+    /// there, and Surreal Interactive's software is neither downloaded nor built in.
+    public static let supportKey = "surrealSupport"
+    public static func supportEnabled(defaults: UserDefaults = .standard) -> Bool {
+        defaults.object(forKey: supportKey) as? Bool ?? true
+    }
 }

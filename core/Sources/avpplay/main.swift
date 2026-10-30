@@ -151,11 +151,14 @@ avpplay – command line for the AVP Play core library
              --no-store-art          don't fetch the cover image from the store page (the icon from the APK is used instead)
              --replace-running       install even if the game is running (it will be quit)
              --controller-mode <standard|surreal>  initial controller mode (pair on Vision Pro)
+             --no-surreal            build for standard controllers only (no Surreal Touch choice in the game)
              --metalfx               build with the compositor's MetalFX upscaling switched on from the start (sharpens the picture
                                      when the game's resolution is below 100%; off in the game under Settings › Rendering)
              --resolution <percent>  with --metalfx: the resolution the game starts at (default 75; 100: the game's own)
              --xr-prediction         build with XR head prediction switched on from the start (off by default; in the game under
                                      Settings › Advanced › Test; the game page's option “XR prediction” does the same)
+             --core-mods             build with the game's mods (Beat Saber: custom songs), where the toolchain has them for
+                                     this version; otherwise the game is built without them (the game page's “Mods” does the same)
              --room-measuring <on|off>  "Measure room" and the play area in the game from the start (default: the app's
                                      setting for all games, on unless changed; in the game under Settings › Play area)
              --game-language <code>  the language the game starts with: device, en, a locale like fr_FR, or game (no preset);
@@ -232,11 +235,14 @@ avpplay – Kommandozeile zur Kern-Bibliothek von AVP Play
              --replace-running       auch installieren, wenn das Spiel gerade läuft (es wird dabei beendet)
              --restore-saves         nach dem Kopieren die Spielstände vom Mac zurückspielen, wenn das Spiel auf dem Gerät noch keine hat
              --controller-mode <standard|surreal>  anfänglicher Controllermodus (auf Vision Pro koppeln)
+             --no-surreal            nur für Standard-Controller bauen (im Spiel keine Surreal-Touch-Wahl)
              --metalfx               mit von Anfang an eingeschaltetem MetalFX-Hochskalieren des Compositors bauen (schärft das Bild,
                                      wenn die Auflösung des Spiels unter 100 % steht; im Spiel abschaltbar unter Einstellungen › Rendering)
              --resolution <Prozent>  mit --metalfx: die Auflösung, mit der das Spiel beginnt (Vorgabe 75; 100: die des Spiels)
              --xr-prediction         mit von Anfang an eingeschalteter XR-Vorhersage der Kopfpose bauen (sonst aus; im Spiel unter
                                      Einstellungen › Erweitert › Test; die Option „XR-Vorhersage“ auf der Seite des Spiels tut dasselbe)
+             --core-mods             mit den Mods des Spiels bauen (Beat Saber: eigene Songs), wo die Toolchain sie für diese
+                                     Fassung hat; sonst wird ohne sie gebaut („Mods“ auf der Seite des Spiels tut dasselbe)
              --room-measuring <on|off>  „Raum vermessen“ und der Spielbereich im Spiel von Anfang an (Vorgabe: die Einstellung
                                      der App für alle Spiele, an, solange sie nicht geändert ist; im Spiel unter Einstellungen › Spielbereich)
              --game-language <Code>  die Sprache, mit der das Spiel beginnt: device, en, eine Sprache wie fr_FR oder game (keine
@@ -349,6 +355,7 @@ func installRequest(_ o: Options, recipe id: String? = nil) -> InstallRequest {
     }
     if o.flags.contains("metalfx") { request.metalFX = true }
     if o.flags.contains("xr-prediction") { request.xrPrediction = true }
+    if o.flags.contains("core-mods") { request.coreMods = true }
     if let value = o.value("room-measuring") {
         guard value == "on" || value == "off" else {
             fail(L("--room-measuring must be on or off", "--room-measuring muss on oder off sein"))
@@ -370,6 +377,10 @@ func installRequest(_ o: Options, recipe id: String? = nil) -> InstallRequest {
             fail(L("--controller-mode must be standard or surreal", "--controller-mode muss standard oder surreal sein"))
         }
         request.controllerMode = mode
+    }
+    if o.flags.contains("no-surreal") {
+        request.surrealSupport = false
+        request.controllerMode = .standard
     }
     request.interval = Double(o.value("interval") ?? "") ?? 0
     return request
@@ -665,6 +676,34 @@ case "account-build":
             encoder.outputFormatting = [.sortedKeys, .prettyPrinted]
             try encoder.encode(draft).write(to: URL(fileURLWithPath: out), options: .atomic)
         }
+    } catch { fail("\(error)") }
+
+case "version-draft":
+    // Wie „neueste Fassung“ in der App (StoreUpdate.make), aber für einen bekannten Build und nur in die Datei von
+    // --to: die Wahl der Fassung in der App bleibt, wie sie ist, und Meta wird nicht nach der Fassung gefragt.
+    let r = recipe(o)
+    guard o.positional.count > 4, let code = Int(o.positional[4]), let out = o.value("to") else {
+        fail(L("Usage: avpplay version-draft <id> <build ID> <version> <version code> --to <file>",
+               "Aufruf: avpplay version-draft <id> <Build-ID> <Fassung> <Versionscode> --to <Datei>"))
+    }
+    let (client, user) = await signedIn(o)
+    do {
+        guard let app = r.store.appId, try await client.ownsApp(appId: app, userId: user) else {
+            fail(L("\(r.title): not owned – nothing is asked.", "\(r.title): nicht im Besitz – es wird nichts gefragt."))
+        }
+        let token = try TokenStore().read(account: o.value("account") ?? "default")
+        try MetaTool(url: metaToolURL(o)).verify()
+        // CatalogBuild hat keinen öffentlichen Initialisierer; er wird dekodiert wie aus dem Zwischenspeicher der App.
+        let named = try JSONSerialization.data(withJSONObject: ["buildId": o.positional[2], "version": o.positional[3], "versionCode": code])
+        let build = try JSONDecoder().decode(CatalogBuild.self, from: named)
+        let files = try await MetaListing.files(buildId: build.buildId, tool: metaToolURL(o), token: token, client: client,
+                                                say: { print($0) })
+        let draft = try StoreUpdate.make(tested: r, build: build, files: files)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys, .prettyPrinted]
+        try encoder.encode(draft).write(to: URL(fileURLWithPath: out), options: .atomic)
+        print(L("\(r.title): \(draft.versionName) (\(draft.versionCode)), \(draft.files.count) files → \(out)",
+                "\(r.title): \(draft.versionName) (\(draft.versionCode)), \(draft.files.count) Dateien → \(out)"))
     } catch { fail("\(error)") }
 
 case "purchases":
