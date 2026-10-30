@@ -146,6 +146,13 @@ struct SettingsView: View {
                        "Einmal am Tag sagt die App dem Katalog, dass sie in Gebrauch ist, mit ihrer Versionsnummer, und einmal pro Spiel, dass du es installiert hast. Keine der beiden Meldungen trägt eine Kennung von dir, diesem Mac oder deiner Vision Pro, und der Dienst behält nichts als Summen pro Tag."))
                     .font(.callout).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+                Toggle(L("Share the fingerprints of untested games with the project", "Fingerabdrücke ungetesteter Spiele mit dem Projekt teilen"),
+                       isOn: Binding(get: { model.shareFingerprints }, set: { model.shareFingerprints = $0 }))
+                    .disabled(!model.onlineCatalog)
+                Text(L("When an untested game's page shows its prognosis, the app sends the catalogue, once per build, the game's store number and version and the names it read from the game: engine, graphics, VR interfaces, the functions it links, OpenXR extensions, middleware and the device features it asks for. Never any content of the game, its package name or anything about you, this Mac or your Vision Pro; who sent it is not stored. The project uses the totals to see which missing pieces of the toolchain hold the most games back.",
+                       "Zeigt die Seite eines ungetesteten Spiels seine Prognose, schickt die App dem Katalog einmal pro Build die Store-Nummer und Version des Spiels und die Namen, die sie aus dem Spiel gelesen hat: Engine, Grafik, VR-Schnittstellen, die eingebundenen Funktionen, OpenXR-Erweiterungen, Middleware und die Gerätemerkmale, die es verlangt. Nie Inhalte des Spiels, seinen Paketnamen oder etwas über dich, diesen Mac oder deine Vision Pro; wer es geschickt hat, wird nicht gespeichert. Das Projekt sieht an den Summen, welche fehlenden Teile der Toolchain die meisten Spiele aufhalten."))
+                    .font(.callout).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             Section(L("Saved Games", "Spielstände")) {

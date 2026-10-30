@@ -353,6 +353,8 @@ final class AppModel: ObservableObject {
     @AppStorage("onlineCatalog") var onlineCatalog = true
     /// Dem Katalog sagen, dass die App in Gebrauch ist und welche Spiele installiert wurden – ohne Kennung.
     @AppStorage("usageCounts") var usageCounts = true
+    /// Fingerabdrücke geladener Spiele mit dem Projekt teilen (nur Namen); aus, solange niemand es einschaltet.
+    @AppStorage("shareFingerprints") var shareFingerprints = false
     /// Titelbilder für Spiele, die noch nicht geladen sind, von deren öffentlicher Store-Seite holen.
     @AppStorage("storePictures") var storePictures = true
     /// Der aktuelle Build geprüfter Store-Spiele, wie der Katalog ihn kennt (Kennung des Rezepts → Build).

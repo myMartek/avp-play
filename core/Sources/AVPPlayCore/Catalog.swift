@@ -386,4 +386,15 @@ public struct CatalogClient: Sendable {
 
     /// „Dieses Spiel wurde installiert“ – einmal pro Spiel; `game` kommt aus `UsagePing.gameKey`.
     public func countInstall(of game: String) async throws { try await post("api/v1/installs", ["appId": game]) }
+
+    /// Die Summen über alle geteilten Fingerabdrücke (`s2-unlock`).
+    public func fingerprintSummary() async throws -> FingerprintSummary {
+        try JSONDecoder().decode(FingerprintSummary.self, from: try await send(request("api/v1/fingerprints/summary"), expecting: 200))
+    }
+
+    /// Der Fingerabdruck eines Spiels, nur wenn der Nutzer das Teilen eingeschaltet hat – einmal pro Build.
+    public func share(_ fingerprint: SharedFingerprint, game: String, versionCode: Int64) async throws {
+        struct Body: Encodable { var appId: String; var versionCode: Int64; var fingerprint: SharedFingerprint }
+        try await post("api/v1/fingerprints", Body(appId: game, versionCode: versionCode, fingerprint: fingerprint))
+    }
 }

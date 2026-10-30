@@ -96,10 +96,11 @@ func usage() -> String {
 avpplay – command line for the AVP Play core library
 
   avpplay recipes                              list the recipes
-  avpplay fingerprint <apk>…                   compatibility fingerprint of an APK as JSON (names only)
+  avpplay fingerprint <apk>… [--shared]        compatibility fingerprint of an APK as JSON (names only; --shared: what sharing sends)
   avpplay coverage --klepton <folder> <apk|folder>… [--markdown <file>] [--json <file>]   what the runtime lacks per game, gaps by unlock value
   avpplay references --out <file>              fingerprints of the verified games in the library (comparison basis)
   avpplay prognosis --klepton <folder> --references <file> <apk>…   outlook for an untested game: closest verified games, unusual needs
+  avpplay unlock --klepton <folder> [--summary <file>] [--top N]   what the runtime lacks, by the number of games (shared fingerprints)
   avpplay show <id>                            files of a recipe
   avpplay login                                sign in to Meta (starts ovr-platform-util; --tool <path>, default ~/Downloads)
   avpplay logout                               delete the stored Meta token
@@ -180,10 +181,11 @@ General:   --account <name>    keychain entry (default: default)
 avpplay – Kommandozeile zur Kern-Bibliothek von AVP Play
 
   avpplay recipes                              Rezepte auflisten
-  avpplay fingerprint <apk>…                   Kompatibilitäts-Fingerabdruck eines APKs als JSON (nur Namen)
+  avpplay fingerprint <apk>… [--shared]        Kompatibilitäts-Fingerabdruck eines APKs als JSON (nur Namen; --shared: was das Teilen schickt)
   avpplay coverage --klepton <Ordner> <apk|Ordner>… [--markdown <Datei>] [--json <Datei>]   was der Runtime pro Spiel fehlt, Lücken nach Unlock-Wert
   avpplay references --out <Datei>             Fingerabdrücke der geprüften Spiele im Bestand (Vergleichsbasis)
   avpplay prognosis --klepton <Ordner> --references <Datei> <apk>…   Aussicht für ein ungetestetes Spiel: nächste geprüfte Spiele, Ungewöhnliches
+  avpplay unlock --klepton <Ordner> [--summary <Datei>] [--top N]   was der Runtime fehlt, nach Zahl der Spiele (geteilte Fingerabdrücke)
   avpplay show <id>                            Dateien eines Rezepts
   avpplay login                                bei Meta anmelden (startet ovr-platform-util; --tool <Pfad>, Standard ~/Downloads)
   avpplay logout                               hinterlegten Meta-Token löschen
@@ -267,7 +269,7 @@ Allgemein: --account <Name>    Eintrag im Schlüsselbund (Standard: default)
 
 let valued: Set<String> = ["account", "steam-account", "source", "store", "recipes", "locale", "with", "only", "interval", "from", "to", "force", "name",
                            "team", "device", "bundle-id", "display-name", "display-suffix", "toolchain", "controller-mode", "icon", "tool", "jobs", "toolchains", "saves", "resolution",
-                           "room-measuring", "game-language", "klepton", "markdown", "json", "references", "out", "leave-out"]
+                           "room-measuring", "game-language", "klepton", "markdown", "json", "references", "out", "leave-out", "summary", "top"]
 let o = Options(Array(CommandLine.arguments.dropFirst()), valued: valued)
 guard let command = o.positional.first else { print(usage()); exit(0) }
 OtherSources.use(recipes: recipesDirectory(o))
@@ -887,7 +889,12 @@ case "fingerprint":
     let encoder = JSONEncoder()
     encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
     for apk in apks {
-        do { print(String(decoding: try encoder.encode(try Fingerprint.make(apk: apk)), as: UTF8.self)) }
+        // --shared: nur der Teil, den die App mit eingeschaltetem Teilen an den Katalogdienst schickt.
+        do {
+            let fp = try Fingerprint.make(apk: apk)
+            let data = o.flags.contains("shared") ? try encoder.encode(SharedFingerprint(fp)) : try encoder.encode(fp)
+            print(String(decoding: data, as: UTF8.self))
+        }
         catch { warn("\(apk.lastPathComponent): \(error)") }
     }
 
@@ -973,6 +980,30 @@ case "prognosis":
             for b in p.blockers { print("    ✗ \(b)") }
         } catch { warn("\(path): \(error)") }
     }
+
+case "unlock":
+    // Die Roadmap nach Unlock-Wert: die Summen des Katalogdienstes (oder --summary <Datei>) gegen die Namen der Runtime.
+    guard let klepton = o.value("klepton") else { fail(L("Give the Klepton source with --klepton <folder>.", "Die Klepton-Quelle mit --klepton <Ordner> angeben.")) }
+    let runtime: RuntimeInterface
+    let summary: FingerprintSummary
+    do {
+        runtime = try RuntimeInterface.scan(klepton: URL(fileURLWithPath: klepton))
+        if let file = o.value("summary") {
+            summary = try JSONDecoder().decode(FingerprintSummary.self, from: Data(contentsOf: URL(fileURLWithPath: file)))
+        } else {
+            summary = try await CatalogClient.configured.fingerprintSummary()
+        }
+    } catch { fail("\(error)") }
+    let top = Int(o.value("top") ?? "") ?? 25
+    let gaps = summary.unlock(runtime: runtime)
+    print(L("\(summary.games) games with a shared fingerprint; runtime \(runtime.commit ?? "?").",
+            "\(summary.games) Spiele mit geteiltem Fingerabdruck; Runtime \(runtime.commit ?? "?")."))
+    print(L("\nMissing functions (OVRPlugin, OpenXR, VrApi) – games that link them:", "\nFehlende Funktionen (OVRPlugin, OpenXR, VrApi) – Spiele, die sie einbinden:"))
+    for f in gaps.functions.prefix(top) { print("  \(String(format: "%4d", f.games))  \(f.name)") }
+    print(L("\nOpenXR extensions the runtime does not offer – games that ask for them:", "\nOpenXR-Erweiterungen, die die Runtime nicht anbietet – Spiele, die danach fragen:"))
+    for e in gaps.extensions.prefix(top) { print("  \(String(format: "%4d", e.games))  \(e.name)") }
+    print(L("\nPlatform SDK areas with missing functions (online features) – most games in one area:", "\nBereiche des Plattform-SDKs mit fehlenden Funktionen (Online-Funktionen) – meiste Spiele in einem Bereich:"))
+    for a in gaps.platformAreas.prefix(top) { print("  \(String(format: "%4d", a.games))  \(a.name)") }
 
 case "unpack":
     let r = recipe(o)

@@ -217,3 +217,43 @@ public struct CoverageMatrix: Codable, Equatable, Sendable {
         return lines.joined(separator: "\n") + "\n"
     }
 }
+
+/// Was der Katalogdienst über alle geteilten Fingerabdrücke sagt: wie viele Spiele welche Funktion fest einbinden
+/// (`familie:name`) und welche Erweiterung erfragen. Er kennt die Runtime nicht; was ihr fehlt, rechnet `unlock`.
+public struct FingerprintSummary: Codable, Equatable, Sendable {
+    public struct NameCount: Codable, Equatable, Sendable {
+        public var name: String
+        public var games: Int
+        public init(name: String, games: Int) { self.name = name; self.games = games }
+    }
+
+    public var games: Int
+    public var engines: [String: Int]
+    public var functions: [NameCount]
+    public var extensions: [NameCount]
+
+    public init(games: Int, engines: [String: Int], functions: [NameCount], extensions: [NameCount]) {
+        self.games = games; self.engines = engines; self.functions = functions; self.extensions = extensions
+    }
+
+    /// Die Roadmap nach Unlock-Wert (`s2-unlock`): was die Runtime nicht nennt, die meisten betroffenen Spiele
+    /// zuerst. Plattform-Funktionen getrennt nach Bereichen, weil sie den Start selten aufhalten.
+    public func unlock(runtime: RuntimeInterface) -> (functions: [NameCount], platformAreas: [NameCount], extensions: [NameCount]) {
+        var missing: [NameCount] = [], areas: [String: Int] = [:]
+        for f in functions {
+            let parts = f.name.split(separator: ":", maxSplits: 1).map(String.init)
+            guard parts.count == 2, let family = Fingerprint.Family(rawValue: parts[0]),
+                  !runtime.functions(family).contains(parts[1]) else { continue }
+            if family == .platform {
+                let area = CoverageMatrix.platformArea(parts[1])
+                areas[area] = max(areas[area] ?? 0, f.games)
+            } else {
+                missing.append(f)
+            }
+        }
+        let known = Set(runtime.openxrExtensions)
+        let ext = extensions.filter { !known.contains($0.name) && NameScanner.isQuestExtension($0.name) }
+        let byGames: (NameCount, NameCount) -> Bool = { a, b in a.games != b.games ? a.games > b.games : a.name < b.name }
+        return (missing.sorted(by: byGames), areas.map { NameCount(name: $0.key, games: $0.value) }.sorted(by: byGames), ext.sorted(by: byGames))
+    }
+}
