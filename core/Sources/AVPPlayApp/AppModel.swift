@@ -121,6 +121,10 @@ struct GameOptions: Codable, Equatable {
     /// Beim Installieren die Spielstände vom Mac zurückspielen, wenn das Spiel auf dem Gerät noch keine hat.
     /// Wählbar und nicht fest, weil ältere gespeicherte Angaben den Eintrag nicht kennen; ohne Angabe: ja.
     var restoreSaves: Bool?
+    /// Das Spiel mit seinen Mods bauen (Beat Saber: eigene Songs). Ohne Angabe: wie das Mod-Profil der Fassung sagt
+    /// (`defaultOn`, bisher nur bei Beat Saber an). Gilt nur für eine Fassung, für die die Toolchain Mods hat; für jede
+    /// andere wird ohne sie gebaut, und die Wahl bleibt für später stehen.
+    var coreMods: Bool?
 }
 
 /// Die in der Übersicht angehakten Spiele – ein eigener, kleiner Zustand (siehe `AppModel.picked`).
@@ -641,6 +645,7 @@ final class AppModel: ObservableObject {
         let id = game.id, catalog = game.catalog
         let paths = paths, apps = installedApps, revision = toolchainRevision, prefix = bundlePrefix, drafts = draftsDirectory
         let pin = toolchainChoices.games[id], metalFX = metalFXExpected
+        let modProfiles = toolchain(for: game)?.coreModsProfiles ?? []
         Task.detached(priority: .userInitiated) {
             var fresh: Game?
             if let recipes = paths.recipes {
@@ -650,7 +655,7 @@ final class AppModel: ObservableObject {
                     let active = StoreUpdate.resolve([tested], variants: variants, sources: sources, drafts: drafts, choices: choices).first ?? tested
                     fresh = Probe.game(active, draft: false, tested: tested, variants: variants, sources: sources, paths: paths,
                                        apps: apps, toolchainRevision: revision, pin: pin, bundlePrefix: prefix,
-                                       metalFX: metalFX)
+                                       metalFX: metalFX, coreModProfiles: modProfiles)
                     fresh?.catalog = catalog
                 }
             }
@@ -918,13 +923,57 @@ final class AppModel: ObservableObject {
         if let data = try? JSONEncoder().encode(options) { UserDefaults.standard.set(data, forKey: "gameOptions") }
     }
 
+    // MARK: Mods
+
+    /// Ob die Toolchain dieses Spiels Mods dafür hat, in irgendeiner Fassung – dann steht der Schalter auf der Seite.
+    func offersCoreMods(_ game: Game) -> Bool {
+        toolchain(for: game)?.offersCoreMods(for: game.recipe) == true
+    }
+
+    /// Die Mods für die Fassung, die gerade gilt; `nil`, wenn sie für diese Fassung (noch) nicht portiert sind.
+    func coreModsProfile(_ game: Game) -> Toolchain.CoreModsProfile? {
+        toolchain(for: game)?.coreModsProfile(for: game.recipe)
+    }
+
+    /// Die Fassungen, für die es die Mods gibt, für den Hinweis bei einer anderen.
+    func coreModsVersions(_ game: Game) -> [String] {
+        (toolchain(for: game)?.coreModsProfiles ?? []).filter { $0.target == game.recipe.toolchain.target }.map(\.versionName)
+    }
+
+    /// Ob dieses Spiel mit Mods gebaut wird: die eigene Wahl, sonst die Vorgabe des Profils seiner Fassung.
+    func coreModsOn(_ game: Game) -> Bool {
+        options(for: game).coreMods ?? (coreModsProfile(game)?.defaultOn == true)
+    }
+
+    /// Die Mod-Liste für Einstellungen › Verwendete Software: aus der Toolchain eines Spiels mit Mods, sonst der neuesten.
+    var modCredits: ModCredits? {
+        let games = allGames.filter { offersCoreMods($0) }
+        return (games.map { toolchain(for: $0) } + [toolchain]).lazy.compactMap { $0?.modCredits }.first
+    }
+
+    func setCoreMods(_ on: Bool, for game: Game) {
+        var next = options(for: game)
+        next.coreMods = on
+        setOptions(next, for: game)
+        refreshStatus(of: game.id)
+    }
+
+    /// Was ein aktueller Bau an Mods tragen soll: die Wahl des Spiels, wo es für seine Fassung Mods gibt; sonst `nil`
+    /// (nicht vergleichen). Liest die gespeicherte Wahl selbst, damit auch die Übersicht im Hintergrund sie kennt.
+    nonisolated static func coreModsExpected(recipe: Recipe, profiles: [Toolchain.CoreModsProfile]) -> Bool? {
+        guard let profile = profiles.first(where: { $0.target == recipe.toolchain.target && $0.versionCode == recipe.versionCode }) else { return nil }
+        let stored = UserDefaults.standard.data(forKey: "gameOptions").flatMap { try? JSONDecoder().decode([String: GameOptions].self, from: $0) }
+        return stored?[recipe.id]?.coreMods ?? profile.defaultOn
+    }
+
     /// Bestimmt den Stand eines Spiels neu, mit dem, was gerade bekannt ist (Gerät, Toolchain, Einstellungen).
     func refreshStatus(of id: String) {
         guard var fresh = allGames.first(where: { $0.id == id }) ?? games.first(where: { $0.id == id }) else { return }
         fresh.status = GameStatus.of(recipe: fresh.recipe, store: paths.store, apps: installedApps, toolchainVersion: toolchainRevision?.forTarget(fresh.recipe.toolchain.target),
                                      pin: toolchainChoices.games[id], bundlePrefix: bundlePrefix,
                                      otherSourceBuilds: Set(fresh.otherSourceBuilds),
-                                     metalFX: metalFXExpected)
+                                     metalFX: metalFXExpected,
+                                     coreMods: toolchain(for: fresh).flatMap { AppModel.coreModsExpected(recipe: fresh.recipe, profiles: $0.coreModsProfiles) })
         replace(fresh)
     }
 
@@ -1585,6 +1634,8 @@ final class AppModel: ObservableObject {
             request.controllerMode = surrealSupport ? controllerMode : .standard
             if !surrealSupport { request.surrealSupport = false }
         }
+        // Die Mods: wie für das Spiel gewählt. Gibt es sie für diese Fassung nicht, baut der Auftrag ohne sie und sagt es.
+        if steps.contains(.build), chosen.coreMods ?? (coreModsProfile(game)?.defaultOn == true) { request.coreMods = true }
         if steps.contains(.build), metalFXUpscaling {
             request.metalFX = true
             request.resolution = metalFXResolution

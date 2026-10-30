@@ -250,6 +250,8 @@ struct SettingsView: View {
                     }
                 }
             }
+
+            Section { SoftwareCreditsView() }
         }
         .formStyle(.grouped)
         .frame(maxWidth: 760)

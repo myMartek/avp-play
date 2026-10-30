@@ -425,7 +425,7 @@ final class ToolchainChoiceTests: XCTestCase {
         XCTAssertEqual(AppStamp.parse("7.4.44")?.xrPrediction, false)
         // Eine Stufe ohne MetalFX bleibt ungültig, auch mit dem Bit der Vorhersage; darüber stammt nichts von hier.
         XCTAssertEqual(AppStamp.parse("7.4.168"), .init(versionCode: 7, toolchain: 4, modified: false))
-        XCTAssertEqual(AppStamp.parse("7.4.256"), .init(versionCode: 7, toolchain: 4, modified: false))
+        XCTAssertEqual(AppStamp.parse("7.4.512"), .init(versionCode: 7, toolchain: 4, modified: false))
         for percent in stride(from: 50, through: 100, by: 5) {
             let stamp = AppStamp.build(versionCode: 1, toolchainVersion: 2, metalFX: true, resolution: percent, xrPrediction: true)
             XCTAssertEqual(AppStamp.parse(stamp)?.xrPrediction, true, stamp)
@@ -467,6 +467,74 @@ final class ToolchainChoiceTests: XCTestCase {
         XCTAssertEqual(renewed("7.4.172").resolution, 75)
         XCTAssertNil(renewed("7.4.44").xrPrediction)
         XCTAssertNil(renewed("7.4").xrPrediction)
+    }
+
+    // MARK: Die Mods (Beat Saber: eigene Songs)
+
+    func testTheStampCarriesTheMods() {
+        XCTAssertEqual(AppStamp.build(versionCode: 3237, toolchainVersion: 812, coreMods: true), "3237.812.256")
+        XCTAssertEqual(AppStamp.build(versionCode: 7, toolchainVersion: 4, modified: true, xrPrediction: true, coreMods: true), "7.4.385")
+        XCTAssertEqual(AppStamp.parse("3237.812.256"), .init(versionCode: 3237, toolchain: 812, modified: false, coreMods: true))
+        XCTAssertEqual(AppStamp.parse("7.4.385"), .init(versionCode: 7, toolchain: 4, modified: true, xrPrediction: true, coreMods: true))
+        XCTAssertEqual(AppStamp.parse("7.4.128")?.coreMods, false)
+        // Eine Stufe ohne MetalFX bleibt ungültig, auch mit dem Bit der Mods.
+        XCTAssertEqual(AppStamp.parse("7.4.296"), .init(versionCode: 7, toolchain: 4, modified: false))
+    }
+
+    func testABuildThatDiffersFromTheGamesModsCanBeUpdated() {
+        let store = ContentStore(root: temp())
+        let bundle = Toolchain.bundleId(target: "moss", prefix: "com.example")
+        func status(_ installed: String, coreMods: Bool?, pin: ToolchainChoices.Pin? = nil) -> GameStatus.OnDevice {
+            GameStatus.of(recipe: recipe(), store: store,
+                          apps: [InstalledApp(bundleIdentifier: bundle, name: "Moss", version: "1.0", bundleVersion: installed)],
+                          toolchainVersion: 4, pin: pin, bundlePrefix: "com.example", coreMods: coreMods).onDevice
+        }
+        XCTAssertEqual(status("7.4", coreMods: true), .olderToolchain(stamp: "1.0 (7.4)"))
+        XCTAssertEqual(status("7.4.256", coreMods: true), .current(stamp: "1.0 (7.4.256)"))
+        XCTAssertEqual(status("7.4.256", coreMods: false), .olderToolchain(stamp: "1.0 (7.4.256)"))
+        XCTAssertEqual(status("7.4", coreMods: false), .current(stamp: "1.0 (7.4)"))
+        // Keine Mods für diese Fassung: kein Vergleich. Mit gewählter Toolchain wird verglichen.
+        XCTAssertEqual(status("7.4.256", coreMods: nil), .current(stamp: "1.0 (7.4.256)"))
+        XCTAssertEqual(status("7.4", coreMods: true, pin: .init(version: 4, commit: "abc")), .olderToolchain(stamp: "1.0 (7.4)"))
+    }
+
+    func testRenewalKeepsTheMods() {
+        var request = InstallRequest(toolchain: "/tmp/t")
+        Renewal.keepBuild(AppStamp.parse("3237.812.256"), in: &request)
+        XCTAssertEqual(request.coreMods, true)
+        var plain = InstallRequest(toolchain: "/tmp/t")
+        Renewal.keepBuild(AppStamp.parse("3237.812"), in: &plain)
+        XCTAssertNil(plain.coreMods)
+    }
+
+    func testModsExistOnlyForTheVersionTheToolchainHasLibrariesFor() throws {
+        let dir = temp()
+        let toolchain = try plant(manifest(4), at: dir)
+        let ports = dir.appendingPathComponent("ports/scotland2")
+        try FileManager.default.createDirectory(at: ports.appendingPathComponent("prebuilt/7/libs"), withIntermediateDirectories: true)
+        func beatSaber(_ code: Int) -> Recipe {
+            var r = recipe(id: "beatsaber140"); r.toolchain.target = "beatsaber140"; r.versionCode = code; return r
+        }
+        // Ohne Profil: keine Mods.
+        XCTAssertFalse(toolchain.offersCoreMods(for: beatSaber(7)))
+        try """
+            {"schema": 1, "profiles": [{"name": "1.0", "target": "beatsaber140", "versionName": "1.0_1", "versionCode": 7,
+                                        "prebuilt": "prebuilt/7", "defaultOn": true},
+                                       {"name": "escape", "target": "beatsaber140", "versionName": "x", "versionCode": 8,
+                                        "prebuilt": "../elsewhere"}]}
+            """.write(to: ports.appendingPathComponent("avp-profiles.json"), atomically: true, encoding: .utf8)
+        // Ein Profil ohne fertige Bibliotheken zählt nicht, auch nicht mit einer neben libs/.
+        XCTAssertFalse(toolchain.offersCoreMods(for: beatSaber(7)))
+        try Data().write(to: ports.appendingPathComponent("prebuilt/7/libsongcore.so"))
+        XCTAssertFalse(toolchain.offersCoreMods(for: beatSaber(7)))
+        try Data().write(to: ports.appendingPathComponent("prebuilt/7/libs/libsongcore.so"))
+        XCTAssertEqual(toolchain.coreModsProfiles.map(\.versionCode), [7])
+        XCTAssertTrue(toolchain.offersCoreMods(for: beatSaber(9)))
+        XCTAssertEqual(toolchain.coreModsProfile(for: beatSaber(7))?.versionName, "1.0_1")
+        // An ohne eigene Wahl nur, wo das Profil es sagt.
+        XCTAssertEqual(toolchain.coreModsProfile(for: beatSaber(7))?.defaultOn, true)
+        XCTAssertNil(toolchain.coreModsProfile(for: beatSaber(9)))
+        XCTAssertFalse(toolchain.offersCoreMods(for: recipe()))
     }
 
     func testOnlyAToolchainWithTheTestSwitchSupportsXRPrediction() throws {
