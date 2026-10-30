@@ -96,6 +96,8 @@ func usage() -> String {
 avpplay – command line for the AVP Play core library
 
   avpplay recipes                              list the recipes
+  avpplay fingerprint <apk>…                   compatibility fingerprint of an APK as JSON (names only)
+  avpplay coverage --klepton <folder> <apk|folder>… [--markdown <file>] [--json <file>]   what the runtime lacks per game, gaps by unlock value
   avpplay show <id>                            files of a recipe
   avpplay login                                sign in to Meta (starts ovr-platform-util; --tool <path>, default ~/Downloads)
   avpplay logout                               delete the stored Meta token
@@ -176,6 +178,8 @@ General:   --account <name>    keychain entry (default: default)
 avpplay – Kommandozeile zur Kern-Bibliothek von AVP Play
 
   avpplay recipes                              Rezepte auflisten
+  avpplay fingerprint <apk>…                   Kompatibilitäts-Fingerabdruck eines APKs als JSON (nur Namen)
+  avpplay coverage --klepton <Ordner> <apk|Ordner>… [--markdown <Datei>] [--json <Datei>]   was der Runtime pro Spiel fehlt, Lücken nach Unlock-Wert
   avpplay show <id>                            Dateien eines Rezepts
   avpplay login                                bei Meta anmelden (startet ovr-platform-util; --tool <Pfad>, Standard ~/Downloads)
   avpplay logout                               hinterlegten Meta-Token löschen
@@ -259,7 +263,7 @@ Allgemein: --account <Name>    Eintrag im Schlüsselbund (Standard: default)
 
 let valued: Set<String> = ["account", "steam-account", "source", "store", "recipes", "locale", "with", "only", "interval", "from", "to", "force", "name",
                            "team", "device", "bundle-id", "display-name", "display-suffix", "toolchain", "controller-mode", "icon", "tool", "jobs", "toolchains", "saves", "resolution",
-                           "room-measuring", "game-language"]
+                           "room-measuring", "game-language", "klepton", "markdown", "json"]
 let o = Options(Array(CommandLine.arguments.dropFirst()), valued: valued)
 guard let command = o.positional.first else { print(usage()); exit(0) }
 OtherSources.use(recipes: recipesDirectory(o))
@@ -871,6 +875,55 @@ case "adopt":
                     + "\(t.notFound.isEmpty ? "" : " (\(t.notFound.joined(separator: ", ")): kein angegebener Ordner trägt die Kenndateien dieser Version)")."))
         }
     } catch { fail("\(error)") }
+
+case "fingerprint":
+    // Nur Namen aus dem APK; nichts verlässt den Rechner.
+    let apks = o.positional.dropFirst().map { URL(fileURLWithPath: $0) }
+    guard !apks.isEmpty else { fail(L("Give one or more APK files.", "Ein oder mehrere APKs angeben.")) }
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+    for apk in apks {
+        do { print(String(decoding: try encoder.encode(try Fingerprint.make(apk: apk)), as: UTF8.self)) }
+        catch { warn("\(apk.lastPathComponent): \(error)") }
+    }
+
+case "coverage":
+    guard let klepton = o.value("klepton") else {
+        fail(L("Give the Klepton source with --klepton <folder>.", "Die Klepton-Quelle mit --klepton <Ordner> angeben."))
+    }
+    let runtime: RuntimeInterface
+    do { runtime = try RuntimeInterface.scan(klepton: URL(fileURLWithPath: klepton)) } catch { fail("\(error)") }
+    // Spielnamen aus den Rezepten: der Ordner einer Fassung heißt <Rezept>-<Code>.
+    let titles = Dictionary((try? RecipeStore(directory: recipesDirectory(o)).loadAll())?.map { ($0.id, $0.title) } ?? [], uniquingKeysWith: { a, _ in a })
+    var apks: [URL] = []
+    for path in o.positional.dropFirst() {
+        let url = URL(fileURLWithPath: path)
+        if url.pathExtension == "apk" { apks.append(url); continue }
+        let walker = FileManager.default.enumerator(at: url, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])
+        while let file = walker?.nextObject() as? URL { if file.pathExtension == "apk" { apks.append(file) } }
+    }
+    guard !apks.isEmpty else { fail(L("No APK found.", "Kein APK gefunden.")) }
+    var games: [(name: String, fingerprint: Fingerprint)] = []
+    for apk in apks.sorted(by: { $0.path < $1.path }) {
+        let folder = apk.deletingLastPathComponent().lastPathComponent
+        let recipeId = folder.split(separator: "-").dropLast().joined(separator: "-")
+        let name = titles[recipeId] ?? "\(folder)/\(apk.lastPathComponent)"
+        do {
+            games.append((name, try Fingerprint.make(apk: apk)))
+            FileHandle.standardError.write(Data("  \(name)\n".utf8))
+        } catch { warn("\(name): \(error)") }
+    }
+    let matrix = CoverageMatrix(runtime: runtime, games: games)
+    if let json = o.value("json") {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        do { try encoder.encode(matrix).write(to: URL(fileURLWithPath: json)) } catch { fail("\(error)") }
+    }
+    if let markdown = o.value("markdown") {
+        do { try matrix.markdown().write(to: URL(fileURLWithPath: markdown), atomically: true, encoding: .utf8) } catch { fail("\(error)") }
+    } else {
+        print(matrix.markdown())
+    }
 
 case "unpack":
     let r = recipe(o)
