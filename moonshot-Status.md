@@ -3,7 +3,7 @@
 Der Plan steht in [`moonshot.md`](moonshot.md). Diese Datei sagt pro Punkt, wie weit er ist, was gemacht wurde, was
 noch fehlt und **was Marcel testen oder entscheiden muss**. Sie ersetzt die `HANDOFF.md` der Cloud-Session.
 
-Stand: 27. Oktober 2026.
+Stand: 30. Oktober 2026 (AVP Play 1.8.1, Toolchain 827).
 
 ## Übersicht
 
@@ -11,18 +11,18 @@ Stand: 27. Oktober 2026.
 |---|---|---|
 | Schritt 0 (Menüleiste) | **veröffentlicht in AVP Play 1.5.5** | Test der offenen Punkte unten |
 | CI | **verworfen** (27.10.): kein CI; geprüft wird lokal mit Xcode 27 und vor jedem Release mit `make check` | nein |
-| `d30-fingerprint` | **Extraktor fertig, getestet, auf 59 APKs gelaufen**, erste Abdeckungskarte da | Entscheidung: als PR nach `main`? |
+| `d30-fingerprint` | **in `main`** (30.10., avp-play #101): Extraktor ohne die Karte; kommt mit dem nächsten Release | nein |
 | `d30-host` | **erreicht**: Beat Saber 1.45 ohne Headset auf dem Mac bis ins Hauptmenü, mit Bildern, per Skript | nein |
 | `s1-remote` | **in der Brille getestet (27.10.): Bild ja, Knöpfe + Drehung ja (Controller per Bluetooth am Mac, Gyro), echte Position nein.** Beat Saber vom Mac steht im Raum (~48 ms Vorlauf), Pinch kommt an; über die Brille erreichen die Controller den Mac-Raum nicht | offen: Ruckeln beim zweiten Öffnen; Entscheidung, ob weiter (nur Menüs per Pinch) |
 | `d30-remote` | **abgeschlossen** (27.10.): Würfel steht im Raum, 100 Hz ohne Aussetzer, ~48 ms Vorlauf; schwarze Kacheln am Rand im Mixed-Modus (Grenze des Mac-Wegs) | nein |
-| `s2-coverage` | **Prognose fertig** (Kern, CLI, Spielseite), auf geprüften Spielen gegengeprüft | **ja: Spielseite ansehen** |
-| `s2-fingerprint` | **Teilen per Opt-in fertig** (App + Katalogdienst-Endpunkt, privat, nicht ausgerollt) | **ja: Freigabe + Rollout** |
-| `s2-unlock` | **Roadmap fertig** (`avpplay unlock`), lokal mit 59 Fingerabdrücken durchgespielt | hängt an Rollout |
+| `s2-coverage` | **in `main`** (30.10., avp-play #102): Prognose in Kern, CLI und Spielseite; kommt mit dem nächsten Release | ja: Spielseite im nächsten Build ansehen |
+| `s2-fingerprint` | **in `main`** (30.10., avp-play #103): Teilen per Opt-in; Katalogdienst im privaten `main`, **nicht ausgerollt** | Rollout gehört zum nächsten Release |
+| `s2-unlock` | **in `main`** (30.10., avp-play #103): `avpplay unlock`, lokal mit 59 Fingerabdrücken durchgespielt | hängt an Rollout |
 | `s4-appliance` | **veröffentlicht in AVP Play 1.5.6** (27.10.): bei der Anmeldung nur das Symbol, ⌘Q legt in die Menüleiste; von Marcel getestet | nein (offen: Wake-on-LAN, Erneuerung aus der Menüleiste) |
 | `s1-headless` | **fertig**: `avpplay lab run <spiel>` mit Eingabeskript (Aufrufe, Drücke, **Posen**), Bildzeiten pro Frame, Laborpaket (ANGLE + MoltenVK für den Mac) | nein (Freigabe für das Laborpaket als Download erst beim Release) |
 | `s2-judge` | **Bildprüfung fertig** (`avpplay lab judge`): schwarz, einfarbig, magenta, ein Auge, Stillstand, angehalten; an Beat Saber und Demeo gegengeprüft | nein (Urteil per Bildmodell offen, braucht einen API-Schlüssel) |
 | `s2-engines` | **Regel „Unreal auf GLES“ gebaut** (Profil für ungetestete Spiele), an 19 Unreal-Spielen auf dem Mac geprüft; Unity-Regeln waren schon im Profil | ja: ein ungetestetes Unreal-GL-Spiel in der Brille, sobald eins da ist |
-| `s3-framegen` | **in der Brille (28.10.):** Zwischenbilder im Compositor; Interpolation „Dazwischen“ bei Alyx „fühlt sich auch besser an“. Runde 2 auf `feat/framegen-trials`: drei Stufen im Startfenster (Alyx Standard „Dazwischen“), Tipp reihum, Anzeige mit gezeigter Rate, keine ungezeigten Bilder, verformte Pfeile im Mac-Test behoben. **Veröffentlicht in AVP Play 1.6.0** (Toolchain 785, Klepton #93); eigene Spielvektoren (HITMAN, AC Nexus, LEGO) **in 1.7.0** (Toolchain 809, Klepton #98) | visionOS' eigene 50 Hz klären |
+| `s3-framegen` | **in der Brille (28.10.):** Zwischenbilder im Compositor; Interpolation „Dazwischen“ bei Alyx „fühlt sich auch besser an“. Runde 2 auf `feat/framegen-trials`: drei Stufen im Startfenster (Alyx Standard „Dazwischen“), Tipp reihum, Anzeige mit gezeigter Rate, keine ungezeigten Bilder, verformte Pfeile im Mac-Test behoben. **Veröffentlicht in AVP Play 1.6.0** (Toolchain 785, Klepton #93); eigene Spielvektoren (HITMAN, AC Nexus, LEGO) **in 1.7.0** (Toolchain 809, Klepton #98) | visionOS' eigene 50 Hz klären (ungelöst, Ursache unbekannt) |
 | übrige `s1-*`, `s2-*`, `s3-*`, `s4-*` | nicht begonnen | – |
 
 ## Branches
@@ -35,7 +35,7 @@ Stand: 27. Oktober 2026.
 | `moonshot/s2-coverage` | Prognose für ungetestete Spiele (auf `moonshot/d30-fingerprint`) |
 | `moonshot/s4-appliance` | Start nur in der Menüleiste (auf `main`) |
 | `moonshot/s2-fingerprint` | Teilen der Fingerabdrücke + `avpplay unlock` (auf `moonshot/s2-coverage`) |
-| privates Repo: `moonshot/s2-fingerprint` (Worktree `BeatSaberVR/qi-s2-fingerprint`) | Katalogdienst: `POST /api/v1/fingerprints`, `GET /api/v1/fingerprints/summary`; nicht in `main`, nicht ausgerollt |
+| privates Repo: `moonshot/s2-fingerprint` | Katalogdienst: `POST /api/v1/fingerprints`, `GET /api/v1/fingerprints/summary`; seit 30.10. im privaten `main`, nicht ausgerollt |
 | ~~`ci/macos-build`~~ | gelöscht (lokal und auf GitHub, samt aller Läufe) |
 | Klepton-Fork (privat): `moonshot/s1-remote` (auf `moonshot/d30-host`, Worktree `QuestInstaller/klepton-fork-d30`) | `KleptonRemote.app` (`mains/KleptonRemote.swift`, `runtime/gfx/kl_remote_mtl.m`, `tools/remote/`), Relay-App `spikes/relay`; Sicherung in myMartek/klepton-fork |
 | Klepton-Fork (privat): `moonshot/d30-host` | `tools/lab_run.sh` + `tools/lab/beatsaber145-menu.txt`; Sicherung in myMartek/klepton-fork |
@@ -92,8 +92,7 @@ Bekannte Lücke: Beim Start über die Anmeldung öffnet sich das Fenster. Ein St
 
 ## `d30-fingerprint`: Fingerabdruck-Extraktor und erste Abdeckungskarte
 
-**Stand:** fertig für den Spike. Branch `moonshot/d30-fingerprint` (auf `main` mit 1.5.5), 9 neue Tests,
-`swift test` 349 grün.
+**Stand:** in `main` seit 30.10. (avp-play #101), noch in keinem Release. 9 neue Tests.
 
 Gemacht:
 - `core/Sources/AVPPlayCore/Fingerprint.swift`: `Fingerprint.make(apk:)` liest ein APK (über `unzip`) und liefert
@@ -131,8 +130,7 @@ Grenzen (bewusst, für den Spike):
 - Unity-Spiele zeigen die ganze Plattform-Hülle (~650 genannte, 0 eingebundene); dort sagt die Karte wenig.
 
 **Entscheidung für Marcel:**
-- [ ] Soll der Extraktor (ohne die Karte) als eigener PR nach `main`? Er ändert in der App nichts, nur Bibliothek
-      und CLI. Der Plan sieht das vor („Was für sich allein nützt, geht zusätzlich als eigener Pull Request“).
+- [x] Der Extraktor (ohne die Karte) ist als eigener PR nach `main` gegangen (30.10., avp-play #101).
 
 Nächste Schritte (für `s2-fingerprint`/`s2-coverage`/`s2-unlock`):
 - Den Fingerabdruck beim Laden eines Spiels erstellen und neben dem APK ablegen (lokal).
@@ -255,7 +253,8 @@ Die wichtigste Antwort kommt schon aus dem macOS-27-SDK:
 
 ## `s2-coverage`: Prognose für ungetestete Spiele
 
-**Stand:** fertig auf `moonshot/s2-coverage`, `swift test` 351 grün. Nicht in einem Release.
+**Stand:** in `main` seit 30.10. (avp-play #102), noch in keinem Release. Die Referenzdaten sind die 46 geprüften
+Spiele vom 27.10.; später geprüfte Spiele fehlen darin.
 
 Die rohe Lückenzahl aus `d30-fingerprint` täuscht (geprüfte Spiele haben dieselben Lücken). Die Prognose vergleicht
 darum mit den **geprüften Spielen**:
@@ -279,8 +278,7 @@ darum mit den **geprüften Spielen**:
 - [ ] Die Prognose auf der Seite eines geladenen, ungetesteten Spiels ansehen (Text, Farben, Aufklappen). Ich habe
       die Ansicht nicht mit deinem Bestand gestartet, weil ein Testbau dabei mit deinem Meta-Zugang Besitzabfragen
       stellen und nach dem Schlüsselbund fragen würde. Gebaut und mit CLI/Tests geprüft ist sie.
-- [ ] Ob die Fingerabdrücke der geprüften Spiele (nur Namen) so im öffentlichen Repo liegen dürfen. Der Plan erlaubt
-      das ausdrücklich; der Branch ist schon gepusht.
+- [x] Die Fingerabdrücke der geprüften Spiele (nur Namen) liegen seit 30.10. in `main`.
 
 ## `s4-appliance`: Start nur in der Menüleiste
 
@@ -353,15 +351,16 @@ avpplay lab run beatsaber140 --script tools/lab/beatsaber145-menu.txt
 
 ## `s2-fingerprint` und `s2-unlock`: Teilen und Roadmap
 
-**Stand:** fertig auf `moonshot/s2-fingerprint` (App, öffentlich) und auf dem privaten Branch `moonshot/s2-fingerprint`
-(Katalogdienst). **Nicht ausgerollt, nicht veröffentlicht.**
+**Stand:** in `main` seit 30.10. (avp-play #103), Katalogdienst im privaten `main`. **Nicht ausgerollt, in keinem
+Release.** Der Dienst muss mit dem Release ausgerollt werden, der das enthält: Vorher läuft das Teilen ins Leere und
+`avpplay unlock` hat keine Daten.
 
 App:
 - Einstellungen › Online-Katalog: **„Fingerabdrücke ungetesteter Spiele mit dem Projekt teilen“**, aus, solange
   niemand es einschaltet (wie die Telemetrie). Ist es an, schickt die App den Fingerabdruck eines Builds einmal,
   wenn die Seite eines ungetesteten Spiels die Prognose rechnet.
-- Was geht: Engine, Grafik, Schnittstellen, fest eingebundene Funktionen, Erweiterungen, Middleware, Gerätemerkmale
-  (`SharedFingerprint`). Was nie geht: Paketname, Berechtigungen, Java-Pakete, bloß genannte Namen, etwas über den
+- Was geht: Store-Nummer und Version des Spiels, Engine, Grafik, Schnittstellen, fest eingebundene Funktionen,
+  Erweiterungen, Middleware, Gerätemerkmale (`SharedFingerprint`). Der Einstellungstext nennt das seit 30.10. vollständig. Was nie geht: Paketname, Berechtigungen, Java-Pakete, bloß genannte Namen, etwas über den
   Nutzer. Ein Test hält die Schlüssel fest.
 - `avpplay unlock --klepton <ordner>` holt die Summen vom Dienst und listet, was der Runtime fehlt, nach Zahl der
   Spiele; `avpplay fingerprint --shared <apk>` zeigt, was das Teilen schicken würde.
@@ -381,8 +380,8 @@ daraus, Toolchain 778:
 - Plattform-Bereiche (Online): Leaderboard (23), Achievement, User, Voip (22), CloudStorage, DataStore, Net (21) …
 
 **Muss Marcel entscheiden:**
-- [ ] Ob die Endpunkte so in den Katalogdienst dürfen; dann privaten Branch nach `main` und beim nächsten Rollout mit.
-- [ ] Der Text der Einstellung (DE/EN) und dass sie aus ist, bis man sie einschaltet.
+- [x] Die Endpunkte sind im privaten `main` (30.10.); Rollout mit dem nächsten Release.
+- [x] Text der Einstellung (DE/EN) und aus, bis man sie einschaltet: mit `main` übernommen (30.10.).
 
 ## `s2-engines`: welche Anpassungen eigentlich Engine-Regeln sind
 
@@ -428,8 +427,8 @@ zwischen zwei Läufen sind Streuung (der erste Lauf ist oft langsam, Shader).
 
 ## `s3-framegen`: Zwischenbilder
 
-**Stand (28.10.):** Generator gebaut und im Labor gemessen. Nicht im Compositor, nicht in der Brille, nicht in
-einem Release.
+**Stand (30.10.):** veröffentlicht in AVP Play 1.6.0, Spielvektoren in 1.7.0. Die Abschnitte darunter sind die
+Geschichte der Runden, der aktuelle Stand steht unter „Was fehlt“.
 
 - **Warum nicht MetalFX:** Apples Zwischenbilder (`MTLFXFrameInterpolator`) gibt es auf macOS, auf visionOS nicht.
   Deshalb ein eigener Metal-Generator, derselbe Code für Mac und Brille.
@@ -553,8 +552,7 @@ bei 50 Hz (visionOS stellt es so ein) „merke keinen Unterschied“ – es fül
     Surreal Touch #94–#97).
 
 **Was fehlt:**
-- Messung **im Spiel** (fliegende Blöcke, Säbel, Wände): dort entsteht das Ruckeln, das man sieht. Dafür im Labor
-  ein Lied starten (Probe-Aufrufe ins Menü).
+- **visionOS' eigene 50 Hz:** Manche Sitzungen laufen ohne erkennbaren Grund mit 50 Hz, dann entstehen keine
+  Zwischenbilder. Ursache unbekannt.
+- Messung **im Spiel** (fliegende Blöcke, Säbel, Wände). Dafür im Labor ein Lied starten (Probe-Aufrufe ins Menü).
 - Dünne, schnelle Dinge (Laser, Säbel) findet die Blocksuche noch nicht.
-- Einbau in den Compositor (Vordurchgang wie bei MetalFX, nur in Bildern ohne neues Spielbild), Schalter im
-  Startfenster, Spiel auf halbe Rate mit `KL_GUEST_PACE_DIV=2`; dann Test in der Brille.
