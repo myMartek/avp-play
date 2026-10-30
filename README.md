@@ -54,14 +54,6 @@ Along the way the app keeps your saved games on your Mac, can keep the downloads
 mixed-reality games in your own room, and updates itself from this repository's releases. The
 [wiki](https://github.com/myMartek/avp-play/wiki) has the details.
 
-**Beat Saber with mods.** Beat Saber 1.45.3 is built with the Beat Saber modding community's mods unless you
-switch them off on its page: search and download custom songs from [BeatSaver](https://beatsaver.com) right in the
-game, and *Apple Music Search* finds maps for the songs you played recently, your most played and your favourites
-in Apple Music (only titles and artists are read; no song is played from Apple Music). The mods are named with their
-authors and original projects in the game (start window › Settings › Mods), in the app (Settings › Software used)
-and in [THIRD-PARTY.md](THIRD-PARTY.md#beat-saber-mods). Another Beat Saber version is built without them until
-they are ported to it.
-
 **Remote control from the headset.** Switch on *Remote Control* in the sidebar, and the visionOS app
 **AVP Play Remote** lets you browse your games, install and update them and follow the jobs while you wear the
 Vision Pro – the Mac still does the work. The Mac shows itself on your Wi-Fi, you pair once with a six-digit
