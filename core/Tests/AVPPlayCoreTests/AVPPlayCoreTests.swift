@@ -90,11 +90,13 @@ final class RecipeTests: XCTestCase {
         XCTAssertEqual(bs.addons?.items?.count, 280)
         // Beat Saber folgt seit 1.45 dem Store wie die anderen: nichts hält es bei seiner Fassung.
         XCTAssertNil(bs.store.pinned)
-        XCTAssertEqual(bs.versionCode, 3148)
+        XCTAssertEqual(bs.versionCode, 3237)
         XCTAssertTrue(bs.files.allSatisfy { $0.sha256 != nil && $0.size != nil })
-        // …und die Fassung davor bleibt als weitere geprüfte wählbar: dasselbe Spiel, derselbe Eintrag der Toolchain.
+        // …und die Fassungen davor bleiben als weitere geprüfte wählbar: dasselbe Spiel, derselbe Eintrag der Toolchain.
         let variants = RecipeStore(directory: dir).loadVariants()
-        let old = try XCTUnwrap(variants.first { $0.id == "beatsaber140" })
+        XCTAssertEqual(Set(variants.filter { $0.id == "beatsaber140" }.map(\.versionCode)), [1716, 3148])
+        XCTAssertEqual(variants.first { $0.id == "beatsaber140" && $0.versionCode == 3148 }?.addons?.items?.count, 280)
+        let old = try XCTUnwrap(variants.first { $0.id == "beatsaber140" && $0.versionCode == 1716 })
         XCTAssertEqual(old.versionCode, 1716)
         XCTAssertEqual(old.toolchain.target, bs.toolchain.target)
         XCTAssertEqual(old.store.appId, bs.store.appId)

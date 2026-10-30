@@ -65,7 +65,9 @@ code, and everything between the two stays in your network, encrypted. AVP Play 
 **In the menu bar.** An icon in the menu bar shows the running job with its progress, whether the Vision Pro and
 AVP Play Remote are connected and, with a free Apple account, when the next game runs out. With *Keep running in the
 menu bar when the window is closed* (Settings › Menu Bar) you can close the window: jobs keep going, AVP Play Remote
-stays connected, and the Dock icon comes back when you open the window again.
+stays connected, and the Dock icon comes back when you open the window again. ⌘Q then also puts AVP Play back into
+the menu bar; **Quit** in the menu bar quits it. Together with *Open at login* AVP Play starts as the menu bar icon
+only, without its window.
 
 ## What you need
 
@@ -141,6 +143,9 @@ Reports and fixes from the app help just as much – see *Community Verified* be
 - **[Glovebox](https://github.com/glovebox-vr/glovebox)**, which brings Half-Life: Alyx to the Vision Pro and
   published all of it under the MIT licence: shaders prepared before the game starts, Steam Cloud saves, the fix
   for flashing eyes and more came from there – each named in the source where it lives.
+- **[naldo29](https://github.com/naldo29)**, who ported the Beat Saber mods to the Vision Pro
+  ([beat-saber-with-custom-song-support](https://github.com/naldo29/beat-saber-with-custom-song-support)), and the
+  **Beat Saber modding community**, whose mods it runs – each named in [THIRD-PARTY.md](THIRD-PARTY.md#beat-saber-mods).
 - **Everyone who sent in a fix or a report** – the *Community Verified* games are their work.
 
 ## Legal

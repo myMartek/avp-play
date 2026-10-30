@@ -119,6 +119,9 @@ public struct ToolchainPackager: Sendable {
     /// 20 GB großen ANGLE-Quellbaum nichts bauen.
     static let prebuilt = ["vendor/out/xros", "vendor/out/xrsim",
                            "vendor-moltenvk/out/include", "vendor-moltenvk/out/xros", "vendor-moltenvk/out/xrsim"]
+    /// Vorgebaute Teile, die nur kommen, wo der Fork sie hat: die fertigen Mods je Spielfassung
+    /// (`Toolchain.coreModsProfiles`). Ohne sie baut die Toolchain alles wie bisher, nur ohne Mods.
+    static let optionalPrebuilt = ["ports/scotland2/prebuilt"]
 
     public let root: URL
     public init(root: URL) { self.root = root }
@@ -161,7 +164,7 @@ public struct ToolchainPackager: Sendable {
         let tree = stage.appendingPathComponent("tree", isDirectory: true)
         try fm.createDirectory(at: tree, withIntermediateDirectories: true)
         _ = try run(["/usr/bin/tar", "-xf", sources.path, "-C", tree.path])
-        for part in prebuilt {
+        for part in prebuilt + optionalPrebuilt.filter({ fm.fileExists(atPath: checkout.appendingPathComponent($0).path) }) {
             let target = tree.appendingPathComponent(part)
             try fm.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
             try fm.copyItem(at: checkout.appendingPathComponent(part), to: target)
@@ -499,12 +502,15 @@ public enum AppStamp {
     /// (`Built.experimental`), damit ältere Stempel weiter stimmen.
     /// Hat ein MetalFX-Bau eine vorgegebene Startauflösung (`MetalFXResolution`), kommt 8 × die Stufe darunter hinzu:
     /// (100 − Prozent) / 5, also 5 für 75 % – so übernimmt das Erneuern sie unverändert. Dazu 128, wenn die
-    /// XR-Vorhersage von Anfang an eingeschaltet ist (`Toolchain.xrPredictionSwitch`).
+    /// XR-Vorhersage von Anfang an eingeschaltet ist (`Toolchain.xrPredictionSwitch`), und 256, wenn der Bau die
+    /// Mods mitbringt (`Toolchain.coreModsVariable`).
     /// Mehr als drei Zahlen nimmt der Schlüssel nicht.
     public static func build(versionCode: Int, toolchainVersion: Int, modified: Bool = false,
-                             metalFX: Bool = false, resolution: Int? = nil, xrPrediction: Bool = false) -> String {
+                             metalFX: Bool = false, resolution: Int? = nil, xrPrediction: Bool = false,
+                             coreMods: Bool = false) -> String {
         let step = metalFX ? resolutionStep(resolution) : 0
         let extra = (modified ? 1 : 0) + (metalFX ? 4 : 0) + 8 * step + (xrPrediction ? xrPredictionBit : 0)
+            + (coreMods ? coreModsBit : 0)
         return "\(max(0, min(versionCode, 999_999_999))).\(max(0, min(toolchainVersion, 999_999_999)))" + (extra > 0 ? ".\(extra)" : "")
     }
 
@@ -522,16 +528,20 @@ public enum AppStamp {
         public var resolution: Int?
         /// Die XR-Vorhersage ist in diesem Bau von Anfang an eingeschaltet.
         public var xrPrediction = false
+        /// Der Bau bringt die Mods mit (Beat Saber: eigene Songs).
+        public var coreMods = false
 
         public init(versionCode: Int, toolchain: Int, modified: Bool, experimental: Bool = false, metalFX: Bool = false,
-                    resolution: Int? = nil, xrPrediction: Bool = false) {
+                    resolution: Int? = nil, xrPrediction: Bool = false, coreMods: Bool = false) {
             self.versionCode = versionCode; self.toolchain = toolchain; self.modified = modified; self.experimental = experimental
-            self.metalFX = metalFX; self.resolution = resolution; self.xrPrediction = xrPrediction
+            self.metalFX = metalFX; self.resolution = resolution; self.xrPrediction = xrPrediction; self.coreMods = coreMods
         }
     }
 
     /// Das Bit der XR-Vorhersage, über den vier Bits der Stufe (höchstens 10).
     private static let xrPredictionBit = 128
+    /// Das Bit der Mods, über dem der XR-Vorhersage.
+    private static let coreModsBit = 256
 
     /// Die Stufe unter 100 % (`MetalFXResolution.range` in Schritten von 5); 0 ohne Vorgabe oder bei 100 %.
     private static func resolutionStep(_ percent: Int?) -> Int {
@@ -546,14 +556,14 @@ public enum AppStamp {
         guard parts.count == 2 || parts.count == 3, let code = parts[0], let toolchain = parts[1] else { return nil }
         guard parts.count == 2 || parts[2] != nil else { return nil }
         // Die dritte Zahl ist eine Summe (siehe `build`): Schalter in den unteren drei Bits, darüber in vier Bits die
-        // Stufe der Auflösung, die es nur mit MetalFX gibt, darüber die XR-Vorhersage. Alles andere stammt nicht von
-        // diesem Werkzeug und sagt nichts.
+        // Stufe der Auflösung, die es nur mit MetalFX gibt, darüber die XR-Vorhersage und die Mods. Alles andere stammt
+        // nicht von diesem Werkzeug und sagt nichts.
         let extra = parts.count == 3 ? parts[2] ?? 0 : 0
         let step = (extra >> 3) & 15
-        let valid = extra >= 0 && extra < 2 * xrPredictionBit && step <= maxResolutionStep && (step == 0 || extra & 4 != 0)
+        let valid = extra >= 0 && extra < 2 * coreModsBit && step <= maxResolutionStep && (step == 0 || extra & 4 != 0)
         let bits = valid ? extra : 0
         return Built(versionCode: code, toolchain: toolchain, modified: bits & 1 != 0, experimental: bits & 2 != 0,
                      metalFX: bits & 4 != 0, resolution: valid && step > 0 ? MetalFXResolution.full - 5 * step : nil,
-                     xrPrediction: bits & xrPredictionBit != 0)
+                     xrPrediction: bits & xrPredictionBit != 0, coreMods: bits & coreModsBit != 0)
     }
 }

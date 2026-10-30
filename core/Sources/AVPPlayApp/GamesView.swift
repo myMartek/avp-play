@@ -842,6 +842,8 @@ struct GameDetail: View {
                 // Erst wenn feststeht, woraus das Spiel besteht, und es etwas zu bauen gibt.
                 if game.prepared, model.toolchainText != nil { ToolchainBox(game: game) }
 
+                if model.offersCoreMods(game) { CoreModsBox(game: game) }
+
                 if model.hasSaves(game), game.installed || model.saveSnapshots[game.id] != nil { SavesBox(game: game) }
 
                 if !languageFiles.isEmpty || game.recipe.addons != nil || !extras.isEmpty { optionalContent }
@@ -1283,5 +1285,40 @@ extension AppModel {
         }
         return L("This also deletes the copies of your own game files that this app keeps. For the next update you have to choose the folder with them again. ",
                  "Dabei werden auch die Kopien deiner eigenen Spieldateien gelöscht, die dieses Programm aufbewahrt. Für die nächste Aktualisierung musst du den Ordner damit neu auswählen. ") + device
+    }
+}
+
+/// Der Schalter für die Mods eines Spiels (Beat Saber: eigene Songs). Aus, bis man ihn einschaltet; für eine Fassung,
+/// für die die Mods noch nicht portiert sind, ausgegraut – das Spiel wird dann ohne sie gebaut.
+private struct CoreModsBox: View {
+    @EnvironmentObject var model: AppModel
+    let game: Game
+
+    var body: some View {
+        let profile = model.coreModsProfile(game)
+        let chosen = model.coreModsOn(game)
+        GroupBox(L("Mods (custom songs)", "Mods (eigene Songs)")) {
+            VStack(alignment: .leading, spacing: 6) {
+                Toggle(isOn: Binding(get: { chosen && profile != nil }, set: { model.setCoreMods($0, for: game) })) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(L("Build with mods", "Mit Mods bauen"))
+                        Text(L("Brings SongCore, BetterSongSearch and SongDownloader into the game: you search and download songs from BeatSaver in the game. Off: the game as before. Switching is an update of the same app; saves stay.",
+                               "Bringt SongCore, BetterSongSearch und SongDownloader ins Spiel: Songs suchst und lädst du im Spiel von BeatSaver. Aus: das Spiel wie bisher. Umschalten ist ein Update derselben App; Spielstände bleiben."))
+                            .font(.callout).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .disabled(profile == nil)
+                if profile == nil {
+                    let versions = model.coreModsVersions(game).joined(separator: ", ")
+                    Label(L("The mods are not ported to \(game.recipe.versionName) yet (they exist for \(versions)). The game is built without them\(chosen ? "; your choice stays for a version that has them" : "").",
+                            "Die Mods sind für \(game.recipe.versionName) noch nicht portiert (es gibt sie für \(versions)). Das Spiel wird ohne sie gebaut\(chosen ? "; deine Wahl bleibt für eine Fassung mit Mods stehen" : "")."),
+                          systemImage: "info.circle")
+                        .font(.callout).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading).padding(6)
+        }
     }
 }

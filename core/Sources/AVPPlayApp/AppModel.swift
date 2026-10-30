@@ -1,6 +1,7 @@
 import AppKit
 import AVPPlayCore
 import Combine
+import Network
 import SwiftUI
 import UserNotifications
 
@@ -120,6 +121,10 @@ struct GameOptions: Codable, Equatable {
     /// Beim Installieren die Spielstände vom Mac zurückspielen, wenn das Spiel auf dem Gerät noch keine hat.
     /// Wählbar und nicht fest, weil ältere gespeicherte Angaben den Eintrag nicht kennen; ohne Angabe: ja.
     var restoreSaves: Bool?
+    /// Das Spiel mit seinen Mods bauen (Beat Saber: eigene Songs). Ohne Angabe: wie das Mod-Profil der Fassung sagt
+    /// (`defaultOn`, bisher nur bei Beat Saber an). Gilt nur für eine Fassung, für die die Toolchain Mods hat; für jede
+    /// andere wird ohne sie gebaut, und die Wahl bleibt für später stehen.
+    var coreMods: Bool?
 }
 
 /// Die in der Übersicht angehakten Spiele – ein eigener, kleiner Zustand (siehe `AppModel.picked`).
@@ -181,6 +186,59 @@ final class AppModel: ObservableObject {
     @Published var refreshing = false
     /// Ob der Start (Katalog, Watcher, Update-Check) schon gelaufen ist; das Fenster kann aus der Menüleiste neu entstehen.
     var launched = false
+
+    /// Was beim Start einmal geschieht – aus dem Fenster heraus oder, bei einem Start nur in der Menüleiste, ohne es.
+    func startUp() async {
+        guard !launched else { return }
+        launched = true
+        installBundledToolchainIfNewer()
+        Task.detached(priority: .background) { CoverCache().prune() }
+        refresh()
+        checkAccount()
+        loadCatalog()
+        reconcileBackgroundService()
+        startSaveWatch()
+        startDeviceWatch()
+        startNetworkWatch()
+        await checkForUpdate(manual: false)
+    }
+
+    // MARK: Ohne Netz gestartet
+
+    /// Bei der Anmeldung am Mac startet AVP Play oft, bevor das Netz steht (Neustart am 27.10.: „Meta nicht
+    /// angemeldet“, obwohl der Zugang gültig war). Ein Verbindungsfehler ist kein Urteil über den Zugang: Die Prüfung
+    /// läuft dann nach 3, 10, 30, 60 und 120 s noch einmal und zusätzlich, sobald macOS das Netz als verfügbar meldet.
+    /// Der Katalog wird dabei mit nachgeladen.
+    private var pathMonitor: NWPathMonitor?
+    private var accountOffline = false
+    private var offlineRetries = 0
+    private static let offlineDelays: [Double] = [3, 10, 30, 60, 120]
+
+    private func startNetworkWatch() {
+        guard pathMonitor == nil else { return }
+        let monitor = NWPathMonitor()
+        monitor.pathUpdateHandler = { [weak self] path in
+            guard path.status == .satisfied else { return }
+            Task { @MainActor in self?.retryAfterOffline() }
+        }
+        monitor.start(queue: DispatchQueue(label: "avpplay.network", qos: .utility))
+        pathMonitor = monitor
+    }
+
+    private func retryAfterOffline() {
+        if accountOffline { checkAccount() }
+        if onlineCatalog, catalogProblem != nil { loadCatalog() }
+    }
+
+    func scheduleOfflineRetry() {
+        guard offlineRetries < Self.offlineDelays.count else { return }
+        let delay = Self.offlineDelays[offlineRetries]
+        offlineRetries += 1
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(delay))
+            if self.accountOffline || self.catalogProblem != nil { self.retryAfterOffline() }
+        }
+    }
     @Published var toolchainText: String?
     @Published var account: AccountState = .unknown
     @Published var toolPresent = false
@@ -310,6 +368,7 @@ final class AppModel: ObservableObject {
     @AppStorage("autoRemoveOldToolchains") var autoRemoveOldToolchains = true
     /// Initial controller mode for newly built games; the headset preference wins later.
     @AppStorage(ControllerMode.preferenceKey) var controllerMode: ControllerMode = .standard
+    @AppStorage(ControllerMode.supportKey) var surrealSupport = true
     /// „Raum vermessen“ in Spielen, die gebaut werden (`InstallDefaults.roomMeasuring`) – in einer Datei, nicht in den
     /// Einstellungen der App, damit die Kommandozeile und das Erneuern der Signaturen dasselbe bauen.
     @Published var roomMeasuringForNewGames = InstallDefaults.roomMeasuring() {
@@ -593,6 +652,7 @@ final class AppModel: ObservableObject {
         let id = game.id, catalog = game.catalog
         let paths = paths, apps = installedApps, revision = toolchainRevision, prefix = bundlePrefix, drafts = draftsDirectory
         let pin = toolchainChoices.games[id], metalFX = metalFXExpected
+        let modProfiles = toolchain(for: game)?.coreModsProfiles ?? []
         Task.detached(priority: .userInitiated) {
             var fresh: Game?
             if let recipes = paths.recipes {
@@ -602,7 +662,7 @@ final class AppModel: ObservableObject {
                     let active = StoreUpdate.resolve([tested], variants: variants, sources: sources, drafts: drafts, choices: choices).first ?? tested
                     fresh = Probe.game(active, draft: false, tested: tested, variants: variants, sources: sources, paths: paths,
                                        apps: apps, toolchainRevision: revision, pin: pin, bundlePrefix: prefix,
-                                       metalFX: metalFX)
+                                       metalFX: metalFX, coreModProfiles: modProfiles)
                     fresh?.catalog = catalog
                 }
             }
@@ -870,13 +930,57 @@ final class AppModel: ObservableObject {
         if let data = try? JSONEncoder().encode(options) { UserDefaults.standard.set(data, forKey: "gameOptions") }
     }
 
+    // MARK: Mods
+
+    /// Ob die Toolchain dieses Spiels Mods dafür hat, in irgendeiner Fassung – dann steht der Schalter auf der Seite.
+    func offersCoreMods(_ game: Game) -> Bool {
+        toolchain(for: game)?.offersCoreMods(for: game.recipe) == true
+    }
+
+    /// Die Mods für die Fassung, die gerade gilt; `nil`, wenn sie für diese Fassung (noch) nicht portiert sind.
+    func coreModsProfile(_ game: Game) -> Toolchain.CoreModsProfile? {
+        toolchain(for: game)?.coreModsProfile(for: game.recipe)
+    }
+
+    /// Die Fassungen, für die es die Mods gibt, für den Hinweis bei einer anderen.
+    func coreModsVersions(_ game: Game) -> [String] {
+        (toolchain(for: game)?.coreModsProfiles ?? []).filter { $0.target == game.recipe.toolchain.target }.map(\.versionName)
+    }
+
+    /// Ob dieses Spiel mit Mods gebaut wird: die eigene Wahl, sonst die Vorgabe des Profils seiner Fassung.
+    func coreModsOn(_ game: Game) -> Bool {
+        options(for: game).coreMods ?? (coreModsProfile(game)?.defaultOn == true)
+    }
+
+    /// Die Mod-Liste für Einstellungen › Verwendete Software: aus der Toolchain eines Spiels mit Mods, sonst der neuesten.
+    var modCredits: ModCredits? {
+        let games = allGames.filter { offersCoreMods($0) }
+        return (games.map { toolchain(for: $0) } + [toolchain]).lazy.compactMap { $0?.modCredits }.first
+    }
+
+    func setCoreMods(_ on: Bool, for game: Game) {
+        var next = options(for: game)
+        next.coreMods = on
+        setOptions(next, for: game)
+        refreshStatus(of: game.id)
+    }
+
+    /// Was ein aktueller Bau an Mods tragen soll: die Wahl des Spiels, wo es für seine Fassung Mods gibt; sonst `nil`
+    /// (nicht vergleichen). Liest die gespeicherte Wahl selbst, damit auch die Übersicht im Hintergrund sie kennt.
+    nonisolated static func coreModsExpected(recipe: Recipe, profiles: [Toolchain.CoreModsProfile]) -> Bool? {
+        guard let profile = profiles.first(where: { $0.target == recipe.toolchain.target && $0.versionCode == recipe.versionCode }) else { return nil }
+        let stored = UserDefaults.standard.data(forKey: "gameOptions").flatMap { try? JSONDecoder().decode([String: GameOptions].self, from: $0) }
+        return stored?[recipe.id]?.coreMods ?? profile.defaultOn
+    }
+
     /// Bestimmt den Stand eines Spiels neu, mit dem, was gerade bekannt ist (Gerät, Toolchain, Einstellungen).
     func refreshStatus(of id: String) {
         guard var fresh = allGames.first(where: { $0.id == id }) ?? games.first(where: { $0.id == id }) else { return }
         fresh.status = GameStatus.of(recipe: fresh.recipe, store: paths.store, apps: installedApps, toolchainVersion: toolchainRevision?.forTarget(fresh.recipe.toolchain.target),
                                      pin: toolchainChoices.games[id], bundlePrefix: bundlePrefix,
                                      otherSourceBuilds: Set(fresh.otherSourceBuilds),
-                                     metalFX: metalFXExpected)
+                                     metalFX: metalFXExpected,
+                                     coreMods: toolchain(for: fresh).flatMap { AppModel.coreModsExpected(recipe: fresh.recipe, profiles: $0.coreModsProfiles) })
         replace(fresh)
     }
 
@@ -1153,18 +1257,28 @@ final class AppModel: ObservableObject {
         account = .checking
         Task.detached {
             let state: AccountState
+            let offline: Bool
             do {
                 let token = try TokenStore().read()
                 do {
                     _ = try await MetaClient(token: token).me()
                     state = .signedIn
+                    offline = false
+                } catch MetaError.transport(let why) {
+                    state = .problem(L("No connection to Meta yet (\(why)). AVP Play tries again by itself.",
+                                       "Noch keine Verbindung zu Meta (\(why)). AVP Play versucht es von selbst noch einmal."))
+                    offline = true
                 } catch {
                     state = .problem(Redaction.redact("\(error)"))
+                    offline = false
                 }
             } catch {
                 state = .signedOut
+                offline = false
             }
             await MainActor.run {
+                self.accountOffline = offline
+                if offline { self.scheduleOfflineRetry() } else { self.offlineRetries = 0 }
                 self.account = state
                 self.checkOwnership()
                 if self.filterOwned { self.loadLibrary() }
@@ -1523,7 +1637,12 @@ final class AppModel: ObservableObject {
         request.addons = addons ?? chosen.addons
         // Nur eine Installation spielt Spielstände zurück; ein Abgleich von Inhalten rührt sie nicht an.
         if steps.contains(.build) { request.restoreSaves = chosen.restoreSaves ?? true }
-        if steps.contains(.build) { request.controllerMode = controllerMode }
+        if steps.contains(.build) {
+            request.controllerMode = surrealSupport ? controllerMode : .standard
+            if !surrealSupport { request.surrealSupport = false }
+        }
+        // Die Mods: wie für das Spiel gewählt. Gibt es sie für diese Fassung nicht, baut der Auftrag ohne sie und sagt es.
+        if steps.contains(.build), chosen.coreMods ?? (coreModsProfile(game)?.defaultOn == true) { request.coreMods = true }
         if steps.contains(.build), metalFXUpscaling {
             request.metalFX = true
             request.resolution = metalFXResolution
