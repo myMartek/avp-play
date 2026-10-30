@@ -7,6 +7,9 @@ struct RemoteControlView: View {
         Form {
             RemoteControlSection()
             CompanionSection()
+            // Dieselben Schalter wie in den Einstellungen: Erst mit „Weiterlaufen“ erreicht AVP Play Remote den Mac
+            // auch bei geschlossenem Fenster und nach der Anmeldung.
+            MenuBarSettings()
         }
             .formStyle(.grouped)
             .frame(maxWidth: 760)

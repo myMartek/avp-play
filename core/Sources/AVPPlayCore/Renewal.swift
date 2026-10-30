@@ -95,6 +95,7 @@ public enum Renewal {
             request.resolution = built.resolution
         }
         if built.xrPrediction { request.xrPrediction = true }
+        if built.coreMods { request.coreMods = true }
     }
 
     /// Ist die Installation jetzt dran? Ab dem Zeitpunkt, ab dem auch die App an die Erneuerung erinnert (zwei Tage

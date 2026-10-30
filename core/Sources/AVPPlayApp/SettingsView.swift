@@ -76,13 +76,22 @@ struct SettingsView: View {
             }
 
             Section(L("Controllers", "Controller")) {
-                Picker(L("Controller Type", "Controllertyp"), selection: $model.controllerMode) {
-                    ForEach(ControllerMode.allCases) { Text($0.title).tag($0) }
-                }
-                Text(L("The initial choice for games you install or rebuild. Both controller modes are included in a compatible toolchain. Pair Surreal Touch on Vision Pro in the game's Settings. You can change the mode there without reinstalling.",
-                       "Die erste Wahl für neu installierte oder neu gebaute Spiele. Eine kompatible Toolchain enthält beide Modi. Surreal Touch in den Spieleinstellungen auf Vision Pro koppeln. Dort lässt sich der Modus ohne Neuinstallation ändern."))
+                Toggle(L("Surreal Touch support", "Surreal-Touch-Unterstützung"), isOn: $model.surrealSupport)
+                Text(model.surrealSupport
+                     ? L("Games you install or rebuild can be switched to Surreal Touch controllers in their start window on the Vision Pro. For that, your Mac downloads Surreal Interactive's software once (about 50 MB) and builds it into every game.",
+                         "Neu installierte oder neu gebaute Spiele lassen sich im Startfenster auf der Vision Pro auf Surreal-Touch-Controller umstellen. Dafür lädt dein Mac einmal die Software von Surreal Interactive (etwa 50 MB) und baut sie in jedes Spiel ein.")
+                     : L("Off: games you install or rebuild are made for standard controllers only. Their start window offers no controller type, and nothing from Surreal is downloaded or built in. Games already installed stay as they are until you rebuild them.",
+                         "Aus: Neu installierte oder neu gebaute Spiele sind nur für Standard-Controller. Ihr Startfenster bietet keinen Controllertyp an, und von Surreal wird nichts geladen oder eingebaut. Schon installierte Spiele bleiben so, bis du sie neu baust."))
                     .font(.callout).foregroundStyle(.secondary)
-                if model.controllerMode == .surreal, model.toolchain?.supportsSurrealControllers != true {
+                if model.surrealSupport {
+                    Picker(L("Controller Type", "Controllertyp"), selection: $model.controllerMode) {
+                        ForEach(ControllerMode.allCases) { Text($0.title).tag($0) }
+                    }
+                    Text(L("The initial choice for games you install or rebuild. Both controller modes are included in a compatible toolchain. Pair Surreal Touch on Vision Pro in the game's Settings. You can change the mode there without reinstalling.",
+                           "Die erste Wahl für neu installierte oder neu gebaute Spiele. Eine kompatible Toolchain enthält beide Modi. Surreal Touch in den Spieleinstellungen auf Vision Pro koppeln. Dort lässt sich der Modus ohne Neuinstallation ändern."))
+                        .font(.callout).foregroundStyle(.secondary)
+                }
+                if model.surrealSupport, model.controllerMode == .surreal, model.toolchain?.supportsSurrealControllers != true {
                     Text(L("The selected toolchain does not include Surreal Touch yet. Select your customized toolchain on the game's page before rebuilding.",
                            "Die ausgewählte Toolchain enthält Surreal Touch noch nicht. Vor dem Neubau die angepasste Toolchain auf der Spielseite auswählen."))
                         .font(.callout).foregroundStyle(.orange)
@@ -241,6 +250,8 @@ struct SettingsView: View {
                     }
                 }
             }
+
+            Section { SoftwareCreditsView() }
         }
         .formStyle(.grouped)
         .frame(maxWidth: 760)
