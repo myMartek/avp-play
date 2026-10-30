@@ -286,6 +286,51 @@ public struct Toolchain: Sendable {
         return text.contains("KLEPTON_SURREAL_SUPPORT")
     }
 
+    /// Mit dieser Variable baut `run.sh` ein Spiel mit seinen Mods (Beat Saber: eigene Songs). Welches Mod-Profil
+    /// gilt, sucht die Toolchain selbst nach der Fassung des Spiels aus.
+    public static let coreModsVariable = "KLEPTON_SCOTLAND2"
+
+    /// Wofür die Mods einer Toolchain gebaut sind: ein Spiel (Target) in genau einer Fassung.
+    public struct CoreModsProfile: Equatable, Sendable {
+        public var name: String
+        public var target: String
+        public var versionName: String
+        public var versionCode: Int
+        /// Ohne eigene Wahl des Spiels an (`"defaultOn"` im Profil). Bisher nur Beat Saber mit diesen Mods; ein
+        /// Profil ohne die Angabe ist aus, bis man es einschaltet.
+        public var defaultOn = false
+    }
+
+    /// Die Mod-Profile dieser Toolchain (`ports/scotland2/avp-profiles.json`), nur die mit fertigen Bibliotheken
+    /// (`<prebuilt>/libs`). Mods gibt es je Fassung: Sie greifen an festen Stellen der Spieldateien an, und eine neue Fassung
+    /// des Spiels braucht neu gebaute Mods.
+    public var coreModsProfiles: [CoreModsProfile] {
+        let folder = root.appendingPathComponent("ports/scotland2", isDirectory: true)
+        guard let data = try? Data(contentsOf: folder.appendingPathComponent("avp-profiles.json")),
+              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              object["schema"] as? Int == 1, let rows = object["profiles"] as? [[String: Any]] else { return [] }
+        return rows.compactMap { row in
+            guard let name = row["name"] as? String, let target = row["target"] as? String,
+                  let versionName = row["versionName"] as? String, let versionCode = row["versionCode"] as? Int,
+                  let prebuilt = row["prebuilt"] as? String, !prebuilt.contains(".."),
+                  let libs = try? FileManager.default.contentsOfDirectory(atPath: folder.appendingPathComponent(prebuilt).appendingPathComponent("libs").path),
+                  libs.contains(where: { $0.hasSuffix(".so") }) else { return nil }
+            return CoreModsProfile(name: name, target: target, versionName: versionName, versionCode: versionCode,
+                                   defaultOn: row["defaultOn"] as? Bool ?? false)
+        }
+    }
+
+    /// Ob es für dieses Spiel überhaupt Mods gibt, in irgendeiner Fassung – dann zeigt die App den Schalter.
+    public func offersCoreMods(for recipe: Recipe) -> Bool {
+        coreModsProfiles.contains { $0.target == recipe.toolchain.target }
+    }
+
+    /// Das Profil, mit dem diese Fassung des Spiels Mods bekommen kann; `nil`, wenn die Mods für sie (noch) nicht
+    /// gebaut sind.
+    public func coreModsProfile(for recipe: Recipe) -> CoreModsProfile? {
+        coreModsProfiles.first { $0.target == recipe.toolchain.target && $0.versionCode == recipe.versionCode }
+    }
+
     public func controllerEnvironment(_ mode: ControllerMode, surrealSupport: Bool = true) throws -> [String: String] {
         // Ohne Surreal-Touch-Unterstützung: immer Standard, und die Toolchain lässt die Wahl im Spiel weg.
         guard surrealSupport else { return ["KLEPTON_CONTROLLER_MODE": "standard", "KLEPTON_SURREAL_SUPPORT": "0"] }
@@ -389,15 +434,22 @@ public struct Toolchain: Sendable {
     ///   das kann (`supportsXRPrediction`); auch das sagt der Stempel.
     /// - Parameters displayName, displaySuffix: der Name der App auf dem Gerät statt des üblichen bzw. ein Zusatz
     ///   dazu (`displayEnvironment`); ohne Angabe bleibt er, wie er war.
+    /// - Parameter coreMods: das Spiel mit seinen Mods bauen. Nur für eine Fassung, für die die Toolchain Mods hat
+    ///   (`coreModsProfile`); sonst ist es ein Fehler und nichts wird gebaut. Auch das sagt der Stempel.
     public func buildAndInstall(recipe: Recipe, team: String, device: Device, bundleId: String?, log: URL,
                                 extraEnvironment: [String: String] = [:],
                                 metalFX: Bool = false, resolution: Int? = nil, xrPrediction: Bool = false,
                                 displayName: String? = nil, displaySuffix: String? = nil,
-                                controllerMode: ControllerMode = .standard, surrealSupport: Bool = true) throws {
+                                controllerMode: ControllerMode = .standard, surrealSupport: Bool = true,
+                                coreMods: Bool = false) throws {
         guard team.count == 10, team.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber) }) else {
             throw RecipeError.invalid(L("team ID '\(team)' (expected: 10 characters)", "Team-ID '\(team)' (erwartet: 10 Zeichen)"))
         }
         let controllerEnvironment = try controllerEnvironment(controllerMode, surrealSupport: surrealSupport)
+        if coreMods && coreModsProfile(for: recipe) == nil {
+            throw RecipeError.invalid(L("mods: this toolchain has no mods for \(recipe.title) \(recipe.versionName). Turn the mods off for this game, or choose a version they are made for",
+                                        "Mods: Diese Toolchain hat keine Mods für \(recipe.title) \(recipe.versionName). Schalte die Mods für dieses Spiel aus oder wähle eine Fassung, für die es sie gibt"))
+        }
         var env = ProcessInfo.processInfo.environment
         // Nur was macOS und Xcode mitbringen – auf jedem Mac dasselbe, ob dort Homebrew oder ein anderes
         // Python liegt oder nicht. Sonst baut es beim einen mit Werkzeugen, die dem anderen fehlen.
@@ -418,12 +470,14 @@ public struct Toolchain: Sendable {
         let xrPrediction = xrPrediction && supportsXRPrediction
         env["KLEPTON_APP_BUILD"] = AppStamp.build(versionCode: recipe.versionCode, toolchainVersion: version(), modified: isModified,
                                                   metalFX: metalFX, resolution: resolution,
-                                                  xrPrediction: xrPrediction)
+                                                  xrPrediction: xrPrediction, coreMods: coreMods)
         // Nie aus der Umgebung dieses Programms übernehmen: Was eingeschaltet ist, sagt allein der Auftrag.
         let switchesOn = (metalFX ? [Toolchain.metalFXSwitch] : [])
             + (xrPrediction ? [Toolchain.xrPredictionSwitch] : [])
         env["KLEPTON_TEST_ON"] = switchesOn.isEmpty ? nil : switchesOn.joined(separator: ",")
         env[Toolchain.renderScaleVariable] = MetalFXResolution.environmentValue(resolution)
+        // Nie aus der Umgebung dieses Programms: Mods gibt es nur, wenn der Auftrag sie will.
+        env[Toolchain.coreModsVariable] = coreMods ? "1" : nil
         if let bundleId { env["KLEPTON_BUNDLE_ID"] = bundleId }
         // Ein kostenloses Team bekommt von Apple „Increased Memory Limit“, aber weder „Extended Virtual
         // Addressing“ noch „Low-Latency Streaming“. Mit einer der beiden im Auftrag scheitert die ganze Signatur.
