@@ -52,20 +52,20 @@ prebuilt for Beat Saber 1.45.3, with their sources and the changes made for the 
 | [paper2](https://github.com/Fernthedev/paperlog) 4.8.0 – logging | Fernthedev | no licence stated |
 | [reflect-cpp](https://github.com/kodenamekrak/reflectcpp-qpm) 0.25.0 – library | kodenamekrak | MIT |
 | [tinyxml2](https://github.com/MillzyDev/NDK-tinyxml2) 10.0.0 – library | Lee Thomason, packaged by MillzyDev | zlib |
-| [BSML](https://github.com/bsq-ports/Quest-BSML) 0.6.5 – menu framework | bsq-ports | MIT (per the authors; no licence file in the repository yet) |
+| [BSML](https://github.com/bsq-ports/Quest-BSML) 0.6.5 – menu framework | bsq-ports | no licence file in the repository yet |
 | [Lapiz](https://github.com/raineaeternal/Lapiz) 0.3.7 – modding library | raineaeternal | MIT |
 | [SongCore](https://github.com/raineaeternal/Quest-SongCore) 1.3.5 – custom songs | raineaeternal | MIT |
 | [PlaylistCore](https://github.com/Metalit/PlaylistCore) 1.7.2 – playlists | Metalit | GPL-3.0 |
 | [SongDownloader](https://github.com/darknight1050/SongDownloader) 0.9.1 – song downloads | darknight1050 | GPL-3.0 |
 | [BeatSaverPlusPlus](https://github.com/bsq-ports/BeatSaverPlusPlus) 0.2.4 – BeatSaver access | bsq-ports | MIT |
-| [WebUtils](https://github.com/bsq-ports/WebUtils) 0.6.9 – web requests | bsq-ports | MIT (per the authors; no licence file in the repository yet) |
-| [SongDetails](https://github.com/bsq-ports/SongDetails) 1.0.5 – song database | bsq-ports | MIT (per the authors; no licence file in the repository yet) |
-| [MetaCore](https://github.com/Metalit/MetaCore) 2.0.6 – modding library | Metalit | MIT (per the authors; no licence file in the repository yet) |
-| [MetaCoreBS](https://github.com/Metalit/MetaCoreBS) 1.0.1 – modding library | Metalit | MIT (per the authors; no licence file in the repository yet) |
-| [Unicode](https://github.com/Metalit/UnicodeQuest) 0.1.8 – text in all scripts | Metalit | MIT (per the authors; no licence file in the repository yet) |
-| [PlayerDataKeeper](https://github.com/Metalit/PlayerDataKeeper) 0.2.7 – save backups | Metalit | MIT (per the authors; no licence file in the repository yet) |
+| [WebUtils](https://github.com/bsq-ports/WebUtils) 0.6.9 – web requests | bsq-ports | no licence file in the repository yet |
+| [SongDetails](https://github.com/bsq-ports/SongDetails) 1.0.5 – song database | bsq-ports | no licence file in the repository yet |
+| [MetaCore](https://github.com/Metalit/MetaCore) 2.0.6 – modding library | Metalit | no licence file in the repository yet |
+| [MetaCoreBS](https://github.com/Metalit/MetaCoreBS) 1.0.1 – modding library | Metalit | no licence file in the repository yet |
+| [Unicode](https://github.com/Metalit/UnicodeQuest) 0.1.8 – text in all scripts | Metalit | no licence file in the repository yet |
+| [PlayerDataKeeper](https://github.com/Metalit/PlayerDataKeeper) 0.2.7 – save backups | Metalit | no licence file in the repository yet |
 | [BetterSongSearch](https://github.com/bsq-ports/BetterSongSearchQuest) 2.3.0 – song search | bsq-ports | MIT |
-| [Airbuds Search (as Apple Music Search)](https://github.com/zilewang7/Beat-Saber-Airbuds-Search) 2.0.2 – songs from your listening history | zilewang7, based on Spotify Search by TychoTheTaco; Apple Music history by this project | MIT (per the authors; no licence file in the repository yet) |
+| [Airbuds Search (as Apple Music Search)](https://github.com/zilewang7/Beat-Saber-Airbuds-Search) 2.0.2 – songs from your listening history | zilewang7, based on Spotify Search by TychoTheTaco; Apple Music history by this project | no licence file in the repository yet |
 
 The search mod reads the player's Apple Music history on the headset instead of Airbuds (a change of this project).
 Where a repository has no licence file yet, its authors said MIT is what they want. The mods' authors asked to be
