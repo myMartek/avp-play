@@ -1090,6 +1090,11 @@ final class AppModel: ObservableObject {
         return fresh
     }
 
+    /// Das Xcode, das nur gewählt werden muss: Die Prüfung fand gar keins, oder das gewählte ist zu alt.
+    var xcodeToChoose: DeveloperTools.OtherXcode? {
+        xcodeText == nil || (xcodeProblem == nil && xcodeWarning != nil) ? newerXcode : nil
+    }
+
     /// Was einer Installation im Weg steht, als Satz mit der nächsten Handlung – oder `nil`.
     func blocker(for game: Game) -> String? {
         if let why = storeBlocker { return why }

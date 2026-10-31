@@ -12,6 +12,30 @@ final class XcodeVersionTests: XCTestCase {
         XCTAssertNil(DeveloperTools.xcodeMajor(fromVersionLine: ""))
     }
 
+    /// Die Kommandozeilenwerkzeuge sind gewählt, Xcode liegt aber da (avp-play#104).
+    func testAnXcodeThatIsThereButNotChosenIsNamed() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("xcodes-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: folder) }
+        func app(_ name: String, _ version: String) throws {
+            let contents = folder.appendingPathComponent("\(name).app/Contents")
+            try FileManager.default.createDirectory(at: contents.appendingPathComponent("Developer"), withIntermediateDirectories: true)
+            try (["CFBundleShortVersionString": version] as NSDictionary).write(to: contents.appendingPathComponent("Info.plist"))
+        }
+        let tools = "/Library/Developer/CommandLineTools"
+        XCTAssertNil(DeveloperTools.unchosenXcode(in: folder, chosen: tools), "ohne Xcode gibt es nichts zu wählen")
+
+        try app("Xcode", "26.5")
+        XCTAssertEqual(DeveloperTools.unchosenXcode(in: folder, chosen: tools)?.name, "Xcode", "auch ein zu altes")
+        try app("Xcode-27.2", "27.2")
+        let found = try XCTUnwrap(DeveloperTools.unchosenXcode(in: folder, chosen: tools))
+        XCTAssertEqual(found.name, "Xcode-27.2")
+        XCTAssertTrue(found.selectCommand.hasSuffix("/Xcode-27.2.app/Contents/Developer\""), found.selectCommand)
+        XCTAssertEqual(DeveloperTools.unchosenXcode(in: folder, chosen: nil)?.name, "Xcode-27.2", "der gewählte Ordner ist weg")
+
+        // Ist ein Xcode gewählt und die Prüfung scheitert, liegt es nicht an der Wahl.
+        XCTAssertNil(DeveloperTools.unchosenXcode(in: folder, chosen: folder.appendingPathComponent("Xcode.app/Contents/Developer").path))
+    }
+
     func testNewerXcodesSkipTheChosenOneAndOldOnes() throws {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("xcodes-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: folder) }
