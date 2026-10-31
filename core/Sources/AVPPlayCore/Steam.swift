@@ -10,6 +10,8 @@ public enum SteamError: Error, CustomStringConvertible, Equatable {
     case notSignedIn(String)
     /// Steam hat die Anmeldung angenommen, danach aber die Daten des Steam-Clients nicht geliefert.
     case steamNotAnswering(String)
+    /// Steam war nicht zu erreichen. Über die gemerkte Anmeldung sagt das nichts.
+    case noConnection(String)
     case notOwned(String)
     case depotFailed(depot: String, detail: String)
     case notEnoughSpace(needed: Int64, free: Int64)
@@ -38,6 +40,10 @@ public enum SteamError: Error, CustomStringConvertible, Equatable {
         case .steamNotAnswering(let detail):
             return L("Steam accepted the sign-in, which stays saved, but then did not send the Steam client's data in time. That is on Steam's side; try again in a while.",
                      "Steam hat die Anmeldung angenommen, sie bleibt gespeichert. Danach hat Steam aber die Daten des Steam-Clients nicht rechtzeitig geschickt. Das liegt bei Steam; versuch es in einer Weile noch einmal.")
+                + (detail.isEmpty ? "" : " (\(detail))")
+        case .noConnection(let detail):
+            return L("Steam cannot be reached right now. Your sign-in stays saved; try again when Steam is back.",
+                     "Steam ist gerade nicht erreichbar. Deine Anmeldung bleibt gespeichert; versuch es noch einmal, wenn Steam wieder da ist.")
                 + (detail.isEmpty ? "" : " (\(detail))")
         case .notOwned(let what):
             return L("\(what) is not in this Steam account. Nothing is downloaded.", "\(what) gehört nicht zu diesem Steam-Konto. Es wird nichts geladen.")
@@ -306,7 +312,14 @@ enum SteamRun {
     /// Hat das Werkzeug es mit der gemerkten Anmeldung versucht, und Steam hat sie abgelehnt? Was nach einer
     /// angenommenen Anmeldung schiefgeht, zählt nicht dazu.
     static func storedLoginRejected(_ output: String) -> Bool {
-        output.lowercased().contains("using cached credentials") && !loggedOn(output) && loginFailed(output)
+        output.lowercased().contains("using cached credentials") && !loggedOn(output) && loginFailed(output) && !noConnection(output)
+    }
+
+    /// Ist Steam gar nicht erst zu erreichen gewesen? Ohne Netz sagt das Werkzeug nach vier Versuchen (gemessen:
+    /// 25 Sekunden) „ERROR (No Connection)“. Das ist keine Absage: Die gemerkte Anmeldung gilt weiter.
+    static func noConnection(_ output: String) -> Bool {
+        let said = output.lowercased()
+        return ["no connection", "timeout", "service unavailable", "try another cm", "rate limit"].contains { said.contains($0) }
     }
 
     /// Hat Steam das Konto angenommen? Erst danach wartet das Werkzeug auf die Daten des Clients.
@@ -320,6 +333,7 @@ enum SteamRun {
         if loggedOn(output), output.contains("Failed to load platform info") {
             return .steamNotAnswering(failureLine(output))
         }
+        if noConnection(output) { return .noConnection(failureLine(output)) }
         return .notSignedIn(failureLine(output))
     }
 

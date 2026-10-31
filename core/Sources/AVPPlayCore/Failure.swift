@@ -49,13 +49,13 @@ public enum FailureKind: String, Codable, Sendable {
             case .appRunning: return .gameRunning
             case .notOwned: return .notOwned
             case .userFilesNeeded, .missingTrees: return .ownFiles
-            case .missingFiles: return .download
+            case .missingFiles, .offlineFilesMissing: return .download
             case .teamMissing: return .setup
             case .freeTeamFull: return .apple
             case .appNotInstalled: return .build
             case .badIcon: return .other
             case .notANativeApp, .wrongArchitecture, .notAVRGame: return .unsupported
-            case .steamAccountMissing: return .signIn
+            case .steamAccountMissing, .notConfirmedHere: return .signIn
             // Erst vom Gerät entfernen: ein Handgriff dort, wie bei einer App, die gerade läuft.
             case .otherSourceInstalled: return .device
             }

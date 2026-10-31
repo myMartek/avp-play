@@ -72,6 +72,7 @@ extension AppModel {
            let cached = try? JSONDecoder().decode([String: [CatalogBuild]].self, from: data) {
             storeBuildLists = cached
         }
+        guard !offlineMode else { return }
         let now = Date().timeIntervalSince1970
         let wanted: [Game]
         if let game {
@@ -84,7 +85,7 @@ extension AppModel {
         }
         // Von selbst nur für Spiele mit geprüftem Rezept. Für ein ungetestetes wird gefragt, wenn jemand seine Seite
         // öffnet und es dem Konto gehört – dort steht dann die Liste der Fassungen zur Wahl.
-        let list = wanted.filter { (!$0.draft || game != nil) && $0.recipe.store.appId != nil && $0.recipe.store.pinned != true }
+        let list = wanted.filter { (!$0.draft || game != nil) && $0.recipe.store.appId != nil && $0.recipe.store.pinned != true && !isOffline($0) }
             .compactMap { g in g.recipe.store.appId.map { (g.id, $0) } }
         let draftIds = Set(wanted.filter(\.draft).map(\.id))
         guard !list.isEmpty else { return }
@@ -212,9 +213,14 @@ extension AppModel {
     /// daraus ein Rezept an, das wie das geprüfte angeordnet ist.
     private func useStoreVersion(_ game: Game, build: CatalogBuild) {
         guard let tested = testedRecipe(game), let appId = tested.store.appId, !preparing.contains(game.id) else { return }
+        if isOffline(game) {
+            prepareNote[game.id] = offlineText
+            return
+        }
         guard account == .signedIn else {
-            prepareNote[game.id] = L("Sign in to Meta under “Setup” first – then the app can look up the files of this version.",
-                                     "Melde dich zuerst unter „Einrichtung“ bei Meta an – dann kann die App die Dateien dieser Fassung nachschlagen.")
+            prepareNote[game.id] = accountOffline ? metaNotAnsweringText
+                : L("Sign in to Meta under “Setup” first – then the app can look up the files of this version.",
+                    "Melde dich zuerst unter „Einrichtung“ bei Meta an – dann kann die App die Dateien dieser Fassung nachschlagen.")
             return
         }
         preparing.insert(game.id)

@@ -850,6 +850,8 @@ struct GameDetail: View {
 
                 if game.recipe.servers != nil { ServerListBox(game: game) }
 
+                if game.recipe.source != nil { OfflineBox(game: game) }
+
                 if game.installed { FeedbackBox(game: game) }
 
                 GroupBox(L("Good to Know", "Gut zu wissen")) {
@@ -1290,6 +1292,38 @@ extension AppModel {
 
 /// Der Schalter für die Mods eines Spiels (Beat Saber: eigene Songs). Aus, bis man ihn einschaltet; für eine Fassung,
 /// für die die Mods noch nicht portiert sind, ausgegraut – das Spiel wird dann ohne sie gebaut.
+/// Dieses eine Spiel ohne Meta und Steam installieren.
+private struct OfflineBox: View {
+    @EnvironmentObject var model: AppModel
+    let game: Game
+
+    var body: some View {
+        GroupBox(L("Offline", "Offline")) {
+            VStack(alignment: .leading, spacing: 6) {
+                Toggle(isOn: Binding(get: { model.isOffline(game) }, set: { on in
+                    var next = model.options(for: game)
+                    next.offline = on ? true : nil
+                    model.setOptions(next, for: game)
+                })) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(L("Install without \(AppModel.name(game.recipe.source))", "Ohne \(AppModel.name(game.recipe.source)) installieren"))
+                        Text(L("\(AppModel.name(game.recipe.source)) is not asked and nothing is downloaded: its last answer counts, and the game is built from what is on this Mac. New versions and purchases wait until this is off again.",
+                               "\(AppModel.name(game.recipe.source)) wird nicht gefragt und es wird nichts geladen: Es gilt die letzte Antwort, und das Spiel wird aus dem gebaut, was auf diesem Mac liegt. Neue Versionen und Käufe warten, bis das wieder aus ist."))
+                            .font(.callout).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .disabled(model.offlineMode)
+                if model.offlineMode {
+                    Text(L("Offline is on for all games (see “Settings”).", "Offline ist für alle Spiele an (siehe „Einstellungen“)."))
+                        .font(.callout).foregroundStyle(.secondary)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading).padding(6)
+        }
+    }
+}
+
 private struct CoreModsBox: View {
     @EnvironmentObject var model: AppModel
     let game: Game

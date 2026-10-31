@@ -367,9 +367,14 @@ extension AppModel {
             prepareNote[game.id] = why
             return
         }
+        if isOffline(game) {
+            prepareNote[game.id] = offlineText
+            return
+        }
         guard account == .signedIn else {
-            prepareNote[game.id] = L("Sign in to Meta under “Setup” first – then the app can check whether you own this game and look up its files.",
-                                     "Melde dich zuerst unter „Einrichtung“ bei Meta an – dann kann die App prüfen, ob dir das Spiel gehört, und seine Dateien nachschlagen.")
+            prepareNote[game.id] = accountOffline ? metaNotAnsweringText
+                : L("Sign in to Meta under “Setup” first – then the app can check whether you own this game and look up its files.",
+                    "Melde dich zuerst unter „Einrichtung“ bei Meta an – dann kann die App prüfen, ob dir das Spiel gehört, und seine Dateien nachschlagen.")
             return
         }
         // Die Toolchain braucht es zum Nachschlagen nicht: Wer nur laden will, hat sie vielleicht noch gar nicht (oder
@@ -398,7 +403,11 @@ extension AppModel {
                 let user = try await meta.me()
                 let owned = try await meta.ownsApp(appId: entry.appId, userId: user)
                 let records = OwnershipCache(store: paths.store).record(appId: entry.appId, owned: owned)
-                await MainActor.run { self.ownership = records }
+                OwnershipSeal.meta()?.record(key: entry.appId, owned: owned)
+                await MainActor.run {
+                    self.ownership = records
+                    self.refreshSeals()
+                }
                 guard owned else {
                     throw Stop(L("This game is not in your Meta account. Nothing is looked up or downloaded.",
                                  "Dieses Spiel gehört nicht zu deinem Meta-Konto. Es wird nichts nachgeschlagen oder geladen."))

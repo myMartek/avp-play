@@ -266,6 +266,13 @@ extension AppModel {
                                           items: items))
         }
 
+        if game.recipe.source != nil {
+            sections.append(RemoteSection(id: "offline", title: L("Offline", "Offline"), items: [
+                Item(id: "offline", kind: .toggle, title: L("Install without \(AppModel.name(game.recipe.source))", "Ohne \(AppModel.name(game.recipe.source)) installieren"),
+                     on: isOffline(game), enabled: !offlineMode),
+            ]))
+        }
+
         // Gut zu wissen
         var know: [Item] = []
         let ownership = OwnershipLabel.describe(owned: owned(game), checking: checkingPurchase.contains(game.id) || checkingOwnership, source: game.recipe.source)
@@ -505,6 +512,9 @@ extension AppModel {
             Item(id: "roomMeasuring", kind: .toggle, title: L("Measure room in the games that are installed", "„Raum vermessen“ in den Spielen, die installiert werden"),
                  on: roomMeasuringForNewGames),
         ]))
+        sections.append(RemoteSection(id: "offline", title: L("Offline", "Offline"), items: [
+            Item(id: "offlineMode", kind: .toggle, title: L("Install without Meta and Steam", "Ohne Meta und Steam installieren"), on: offlineMode),
+        ]))
         let languages = [RemoteChoice(id: "", title: L("As each game has it", "Wie im jeweiligen Spiel")),
                          RemoteChoice(id: GameLanguage.device, title: GameLanguage.name(GameLanguage.device))]
             + GameLanguage.choices.map { RemoteChoice(id: $0.code, title: $0.name) }
@@ -593,6 +603,7 @@ extension AppModel {
             case "controllerMode": if let value, let mode = ControllerMode(rawValue: value) { controllerMode = mode }
             case "surrealSupport": surrealSupport = on
             case "roomMeasuring": roomMeasuringForNewGames = on
+            case "offlineMode": offlineMode = on
             case "gameLanguage": if let value { gameLanguageForNewGames = value }
             case "renewInBackground":
                 renewInBackground = on
@@ -654,6 +665,10 @@ extension AppModel {
             let name = String(item.dropFirst(6))
             var next = options(for: game)
             next.optionalNames = on ? Array(Set(next.optionalNames + [name])).sorted() : next.optionalNames.filter { $0 != name }
+            setOptions(next, for: game)
+        case "offline":
+            var next = options(for: game)
+            next.offline = on ? true : nil
             setOptions(next, for: game)
         case "addons":
             var next = options(for: game)

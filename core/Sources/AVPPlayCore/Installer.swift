@@ -21,6 +21,10 @@ public enum InstallError: Error, CustomStringConvertible, Equatable {
     case steamAccountMissing
     /// Auf dem Gerät liegt dasselbe Spiel aus einer anderen Kaufquelle (Meta statt Steam oder umgekehrt).
     case otherSourceInstalled(String, wanted: Recipe.Source)
+    /// Der Auftrag läuft offline (`InstallRequest.offline`), und auf diesem Mac fehlen Dateien des Spiels.
+    case offlineFilesMissing(String, names: [String])
+    /// Der Store lässt sich nicht fragen, und auf diesem Mac ist für das angemeldete Konto keine Antwort bestätigt.
+    case notConfirmedHere(String, store: String)
 
     public var description: String {
         switch self {
@@ -65,6 +69,13 @@ public enum InstallError: Error, CustomStringConvertible, Equatable {
             let (new, old) = wanted == .steam ? ("Steam", "Meta") : ("Meta", "Steam")
             return L("\(title) is on the Vision Pro in its \(old) version. The \(new) version is a different build of the game with its own files and its own saved games, and it cannot be installed over the other one. Remove the game from the Vision Pro first (press and hold its icon, “Remove App”), then install again. Removing the app also deletes the saved games of the \(old) version on the headset.",
                      "\(title) liegt in der \(old)-Fassung auf der Vision Pro. Die \(new)-Fassung ist ein anderer Stand des Spiels mit eigenen Dateien und eigenen Spielständen und lässt sich nicht über die andere installieren. Entferne das Spiel zuerst von der Vision Pro (Symbol gedrückt halten, „App entfernen“) und installiere dann neu. Beim Entfernen löscht das Headset auch die Spielstände der \(old)-Fassung.")
+        case .offlineFilesMissing(let title, let names):
+            let list = "\(names.prefix(4).joined(separator: ", "))\(names.count > 4 ? ", …" : "")"
+            return L("\(title) cannot be installed offline: \(names.count) file(s) are not on this Mac yet (\(list)). Switch Offline off so that they can be downloaded, then try again.",
+                     "\(title) lässt sich offline nicht installieren: \(names.count) Datei(en) liegen noch nicht auf diesem Mac (\(list)). Schalte Offline aus, damit sie geladen werden können, und versuche es dann noch einmal.")
+        case .notConfirmedHere(let title, let shop):
+            return L("\(title) has not been confirmed for your current \(shop) account on this Mac yet. \(shop) has to answer once before the game can be installed without it. Nothing was installed.",
+                     "\(title) ist für dein aktuelles \(shop)-Konto auf diesem Mac noch nicht bestätigt. \(shop) muss einmal antworten, bevor sich das Spiel ohne \(shop) installieren lässt. Installiert wurde nichts.")
         case .appRunning(let title):
             return L("\(title) is currently running on the Vision Pro. Installing would quit the game. Quit the game, then resume.",
                      "\(title) läuft gerade auf der Vision Pro. Eine Installation würde das Spiel beenden. Spiel beenden und dann fortsetzen.")
@@ -135,6 +146,10 @@ public struct InstallRequest: Codable, Sendable, Equatable {
     /// Die Sprache, mit der das Spiel beginnt (`GameLanguage`; `""`: keine Vorgabe). Ohne Angabe: wie die
     /// Einstellung der App für alle Spiele (`InstallDefaults.gameLanguage`). Was im Spiel gewählt ist, gilt.
     public var gameLanguage: String?
+    /// Der Auftrag kommt ohne Meta und Steam aus: Gefragt und geladen wird dort nichts, es gilt deren letzte Antwort,
+    /// und gebaut wird aus dem, was auf diesem Mac liegt. Ohne Angabe: wie die Einstellung der App für alle Spiele
+    /// (`InstallDefaults.offline`).
+    public var offline: Bool?
 
     public init(toolchain: String) { self.toolchain = toolchain }
 }
@@ -216,6 +231,8 @@ public struct Installer: Sendable {
     let progress: @Sendable (InstallProgress) -> Void
     /// Metas Werkzeug, falls eingerichtet: der Ausweg für Dateien, die die direkte Adresse mit HTTP 404 verweigert.
     public var metaTool: URL?
+    /// Für Tests: das Siegel statt des Schlüsselbunds dieses Macs.
+    var sealOverride: OwnershipSeal.Bound?
 
     public init(recipe: Recipe, request: InstallRequest, store: ContentStore,
                 progress: @escaping @Sendable (InstallProgress) -> Void = { _ in },
@@ -232,6 +249,7 @@ public struct Installer: Sendable {
         recipe.source != .steam && (recipe.store.appId != nil || recipe.files.contains { $0.source == nil } || recipe.addons != nil)
     }
     var wantsAddons: Bool { recipe.addons != nil && request.addons }
+    var offline: Bool { request.offline ?? InstallDefaults.offline() }
 
     public func perform(_ step: InstallStep) async throws {
         switch step {
@@ -277,9 +295,12 @@ public struct Installer: Sendable {
 
     // MARK: Auswahl und Bestand
 
-    /// Die Käufe, die gelten: der zuletzt von Meta bestätigte Stand.
+    /// Die Käufe, die gelten: der zuletzt vom Store bestätigte Stand, soweit er auf diesem Mac für das angemeldete
+    /// Konto versiegelt ist. Er gilt je Spiel, nicht je Fassung – auch eine neue Fassung bekommt ihre Zusatzinhalte.
     func confirmedPurchases() -> PurchaseRecord? {
-        wantsAddons ? PurchaseRecord.load(store: store, recipe: recipe) : nil
+        guard wantsAddons, let app = recipe.store.appId ?? recipe.store.steamAppId,
+              let answer = lastAnswer(), answer.owned, let skus = answer.skus else { return nil }
+        return PurchaseRecord(appId: app, skus: skus, verified: answer.checked)
     }
 
     func selection() -> FetchSelection {
@@ -342,9 +363,62 @@ public struct Installer: Sendable {
 
     // MARK: Schritte
 
+    /// Die Antworten des Stores auf diesem Mac, für das angemeldete Konto (`OwnershipSeal`).
+    func ownershipSeal() -> OwnershipSeal.Bound? {
+        if let sealOverride { return sealOverride }
+        return recipe.source == .steam ? OwnershipSeal.steam(account: request.steamAccount ?? "") : OwnershipSeal.meta(account: request.account)
+    }
+
+    /// Die letzte Antwort, die auf diesem Mac für das angemeldete Konto bestätigt ist.
+    func lastAnswer() -> OwnershipSeal.Answer? {
+        OwnershipCache.key(for: recipe).flatMap { ownershipSeal()?.read(key: $0) }
+    }
+
+    /// Hält eine Antwort des Stores fest: lesbar für die Anzeige, versiegelt für den Fall, dass er nicht antwortet.
+    func remember(owned: Bool, skus: [String]? = nil) {
+        guard let key = OwnershipCache.key(for: recipe) else { return }
+        OwnershipCache(store: store).record(appId: key, owned: owned)
+        ownershipSeal()?.record(key: key, owned: owned, skus: skus)
+    }
+
+    /// Meta oder Steam lassen sich nicht fragen: Es gilt ihre letzte Antwort, soweit sie auf diesem Mac für das
+    /// angemeldete Konto bestätigt ist. Ein „Nein“ bleibt ein Nein, und ohne Bestätigung geht es nicht weiter – sonst
+    /// ließe sich ein Spiel mit kopierten Dateien bei jemandem installieren, dem es nie gehört hat.
+    func useLastOwnership() throws {
+        guard recipe.source != nil else { return }
+        guard let known = lastAnswer() else { throw InstallError.notConfirmedHere(recipe.title, store: recipe.source == .steam ? "Steam" : "Meta") }
+        guard known.owned else { throw InstallError.notOwned(recipe.title) }
+        let when = DateFormatter.localizedString(from: known.checked, dateStyle: .medium, timeStyle: .short)
+        report(L("Ownership: using the last confirmed state (\(when)).", "Besitz: Es gilt der zuletzt bestätigte Stand (\(when))."))
+        // Eine neue Fassung hat einen eigenen Ordner; die Anzeige liest die Käufe dort.
+        if let record = confirmedPurchases() { try? record.save(store: store, recipe: recipe) }
+    }
+
+    func reportLastPurchases() {
+        guard let record = confirmedPurchases() else { return }
+        let when = ISO8601DateFormatter().string(from: record.verified)
+        report(L("Purchases: couldn't be checked – using the last confirmed state (\(record.skus.count) purchases, \(when)).",
+                 "Käufe: Abfrage nicht möglich – es gilt der zuletzt bestätigte Stand (\(record.skus.count) Käufe, \(when))."))
+    }
+
+    /// Darf ein Abruf bei Meta beginnen, obwohl die Frage nach dem Besitz gescheitert ist? Nur mit einem früheren Ja –
+    /// und nicht, wenn Meta den Token ablehnt: Dann liefert auch die Download-Adresse nichts.
+    static func mayFetch(after error: Error, lastAnswer: OwnershipSeal.Answer?) -> Bool {
+        if case MetaError.tokenRejected = error { return false }
+        return lastAnswer?.owned == true
+    }
+
     /// Konto: Token prüfen, Besitz prüfen, Käufe holen. Ohne gültigen Token wird nichts Neues freigeschaltet;
-    /// ein früher bestätigter Stand der Käufe bleibt gültig.
+    /// ein früher bestätigter Stand der Käufe bleibt gültig. Antwortet Meta oder Steam nicht, gilt die letzte Antwort.
     func checkAccount() async throws {
+        if offline {
+            if recipe.source != nil {
+                report(L("Offline: Meta and Steam are not asked.", "Offline: Meta und Steam werden nicht gefragt."))
+                try useLastOwnership()
+                reportLastPurchases()
+            }
+            return
+        }
         if let app = recipe.store.steamAppId, recipe.source == .steam {
             try checkSteamAccount(app: app)
             return
@@ -359,45 +433,58 @@ public struct Installer: Sendable {
             let client = MetaClient(token: try TokenStore().read(account: request.account))
             let user = try await client.me()
             if let app = recipe.store.appId {
-                guard try await client.ownsApp(appId: app, userId: user) else { throw InstallError.notOwned(recipe.title) }
+                let owned = try await client.ownsApp(appId: app, userId: user)
+                remember(owned: owned)
+                guard owned else { throw InstallError.notOwned(recipe.title) }
                 report(L("Ownership confirmed.", "Besitz bestätigt."))
             }
             if wantsAddons {
-                source = await PurchaseRecord.refresh(store: store, recipe: recipe) { try await client.purchases(appId: $0) }?.source
+                let purchases = await PurchaseRecord.refresh(store: store, recipe: recipe) { try await client.purchases(appId: $0) }
+                source = purchases?.source
+                if let purchases, purchases.source == .fresh { remember(owned: true, skus: purchases.record.skus) }
             }
         } catch let error as InstallError {
             throw error
         } catch {
             report(L("Note: \(Redaction.redact("\(error)"))", "Hinweis: \(Redaction.redact("\(error)"))"))
-            if wantsAddons, PurchaseRecord.load(store: store, recipe: recipe) != nil { source = .cached(reason: L("no valid token", "kein gültiger Token")) }
+            try useLastOwnership()
+            if confirmedPurchases() != nil { source = .cached(reason: L("no valid token", "kein gültiger Token")) }
         }
         if let record = confirmedPurchases(), let source {
             switch source {
             case .fresh: report(L("Purchases: \(record.skus.count) confirmed.", "Käufe: \(record.skus.count) bestätigt."))
-            case .cached:
-                let when = ISO8601DateFormatter().string(from: record.verified)
-                report(L("Purchases: couldn't be checked – using the last confirmed state (\(record.skus.count) purchases, \(when)).",
-                         "Käufe: Abfrage nicht möglich – es gilt der zuletzt bestätigte Stand (\(record.skus.count) Käufe, \(when))."))
+            case .cached: reportLastPurchases()
             }
         }
     }
 
     /// Ein Spiel aus Steam: Steam wird gefragt, ob das Konto das Spiel besitzt und welche seiner Zusatzinhalte.
-    /// Gefragt wird Valves eigenes Werkzeug mit der Anmeldung des Nutzers; ohne ein klares Ja geht es nicht weiter.
+    /// Gefragt wird Valves eigenes Werkzeug mit der Anmeldung des Nutzers. Sagt es „nein“, geht es nicht weiter;
+    /// antwortet Steam gar nicht oder nichts Klares, gilt wie bei Meta die letzte Antwort.
     /// Die bestätigten Zusatzinhalte bilden die Kaufliste – wie bei Meta ersetzt eine neue Antwort die alte.
     func checkSteamAccount(app: String) throws {
         guard let account = request.steamAccount, SteamTool.isAccountName(account) else { throw InstallError.steamAccountMissing }
         let addons = wantsAddons ? (recipe.addons?.steamApps ?? []) : []
         report(L("Asking Steam whether this account owns the game …", "Steam wird gefragt, ob das Spiel zu diesem Konto gehört …"))
-        let answers = try SteamLicences(account: account).owned(apps: [app] + addons)
-        switch answers[app] {
-        case true?: report(L("Ownership confirmed by Steam.", "Besitz von Steam bestätigt."))
-        case false?: throw InstallError.notOwned(recipe.title)
-        case nil: throw SteamError.unclearOwnership
+        let answers: [String: Bool]
+        let owned: Bool
+        do {
+            answers = try SteamLicences(account: account).owned(apps: [app] + addons)
+            guard let answer = answers[app] else { throw SteamError.unclearOwnership }
+            owned = answer
+        } catch {
+            report(L("Note: \(Redaction.redact("\(error)"))", "Hinweis: \(Redaction.redact("\(error)"))"))
+            try useLastOwnership()
+            reportLastPurchases()
+            return
         }
+        remember(owned: owned)
+        guard owned else { throw InstallError.notOwned(recipe.title) }
+        report(L("Ownership confirmed by Steam.", "Besitz von Steam bestätigt."))
         guard wantsAddons else { return }
         let record = PurchaseRecord(appId: app, skus: addons.filter { answers[$0] == true }.sorted(), verified: Date())
         try? record.save(store: store, recipe: recipe)
+        remember(owned: true, skus: record.skus)
         report(L("Purchases: \(record.skus.count) of \(addons.count) add-ons confirmed by Steam.",
                  "Käufe: \(record.skus.count) von \(addons.count) Zusatzinhalten von Steam bestätigt."))
     }
@@ -424,9 +511,24 @@ public struct Installer: Sendable {
         throw InstallError.otherSourceInstalled(recipe.title, wanted: wanted)
     }
 
+    /// Offline wird nichts geladen: Es muss schon alles auf diesem Mac liegen.
+    func requireLocalFiles(_ plan: [PlannedFetch]) throws {
+        let fromUser = plan.filter { $0.action == .needsUser && $0.file.source?.steam == nil }
+        guard fromUser.isEmpty else {
+            throw InstallError.userFilesNeeded(names: fromUser.map(\.file.name), hint: fromUser.first?.file.source?.hint?.text)
+        }
+        let missing = plan.filter { $0.action != .keep }.map(\.file.name) + TreeStore(store: store).missing(recipe: recipe).map(\.name)
+        guard missing.isEmpty else { throw InstallError.offlineFilesMissing(recipe.title, names: missing) }
+        report(L("Files: \(plan.count) needed, all in the library.", "Dateien: \(plan.count) gebraucht, alle im Bestand."))
+    }
+
     /// Lädt, was im Bestand fehlt. Vor dem ersten Abruf bei Meta wird der Besitz geprüft; es wird nie eine
-    /// Datei angefragt, nur um zu sehen, ob Meta sie herausgibt.
+    /// Datei angefragt, nur um zu sehen, ob Meta sie herausgibt. Lässt sich Meta nicht fragen, gilt ein früheres Ja.
     func fetch() async throws {
+        if offline {
+            try requireLocalFiles(FetchPlan.plan(recipe: recipe, selection: selection()) { store.state(of: $0, in: recipe) })
+            return
+        }
         try fetchFromSteam()
         let plan = FetchPlan.plan(recipe: recipe, selection: selection()) { store.state(of: $0, in: recipe) }
         let onlyDownload = request.downloadOnly ?? false
@@ -477,9 +579,19 @@ public struct Installer: Sendable {
         if todo.contains(where: { $0.file.source == nil }) {
             token = try TokenStore().read(account: request.account)
             client = MetaClient(token: token ?? "")
-            let user = try await client.me()
-            if let app = recipe.store.appId {
-                guard try await client.ownsApp(appId: app, userId: user) else { throw InstallError.notOwned(recipe.title) }
+            do {
+                let user = try await client.me()
+                if let app = recipe.store.appId {
+                    let owned = try await client.ownsApp(appId: app, userId: user)
+                    remember(owned: owned)
+                    guard owned else { throw InstallError.notOwned(recipe.title) }
+                }
+            } catch let error as InstallError {
+                throw error
+            } catch {
+                guard Installer.mayFetch(after: error, lastAnswer: lastAnswer()) else { throw error }
+                report(L("Note: \(Redaction.redact("\(error)"))", "Hinweis: \(Redaction.redact("\(error)"))"))
+                try useLastOwnership()
             }
         }
         var fetcher = Fetcher(client: client, store: store, gate: RequestGate(minInterval: .seconds(request.interval)))
@@ -545,8 +657,9 @@ public struct Installer: Sendable {
         }
         // Ein neuer Bau verlängert die Signatur nur, wenn Xcode dafür ein neues Profil holt (siehe `SigningProfiles`).
         // Bei einem kostenlosen Team gilt das für jede Installation, sonst nur fürs Erneuern.
+        // Offline bleibt das Profil liegen: Ein neues käme von Apple, und ohne Verbindung wäre dann gar keins mehr da.
         let free = AppleTeams.isFree(team)
-        if free || request.resign == true,
+        if free || request.resign == true, !offline,
            SigningProfiles.removeStale(team: team, bundleId: bundle, fresherThan: SigningProfiles.renewBelow(free: free)) > 0 {
             report(L("Signing: a new profile is requested from Apple, so that the game opens for the full time again.",
                      "Signatur: Bei Apple wird ein neues Profil angefordert, damit das Spiel wieder die volle Zeit gilt."))
@@ -656,6 +769,8 @@ public struct Installer: Sendable {
 
     /// Icon bereitlegen und die Toolchain vorbereiten.
     func prepare(_ toolchain: Toolchain) async throws {
+        var request = self.request
+        if offline { request.storeArt = false }
         if let path = request.customIcon {
             guard AppIcon.custom(at: URL(fileURLWithPath: path)) != nil else { throw InstallError.badIcon(path) }
             let target = Toolchain.customIconURL(store: store, recipe: recipe)

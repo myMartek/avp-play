@@ -75,7 +75,7 @@ extension AppModel {
     /// Valves Werkzeug fragt dafür die Lizenzen und die App-Daten ab; das dauert mit vielen Spielen über eine Minute.
     /// Gelingt es nicht, bleibt der letzte Stand stehen.
     func loadSteamLibrary(force: Bool = false) {
-        guard steamSignedIn, storeBlocker == nil, !loadingSteamLibrary else { return }
+        guard steamSignedIn, storeBlocker == nil, !loadingSteamLibrary, !offlineMode else { return }
         if !force, let steamLibrary, !steamLibrary.isStale() { return }
         loadingSteamLibrary = true
         let account = steamAccount
@@ -190,6 +190,7 @@ extension AppModel {
     /// Was einem Abruf bei Steam im Weg steht.
     func steamBlocker(for game: Game) -> String? {
         if let why = storeBlocker { return why }
+        if isOffline(game) { return offlineText }
         if !steamToolPresent || !steamSignedIn {
             return L("Sign in to Steam under “Setup” – then the app can fetch these files for you.", "Melde dich unter „Einrichtung“ bei Steam an – dann kann die App diese Dateien für dich holen.")
         }

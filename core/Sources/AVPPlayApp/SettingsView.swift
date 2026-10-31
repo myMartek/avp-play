@@ -111,6 +111,18 @@ struct SettingsView: View {
                 }
             }
 
+            Section(L("Offline", "Offline")) {
+                Toggle(L("Install without Meta and Steam", "Ohne Meta und Steam installieren"), isOn: $model.offlineMode)
+                Text(L("On, AVP Play neither asks Meta or Steam anything nor downloads from them: their last answer counts, and games are built from what is on this Mac. New versions, new purchases and files that are still missing wait until it is off again. Each game can also be set to this on its own page. Without it, the last answer only counts when Meta or Steam do not respond. An answer only counts on the Mac and with the account that received it: games copied from someone else cannot be installed this way.",
+                       "An fragt AVP Play bei Meta und Steam nichts mehr an und lädt dort nichts: Es gilt deren letzte Antwort, und Spiele werden aus dem gebaut, was auf diesem Mac liegt. Neue Versionen, neue Käufe und fehlende Dateien warten, bis es wieder aus ist. Das lässt sich auch einzeln auf der Seite eines Spiels einstellen. Ohne das gilt die letzte Antwort nur, wenn Meta oder Steam nicht reagieren. Eine Antwort gilt nur auf dem Mac und mit dem Konto, die sie erhalten haben: Von jemand anderem kopierte Spiele lassen sich so nicht installieren."))
+                    .font(.callout).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(L("Apple is a separate matter: signing a game works without a connection only as long as the profile on this Mac is valid.",
+                       "Apple ist davon nicht betroffen: Ohne Verbindung klappt das Signieren nur, solange das Profil auf diesem Mac gültig ist."))
+                    .font(.callout).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
             Section(L("Game language", "Sprache der Spiele")) {
                 Picker(L("Language games start with", "Sprache, mit der Spiele beginnen"), selection: $model.gameLanguageForNewGames) {
                     Text(L("As each game has it", "Wie im jeweiligen Spiel")).tag("")
