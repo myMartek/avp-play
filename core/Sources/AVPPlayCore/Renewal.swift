@@ -186,6 +186,9 @@ public enum Renewal {
             report.outcomes = due.map { RenewalOutcome(recipe: $0.recipe.id, title: $0.recipe.title, result: .skipped, detail: why, expires: $0.record.expires) }
             return report
         }
+        guard !InstallDefaults.offline() else {
+            return skipAll(L("Offline is on, and a new signature has to come from Apple.", "Offline ist an, und eine neue Signatur muss von Apple kommen."))
+        }
         guard StoreLocation.isAvailable(store.root) else {
             return skipAll(L("The folder for downloads is not connected.", "Der Ordner für Downloads ist nicht angeschlossen."))
         }

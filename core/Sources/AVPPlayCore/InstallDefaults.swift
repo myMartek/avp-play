@@ -10,6 +10,8 @@ public enum InstallDefaults {
         var roomMeasuring: Bool?
         /// Die Sprache, die gebaute Spiele gemeldet bekommen (`GameLanguage`). Fehlt der Eintrag: die des Spiels.
         var gameLanguage: String?
+        /// Offline arbeiten: weder Meta noch Steam fragen. Fehlt der Eintrag: aus.
+        var offline: Bool?
     }
 
     private static func values(base: URL) -> Values {
@@ -41,6 +43,18 @@ public enum InstallDefaults {
     public static func setGameLanguage(_ code: String?, base: URL = DataLocation.base) throws {
         var v = values(base: base)
         v.gameLanguage = code.flatMap { GameLanguage.isValid($0) ? $0 : nil }
+        try write(v, base: base)
+    }
+
+    /// Ob Aufträge ohne Meta und Steam auskommen sollen (`InstallRequest.offline`): Es gilt deren letzte Antwort, und
+    /// gebaut wird aus dem, was auf diesem Mac liegt. Ohne Einstellung: aus.
+    public static func offline(base: URL = DataLocation.base) -> Bool {
+        values(base: base).offline ?? false
+    }
+
+    public static func setOffline(_ on: Bool, base: URL = DataLocation.base) throws {
+        var v = values(base: base)
+        v.offline = on ? true : nil
         try write(v, base: base)
     }
 

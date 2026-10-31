@@ -125,6 +125,9 @@ struct GameOptions: Codable, Equatable {
     /// (`defaultOn`, bisher nur bei Beat Saber an). Gilt nur für eine Fassung, für die die Toolchain Mods hat; für jede
     /// andere wird ohne sie gebaut, und die Wahl bleibt für später stehen.
     var coreMods: Bool?
+    /// Dieses Spiel ohne Meta und Steam installieren (`InstallRequest.offline`). Ohne Angabe: wie für alle Spiele
+    /// eingestellt (`AppModel.offlineMode`).
+    var offline: Bool?
 }
 
 /// Die in der Übersicht angehakten Spiele – ein eigener, kleiner Zustand (siehe `AppModel.picked`).
@@ -210,7 +213,7 @@ final class AppModel: ObservableObject {
     /// läuft dann nach 3, 10, 30, 60 und 120 s noch einmal und zusätzlich, sobald macOS das Netz als verfügbar meldet.
     /// Der Katalog wird dabei mit nachgeladen.
     private var pathMonitor: NWPathMonitor?
-    private var accountOffline = false
+    private(set) var accountOffline = false
     private var offlineRetries = 0
     private static let offlineDelays: [Double] = [3, 10, 30, 60, 120]
 
@@ -375,6 +378,15 @@ final class AppModel: ObservableObject {
         didSet {
             guard roomMeasuringForNewGames != oldValue else { return }
             try? InstallDefaults.setRoomMeasuring(roomMeasuringForNewGames)
+        }
+    }
+    /// Offline für alle Spiele (`InstallDefaults.offline`) – in einer Datei, damit auch die Kommandozeile und das
+    /// Erneuern der Signaturen Meta und Steam in Ruhe lassen.
+    @Published var offlineMode = InstallDefaults.offline() {
+        didSet {
+            guard offlineMode != oldValue else { return }
+            try? InstallDefaults.setOffline(offlineMode)
+            checkAccount()
         }
     }
     /// Die Sprache, mit der Spiele beim Installieren oder Neubauen beginnen (`InstallDefaults.gameLanguage`; leer:
@@ -624,10 +636,38 @@ final class AppModel: ObservableObject {
                  "Dieses Spiel gehört nicht zu deinem \(store)-Konto. Es wird nichts geladen.")
     }
 
-    /// Was fehlt, damit das Konto gefragt werden kann, bei dem das Spiel gekauft ist.
+    /// Soll für dieses Spiel weder Meta noch Steam gefragt werden?
+    func isOffline(_ game: Game) -> Bool { offlineMode || options[game.id]?.offline == true }
+
+    /// Warum offline nichts zu holen ist.
+    var offlineText: String {
+        offlineMode ? L("Offline is on (see “Settings”), so Meta and Steam are not asked.", "Offline ist an (siehe „Einstellungen“), Meta und Steam werden nicht gefragt.")
+                    : L("Offline is on for this game, so Meta and Steam are not asked.", "Offline ist für dieses Spiel an, Meta und Steam werden nicht gefragt.")
+    }
+
+    /// Warum Meta sich gerade nicht fragen lässt, obwohl ein Konto angemeldet ist.
+    var metaNotAnsweringText: String {
+        L("Meta is not answering right now. AVP Play tries again by itself.", "Meta antwortet gerade nicht. AVP Play versucht es von selbst noch einmal.")
+    }
+
+    /// Offline lässt sich nur bauen, was schon auf diesem Mac liegt.
+    func offlineBlocker(for game: Game) -> String? {
+        guard isOffline(game), (game.draft && !game.prepared) || hasDownloads(game) else { return nil }
+        return offlineText + " " + L("Files of this game are not on this Mac yet.", "Dateien dieses Spiels liegen noch nicht auf diesem Mac.")
+    }
+
+    /// Was fehlt, damit das Konto gefragt werden kann, bei dem das Spiel gekauft ist. Offline wird es nicht gefragt.
+    /// Antwortet Meta gerade nicht, gilt die letzte Antwort; nur wo es keine gibt und etwas zu laden wäre, geht es nicht.
     func accountBlocker(for game: Game) -> String? {
+        if isOffline(game) { return nil }
         if game.needsSteamAccount, !steamSignedIn { return L("Sign in to Steam first (see “Setup”).", "Erst bei Steam anmelden (siehe „Einrichtung“).") }
-        if game.needsMetaAccount, account != .signedIn { return L("Sign in to Meta first (see “Setup”).", "Erst bei Meta anmelden (siehe „Einrichtung“).") }
+        if game.needsMetaAccount, account != .signedIn {
+            guard accountOffline else { return L("Sign in to Meta first (see “Setup”).", "Erst bei Meta anmelden (siehe „Einrichtung“).") }
+            if owned(game) == .unknown, hasDownloads(game) {
+                return L("Meta is not answering right now, and it has never confirmed this game for your account. AVP Play tries again by itself.",
+                         "Meta antwortet gerade nicht und hat dieses Spiel für dein Konto noch nie bestätigt. AVP Play versucht es von selbst noch einmal.")
+            }
+        }
         return nil
     }
 
@@ -763,6 +803,8 @@ final class AppModel: ObservableObject {
         let cache = OwnershipCache(store: paths.store)
         let known = cache.load()
         ownership = known
+        guard !offlineMode else { return }
+        let games = games.filter { !isOffline($0) }
         let due = account == .signedIn
             ? games.compactMap { $0.recipe.store.appId }.filter { force || OwnershipCache.needsCheck(known[$0]) } : []
         // Steam: die Spiele, bei denen Steam gewählt ist – und mit „Im Besitz“ jedes, für das es ein Steam-Rezept gibt.
@@ -818,6 +860,10 @@ final class AppModel: ObservableObject {
     func checkPurchase(_ game: Game, quiet: Bool = false, firstOpen: Bool = false) {
         guard let current = game.recipe.source, !checkingPurchase.contains(game.id) else { return }
         if let why = storeBlocker { purchaseNote[game.id] = why; return }
+        if isOffline(game) {
+            if !quiet { purchaseNote[game.id] = offlineText }
+            return
+        }
         let metaApp = recipe(of: game, source: .meta)?.store.appId
         let steamApp = recipe(of: game, source: .steam)?.store.steamAppId
         let metaReady = account == .signedIn && metaApp != nil
@@ -832,7 +878,7 @@ final class AppModel: ObservableObject {
             return
         }
         if current == .meta, !metaReady, !steamReady {
-            if !quiet { purchaseNote[game.id] = L("Sign in to Meta under “Setup” first.", "Melde dich zuerst unter „Einrichtung“ bei Meta an.") }
+            if !quiet { purchaseNote[game.id] = accountOffline ? metaNotAnsweringText : L("Sign in to Meta under “Setup” first.", "Melde dich zuerst unter „Einrichtung“ bei Meta an.") }
             return
         }
         checkingPurchase.insert(game.id)
@@ -1097,6 +1143,7 @@ final class AppModel: ObservableObject {
         if toolchain == nil { return L("The toolchain is not installed yet (see “Setup”).", "Die Toolchain ist noch nicht installiert (siehe „Einrichtung“).") }
         if !teamValid { return L("The Apple team ID is still missing (see “Setup”).", "Die Apple-Team-ID fehlt noch (siehe „Einrichtung“).") }
         if device == nil { return deviceProblem ?? L("The Vision Pro is not reachable.", "Die Vision Pro ist nicht erreichbar.") }
+        if let why = offlineBlocker(for: game) { return why }
         if game.draft, !game.prepared {
             // Ein Steam-Spiel des Kontos lädt „Installieren“ selbst von Steam; was dem im Weg steht, sagt `steamDraftBlocker`.
             if game.recipe.source == .steam {
@@ -1255,22 +1302,37 @@ final class AppModel: ObservableObject {
     func checkAccount() {
         guard account != .checking else { return }
         account = .checking
+        let offlineMode = offlineMode
         Task.detached {
             let state: AccountState
             let offline: Bool
             do {
                 let token = try TokenStore().read()
-                do {
-                    _ = try await MetaClient(token: token).me()
-                    state = .signedIn
+                if offlineMode {
+                    state = .problem(L("Offline is on (see “Settings”), so Meta is not asked.", "Offline ist an (siehe „Einstellungen“), Meta wird nicht gefragt."))
                     offline = false
-                } catch MetaError.transport(let why) {
-                    state = .problem(L("No connection to Meta yet (\(why)). AVP Play tries again by itself.",
-                                       "Noch keine Verbindung zu Meta (\(why)). AVP Play versucht es von selbst noch einmal."))
-                    offline = true
-                } catch {
-                    state = .problem(Redaction.redact("\(error)"))
-                    offline = false
+                } else {
+                    do {
+                        _ = try await MetaClient(token: token).me()
+                        state = .signedIn
+                        offline = false
+                    } catch MetaError.transport(let why) {
+                        state = .problem(L("No connection to Meta yet (\(why)). AVP Play tries again by itself.",
+                                           "Noch keine Verbindung zu Meta (\(why)). AVP Play versucht es von selbst noch einmal."))
+                        offline = true
+                    } catch MetaError.tokenRejected(let why) {
+                        state = .problem(Redaction.redact("\(MetaError.tokenRejected(why))"))
+                        offline = false
+                    } catch let error as MetaError {
+                        // Ein Ausfall bei Meta ist keine Abmeldung: Der Token bleibt, und es wird wieder gefragt.
+                        state = .problem(L("Meta is not answering properly right now. AVP Play tries again by itself.",
+                                           "Meta antwortet gerade nicht richtig. AVP Play versucht es von selbst noch einmal.")
+                                         + " (\(Redaction.redact("\(error)")))")
+                        offline = true
+                    } catch {
+                        state = .problem(Redaction.redact("\(error)"))
+                        offline = false
+                    }
                 }
             } catch {
                 state = .signedOut
@@ -1518,6 +1580,7 @@ final class AppModel: ObservableObject {
     /// keine Rolle – wer die noch nicht hat, kann schon laden und später bauen.
     func downloadBlocker(for game: Game) -> String? {
         if let why = storeBlocker { return why }
+        if isOffline(game) { return offlineText }
         if game.draft, !game.prepared {
             if game.recipe.source == .steam {
                 if let why = steamDraftBlocker(for: game) { return why }
@@ -1563,6 +1626,7 @@ final class AppModel: ObservableObject {
         if toolchain == nil { return L("The toolchain is not installed yet (see “Setup”).", "Die Toolchain ist noch nicht installiert (siehe „Einrichtung“).") }
         if device == nil { return deviceProblem ?? L("The Vision Pro is not reachable.", "Die Vision Pro ist nicht erreichbar.") }
         if !game.installed { return L("Install the game first – this only adds to a game that is on the Vision Pro.", "Erst das Spiel installieren – das hier ergänzt nur ein Spiel, das schon auf der Vision Pro ist.") }
+        if isOffline(game) { return offlineText }
         if game.needsSteamAccount ? !steamSignedIn : account != .signedIn {
             return game.needsSteamAccount ? L("Sign in to Steam first (see “Setup”).", "Erst bei Steam anmelden (siehe „Einrichtung“).")
                                           : L("Sign in to Meta first (see “Setup”).", "Erst bei Meta anmelden (siehe „Einrichtung“).")
@@ -1635,6 +1699,7 @@ final class AppModel: ObservableObject {
         request.locales = chosen.locales
         request.optionalNames = chosen.optionalNames
         request.addons = addons ?? chosen.addons
+        request.offline = chosen.offline
         // Nur eine Installation spielt Spielstände zurück; ein Abgleich von Inhalten rührt sie nicht an.
         if steps.contains(.build) { request.restoreSaves = chosen.restoreSaves ?? true }
         if steps.contains(.build) {
@@ -1715,7 +1780,11 @@ final class AppModel: ObservableObject {
     func resume(_ job: Job) {
         guard job.id != runningJob, !queued.contains(job.id) else { return }
         // Fortsetzen heißt sich anstellen. Der Platz steht im Auftrag selbst, damit Liste und Ablauf dasselbe sagen.
-        if let stored = try? paths.jobs.load(job.id) { _ = try? paths.jobs.enqueue(stored) }
+        // Offline gilt, wie es jetzt eingestellt ist: Wer es ausschaltet, damit Fehlendes geladen wird, setzt danach fort.
+        if var stored = try? paths.jobs.load(job.id) {
+            stored.request.offline = options[stored.recipe.id]?.offline
+            _ = try? paths.jobs.enqueue(stored)
+        }
         queued.append(job.id)
         reloadJobs()
         pump()

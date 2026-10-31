@@ -367,9 +367,14 @@ extension AppModel {
             prepareNote[game.id] = why
             return
         }
+        if isOffline(game) {
+            prepareNote[game.id] = offlineText
+            return
+        }
         guard account == .signedIn else {
-            prepareNote[game.id] = L("Sign in to Meta under “Setup” first – then the app can check whether you own this game and look up its files.",
-                                     "Melde dich zuerst unter „Einrichtung“ bei Meta an – dann kann die App prüfen, ob dir das Spiel gehört, und seine Dateien nachschlagen.")
+            prepareNote[game.id] = accountOffline ? metaNotAnsweringText
+                : L("Sign in to Meta under “Setup” first – then the app can check whether you own this game and look up its files.",
+                    "Melde dich zuerst unter „Einrichtung“ bei Meta an – dann kann die App prüfen, ob dir das Spiel gehört, und seine Dateien nachschlagen.")
             return
         }
         // Die Toolchain braucht es zum Nachschlagen nicht: Wer nur laden will, hat sie vielleicht noch gar nicht (oder

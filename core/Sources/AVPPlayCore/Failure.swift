@@ -49,7 +49,7 @@ public enum FailureKind: String, Codable, Sendable {
             case .appRunning: return .gameRunning
             case .notOwned: return .notOwned
             case .userFilesNeeded, .missingTrees: return .ownFiles
-            case .missingFiles: return .download
+            case .missingFiles, .offlineFilesMissing: return .download
             case .teamMissing: return .setup
             case .freeTeamFull: return .apple
             case .appNotInstalled: return .build

@@ -153,6 +153,8 @@ avpplay – command line for the AVP Play core library
              --icon <image file>     use your own app icon (takes priority over everything else)
              --no-store-art          don't fetch the cover image from the store page (the icon from the APK is used instead)
              --replace-running       install even if the game is running (it will be quit)
+             --offline               ask neither Meta nor Steam and download nothing: their last answer counts, and the game is built
+                                     from what is on this Mac (default: the app's setting)
              --controller-mode <standard|surreal>  initial controller mode (pair on Vision Pro)
              --no-surreal            build for standard controllers only (no Surreal Touch choice in the game)
              --metalfx               build with the compositor's MetalFX upscaling switched on from the start (sharpens the picture
@@ -239,6 +241,8 @@ avpplay – Kommandozeile zur Kern-Bibliothek von AVP Play
              --icon <Bilddatei>      eigenes App-Icon hinterlegen (hat Vorrang vor allem anderen)
              --no-store-art          kein Titelbild von der Store-Seite holen (dann Icon aus dem APK)
              --replace-running       auch installieren, wenn das Spiel gerade läuft (es wird dabei beendet)
+             --offline               weder Meta noch Steam fragen und nichts laden: Es gilt deren letzte Antwort, und das Spiel wird
+                                     aus dem gebaut, was auf diesem Mac liegt (Vorgabe: die Einstellung der App)
              --restore-saves         nach dem Kopieren die Spielstände vom Mac zurückspielen, wenn das Spiel auf dem Gerät noch keine hat
              --controller-mode <standard|surreal>  anfänglicher Controllermodus (auf Vision Pro koppeln)
              --no-surreal            nur für Standard-Controller bauen (im Spiel keine Surreal-Touch-Wahl)
@@ -339,6 +343,7 @@ func installRequest(_ o: Options, recipe id: String? = nil) -> InstallRequest {
     request.locales = (o.values["locale"] ?? []).sorted()
     request.optionalNames = (o.values["with"] ?? []).sorted()
     request.addons = !o.flags.contains("no-addons")
+    if o.flags.contains("offline") { request.offline = true }
     request.team = o.value("team")
     request.device = o.value("device")
     request.bundleId = o.value("bundle-id")
