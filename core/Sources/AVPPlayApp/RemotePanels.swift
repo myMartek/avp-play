@@ -444,7 +444,7 @@ extension AppModel {
         var xcode = [Item(id: "xcode", kind: .check, title: "Xcode",
                           detail: xcodeProblem ?? xcodeText.map { text in xcodeWarning.map { "\(text) \($0)" } ?? text } ?? L("Checking …", "Wird geprüft …"),
                           state: state(xcodeProblem != nil ? .missing : xcodeText == nil ? .checking : xcodeWarning != nil ? .warning : .ok))]
-        if let newer = newerXcode, xcodeWarning != nil { xcode.append(Item(id: "xcode-select", kind: .text, title: "", detail: newer.selectCommand, style: .secondary)) }
+        if let newer = xcodeToChoose { xcode.append(Item(id: "xcode-select", kind: .text, title: "", detail: newer.selectCommand, style: .secondary)) }
 
         let deviceState: CheckState = device == nil ? (devices.count > 1 ? .warning : .missing) : (deviceProblem == nil ? .ok : .warning)
         var visionPro = [Item(id: "device", kind: .check, title: "Vision Pro",

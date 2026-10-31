@@ -144,6 +144,10 @@ enum Probe {
                                        "Mit diesem Xcode werden die Spiele gebaut, und AVP Play braucht Xcode \(minimum) oder neuer: Mit einem älteren kann der Bau eines Spiels mit einem Compilerfehler abbrechen. Xcode im App Store aktualisieren, einmal starten und dann „Neu prüfen“ wählen.")
                 }
             }
+        } else if let xcode = DeveloperTools.unchosenXcode(chosen: DeveloperTools.directory()) {
+            s.newerXcode = xcode
+            s.xcodeProblem = L("\(xcode.name) \(xcode.version) is on this Mac but not chosen: macOS is set to use something else for developer tools, usually the Command Line Tools. Reinstalling Xcode doesn't change that. To choose it, run this command in Terminal (it asks for your Mac password), then choose “Check Again”:",
+                               "\(xcode.name) \(xcode.version) liegt auf diesem Mac, ist aber nicht gewählt: macOS benutzt als Entwicklerwerkzeuge etwas anderes, meist die Kommandozeilenwerkzeuge. Xcode neu zu installieren ändert daran nichts. Um es zu wählen, diesen Befehl im Terminal ausführen (er fragt nach dem Mac-Passwort) und dann „Neu prüfen“ wählen:")
         } else {
             s.xcodeProblem = L("Xcode is not installed or has never been opened. Get Xcode from the App Store and open it once.", "Xcode ist nicht installiert oder noch nie geöffnet worden. Xcode aus dem App Store laden und einmal starten.")
         }

@@ -44,13 +44,26 @@ public enum DeveloperTools {
     /// Die Xcode-Programme in `folder`, die mindestens `minimumXcodeMajor` sind und nicht `chosen` – das neueste
     /// zuerst. So lässt sich sagen, dass ein neues Xcode schon da ist und nur gewählt werden muss.
     public static func newerXcodes(in folder: URL = URL(fileURLWithPath: "/Applications"), chosen: String?) -> [OtherXcode] {
+        xcodes(in: folder, chosen: chosen, minimumMajor: minimumXcodeMajor)
+    }
+
+    /// Das Xcode, das gewählt werden muss, weil der gewählte Entwicklerordner gar keines ist: Sind nur die
+    /// Kommandozeilenwerkzeuge gewählt (oder ein Ordner, den es nicht mehr gibt), kennt `xcrun` kein `xcodebuild`, und
+    /// auch ein neu installiertes Xcode ändert daran nichts (avp-play#104). Das neueste zuerst, auch ein zu altes: Dass
+    /// es zu alt ist, sagt die Prüfung, sobald es gewählt ist.
+    public static func unchosenXcode(in folder: URL = URL(fileURLWithPath: "/Applications"), chosen: String?) -> OtherXcode? {
+        if let chosen, chosen.contains(".app/") { return nil }
+        return xcodes(in: folder, chosen: chosen, minimumMajor: 0).first
+    }
+
+    private static func xcodes(in folder: URL, chosen: String?, minimumMajor: Int) -> [OtherXcode] {
         guard let entries = try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil) else { return [] }
         let chosenPath = chosen.map { URL(fileURLWithPath: $0).resolvingSymlinksInPath().path }
         var found: [OtherXcode] = []
         for app in entries where app.pathExtension == "app" && app.lastPathComponent.hasPrefix("Xcode") {
             guard let info = NSDictionary(contentsOf: app.appendingPathComponent("Contents/Info.plist")),
                   let version = info["CFBundleShortVersionString"] as? String,
-                  let major = majorVersion(version), major >= minimumXcodeMajor else { continue }
+                  let major = majorVersion(version), major >= minimumMajor else { continue }
             let developer = app.appendingPathComponent("Contents/Developer").path
             if URL(fileURLWithPath: developer).resolvingSymlinksInPath().path == chosenPath { continue }
             found.append(OtherXcode(name: app.deletingPathExtension().lastPathComponent, version: version, developer: developer))
