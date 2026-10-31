@@ -403,7 +403,11 @@ extension AppModel {
                 let user = try await meta.me()
                 let owned = try await meta.ownsApp(appId: entry.appId, userId: user)
                 let records = OwnershipCache(store: paths.store).record(appId: entry.appId, owned: owned)
-                await MainActor.run { self.ownership = records }
+                OwnershipSeal.meta()?.record(key: entry.appId, owned: owned)
+                await MainActor.run {
+                    self.ownership = records
+                    self.refreshSeals()
+                }
                 guard owned else {
                     throw Stop(L("This game is not in your Meta account. Nothing is looked up or downloaded.",
                                  "Dieses Spiel gehört nicht zu deinem Meta-Konto. Es wird nichts nachgeschlagen oder geladen."))

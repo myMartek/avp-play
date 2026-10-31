@@ -214,6 +214,7 @@ final class AppModel: ObservableObject {
     /// Der Katalog wird dabei mit nachgeladen.
     private var pathMonitor: NWPathMonitor?
     private(set) var accountOffline = false
+    @Published var sealedAnswers: [String: Bool] = [:]
     private var offlineRetries = 0
     private static let offlineDelays: [Double] = [3, 10, 30, 60, 120]
 
@@ -650,9 +651,33 @@ final class AppModel: ObservableObject {
         L("Meta is not answering right now. AVP Play tries again by itself.", "Meta antwortet gerade nicht. AVP Play versucht es von selbst noch einmal.")
     }
 
-    /// Offline lässt sich nur bauen, was schon auf diesem Mac liegt.
+    /// Die Antworten des Stores, die auf diesem Mac für die angemeldeten Konten versiegelt sind (`OwnershipSeal`), je
+    /// Schlüssel (`OwnershipCache.key`) ob das Spiel dazugehört. Nur sie gelten, wenn der Store nicht gefragt wird.
+    func refreshSeals() {
+        let meta = OwnershipSeal.meta()
+        let steam = OwnershipSeal.steam(account: steamAccount)
+        var found: [String: Bool] = [:]
+        for key in Set(games.flatMap { $0.ownershipKeys.isEmpty ? [OwnershipCache.key(for: $0.recipe)].compactMap { $0 } : $0.ownershipKeys }) {
+            found[key] = (key.hasPrefix("steam:") ? steam : meta)?.read(key: key)?.owned
+        }
+        if found != sealedAnswers { sealedAnswers = found }
+    }
+
+    /// Ist auf diesem Mac für das angemeldete Konto bestätigt, dass das Spiel dazugehört? Ein Spiel ohne Kaufquelle
+    /// braucht das nicht.
+    func confirmedHere(_ game: Game) -> Bool {
+        OwnershipCache.key(for: game.recipe).map { sealedAnswers[$0] == true } ?? true
+    }
+
+    /// Offline lässt sich nur bauen, was schon auf diesem Mac liegt und hier einmal bestätigt wurde.
     func offlineBlocker(for game: Game) -> String? {
-        guard isOffline(game), (game.draft && !game.prepared) || hasDownloads(game) else { return nil }
+        guard isOffline(game) else { return nil }
+        if let key = OwnershipCache.key(for: game.recipe), sealedAnswers[key] == nil {
+            let store = AppModel.name(game.recipe.source)
+            return offlineText + " " + L("This game has not been confirmed for your current \(store) account on this Mac yet. Let \(store) answer once.",
+                                         "Dieses Spiel ist für dein aktuelles \(store)-Konto auf diesem Mac noch nicht bestätigt. Lass \(store) einmal antworten.")
+        }
+        guard (game.draft && !game.prepared) || hasDownloads(game) else { return nil }
         return offlineText + " " + L("Files of this game are not on this Mac yet.", "Dateien dieses Spiels liegen noch nicht auf diesem Mac.")
     }
 
@@ -663,9 +688,9 @@ final class AppModel: ObservableObject {
         if game.needsSteamAccount, !steamSignedIn { return L("Sign in to Steam first (see “Setup”).", "Erst bei Steam anmelden (siehe „Einrichtung“).") }
         if game.needsMetaAccount, account != .signedIn {
             guard accountOffline else { return L("Sign in to Meta first (see “Setup”).", "Erst bei Meta anmelden (siehe „Einrichtung“).") }
-            if owned(game) == .unknown, hasDownloads(game) {
-                return L("Meta is not answering right now, and it has never confirmed this game for your account. AVP Play tries again by itself.",
-                         "Meta antwortet gerade nicht und hat dieses Spiel für dein Konto noch nie bestätigt. AVP Play versucht es von selbst noch einmal.")
+            if !confirmedHere(game) {
+                return L("Meta is not answering right now, and this game has not been confirmed for your account on this Mac yet. AVP Play tries again by itself.",
+                         "Meta antwortet gerade nicht, und dieses Spiel ist für dein Konto auf diesem Mac noch nicht bestätigt. AVP Play versucht es von selbst noch einmal.")
             }
         }
         return nil
@@ -803,16 +828,20 @@ final class AppModel: ObservableObject {
         let cache = OwnershipCache(store: paths.store)
         let known = cache.load()
         ownership = known
+        refreshSeals()
         guard !offlineMode else { return }
         let games = games.filter { !isOffline($0) }
+        // Fällig ist auch, was auf diesem Mac noch nicht versiegelt ist.
+        let sealed = sealedAnswers
         let due = account == .signedIn
-            ? games.compactMap { $0.recipe.store.appId }.filter { force || OwnershipCache.needsCheck(known[$0]) } : []
+            ? games.compactMap { $0.recipe.store.appId }.filter { force || OwnershipCache.needsCheck(known[$0]) || sealed[$0] == nil } : []
+        let withAddons = Set(games.filter { $0.recipe.addons != nil }.compactMap { $0.recipe.store.appId })
         // Steam: die Spiele, bei denen Steam gewählt ist – und mit „Im Besitz“ jedes, für das es ein Steam-Rezept gibt.
         let steamApps = filterOwned
             ? games.flatMap(\.ownershipKeys).filter { $0.hasPrefix("steam:") }.map { String($0.dropFirst("steam:".count)) }
             : games.filter { $0.recipe.source == .steam }.compactMap { $0.recipe.store.steamAppId }
         let steamDue = steamSignedIn
-            ? Array(Set(steamApps)).sorted().filter { force || OwnershipCache.needsCheck(known["steam:\($0)"]) } : []
+            ? Array(Set(steamApps)).sorted().filter { force || OwnershipCache.needsCheck(known["steam:\($0)"]) || sealed["steam:\($0)"] == nil } : []
         guard !due.isEmpty || !steamDue.isEmpty else { return }
         checkingOwnership = true
         let steamAccount = steamAccount
@@ -822,12 +851,21 @@ final class AppModel: ObservableObject {
                 do {
                     let client = MetaClient(token: try TokenStore().read())
                     let user = try await client.me()
+                    let seal = OwnershipSeal.meta()
                     for app in due {
                         try await gate.waitForTurn()
                         let owned = try await client.ownsApp(appId: app, userId: user)
                         await gate.requestFinished()
                         let now = cache.record(appId: app, owned: owned)
                         await MainActor.run { self.ownership = now }
+                        // Die Zusatzinhalte gleich mit: Antwortet Meta beim nächsten Auftrag nicht, fehlte sonst ihre Liste.
+                        var skus: [String]?
+                        if owned, withAddons.contains(app) {
+                            try await gate.waitForTurn()
+                            skus = try? await client.purchases(appId: app)
+                            await gate.requestFinished()
+                        }
+                        seal?.record(key: app, owned: owned, skus: skus)
                     }
                 } catch {}
             }
@@ -836,9 +874,11 @@ final class AppModel: ObservableObject {
                 var signedOut = false
                 do {
                     let answers = try SteamLicences(account: steamAccount).owned(apps: steamDue)
+                    let seal = OwnershipSeal.steam(account: steamAccount)
                     for app in steamDue {
                         guard let owned = answers[app] else { continue }
                         let now = cache.record(appId: "steam:\(app)", owned: owned)
+                        seal?.record(key: "steam:\(app)", owned: owned)
                         await MainActor.run { self.ownership = now }
                     }
                 } catch {
@@ -846,7 +886,10 @@ final class AppModel: ObservableObject {
                 }
                 if signedOut { await MainActor.run { self.steamSignedInAs = "" } }
             }
-            await MainActor.run { self.checkingOwnership = false }
+            await MainActor.run {
+                self.checkingOwnership = false
+                self.refreshSeals()
+            }
         }
     }
 
@@ -898,6 +941,7 @@ final class AppModel: ObservableObject {
                     let answer = try await client.ownsApp(appId: metaApp, userId: user)
                     metaOwned = answer
                     let now = cache.record(appId: metaApp, owned: answer)
+                    OwnershipSeal.meta()?.record(key: metaApp, owned: answer)
                     await MainActor.run { self.ownership = now }
                 } catch {
                     if !quiet, current == .meta { note = L("Meta could not be asked: \(Redaction.redact("\(error)"))", "Meta ließ sich nicht fragen: \(Redaction.redact("\(error)"))") }
@@ -909,6 +953,7 @@ final class AppModel: ObservableObject {
                     if let answer = try SteamLicences(account: steamAccount).owned(apps: [steamApp])[steamApp] {
                         steamOwned = answer
                         let now = cache.record(appId: "steam:\(steamApp)", owned: answer)
+                        OwnershipSeal.steam(account: steamAccount)?.record(key: "steam:\(steamApp)", owned: answer)
                         await MainActor.run { self.ownership = now }
                     } else if !quiet, current == .steam {
                         note = "\(SteamError.unclearOwnership)"
@@ -944,6 +989,7 @@ final class AppModel: ObservableObject {
             await MainActor.run {
                 self.checkingPurchase.remove(id)
                 self.purchaseNote[id] = final
+                self.refreshSeals()
                 if lost { self.steamSignedInAs = "" }
                 if firstOpen, settled { UserDefaults.standard.set(true, forKey: AppModel.sourceLookedKey(id)) }
                 guard let game = self.allGames.first(where: { $0.id == id }) else { return }
@@ -1274,6 +1320,7 @@ final class AppModel: ObservableObject {
         saveSnapshots = s.saves
         reloadJobs()
         ownership = OwnershipCache(store: paths.store).load()
+        refreshSeals()
         installPreparedSteamGames()
         if account != .signedOut { library = MetaLibraryCache(store: paths.store).load() }
         if horizonPlus == nil { horizonPlus = HorizonPlusCache(store: paths.store).load() }
@@ -1354,6 +1401,8 @@ final class AppModel: ObservableObject {
         account = .signedOut
         OwnershipCache(store: paths.store).clear()
         ownership = [:]
+        OwnershipSeal.forgetAll()
+        sealedAnswers = [:]
         MetaLibraryCache(store: paths.store).clear()
         library = nil
     }

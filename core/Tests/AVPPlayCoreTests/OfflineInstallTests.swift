@@ -33,7 +33,16 @@ final class OfflineInstallTests: XCTestCase {
         var request = InstallRequest(toolchain: "/nonexistent")
         request.account = "offline-test-no-such-account"
         request.offline = offline
-        return Installer(recipe: recipe, request: request, store: store, report: { lines.add($0) })
+        var installer = Installer(recipe: recipe, request: request, store: store, report: { lines.add($0) })
+        installer.sealOverride = mine
+        return installer
+    }
+
+    /// Die Siegel dieses Testlaufs: dasselbe Geheimnis, derselbe Mac, dasselbe Konto.
+    private var mine: OwnershipSeal.Bound { seal().bound(to: "meta:me") }
+
+    private func seal(machine: String = "mac-1", secret: UInt8 = 7) -> OwnershipSeal {
+        OwnershipSeal(directory: root.appendingPathComponent("seals", isDirectory: true), secret: Data(repeating: secret, count: 32), machine: machine)
     }
 
     private final class Lines: @unchecked Sendable {
@@ -50,51 +59,120 @@ final class OfflineInstallTests: XCTestCase {
         try Data("apk".utf8).write(to: url)
     }
 
-    func testMetaThatCannotBeAskedFallsBackToTheLastYes() async throws {
-        let r = recipe()
-        OwnershipCache(store: store).record(appId: "999", owned: true)
+    func testMetaThatCannotBeAskedFallsBackToTheSealedYes() async throws {
+        mine.record(key: "999", owned: true)
         let lines = Lines()
-        try await installer(r, offline: false, lines: lines).checkAccount()
+        try await installer(recipe(), offline: false, lines: lines).checkAccount()
         XCTAssertTrue(lines.text.contains("last confirmed") || lines.text.contains("zuletzt bestätigte"), lines.text)
     }
 
-    func testALastNoStaysANoWhenNobodyCanBeAsked() async throws {
+    func testASealedNoStaysANoWhenNobodyCanBeAsked() async throws {
         let r = recipe()
-        OwnershipCache(store: store).record(appId: "999", owned: false)
-        do {
-            try await installer(r, offline: false).checkAccount()
-            XCTFail("ein Nein bleibt ein Nein")
-        } catch { XCTAssertEqual(error as? InstallError, .notOwned(r.title)) }
-        do {
-            try await installer(r, offline: true).checkAccount()
-            XCTFail("auch offline")
-        } catch { XCTAssertEqual(error as? InstallError, .notOwned(r.title)) }
+        mine.record(key: "999", owned: false)
+        for offline in [false, true] {
+            do {
+                try await installer(r, offline: offline).checkAccount()
+                XCTFail("ein Nein bleibt ein Nein")
+            } catch { XCTAssertEqual(error as? InstallError, .notOwned(r.title)) }
+        }
     }
 
-    func testWithoutAnyAnswerTheAccountStepStillPasses() async throws {
-        try await installer(recipe(), offline: false).checkAccount()
-        try await installer(recipe(), offline: true).checkAccount()
+    /// Wer Spiele weitergibt, gibt auch `ownership.json`, `library.json` und die Kaufliste weiter. Sie zählen nicht.
+    func testCopiedPlainAnswersCountForNothing() async throws {
+        let r = recipe()
+        OwnershipCache(store: store).record(appId: "999", owned: true)
+        try MetaLibraryCache(store: store).save(MetaLibrary(checked: Date(), apps: [LibraryApp(appId: "999", title: "Offline Test")]))
+        try put(r)
+        for offline in [false, true] {
+            do {
+                try await installer(r, offline: offline).checkAccount()
+                XCTFail("ohne Siegel geht es nicht weiter")
+            } catch {
+                XCTAssertEqual(error as? InstallError, .notConfirmedHere(r.title, store: "Meta"))
+                XCTAssertEqual(FailureKind.of(error), .signIn)
+            }
+        }
     }
 
-    func testTheLibraryCountsAsAnEarlierYes() throws {
-        let r = recipe()
-        try MetaLibraryCache(store: store).save(MetaLibrary(checked: Date(timeIntervalSince1970: 1000), apps: [LibraryApp(appId: "999", title: "Offline Test")]))
-        XCTAssertEqual(installer(r).lastOwnership(), OwnershipRecord(owned: true, checked: Date(timeIntervalSince1970: 1000)))
-        // Die eigene Antwort geht vor: Die Bibliothek führt auch Apps, die Meta einzeln nicht bestätigt.
-        OwnershipCache(store: store).record(appId: "999", owned: false, checked: Date(timeIntervalSince1970: 2000))
-        XCTAssertEqual(installer(r).lastOwnership()?.owned, false)
+    func testPurchasesComeFromTheSealAndNotFromTheCopiedFile() throws {
+        var r = recipe()
+        r.addons = try JSONDecoder().decode(Addons.self, from: Data(#"{"kind":"purchase-list","dest":"android-files"}"#.utf8))
+        try PurchaseRecord(appId: "999", skus: ["copied"], verified: Date()).save(store: store, recipe: r)
+        XCTAssertNil(installer(r).confirmedPurchases(), "die Datei im Spielordner gilt nicht")
+        mine.record(key: "999", owned: true, skus: ["dlc1", "dlc2"])
+        XCTAssertEqual(installer(r).confirmedPurchases()?.skus, ["dlc1", "dlc2"])
+    }
+
+    /// Eine neue Fassung liegt in einem neuen Ordner. Ihre Zusatzinhalte kommen trotzdem, auch wenn Meta nicht antwortet.
+    func testANewVersionKeepsItsPurchasesWhenMetaIsDown() async throws {
+        var r = recipe()
+        r.addons = try JSONDecoder().decode(Addons.self, from: Data(#"{"kind":"purchase-list","dest":"android-files"}"#.utf8))
+        mine.record(key: "999", owned: true, skus: ["dlc1"])
+        var newer = r
+        newer.versionCode = 8
+        XCTAssertNil(PurchaseRecord.load(store: store, recipe: newer))
+        try await installer(newer, offline: false).checkAccount()
+        XCTAssertEqual(PurchaseRecord.load(store: store, recipe: newer)?.skus, ["dlc1"], "für die Anzeige der neuen Fassung")
+    }
+
+    func testASealOpensOnlyOnThisMacWithThisAccount() {
+        mine.record(key: "999", owned: true, skus: ["dlc"])
+        XCTAssertEqual(mine.read(key: "999")?.skus, ["dlc"])
+        XCTAssertNil(seal(machine: "mac-2").bound(to: "meta:me").read(key: "999"), "anderer Mac")
+        XCTAssertNil(seal().bound(to: "meta:someone").read(key: "999"), "anderes Konto")
+        XCTAssertNil(seal(secret: 8).bound(to: "meta:me").read(key: "999"), "anderer Schlüsselbund")
+        XCTAssertNil(mine.read(key: "1000"), "anderes Spiel")
+    }
+
+    /// Auch wenn die Datei unter den Namen kommt, den das fremde Konto erwartet, lässt sie sich dort nicht öffnen.
+    func testACopiedSealFileIsUselessUnderAnyName() throws {
+        mine.record(key: "999", owned: true)
+        let folder = root.appendingPathComponent("other-mac", isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let other = OwnershipSeal(directory: folder, secret: Data(repeating: 7, count: 32), machine: "mac-2").bound(to: "meta:me")
+        try FileManager.default.copyItem(at: mine.file("999"), to: other.file("999"))
+        XCTAssertEqual(mine.file("999").lastPathComponent, other.file("999").lastPathComponent, "der Name hängt nicht am Mac")
+        XCTAssertNil(other.read(key: "999"))
+        // Ein Siegel für ein anderes Spiel lässt sich nicht umwidmen.
+        mine.record(key: "1000", owned: true)
+        try FileManager.default.removeItem(at: mine.file("999"))
+        try FileManager.default.copyItem(at: mine.file("1000"), to: mine.file("999"))
+        XCTAssertNil(mine.read(key: "999"))
+    }
+
+    func testATamperedSealIsRefused() throws {
+        mine.record(key: "999", owned: false)
+        var bytes = try Data(contentsOf: mine.file("999"))
+        bytes[bytes.count / 2] ^= 1
+        try bytes.write(to: mine.file("999"))
+        XCTAssertNil(mine.read(key: "999"))
+    }
+
+    func testASealTellsNothingInPlainText() throws {
+        mine.record(key: "999", owned: true, skus: ["walkabout_dlc"])
+        let text = String(decoding: try Data(contentsOf: mine.file("999")), as: UTF8.self)
+        XCTAssertFalse(text.contains("walkabout_dlc"))
+        XCTAssertFalse(mine.file("999").lastPathComponent.contains("999"))
+    }
+
+    func testANewAnswerKeepsTheConfirmedPurchasesUnlessItNamesThem() {
+        mine.record(key: "999", owned: true, skus: ["a"])
+        mine.record(key: "999", owned: true)
+        XCTAssertEqual(mine.read(key: "999")?.skus, ["a"])
+        mine.record(key: "999", owned: true, skus: [])
+        XCTAssertEqual(mine.read(key: "999")?.skus, [], "ein Rückkauf entfernt den Inhalt")
     }
 
     func testSteamAnswersAreKeptUnderTheirOwnKey() {
         let r = recipe(steam: true)
-        OwnershipCache(store: store).record(appId: "555", owned: true)
-        XCTAssertNil(installer(r).lastOwnership(), "eine Meta-Nummer gilt nicht für Steam")
-        OwnershipCache(store: store).record(appId: "steam:555", owned: true)
-        XCTAssertEqual(installer(r).lastOwnership()?.owned, true)
+        mine.record(key: "555", owned: true)
+        XCTAssertNil(installer(r).lastAnswer(), "eine Meta-Nummer gilt nicht für Steam")
+        mine.record(key: "steam:555", owned: true)
+        XCTAssertEqual(installer(r).lastAnswer()?.owned, true)
     }
 
-    func testAFetchStartsOnlyAfterAnEarlierYesAndNeverWithARejectedToken() {
-        let yes = OwnershipRecord(owned: true, checked: Date()), no = OwnershipRecord(owned: false, checked: Date())
+    func testAFetchStartsOnlyAfterASealedYesAndNeverWithARejectedToken() {
+        let yes = OwnershipSeal.Answer(owned: true), no = OwnershipSeal.Answer(owned: false)
         XCTAssertTrue(Installer.mayFetch(after: MetaError.transport("offline"), lastAnswer: yes))
         XCTAssertTrue(Installer.mayFetch(after: MetaError.api(status: 503, message: "down"), lastAnswer: yes))
         XCTAssertFalse(Installer.mayFetch(after: MetaError.transport("offline"), lastAnswer: no))

@@ -55,7 +55,7 @@ public enum FailureKind: String, Codable, Sendable {
             case .appNotInstalled: return .build
             case .badIcon: return .other
             case .notANativeApp, .wrongArchitecture, .notAVRGame: return .unsupported
-            case .steamAccountMissing: return .signIn
+            case .steamAccountMissing, .notConfirmedHere: return .signIn
             // Erst vom Gerät entfernen: ein Handgriff dort, wie bei einer App, die gerade läuft.
             case .otherSourceInstalled: return .device
             }
