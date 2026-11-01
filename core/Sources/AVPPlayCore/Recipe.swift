@@ -62,6 +62,10 @@ public struct Recipe: Codable, Sendable, Identifiable {
     /// aus einer anderen Kaufquelle beschreibt.
     public var catalogAppId: String? { store.appId ?? icon?.metaAppId }
 
+    /// Die Steam-App, deren Bilder (Bibliotheksbild, Logo, Titelbild) das Spiel bekommt: die Kaufquelle, oder bei
+    /// einer Sonderapp, die ihre Spieldaten aus einem Steam-Kauf nimmt (Counter-Strike, Portal), die App des Kaufs.
+    public var steamArtAppId: String? { store.steamAppId ?? icon?.steamAppId }
+
     /// Die Kaufquelle dieses Rezepts; `nil` bei einer Sonderapp, die zu keinem Store-Titel gehört.
     public var source: Source? {
         if store.appId != nil { return .meta }

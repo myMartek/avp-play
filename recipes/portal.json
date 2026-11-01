@@ -1,0 +1,113 @@
+{
+ "schema": 1,
+ "id": "portal",
+ "title": "Portal",
+ "package": "com.sourcevrport.hl2vr",
+ "versionName": "0.5.5+d6c0a068",
+ "versionCode": 50501348,
+ "store": {},
+ "toolchain": {
+  "target": "sourcevr-portal",
+  "minCommit": "fbd5ad7"
+ },
+ "files": [
+  {
+   "name": "SourceVRCore-0.1.28.apk",
+   "role": "apk",
+   "id": "",
+   "size": 740888356,
+   "sha256": "5b0acd75fb4adba92e63bc5b5266e6a1b1d3aa721e82fc0995893d0792050976",
+   "required": true,
+   "dest": "",
+   "localName": "sourcevr-portal.apk",
+   "source": {
+    "kind": "url",
+    "url": "https://github.com/tinsarfal/SourceVR/releases/download/0.1.28/SourceVRCore-0.1.28.apk",
+    "hint": {
+     "en": "SourceVR 0.1.28 by tinsarfal: the Source engine for Quest headsets, one package for Valve's games. It brings no game content.",
+     "de": "SourceVR 0.1.28 von tinsarfal: die Source-Engine für Quest-Headsets, ein Paket für Valves Spiele. Spielinhalte bringt es nicht mit."
+    }
+   }
+  }
+ ],
+ "trees": [
+  {
+   "name": "gamedata",
+   "role": "data",
+   "dest": "android-files/SourceVRPort/common",
+   "only": [
+    "portal",
+    "hl2",
+    "platform"
+   ],
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The folders 'portal', 'hl2' and 'platform' of your own Portal (Steam, app 400). With a Steam sign-in under Setup the app fetches them for you (about 5.7 GB). By hand: choose the folder that contains all three, for example the 'Portal' folder of a Steam library on Windows or Linux.",
+     "de": "Die Ordner 'portal', 'hl2' und 'platform' deines eigenen Portal (Steam, App 400). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 5,7 GB). Von Hand: den Ordner wählen, der alle drei enthält, etwa den Ordner 'Portal' einer Steam-Bibliothek unter Windows oder Linux."
+    },
+    "steam": {
+     "app": "400",
+     "depots": [
+      {
+       "id": "401",
+       "manifest": "3169084482272098670",
+       "bytes": 4183764392
+      },
+      {
+       "id": "409",
+       "manifest": "5466869569815608374",
+       "bytes": 3847178360
+      }
+     ]
+    }
+   },
+   "markers": [
+    {
+     "path": "portal/portal_pak_dir.vpk",
+     "size": 164569,
+     "sha256": "11ac8d930872d398d975d8f2e3a43fa2c47d2894619b5584efdda7072bde48b9"
+    },
+    {
+     "path": "portal/maps/testchmb_a_00.bsp",
+     "size": 7715828,
+     "sha256": "9e1674866df01e6383a654eb4da7c770f9e788786e3bc5d412aece4f2432747e"
+    },
+    {
+     "path": "hl2/hl2_textures_dir.vpk",
+     "size": 224277,
+     "sha256": "a523334b897382fc59755036bb7502f284e39bff4800282c9d1a4b1646e20871"
+    }
+   ]
+  }
+ ],
+ "icon": {
+  "steamAppId": "400"
+ },
+ "status": {
+  "playability": "verified",
+  "download": "special",
+  "notes": [
+   {
+    "en": "Special app: not a Meta Store title. The engine is tinsarfal's free SourceVR; the game data comes from your own Steam purchase of Portal (app 400).",
+    "de": "Sonderapp: kein Titel aus dem Meta-Store. Die Engine ist tinsarfals freies SourceVR; die Spieldaten stammen aus dem eigenen Steam-Kauf von Portal (App 400)."
+   },
+   {
+    "en": "Played on the device through the first test chambers (2026-11-01): portals, the lift, the aiming ring and both portal rings render correctly. The trigger fires portals, the grip picks things up, the left stick moves and the right stick turns.",
+    "de": "Am Gerät durch die ersten Testkammern gespielt (2026-11-01): Portale, Aufzug, Zielring und beide Portalringe werden richtig gezeichnet. Der Abzug schießt Portale, der Griff hebt auf, der linke Stick bewegt, der rechte dreht."
+   },
+   {
+    "en": "On the first start the game's own setup wizard asks for the gun hand and comfort settings. AVP Play sets two defaults once: a still picture behind the main menu instead of the camera flight, and portal recursion depth 1 (depth 2 halved the frame rate while standing in a portal); both can be changed in the game's VR settings.",
+    "de": "Beim ersten Start fragt der Einrichtungsassistent des Spiels nach Waffenhand und Komfort-Einstellungen. AVP Play setzt einmalig zwei Voreinstellungen: ein stehendes Bild hinter dem Hauptmenü statt der Kamerafahrt, und Portal-Rekursionstiefe 1 (Tiefe 2 halbierte die Bildrate im Portal); beides lässt sich in den VR-Einstellungen des Spiels ändern."
+   },
+   {
+    "en": "Known: on some starts a portal ring or the aiming ring came out black; a restart cured it. The cause is being looked for.",
+    "de": "Bekannt: Bei manchen Starts war ein Portalring oder der Zielring schwarz; ein Neustart half. Die Ursache wird noch gesucht."
+   },
+   {
+    "en": "Needs the fork from fbd5ad7 on: the SourceVR targets, sRGB-compressed textures offered natively, the two defaults.",
+    "de": "Braucht den Fork ab fbd5ad7: die SourceVR-Targets, nativ angebotene sRGB-Kompression, die zwei Voreinstellungen."
+   }
+  ]
+ }
+}

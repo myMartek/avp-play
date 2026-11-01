@@ -808,9 +808,10 @@ public struct Installer: Sendable {
                          "Startbild: die Store-Seite zeigt kein Titelbild – vom Katalog des Projekts geholt."))
             }
         }
-        // Ein Steam-Spiel ohne Seite im Meta-Store: Bibliotheksbild und Logo von Valves Bilder-Server – daraus werden Icon
-        // und Startbild, wie mit dem Steam-Client auf dem Mac. Gibt es die nicht, wenigstens das Titelbild als Startbild.
-        if request.storeArt, recipe.source == .steam, recipe.catalogAppId == nil, let steam = recipe.store.steamAppId,
+        // Ein Steam-Spiel ohne Seite im Meta-Store – oder eine Sonderapp, deren Spieldaten aus einem Steam-Kauf kommen
+        // (Portal): Bibliotheksbild und Logo von Valves Bilder-Server – daraus werden Icon und Startbild, wie mit dem
+        // Steam-Client auf dem Mac. Gibt es die nicht, wenigstens das Titelbild als Startbild.
+        if request.storeArt, recipe.catalogAppId == nil, let steam = recipe.steamArtAppId,
            AppIcon.steamLibrary(appId: steam) == nil {
             let folder = Toolchain.steamArtURL(store: store, recipe: recipe).appendingPathComponent(steam, isDirectory: true)
             if !FileManager.default.fileExists(atPath: folder.appendingPathComponent("logo.png").path) {
