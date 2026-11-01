@@ -146,9 +146,9 @@ public struct Toolchain: Sendable {
         let coverMark = (try? Hashing.sha256(of: storeCover)).map { String($0.prefix(16)) } ?? "-"
         // Bei einem Spiel aus Steam auch die Steam-Bilder (Bildspeicher des Steam-Clients oder von Valve geholt): kommen
         // sie hinzu, wird das Icon neu geschrieben.
-        let steamArt = recipe.source == .steam ? recipe.store.steamAppId.flatMap {
+        let steamArt = recipe.steamArtAppId.flatMap {
             AppIcon.steamLibrary(appId: $0, cacheRoots: AppIcon.steamCacheRoots + [Toolchain.steamArtURL(store: store, recipe: recipe)])
-        } : nil
+        }
         let steamMark = steamArt.map { " steam-\(AppIcon.fingerprint($0).prefix(16))" } ?? ""
         let want = "\(apk.sha256 ?? "ohne-pruefsumme") \(recipe.versionCode) icon4 \(customMark) \(coverMark)\(steamMark)"
         let fm = FileManager.default
