@@ -502,15 +502,16 @@ public enum AppStamp {
     /// (`Built.experimental`), damit ältere Stempel weiter stimmen.
     /// Hat ein MetalFX-Bau eine vorgegebene Startauflösung (`MetalFXResolution`), kommt 8 × die Stufe darunter hinzu:
     /// (100 − Prozent) / 5, also 5 für 75 % – so übernimmt das Erneuern sie unverändert. Dazu 128, wenn die
-    /// XR-Vorhersage von Anfang an eingeschaltet ist (`Toolchain.xrPredictionSwitch`), und 256, wenn der Bau die
-    /// Mods mitbringt (`Toolchain.coreModsVariable`).
+    /// XR-Vorhersage von Anfang an eingeschaltet ist (`Toolchain.xrPredictionSwitch`), 256, wenn der Bau die
+    /// Mods mitbringt (`Toolchain.coreModsVariable`), und 512, wenn er die räumlichen Personas mitbringt
+    /// (`Toolchain.spatialPersonasVariable`; Walkabout).
     /// Mehr als drei Zahlen nimmt der Schlüssel nicht.
     public static func build(versionCode: Int, toolchainVersion: Int, modified: Bool = false,
                              metalFX: Bool = false, resolution: Int? = nil, xrPrediction: Bool = false,
-                             coreMods: Bool = false) -> String {
+                             coreMods: Bool = false, spatialPersonas: Bool = false) -> String {
         let step = metalFX ? resolutionStep(resolution) : 0
         let extra = (modified ? 1 : 0) + (metalFX ? 4 : 0) + 8 * step + (xrPrediction ? xrPredictionBit : 0)
-            + (coreMods ? coreModsBit : 0)
+            + (coreMods ? coreModsBit : 0) + (spatialPersonas ? spatialPersonasBit : 0)
         return "\(max(0, min(versionCode, 999_999_999))).\(max(0, min(toolchainVersion, 999_999_999)))" + (extra > 0 ? ".\(extra)" : "")
     }
 
@@ -530,11 +531,14 @@ public enum AppStamp {
         public var xrPrediction = false
         /// Der Bau bringt die Mods mit (Beat Saber: eigene Songs).
         public var coreMods = false
+        /// Der Bau bringt die räumlichen Personas mit (Walkabout: SharePlay-Berechtigung, Option im Spiel).
+        public var spatialPersonas = false
 
         public init(versionCode: Int, toolchain: Int, modified: Bool, experimental: Bool = false, metalFX: Bool = false,
-                    resolution: Int? = nil, xrPrediction: Bool = false, coreMods: Bool = false) {
+                    resolution: Int? = nil, xrPrediction: Bool = false, coreMods: Bool = false, spatialPersonas: Bool = false) {
             self.versionCode = versionCode; self.toolchain = toolchain; self.modified = modified; self.experimental = experimental
             self.metalFX = metalFX; self.resolution = resolution; self.xrPrediction = xrPrediction; self.coreMods = coreMods
+            self.spatialPersonas = spatialPersonas
         }
     }
 
@@ -542,6 +546,8 @@ public enum AppStamp {
     private static let xrPredictionBit = 128
     /// Das Bit der Mods, über dem der XR-Vorhersage.
     private static let coreModsBit = 256
+    /// Das Bit der räumlichen Personas, über dem der Mods.
+    private static let spatialPersonasBit = 512
 
     /// Die Stufe unter 100 % (`MetalFXResolution.range` in Schritten von 5); 0 ohne Vorgabe oder bei 100 %.
     private static func resolutionStep(_ percent: Int?) -> Int {
@@ -560,10 +566,11 @@ public enum AppStamp {
         // nicht von diesem Werkzeug und sagt nichts.
         let extra = parts.count == 3 ? parts[2] ?? 0 : 0
         let step = (extra >> 3) & 15
-        let valid = extra >= 0 && extra < 2 * coreModsBit && step <= maxResolutionStep && (step == 0 || extra & 4 != 0)
+        let valid = extra >= 0 && extra < 2 * spatialPersonasBit && step <= maxResolutionStep && (step == 0 || extra & 4 != 0)
         let bits = valid ? extra : 0
         return Built(versionCode: code, toolchain: toolchain, modified: bits & 1 != 0, experimental: bits & 2 != 0,
                      metalFX: bits & 4 != 0, resolution: valid && step > 0 ? MetalFXResolution.full - 5 * step : nil,
-                     xrPrediction: bits & xrPredictionBit != 0, coreMods: bits & coreModsBit != 0)
+                     xrPrediction: bits & xrPredictionBit != 0, coreMods: bits & coreModsBit != 0,
+                     spatialPersonas: bits & spatialPersonasBit != 0)
     }
 }

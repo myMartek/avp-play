@@ -425,7 +425,7 @@ final class ToolchainChoiceTests: XCTestCase {
         XCTAssertEqual(AppStamp.parse("7.4.44")?.xrPrediction, false)
         // Eine Stufe ohne MetalFX bleibt ungültig, auch mit dem Bit der Vorhersage; darüber stammt nichts von hier.
         XCTAssertEqual(AppStamp.parse("7.4.168"), .init(versionCode: 7, toolchain: 4, modified: false))
-        XCTAssertEqual(AppStamp.parse("7.4.512"), .init(versionCode: 7, toolchain: 4, modified: false))
+        XCTAssertEqual(AppStamp.parse("7.4.1024"), .init(versionCode: 7, toolchain: 4, modified: false))
         for percent in stride(from: 50, through: 100, by: 5) {
             let stamp = AppStamp.build(versionCode: 1, toolchainVersion: 2, metalFX: true, resolution: percent, xrPrediction: true)
             XCTAssertEqual(AppStamp.parse(stamp)?.xrPrediction, true, stamp)
@@ -467,6 +467,81 @@ final class ToolchainChoiceTests: XCTestCase {
         XCTAssertEqual(renewed("7.4.172").resolution, 75)
         XCTAssertNil(renewed("7.4.44").xrPrediction)
         XCTAssertNil(renewed("7.4").xrPrediction)
+    }
+
+    // MARK: Räumliche Personas (Walkabout)
+
+    func testTheStampCarriesTheSpatialPersonas() {
+        XCTAssertEqual(AppStamp.build(versionCode: 62568, toolchainVersion: 853, spatialPersonas: true), "62568.853.512")
+        XCTAssertEqual(AppStamp.build(versionCode: 7, toolchainVersion: 4, modified: true, metalFX: true, resolution: 75,
+                                      xrPrediction: true, coreMods: true, spatialPersonas: true), "7.4.941")
+        XCTAssertEqual(AppStamp.parse("62568.853.512"),
+                       .init(versionCode: 62568, toolchain: 853, modified: false, spatialPersonas: true))
+        XCTAssertEqual(AppStamp.parse("7.4.941"),
+                       .init(versionCode: 7, toolchain: 4, modified: true, metalFX: true, resolution: 75,
+                             xrPrediction: true, coreMods: true, spatialPersonas: true))
+        XCTAssertEqual(AppStamp.parse("7.4.256")?.spatialPersonas, false)
+        // Darüber stammt nichts von hier.
+        XCTAssertEqual(AppStamp.parse("7.4.1024"), .init(versionCode: 7, toolchain: 4, modified: false))
+        XCTAssertEqual(AppStamp.parse("7.4.1536"), .init(versionCode: 7, toolchain: 4, modified: false))
+    }
+
+    func testABuildThatDiffersFromTheGamesSpatialPersonasOptionCanBeUpdated() {
+        let store = ContentStore(root: temp())
+        let bundle = Toolchain.bundleId(target: "moss", prefix: "com.example")
+        func status(_ installed: String, spatialPersonas: Bool?, pin: ToolchainChoices.Pin? = nil) -> GameStatus.OnDevice {
+            GameStatus.of(recipe: recipe(), store: store,
+                          apps: [InstalledApp(bundleIdentifier: bundle, name: "Moss", version: "1.0", bundleVersion: installed)],
+                          toolchainVersion: 4, pin: pin, bundlePrefix: "com.example", spatialPersonas: spatialPersonas).onDevice
+        }
+        XCTAssertEqual(status("7.4", spatialPersonas: true), .olderToolchain(stamp: "1.0 (7.4)"))
+        XCTAssertEqual(status("7.4.512", spatialPersonas: true), .current(stamp: "1.0 (7.4.512)"))
+        XCTAssertEqual(status("7.4.512", spatialPersonas: false), .olderToolchain(stamp: "1.0 (7.4.512)"))
+        XCTAssertEqual(status("7.4", spatialPersonas: false), .current(stamp: "1.0 (7.4)"))
+        // Kein Vergleich ohne die Option; mit einer gewählten Toolchain wird wie bei den Mods verglichen.
+        XCTAssertEqual(status("7.4.512", spatialPersonas: nil), .current(stamp: "1.0 (7.4.512)"))
+        XCTAssertEqual(status("7.4", spatialPersonas: true, pin: .init(version: 4, commit: "abc")),
+                       .olderToolchain(stamp: "1.0 (7.4)"))
+        XCTAssertEqual(status("7.4.512", spatialPersonas: true, pin: .init(version: 4, commit: "abc")),
+                       .current(stamp: "1.0 (7.4.512)"))
+    }
+
+    func testRenewalKeepsTheSpatialPersonas() {
+        func renewed(_ stamp: String) -> InstallRequest {
+            var request = InstallRequest(toolchain: "/tmp/t")
+            Renewal.keepBuild(AppStamp.parse(stamp), in: &request)
+            return request
+        }
+        XCTAssertEqual(renewed("7.4.512").spatialPersonas, true)
+        XCTAssertEqual(renewed("7.4.768").spatialPersonas, true)
+        XCTAssertEqual(renewed("7.4.768").coreMods, true)
+        XCTAssertNil(renewed("7.4.256").spatialPersonas)
+        XCTAssertNil(renewed("7.4").spatialPersonas)
+    }
+
+    func testOnlyWalkaboutWithAToolchainThatKnowsTheVariableOffersSpatialPersonas() throws {
+        let dir = temp()
+        let toolchain = try plant(manifest(4), at: dir)
+        var walkabout = recipe()
+        walkabout.toolchain.target = "walkabout"
+        try "KLEPTON_TEST_ON".write(to: dir.appendingPathComponent("visionos/gen_xcodeproj.py"), atomically: true, encoding: .utf8)
+        XCTAssertFalse(toolchain.supportsSpatialPersonas)
+        XCTAssertFalse(toolchain.offersSpatialPersonas(for: walkabout))
+        try "GROUP_SESSION = os.environ.get(\"KLEPTON_GROUP_SESSION\") == \"1\""
+            .write(to: dir.appendingPathComponent("visionos/gen_xcodeproj.py"), atomically: true, encoding: .utf8)
+        XCTAssertTrue(toolchain.supportsSpatialPersonas)
+        XCTAssertTrue(toolchain.offersSpatialPersonas(for: walkabout))
+        // Für jedes andere Spiel gibt es die Option nicht, auch mit dieser Toolchain.
+        XCTAssertFalse(toolchain.offersSpatialPersonas(for: recipe()))
+    }
+
+    func testAnInstallRequestWithoutTheFieldHasNoSpatialPersonas() throws {
+        var request = InstallRequest(toolchain: "/tmp/t")
+        let old = try JSONSerialization.jsonObject(with: JSONEncoder().encode(request)) as? [String: Any]
+        XCTAssertNil(old?["spatialPersonas"])
+        XCTAssertNil(try JSONDecoder().decode(InstallRequest.self, from: JSONEncoder().encode(request)).spatialPersonas)
+        request.spatialPersonas = true
+        XCTAssertEqual(try JSONDecoder().decode(InstallRequest.self, from: JSONEncoder().encode(request)).spatialPersonas, true)
     }
 
     // MARK: Die Mods (Beat Saber: eigene Songs)

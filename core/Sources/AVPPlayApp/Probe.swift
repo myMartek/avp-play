@@ -88,7 +88,8 @@ enum Probe {
                 func game(_ r: Recipe, draft: Bool, tested: Recipe? = nil) -> Game {
                     Probe.game(r, draft: draft, tested: tested, variants: variants, sources: sources, paths: paths, apps: apps,
                                toolchainRevision: revision, pin: choices.games[r.id], bundlePrefix: bundlePrefix,
-                               metalFX: metalFX, coreModProfiles: choices.games[r.id] == nil ? modProfiles : [])
+                               metalFX: metalFX, coreModProfiles: choices.games[r.id] == nil ? modProfiles : [],
+                               spatialPersonas: AppModel.spatialPersonasExpected(recipe: r, toolchain: toolchain))
                 }
                 let bundled = try RecipeStore(directory: recipes).loadAll()
                 // Entwürfe für ungetestete Spiele, die schon nachgeschlagen wurden. Ein mitgeliefertes Rezept für
@@ -167,7 +168,8 @@ enum Probe {
     /// der Kaufquelle nur dieses eine Spiel neu bestimmen muss und nicht alles.
     static func game(_ r: Recipe, draft: Bool, tested: Recipe?, variants: [Recipe], sources: [Recipe], paths: Paths,
                      apps: [InstalledApp]?, toolchainRevision: AppRevision?, pin: ToolchainChoices.Pin? = nil, bundlePrefix: String,
-                     metalFX: Bool? = nil, coreModProfiles: [Toolchain.CoreModsProfile] = []) -> Game {
+                     metalFX: Bool? = nil, coreModProfiles: [Toolchain.CoreModsProfile] = [],
+                     spatialPersonas: Bool? = nil) -> Game {
         // Geprüft ist die Fassung ohne Wahl und jede weitere mit eigenem Rezept; alles andere ist eine
         // ungetestete aus dem Store, und dann nennt das Spiel die, die ohne Wahl gilt.
         let own = tested.map { t in variants.filter { $0.id == t.id && $0.versionCode != t.versionCode } } ?? []
@@ -181,7 +183,8 @@ enum Probe {
         var g = Game(recipe: r,
              status: GameStatus.of(recipe: r, store: paths.store, apps: apps, toolchainVersion: toolchainRevision?.forTarget(r.toolchain.target), pin: pin,
                                     bundlePrefix: bundlePrefix, otherSourceBuilds: Set(foreign),
-                                    metalFX: metalFX, coreMods: AppModel.coreModsExpected(recipe: r, profiles: coreModProfiles)),
+                                    metalFX: metalFX, coreMods: AppModel.coreModsExpected(recipe: r, profiles: coreModProfiles),
+                                    spatialPersonas: spatialPersonas),
              // Das Titelbild gehört zum Spiel, nicht zur Kaufquelle: Fehlt es bei dieser, gilt das der anderen.
              cover: (StartHero.choose(recipe: r, store: paths.store) ?? tested.flatMap { StartHero.choose(recipe: $0, store: paths.store) })
                  .flatMap { NSImage(data: $0.image) },
