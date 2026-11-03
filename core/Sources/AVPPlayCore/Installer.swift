@@ -718,7 +718,11 @@ public struct Installer: Sendable {
         // Toolchain, die es kann. Sonst wird ohne gebaut und das gesagt; nie still mit.
         var spatialPersonas = request.spatialPersonas == true
         if spatialPersonas {
-            if toolchain.offersSpatialPersonas(for: recipe) {
+            if AppleTeams.isFree(team) {
+                spatialPersonas = false
+                report(L("Spatial Personas: SharePlay (Group Activities) is not available to a free Apple team, so the game is built without it. A paid Apple Developer Program membership on this Mac is needed for it.",
+                         "Räumliche Personas: SharePlay (Group Activities) gibt es für ein kostenloses Apple-Team nicht, das Spiel wird ohne gebaut. Dafür braucht es eine bezahlte Mitgliedschaft im Apple Developer Program auf diesem Mac."))
+            } else if toolchain.offersSpatialPersonas(for: recipe) {
                 report(L("Spatial Personas: this build carries SharePlay (experimental; in the game under Settings › Spatial Personas).",
                          "Räumliche Personas: Dieser Bau bringt SharePlay mit (experimentell; im Spiel unter Einstellungen › Räumliche Personas)."))
             } else {

@@ -1368,6 +1368,28 @@ private struct SpatialPersonasBox: View {
                       systemImage: "flask")
                     .font(.callout).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+                if chosen {
+                    // SharePlay findet die App beim Gegenüber über die Bundle-ID: Sie muss bei allen gleich sein. Die
+                    // Standardkennung trägt den Benutzernamen des Macs, also weicht sie von Mac zu Mac ab.
+                    let bundle = Toolchain.bundleId(target: game.recipe.toolchain.target, prefix: model.bundlePrefix)
+                    Label {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(L("Bundle identifier of this build: ", "Bundle-ID dieses Baus: ") + bundle)
+                                .textSelection(.enabled)
+                            Text(L("Your co-players must install Walkabout under exactly this identifier: same bundle prefix in Settings › Advanced on their Mac. The default prefix contains the Mac's user name and therefore differs from Mac to Mac.",
+                                   "Deine Mitspieler müssen Walkabout unter genau dieser Kennung installieren: dasselbe Bundle-Präfix unter Einstellungen › Erweitert auf ihrem Mac. Das Standard-Präfix enthält den Benutzernamen des Macs und ist deshalb auf jedem Mac anders."))
+                        }
+                    } icon: { Image(systemName: "person.2") }
+                        .font(.callout).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                if model.team?.free == true {
+                    Label(L("A free Apple team cannot have SharePlay (Group Activities is for paid teams only): the game is built without it.",
+                            "Ein kostenloses Apple-Team kann kein SharePlay haben (Group Activities gibt es nur für bezahlte Teams): Das Spiel wird ohne gebaut."),
+                          systemImage: "exclamationmark.triangle")
+                        .font(.callout).foregroundStyle(.orange)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading).padding(6)
         }

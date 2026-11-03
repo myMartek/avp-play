@@ -1082,6 +1082,8 @@ final class AppModel: ObservableObject {
     /// `nil` (nicht vergleichen). Liest die gespeicherte Wahl selbst, damit auch die Übersicht im Hintergrund sie kennt.
     nonisolated static func spatialPersonasExpected(recipe: Recipe, toolchain: Toolchain?) -> Bool? {
         guard let toolchain, toolchain.offersSpatialPersonas(for: recipe) else { return nil }
+        // Ein kostenloses Team baut immer ohne (siehe `Toolchain.buildAndInstall`): dann ist nichts zu vergleichen.
+        if AppleTeams.isFree(UserDefaults.standard.string(forKey: "teamId") ?? "") { return nil }
         let stored = UserDefaults.standard.data(forKey: "gameOptions").flatMap { try? JSONDecoder().decode([String: GameOptions].self, from: $0) }
         return stored?[recipe.id]?.spatialPersonas == true
     }
