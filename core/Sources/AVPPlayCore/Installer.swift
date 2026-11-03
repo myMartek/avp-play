@@ -135,6 +135,9 @@ public struct InstallRequest: Codable, Sendable, Equatable {
     /// Das Spiel mit seinen Mods bauen (Beat Saber: eigene Songs) – die Option „Mods“ auf der Seite des Spiels.
     /// Ohne Angabe: nein. Nur für eine Fassung, für die die Toolchain Mods hat (`Toolchain.coreModsProfile`).
     public var coreMods: Bool?
+    /// Walkabout mit räumlichen Personas bauen (`Toolchain.spatialPersonasVariable`) – die Option „Räumliche Personas“
+    /// auf der Seite des Spiels. Ohne Angabe: nein. Nur für das Target und eine Toolchain, die es kann.
+    public var spatialPersonas: Bool?
     /// Initial launcher mode; an existing per-game headset preference always wins.
     public var controllerMode: ControllerMode?
     /// `false`: the game is built for standard controllers only (`ControllerMode.supportKey`,
@@ -711,6 +714,22 @@ public struct Installer: Sendable {
                          "Mods: Für \(recipe.versionName) noch nicht portiert; das Spiel wird ohne sie gebaut."))
             }
         }
+        // Die räumlichen Personas: aus, außer die Seite des Spiels schaltet sie ein – und nur für Walkabout mit einer
+        // Toolchain, die es kann. Sonst wird ohne gebaut und das gesagt; nie still mit.
+        var spatialPersonas = request.spatialPersonas == true
+        if spatialPersonas {
+            if toolchain.offersSpatialPersonas(for: recipe) {
+                report(L("Spatial Personas: this build carries SharePlay (experimental; in the game under Settings › Spatial Personas).",
+                         "Räumliche Personas: Dieser Bau bringt SharePlay mit (experimentell; im Spiel unter Einstellungen › Räumliche Personas)."))
+            } else {
+                spatialPersonas = false
+                report(recipe.toolchain.target == Toolchain.spatialPersonasTarget
+                       ? L("Spatial Personas: this toolchain cannot build them yet; the game is built as usual.",
+                           "Räumliche Personas: Diese Toolchain kann sie noch nicht bauen; das Spiel wird wie üblich gebaut.")
+                       : L("Spatial Personas: only for Walkabout Mini Golf; the game is built as usual.",
+                           "Räumliche Personas: Nur für Walkabout Mini Golf; das Spiel wird wie üblich gebaut."))
+            }
+        }
         // Die Raumvermessung: an, außer die Einstellung der App für alle Spiele (oder der Auftrag) sagt aus.
         let roomMeasuring = request.roomMeasuring ?? InstallDefaults.roomMeasuring()
         var extraEnvironment = TreeStore(store: store).toolchainEnvironment(recipe: recipe)
@@ -743,7 +762,7 @@ public struct Installer: Sendable {
                                           displayName: request.displayName, displaySuffix: request.displaySuffix,
                                           controllerMode: request.controllerMode ?? (request.resign == true ? toolchain.builtControllerMode(recipe: recipe) : .standard),
                                           surrealSupport: request.surrealSupport ?? true,
-                                          coreMods: coreMods)
+                                          coreMods: coreMods, spatialPersonas: spatialPersonas)
         } catch ToolchainError.refused(.capability, free: false, _) {
             // Xcode führt das Team als bezahlt, Apple als „Personal Team“ (siehe `AppleTeams.markFree`): einmal
             // neu, wie für ein kostenloses Team. Jetzt gilt es als kostenlos, ein zweites Nein kommt also mit

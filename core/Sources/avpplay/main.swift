@@ -165,6 +165,8 @@ avpplay – command line for the AVP Play core library
                                      Settings › Advanced › Test; the game page's option “XR prediction” does the same)
              --core-mods             build with the game's mods (Beat Saber: custom songs), where the toolchain has them for
                                      this version; otherwise the game is built without them (the game page's “Mods” does the same)
+             --spatial-personas      Walkabout Mini Golf only: build with SharePlay for Spatial Personas (experimental; the game
+                                     page's “Spatial Personas” does the same); other games are built as usual
              --room-measuring <on|off>  "Measure room" and the play area in the game from the start (default: the app's
                                      setting for all games, on unless changed; in the game under Settings › Play area)
              --game-language <code>  the language the game starts with: device, en, a locale like fr_FR, or game (no preset);
@@ -255,6 +257,8 @@ avpplay – Kommandozeile zur Kern-Bibliothek von AVP Play
                                      Einstellungen › Erweitert › Test; die Option „XR-Vorhersage“ auf der Seite des Spiels tut dasselbe)
              --core-mods             mit den Mods des Spiels bauen (Beat Saber: eigene Songs), wo die Toolchain sie für diese
                                      Fassung hat; sonst wird ohne sie gebaut („Mods“ auf der Seite des Spiels tut dasselbe)
+             --spatial-personas      nur Walkabout Mini Golf: mit SharePlay für räumliche Personas bauen (experimentell; „Räumliche
+                                     Personas“ auf der Seite des Spiels tut dasselbe); andere Spiele werden wie üblich gebaut
              --room-measuring <on|off>  „Raum vermessen“ und der Spielbereich im Spiel von Anfang an (Vorgabe: die Einstellung
                                      der App für alle Spiele, an, solange sie nicht geändert ist; im Spiel unter Einstellungen › Spielbereich)
              --game-language <Code>  die Sprache, mit der das Spiel beginnt: device, en, eine Sprache wie fr_FR oder game (keine
@@ -371,6 +375,7 @@ func installRequest(_ o: Options, recipe id: String? = nil) -> InstallRequest {
     if o.flags.contains("metalfx") { request.metalFX = true }
     if o.flags.contains("xr-prediction") { request.xrPrediction = true }
     if o.flags.contains("core-mods") { request.coreMods = true }
+    if o.flags.contains("spatial-personas") { request.spatialPersonas = true }
     if let value = o.value("room-measuring") {
         guard value == "on" || value == "off" else {
             fail(L("--room-measuring must be on or off", "--room-measuring muss on oder off sein"))

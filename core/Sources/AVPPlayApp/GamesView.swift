@@ -844,6 +844,8 @@ struct GameDetail: View {
 
                 if model.offersCoreMods(game) { CoreModsBox(game: game) }
 
+                if model.offersSpatialPersonas(game) { SpatialPersonasBox(game: game) }
+
                 if model.hasSaves(game), game.installed || model.saveSnapshots[game.id] != nil { SavesBox(game: game) }
 
                 if !languageFiles.isEmpty || game.recipe.addons != nil || !extras.isEmpty { optionalContent }
@@ -1257,6 +1259,14 @@ extension AppModel {
                     : L("Installed with MetalFX upscaling on from the start; the setting is off now – “Update” builds it without; saved games and data are kept.",
                         "Installiert mit von Anfang an eingeschaltetem MetalFX-Hochskalieren; die Einstellung ist jetzt aus – „Aktualisieren“ baut es ohne; Spielstände und Daten bleiben.")
             }
+            if let built = game.status.builtWith, offersSpatialPersonas(game), built.spatialPersonas != spatialPersonasOn(game),
+               built.toolchain >= (toolchainRevision?.forTarget(game.recipe.toolchain.target) ?? 0) {
+                return spatialPersonasOn(game)
+                    ? L("Installed without SharePlay for Spatial Personas, which the option asks for – “Update” builds it with; saved games and data are kept.",
+                        "Installiert ohne SharePlay für räumliche Personas, das die Option verlangt – „Aktualisieren“ baut es damit; Spielstände und Daten bleiben.")
+                    : L("Installed with SharePlay for Spatial Personas; the option is off now – “Update” builds it without; saved games and data are kept.",
+                        "Installiert mit SharePlay für räumliche Personas; die Option ist jetzt aus – „Aktualisieren“ baut es ohne; Spielstände und Daten bleiben.")
+            }
             if let built = game.status.builtWith, built.modified {
                 return L("Installed, built with toolchain \(Toolchain.name(version: built.toolchain, modified: true)). “Update” replaces this build with one from the newest toolchain, without the changes of the modified one (see “Toolchain” below); saved games and data are kept.",
                          "Installiert, gebaut mit Toolchain \(Toolchain.name(version: built.toolchain, modified: true)). „Aktualisieren“ ersetzt diesen Bau durch einen aus der neuesten Toolchain, ohne die Änderungen der modifizierten (siehe unten unter „Toolchain“); Spielstände und Daten bleiben.")
@@ -1328,6 +1338,36 @@ private struct OfflineBox: View {
                     Text(L("Offline is on for all games (see “Settings”).", "Offline ist für alle Spiele an (siehe „Einstellungen“)."))
                         .font(.callout).foregroundStyle(.secondary)
                 }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading).padding(6)
+        }
+    }
+}
+
+/// Walkabout Mini Golf: SharePlay with Spatial Personas (experimental). The toolchain builds the game with the Group
+/// Activities entitlement; in the game the option sits in the start window under Settings.
+private struct SpatialPersonasBox: View {
+    @EnvironmentObject var model: AppModel
+    let game: Game
+
+    var body: some View {
+        let chosen = model.spatialPersonasOn(game)
+        GroupBox(L("Spatial Personas (experimental)", "Räumliche Personas (experimentell)")) {
+            VStack(alignment: .leading, spacing: 6) {
+                Toggle(isOn: Binding(get: { chosen }, set: { model.setSpatialPersonas($0, for: game) })) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(L("Build with SharePlay for Spatial Personas", "Mit SharePlay für räumliche Personas bauen"))
+                        Text(L("For a round with friends who are in a FaceTime call with you and in your Walkabout room: the game draws no heads for them, their Spatial Personas stand where the heads would be, and every teleport in the game moves your Persona. Locomotion is teleport only while it is on. In the game: Settings › Spatial Personas › Start SharePlay, then start the game. Everyone needs this build and the same bundle prefix (Settings › Advanced). Switching is an update of the same app; saves stay.",
+                               "Für eine Runde mit Freunden, die mit dir in einem FaceTime-Anruf und in deinem Walkabout-Raum sind: Das Spiel zeichnet keine Köpfe für sie, ihre räumlichen Personas stehen dort, wo die Köpfe wären, und jeder Teleport im Spiel versetzt deine Persona. Solange es an ist, geht Fortbewegung nur per Teleport. Im Spiel: Einstellungen › Räumliche Personas › SharePlay starten, dann das Spiel starten. Alle brauchen diesen Bau und dasselbe Bundle-Präfix (Einstellungen › Erweitert). Umschalten ist ein Update derselben App; Spielstände bleiben."))
+                            .font(.callout).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                Label(L("Not yet tried with two headsets: whether the Personas stand exactly on the heads is what this build is for finding out. Please report what you see.",
+                        "Noch nicht mit zwei Headsets ausprobiert: Ob die Personas genau auf den Köpfen stehen, soll dieser Bau herausfinden. Bitte melde, was du siehst."),
+                      systemImage: "flask")
+                    .font(.callout).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity, alignment: .leading).padding(6)
         }

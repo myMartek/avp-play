@@ -266,6 +266,13 @@ extension AppModel {
                                           items: items))
         }
 
+        if offersSpatialPersonas(game) {
+            sections.append(RemoteSection(id: "spatialPersonas", title: L("Spatial Personas (experimental)", "Räumliche Personas (experimentell)"), items: [
+                Item(id: "spatialPersonas", kind: .toggle, title: L("Build with SharePlay for Spatial Personas", "Mit SharePlay für räumliche Personas bauen"),
+                     on: spatialPersonasOn(game)),
+            ]))
+        }
+
         if game.recipe.source != nil {
             sections.append(RemoteSection(id: "offline", title: L("Offline", "Offline"), items: [
                 Item(id: "offline", kind: .toggle, title: L("Install without \(AppModel.name(game.recipe.source))", "Ohne \(AppModel.name(game.recipe.source)) installieren"),
@@ -670,6 +677,8 @@ extension AppModel {
             var next = options(for: game)
             next.offline = on ? true : nil
             setOptions(next, for: game)
+        case "spatialPersonas":
+            setSpatialPersonas(on, for: game)
         case "addons":
             var next = options(for: game)
             next.addons = on
