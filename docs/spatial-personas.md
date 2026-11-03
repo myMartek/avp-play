@@ -12,9 +12,13 @@ Personas stand exactly on the heads. Please report what you see.
 1. On the game's page, under **Spatial Personas (experimental)**, turn on *Build with SharePlay for Spatial
    Personas*, then **Install** or **Update**. The game is built with the Group Activities entitlement (SharePlay)
    and the option switched on. Turning it off and updating builds the game as before; saves stay.
-2. Everyone who plays together needs this build **and the same bundle prefix** (Settings › Advanced): SharePlay
-   finds the app by its bundle identifier.
-3. On the headset: start the FaceTime call, open the game's start window, **Settings › Spatial Personas ›
+2. Everyone who plays together needs this build **and the same bundle identifier**: SharePlay finds the app on the
+   other participants' devices by it. The game's page shows the identifier the build will have; the default prefix
+   contains the Mac's user name, so every co-player sets the same bundle prefix under Settings › Advanced. Two
+   different Apple teams may register the same identifier; a wildcard App ID is not possible with Group Activities.
+3. SharePlay needs a **paid Apple Developer Program** membership on the Mac that builds the game: Apple grants Group
+   Activities to paid teams only. With a free team the game is built without it and the job says so.
+4. On the headset: start the FaceTime call, open the game's start window, **Settings › Spatial Personas ›
    Start SharePlay** (or accept the friend's SharePlay in the call), then **Start** the game. Everyone joins the same
    Walkabout room as usual.
 
