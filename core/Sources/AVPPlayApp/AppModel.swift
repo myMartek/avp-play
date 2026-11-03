@@ -128,6 +128,8 @@ struct GameOptions: Codable, Equatable {
     /// Dieses Spiel ohne Meta und Steam installieren (`InstallRequest.offline`). Ohne Angabe: wie für alle Spiele
     /// eingestellt (`AppModel.offlineMode`).
     var offline: Bool?
+    /// Walkabout mit räumlichen Personas bauen (`InstallRequest.spatialPersonas`; experimentell). Ohne Angabe: nein.
+    var spatialPersonas: Bool?
 }
 
 /// Die in der Übersicht angehakten Spiele – ein eigener, kleiner Zustand (siehe `AppModel.picked`).
@@ -717,7 +719,8 @@ final class AppModel: ObservableObject {
         let id = game.id, catalog = game.catalog
         let paths = paths, apps = installedApps, revision = toolchainRevision, prefix = bundlePrefix, drafts = draftsDirectory
         let pin = toolchainChoices.games[id], metalFX = metalFXExpected
-        let modProfiles = toolchain(for: game)?.coreModsProfiles ?? []
+        let gameToolchain = toolchain(for: game)
+        let modProfiles = gameToolchain?.coreModsProfiles ?? []
         Task.detached(priority: .userInitiated) {
             var fresh: Game?
             if let recipes = paths.recipes {
@@ -727,7 +730,8 @@ final class AppModel: ObservableObject {
                     let active = StoreUpdate.resolve([tested], variants: variants, sources: sources, drafts: drafts, choices: choices).first ?? tested
                     fresh = Probe.game(active, draft: false, tested: tested, variants: variants, sources: sources, paths: paths,
                                        apps: apps, toolchainRevision: revision, pin: pin, bundlePrefix: prefix,
-                                       metalFX: metalFX, coreModProfiles: modProfiles)
+                                       metalFX: metalFX, coreModProfiles: modProfiles,
+                                       spatialPersonas: AppModel.spatialPersonasExpected(recipe: active, toolchain: gameToolchain))
                     fresh?.catalog = catalog
                 }
             }
@@ -1057,6 +1061,31 @@ final class AppModel: ObservableObject {
         refreshStatus(of: game.id)
     }
 
+    // MARK: Räumliche Personas (Walkabout)
+
+    /// Ob dieses Spiel die Option hat: Walkabout, mit einer Toolchain, die es kann.
+    func offersSpatialPersonas(_ game: Game) -> Bool {
+        toolchain(for: game)?.offersSpatialPersonas(for: game.recipe) == true
+    }
+
+    /// Ob dieses Spiel mit räumlichen Personas gebaut wird: die eigene Wahl, sonst aus.
+    func spatialPersonasOn(_ game: Game) -> Bool { options(for: game).spatialPersonas == true }
+
+    func setSpatialPersonas(_ on: Bool, for game: Game) {
+        var next = options(for: game)
+        next.spatialPersonas = on ? true : nil
+        setOptions(next, for: game)
+        refreshStatus(of: game.id)
+    }
+
+    /// Was ein aktueller Bau an räumlichen Personas tragen soll: die Wahl des Spiels, wo es die Option gibt; sonst
+    /// `nil` (nicht vergleichen). Liest die gespeicherte Wahl selbst, damit auch die Übersicht im Hintergrund sie kennt.
+    nonisolated static func spatialPersonasExpected(recipe: Recipe, toolchain: Toolchain?) -> Bool? {
+        guard let toolchain, toolchain.offersSpatialPersonas(for: recipe) else { return nil }
+        let stored = UserDefaults.standard.data(forKey: "gameOptions").flatMap { try? JSONDecoder().decode([String: GameOptions].self, from: $0) }
+        return stored?[recipe.id]?.spatialPersonas == true
+    }
+
     /// Was ein aktueller Bau an Mods tragen soll: die Wahl des Spiels, wo es für seine Fassung Mods gibt; sonst `nil`
     /// (nicht vergleichen). Liest die gespeicherte Wahl selbst, damit auch die Übersicht im Hintergrund sie kennt.
     nonisolated static func coreModsExpected(recipe: Recipe, profiles: [Toolchain.CoreModsProfile]) -> Bool? {
@@ -1072,7 +1101,8 @@ final class AppModel: ObservableObject {
                                      pin: toolchainChoices.games[id], bundlePrefix: bundlePrefix,
                                      otherSourceBuilds: Set(fresh.otherSourceBuilds),
                                      metalFX: metalFXExpected,
-                                     coreMods: toolchain(for: fresh).flatMap { AppModel.coreModsExpected(recipe: fresh.recipe, profiles: $0.coreModsProfiles) })
+                                     coreMods: toolchain(for: fresh).flatMap { AppModel.coreModsExpected(recipe: fresh.recipe, profiles: $0.coreModsProfiles) },
+                                     spatialPersonas: AppModel.spatialPersonasExpected(recipe: fresh.recipe, toolchain: toolchain(for: fresh)))
         replace(fresh)
     }
 
@@ -1762,6 +1792,8 @@ final class AppModel: ObservableObject {
         }
         // Die Mods: wie für das Spiel gewählt. Gibt es sie für diese Fassung nicht, baut der Auftrag ohne sie und sagt es.
         if steps.contains(.build), chosen.coreMods ?? (coreModsProfile(game)?.defaultOn == true) { request.coreMods = true }
+        // Die räumlichen Personas (Walkabout): wie für das Spiel gewählt; eine Toolchain ohne sie baut wie üblich und sagt es.
+        if steps.contains(.build), chosen.spatialPersonas == true { request.spatialPersonas = true }
         if steps.contains(.build), metalFXUpscaling {
             request.metalFX = true
             request.resolution = metalFXResolution

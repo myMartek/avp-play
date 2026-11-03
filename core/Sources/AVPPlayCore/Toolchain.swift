@@ -382,6 +382,24 @@ public struct Toolchain: Sendable {
         return text.contains("Entry(env: \"\(Toolchain.xrPredictionSwitch)\"")
     }
 
+    /// Der Name, unter dem eine Installation Walkabout Mini Golf mit räumlichen Personas baut (`1`): Die Toolchain gibt
+    /// der App die Group-Activities-Berechtigung (SharePlay) und sagt es ihr (`KLGroupSession`); im Spiel ist die Option
+    /// dann an, bis das Startfenster sie ausschaltet (`klepton.personas`). Nur für das Target `walkabout`.
+    public static let spatialPersonasVariable = "KLEPTON_GROUP_SESSION"
+    /// Das Target, für das es die räumlichen Personas gibt.
+    public static let spatialPersonasTarget = "walkabout"
+
+    /// Ob diese Toolchain Walkabout mit räumlichen Personas bauen kann (`spatialPersonasVariable` in ihrem Projektgenerator).
+    public var supportsSpatialPersonas: Bool {
+        guard let text = try? String(contentsOf: root.appendingPathComponent("visionos/gen_xcodeproj.py"), encoding: .utf8) else { return false }
+        return text.contains(Toolchain.spatialPersonasVariable)
+    }
+
+    /// Ob ein Spiel die Option „Räumliche Personas“ hat: Walkabout, mit einer Toolchain, die es kann.
+    public func offersSpatialPersonas(for recipe: Recipe) -> Bool {
+        recipe.toolchain.target == Toolchain.spatialPersonasTarget && supportsSpatialPersonas
+    }
+
     /// Der Name, unter dem eine Installation sagt, ob die Raumvermessung (Spielbereich, „Raum vermessen“) im Spiel von
     /// Anfang an an ist (`1`) oder aus (`0`; im Spiel `KLRoomGuardDefault`). Was im Spiel gewählt ist, gilt danach.
     public static let roomMeasuringVariable = "KLEPTON_ROOM_GUARD"
@@ -436,12 +454,14 @@ public struct Toolchain: Sendable {
     ///   dazu (`displayEnvironment`); ohne Angabe bleibt er, wie er war.
     /// - Parameter coreMods: das Spiel mit seinen Mods bauen. Nur für eine Fassung, für die die Toolchain Mods hat
     ///   (`coreModsProfile`); sonst ist es ein Fehler und nichts wird gebaut. Auch das sagt der Stempel.
+    /// - Parameter spatialPersonas: Walkabout mit räumlichen Personas bauen (`spatialPersonasVariable`). Nur für das
+    ///   Target und eine Toolchain, die es kann; sonst wird wie üblich gebaut. Auch das sagt der Stempel.
     public func buildAndInstall(recipe: Recipe, team: String, device: Device, bundleId: String?, log: URL,
                                 extraEnvironment: [String: String] = [:],
                                 metalFX: Bool = false, resolution: Int? = nil, xrPrediction: Bool = false,
                                 displayName: String? = nil, displaySuffix: String? = nil,
                                 controllerMode: ControllerMode = .standard, surrealSupport: Bool = true,
-                                coreMods: Bool = false) throws {
+                                coreMods: Bool = false, spatialPersonas: Bool = false) throws {
         guard team.count == 10, team.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber) }) else {
             throw RecipeError.invalid(L("team ID '\(team)' (expected: 10 characters)", "Team-ID '\(team)' (erwartet: 10 Zeichen)"))
         }
@@ -468,9 +488,11 @@ public struct Toolchain: Sendable {
         let resolution = metalFX && supportsRenderScalePreset && MetalFXResolution.environmentValue(resolution) != nil
             ? resolution.map(MetalFXResolution.clamped) : nil
         let xrPrediction = xrPrediction && supportsXRPrediction
+        let spatialPersonas = spatialPersonas && offersSpatialPersonas(for: recipe)
         env["KLEPTON_APP_BUILD"] = AppStamp.build(versionCode: recipe.versionCode, toolchainVersion: version(), modified: isModified,
                                                   metalFX: metalFX, resolution: resolution,
-                                                  xrPrediction: xrPrediction, coreMods: coreMods)
+                                                  xrPrediction: xrPrediction, coreMods: coreMods,
+                                                  spatialPersonas: spatialPersonas)
         // Nie aus der Umgebung dieses Programms übernehmen: Was eingeschaltet ist, sagt allein der Auftrag.
         let switchesOn = (metalFX ? [Toolchain.metalFXSwitch] : [])
             + (xrPrediction ? [Toolchain.xrPredictionSwitch] : [])
@@ -478,6 +500,8 @@ public struct Toolchain: Sendable {
         env[Toolchain.renderScaleVariable] = MetalFXResolution.environmentValue(resolution)
         // Nie aus der Umgebung dieses Programms: Mods gibt es nur, wenn der Auftrag sie will.
         env[Toolchain.coreModsVariable] = coreMods ? "1" : nil
+        // Ebenso die räumlichen Personas: die Berechtigung kommt nur in einen Bau, der sie will.
+        env[Toolchain.spatialPersonasVariable] = spatialPersonas ? "1" : nil
         if let bundleId { env["KLEPTON_BUNDLE_ID"] = bundleId }
         // Ein kostenloses Team bekommt von Apple „Increased Memory Limit“, aber weder „Extended Virtual
         // Addressing“ noch „Low-Latency Streaming“. Mit einer der beiden im Auftrag scheitert die ganze Signatur.

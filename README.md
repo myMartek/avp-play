@@ -118,6 +118,11 @@ tools/make-app.sh               # builds ../dist/AVP Play.app (ad-hoc signed, fo
 functions. The recipe format is in [docs/recipes.md](docs/recipes.md); how to report a problem or contribute is in
 [CONTRIBUTING.md](CONTRIBUTING.md).
 
+## Experiments
+
+- **Walkabout Mini Golf with Spatial Personas** – a round with friends in a FaceTime call, their Personas standing
+  where the game's heads would be. Per game, off by default; see [docs/spatial-personas.md](docs/spatial-personas.md).
+
 ## The toolchain
 
 Games are translated by a fork of [Klepton](https://github.com/shinyquagsire23/Klepton) by Max Thomas (MIT),
