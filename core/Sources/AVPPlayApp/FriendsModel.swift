@@ -285,6 +285,7 @@ final class FriendsModel: ObservableObject {
         }
         guard !targets.isEmpty else { return }
         let recipe = game.recipe
+        let store = model.paths.store
         let folder = DataLocation.base.appendingPathComponent("friends/share", isDirectory: true)
         let key = AppStoreConnectKey.load()
         let byHand = devicesRegisteredByHand
@@ -305,12 +306,15 @@ final class FriendsModel: ObservableObject {
                         _ = try await asc.register(udid: device.udid, name: "AVP Play – \(peer.name) – \(device.name)")
                     }
                 }
-                // 2. Der Bau.
+                // 2. Der Bau – nach derselben Vorbereitung wie vor einer Installation (APK und Bäume in der Toolchain).
                 working = L("Building the game for export (a few minutes) …", "Baue das Spiel für den Export (einige Minuten) …")
                 let log = folder.appendingPathComponent("\(recipe.id).export.log")
                 let ipa: URL = try await Task.detached(priority: .userInitiated) {
-                    try toolchain.exportIPA(recipe: recipe, team: team, bundleId: bundleId, log: log, spatialPersonas: true,
-                                            outputDirectory: folder.appendingPathComponent("export-\(recipe.id)", isDirectory: true))
+                    try toolchain.prepare(recipe: recipe, store: store)
+                    let extra = TreeStore(store: store).toolchainEnvironment(recipe: recipe)
+                    return try toolchain.exportIPA(recipe: recipe, team: team, bundleId: bundleId, log: log, extraEnvironment: extra,
+                                                   spatialPersonas: true,
+                                                   outputDirectory: folder.appendingPathComponent("export-\(recipe.id)", isDirectory: true))
                 }.value
                 let info = try IPAPackage.unpack(ipa, into: folder.appendingPathComponent("check-\(recipe.id)", isDirectory: true))
                 let provisioned = Set((IPAPackage.provisionedDevices(app: info.app) ?? []).map { $0.uppercased() })
@@ -341,9 +345,25 @@ final class FriendsModel: ObservableObject {
                 save(results, "friendResults")
                 notice = L("Shared with \(sentTo.joined(separator: ", ")). Each of them sees the offer on Walkabout’s page and answers here when it is installed.",
                            "Geteilt mit \(sentTo.joined(separator: ", ")). Jeder sieht das Angebot auf Walkabouts Seite und meldet hier, wenn es eingespielt ist.")
+            } catch let error as ToolchainError {
+                notice = L("Sharing failed: \(FriendsModel.describe(error))", "Teilen fehlgeschlagen: \(FriendsModel.describe(error))")
             } catch {
                 notice = L("Sharing failed: \(error.localizedDescription)", "Teilen fehlgeschlagen: \(error.localizedDescription)")
             }
+        }
+    }
+
+    /// Ein Toolchain-Fehler mit dem, was im Protokoll steht, statt seiner Nummer.
+    static func describe(_ error: ToolchainError) -> String {
+        switch error {
+        case .buildFailed(let log, let hint):
+            return L("the build failed\(hint.isEmpty ? "" : ": " + hint) (log: \(log.path))", "der Bau ist fehlgeschlagen\(hint.isEmpty ? "" : ": " + hint) (Protokoll: \(log.path))")
+        case .installFailed(let log, let hint):
+            return L("installing failed\(hint.isEmpty ? "" : ": " + hint) (log: \(log.path))", "das Einspielen ist fehlgeschlagen\(hint.isEmpty ? "" : ": " + hint) (Protokoll: \(log.path))")
+        case .refused(let refusal, _, let log):
+            return L("Apple refused: \(refusal) (log: \(log.path))", "Apple hat abgelehnt: \(refusal) (Protokoll: \(log.path))")
+        default:
+            return "\(error)"
         }
     }
 
