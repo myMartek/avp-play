@@ -488,7 +488,9 @@ public struct Toolchain: Sendable {
         let resolution = metalFX && supportsRenderScalePreset && MetalFXResolution.environmentValue(resolution) != nil
             ? resolution.map(MetalFXResolution.clamped) : nil
         let xrPrediction = xrPrediction && supportsXRPrediction
-        let spatialPersonas = spatialPersonas && offersSpatialPersonas(for: recipe)
+        // Group Activities steht nur bezahlten Teams offen (Xcodes Capability-Tabelle: Developer und Enterprise Program);
+        // bei einem kostenlosen Team scheiterte mit dem Schlüssel die ganze Signatur. Dann ohne, wie bei EVA und Streaming.
+        let spatialPersonas = spatialPersonas && offersSpatialPersonas(for: recipe) && !AppleTeams.isFree(team)
         env["KLEPTON_APP_BUILD"] = AppStamp.build(versionCode: recipe.versionCode, toolchainVersion: version(), modified: isModified,
                                                   metalFX: metalFX, resolution: resolution,
                                                   xrPrediction: xrPrediction, coreMods: coreMods,
