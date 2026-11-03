@@ -96,7 +96,7 @@ extension AppModel {
         toolchainChoices = choices
         guard var fresh = allGames.first(where: { $0.id == game.id }) ?? games.first(where: { $0.id == game.id }) else { return }
         fresh.status = GameStatus.of(recipe: fresh.recipe, store: paths.store, apps: installedApps, toolchainVersion: toolchainRevision?.forTarget(fresh.recipe.toolchain.target),
-                                     pin: pin, bundlePrefix: bundlePrefix, otherSourceBuilds: Set(fresh.otherSourceBuilds),
+                                     pin: pin, bundlePrefix: bundlePrefix(for: fresh), otherSourceBuilds: Set(fresh.otherSourceBuilds),
                                      metalFX: metalFXExpected,
                                      coreMods: toolchain(for: fresh).flatMap { AppModel.coreModsExpected(recipe: fresh.recipe, profiles: $0.coreModsProfiles) },
                                      spatialPersonas: AppModel.spatialPersonasExpected(recipe: fresh.recipe, toolchain: toolchain(for: fresh)))

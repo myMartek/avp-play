@@ -846,6 +846,11 @@ struct GameDetail: View {
 
                 if model.offersSpatialPersonas(game) { SpatialPersonasBox(game: game) }
 
+                if game.recipe.toolchain.target == Toolchain.spatialPersonasTarget {
+                    FriendShareBox(game: game)
+                    if model.sharedInstall(game) != nil || AppDelegate.friends.offer(for: game) != nil { FriendOfferBox(game: game) }
+                }
+
                 if model.hasSaves(game), game.installed || model.saveSnapshots[game.id] != nil { SavesBox(game: game) }
 
                 if !languageFiles.isEmpty || game.recipe.addons != nil || !extras.isEmpty { optionalContent }

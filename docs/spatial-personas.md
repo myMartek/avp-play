@@ -12,7 +12,8 @@ Personas stand exactly on the heads. Please report what you see.
 1. On the game's page, under **Spatial Personas (experimental)**, turn on *Build with SharePlay for Spatial
    Personas*, then **Install** or **Update**. The game is built with the Group Activities entitlement (SharePlay)
    and the option switched on. Turning it off and updating builds the game as before; saves stay.
-2. Everyone who plays together needs this build **and the same bundle identifier**: SharePlay finds the app on the
+2. Everyone who plays together needs this build **and the same bundle identifier** – easiest through **Friends**
+   ([docs/friends.md](friends.md)): one paid team builds the game once for everybody and hands it over. Otherwise:: SharePlay finds the app on the
    other participants' devices by it. The game's page shows the identifier the build will have; the default prefix
    contains the Mac's user name, so every co-player sets the same bundle prefix under Settings › Advanced. Two
    different Apple teams may register the same identifier; a wildcard App ID is not possible with Group Activities.
