@@ -130,6 +130,11 @@ struct GameOptions: Codable, Equatable {
     var offline: Bool?
     /// Walkabout mit räumlichen Personas bauen (`InstallRequest.spatialPersonas`; experimentell). Ohne Angabe: nein.
     var spatialPersonas: Bool?
+    /// Dieses Spiel ist aus dem geteilten Bau eines Freunds eingespielt (docs/friends.md): unter dieser Kennung steht es
+    /// auf dem Gerät, dorthin kopiert der Auftrag die Dateien, und gebaut wird es hier nicht.
+    var sharedBundleId: String?
+    var sharedStamp: String?
+    var sharedFrom: String?
 }
 
 /// Die in der Übersicht angehakten Spiele – ein eigener, kleiner Zustand (siehe `AppModel.picked`).
@@ -729,7 +734,7 @@ final class AppModel: ObservableObject {
                     let variants = store.loadVariants(), sources = store.loadSources()
                     let active = StoreUpdate.resolve([tested], variants: variants, sources: sources, drafts: drafts, choices: choices).first ?? tested
                     fresh = Probe.game(active, draft: false, tested: tested, variants: variants, sources: sources, paths: paths,
-                                       apps: apps, toolchainRevision: revision, pin: pin, bundlePrefix: prefix,
+                                       apps: apps, toolchainRevision: revision, pin: pin, bundlePrefix: AppModel.sharedPrefix(recipe: active) ?? prefix,
                                        metalFX: metalFX, coreModProfiles: modProfiles,
                                        spatialPersonas: AppModel.spatialPersonasExpected(recipe: active, toolchain: gameToolchain))
                     fresh?.catalog = catalog
@@ -1061,6 +1066,32 @@ final class AppModel: ObservableObject {
         refreshStatus(of: game.id)
     }
 
+    // MARK: Geteilte Baue (Freunde)
+
+    /// Das Präfix, unter dem ein Spiel auf dem Gerät steht: das des geteilten Baus, wenn es einen gibt, sonst das der App.
+    /// Liest die gespeicherte Wahl selbst, damit auch die Übersicht im Hintergrund sie kennt.
+    nonisolated static func sharedPrefix(recipe: Recipe) -> String? {
+        let stored = UserDefaults.standard.data(forKey: "gameOptions").flatMap { try? JSONDecoder().decode([String: GameOptions].self, from: $0) }
+        guard let bundle = stored?[recipe.id]?.sharedBundleId else { return nil }
+        let suffix = "." + recipe.toolchain.target
+        return bundle.hasSuffix(suffix) ? String(bundle.dropLast(suffix.count)) : nil
+    }
+
+    func bundlePrefix(for game: Game) -> String { AppModel.sharedPrefix(recipe: game.recipe) ?? bundlePrefix }
+
+    func sharedInstall(_ game: Game) -> (bundleId: String, stamp: String, from: String)? {
+        let o = options(for: game)
+        guard let bundle = o.sharedBundleId else { return nil }
+        return (bundle, o.sharedStamp ?? "", o.sharedFrom ?? "")
+    }
+
+    func setSharedInstall(_ game: Game, bundleId: String?, stamp: String?, from: String?) {
+        var next = options(for: game)
+        next.sharedBundleId = bundleId; next.sharedStamp = stamp; next.sharedFrom = from
+        setOptions(next, for: game)
+        refreshStatus(of: game.id)
+    }
+
     // MARK: Räumliche Personas (Walkabout)
 
     /// Ob dieses Spiel die Option hat: Walkabout, mit einer Toolchain, die es kann.
@@ -1100,7 +1131,7 @@ final class AppModel: ObservableObject {
     func refreshStatus(of id: String) {
         guard var fresh = allGames.first(where: { $0.id == id }) ?? games.first(where: { $0.id == id }) else { return }
         fresh.status = GameStatus.of(recipe: fresh.recipe, store: paths.store, apps: installedApps, toolchainVersion: toolchainRevision?.forTarget(fresh.recipe.toolchain.target),
-                                     pin: toolchainChoices.games[id], bundlePrefix: bundlePrefix,
+                                     pin: toolchainChoices.games[id], bundlePrefix: bundlePrefix(for: fresh),
                                      otherSourceBuilds: Set(fresh.otherSourceBuilds),
                                      metalFX: metalFXExpected,
                                      coreMods: toolchain(for: fresh).flatMap { AppModel.coreModsExpected(recipe: fresh.recipe, profiles: $0.coreModsProfiles) },
@@ -1236,6 +1267,10 @@ final class AppModel: ObservableObject {
             }
         }
         if let why = accountBlocker(for: game) { return why }
+        if let shared = sharedInstall(game) {
+            return L("This game is installed from \(shared.from)’s shared build; a new build comes from them (see “Shared by a friend” below). To build it yourself again, remove the shared build there first.",
+                     "Dieses Spiel ist aus \(shared.from)s geteiltem Bau eingespielt; ein neuer Bau kommt von dort (siehe unten „Von einem Freund geteilt“). Um es wieder selbst zu bauen, nimm den geteilten Bau dort zurück.")
+        }
         if owned(game) == .no { return notOwnedText(game) }
         if game.otherSourceInstalled { return otherSourceText(game) }
         if let why = freeAccountBlocker(for: game) { return why }
@@ -1801,9 +1836,11 @@ final class AppModel: ObservableObject {
             request.metalFX = true
             request.resolution = metalFXResolution
         }
-        // Ein eigenes Präfix oder das eines kostenlosen Teams: dann steht die Kennung im Auftrag.
+        // Ein eigenes Präfix oder das eines kostenlosen Teams: dann steht die Kennung im Auftrag. Ein geteilter Bau
+        // eines Freunds steht unter seiner Kennung; dorthin kopiert der Auftrag, gebaut wird er nicht (siehe `blocker`).
         let prefix = bundlePrefix
-        if prefix != Toolchain.defaultBundlePrefix() { request.bundleId = "\(prefix).\(game.recipe.toolchain.target)" }
+        if let shared = sharedInstall(game) { request.bundleId = shared.bundleId }
+        else if prefix != Toolchain.defaultBundlePrefix() { request.bundleId = "\(prefix).\(game.recipe.toolchain.target)" }
         // Was dieses Programm installiert, ist immer die eigentliche Installation – auch nach einem neuen Präfix.
         request.live = true
         do {

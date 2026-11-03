@@ -87,7 +87,7 @@ enum Probe {
                 s.toolchainChoices = choices
                 func game(_ r: Recipe, draft: Bool, tested: Recipe? = nil) -> Game {
                     Probe.game(r, draft: draft, tested: tested, variants: variants, sources: sources, paths: paths, apps: apps,
-                               toolchainRevision: revision, pin: choices.games[r.id], bundlePrefix: bundlePrefix,
+                               toolchainRevision: revision, pin: choices.games[r.id], bundlePrefix: AppModel.sharedPrefix(recipe: r) ?? bundlePrefix,
                                metalFX: metalFX, coreModProfiles: choices.games[r.id] == nil ? modProfiles : [],
                                spatialPersonas: AppModel.spatialPersonasExpected(recipe: r, toolchain: toolchain))
                 }

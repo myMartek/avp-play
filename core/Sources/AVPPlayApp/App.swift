@@ -16,6 +16,7 @@ struct AVPPlayApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @StateObject private var model = AppDelegate.model
     @StateObject private var remote = AppDelegate.remote
+    @StateObject private var friends = AppDelegate.friends
     @AppStorage(MenuBarPreferences.showKey) private var menuBarShow = true
     @AppStorage(MenuBarPreferences.keepRunningKey) private var menuBarKeepRunning = false
 
@@ -24,7 +25,9 @@ struct AVPPlayApp: App {
             RootView()
                 .environmentObject(model)
                 .environmentObject(remote)
+                .environmentObject(friends)
                 .frame(minWidth: 900, minHeight: 600)
+                .onAppear { friends.attach(model) }
         }
         .defaultSize(width: 1120, height: 760)
         .environment(\.locale, L10n.locale)
@@ -88,6 +91,7 @@ struct AVPPlayApp: App {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor static let model = AppModel()
     @MainActor static let remote = RemoteServer()
+    @MainActor static let friends = FriendsModel()
 
     /// Ob macOS das Programm bei der Anmeldung geöffnet hat (Anmeldeobjekt, auch über `SMAppService`).
     @MainActor static var launchedAtLogin = false
