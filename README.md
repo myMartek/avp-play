@@ -122,6 +122,9 @@ functions. The recipe format is in [docs/recipes.md](docs/recipes.md); how to re
 
 - **Walkabout Mini Golf with Spatial Personas** – a round with friends in a FaceTime call, their Personas standing
   where the game's heads would be. Per game, off by default; see [docs/spatial-personas.md](docs/spatial-personas.md).
+- **Friends** – one friend with a paid Apple team builds that SharePlay build for everybody and hands it over through
+  the project's server, sealed; each friend's files still come from their own purchase. Opt-in under Settings › Friends;
+  see [docs/friends.md](docs/friends.md).
 
 ## The toolchain
 
