@@ -430,8 +430,8 @@ final class FriendsModel: ObservableObject {
                 offers[game.id]?.installed = true; save(offers, "friendOffers")
                 model.enqueue(game, steps: InstallStep.addonSync)
                 await report(.installed, "\(info.build)")
-                notice = L("\(record.fromName)’s build is on \(device.name). The game’s files are being copied from your own purchase now (see “Jobs”).",
-                           "\(record.fromName)s Bau ist auf \(device.name). Die Dateien des Spiels werden jetzt aus deinem eigenen Kauf kopiert (siehe „Aufträge“).")
+                notice = L("\(record.fromName)’s build is on \(device.name). The game’s files (about 15 GB for Walkabout) are being copied from your own purchase now – see “Jobs”. Do not start the game before that job has finished: without its files it opens to a black picture.",
+                           "\(record.fromName)s Bau ist auf \(device.name). Die Dateien des Spiels (bei Walkabout etwa 15 GB) werden jetzt aus deinem eigenen Kauf kopiert – siehe „Aufträge“. Starte das Spiel erst, wenn dieser Auftrag fertig ist: Ohne seine Dateien bleibt das Bild schwarz.")
             } catch {
                 notice = L("Installing failed: \(error.localizedDescription)", "Einspielen fehlgeschlagen: \(error.localizedDescription)")
             }
