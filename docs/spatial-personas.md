@@ -1,11 +1,13 @@
 # Walkabout Mini Golf with Spatial Personas (experimental)
 
 A round of Walkabout with friends who are in a FaceTime call with you: the game draws no heads for the other
-players, their Spatial Personas stand where those heads would be, and every teleport in the game moves your Persona
-to where your rig lands. Locomotion is teleport only while this is on.
+players, their Spatial Personas stand where those heads would be, and a teleport by any player takes the whole group
+along. Locomotion is teleport only while this is on, and snap turning with the stick is off while a SharePlay session
+runs: turn with your body.
 
-This is an experiment. It has not yet been tried with two headsets; the build exists to find out whether the
-Personas stand exactly on the heads. Please report what you see.
+This is an experiment. The first run with two headsets showed no Personas (see below why) and teleports that sprang
+back; both are changed since toolchain 859, and it has not been tried with two headsets again. Please report what
+you see.
 
 ## Turning it on
 
@@ -32,30 +34,34 @@ the game starts. From the command line, `--spatial-personas` on an install or jo
 
 ## How it works
 
-Walkabout's course and the shared space of the SharePlay group are tied by one rigid motion that all participants
-agree on. The toolchain measures where your rig stands in the course every frame (the camera's world pose with the
-head pose it handed the game taken off), and when that changes and holds still, it is a teleport: one message to the
-others and one change of the spatial template, which asks visionOS to put your seat where your rig is. Until the
-system moves your seat, the picture stays where it was; then you land on the target, and everybody's heads and
-Personas agree. The compositor keeps working in the raw world; only the game's idea of where its tracking origin
-stands moves.
+**The picture goes through RealityKit.** visionOS does not show Spatial Personas while an app draws through a
+Compositor Services layer, which is how Klepton normally presents a game. In this mode the toolchain hands the
+finished picture to RealityKit instead. The game still renders as before, with its own foveated rendering; only the
+last step changes, and it costs some performance.
 
-Positions come from the game on each device, never from a guess about another player. Each participant owns its
-own seat and the revision on it, so a stale message never overwrites a newer position. The participant with the
-lowest id hands out the roles (`player1` … `player8`) and the shared origin and sends the whole state to whoever
-joins. Nothing moves a Persona directly: visionOS does, from the template.
+**Everyone stands on one rig.** A Persona stands where that player is in the shared space; the game draws another
+player's head at their rig plus their head. Both agree only when all players stand on the same rig. So the group
+shares one: the toolchain measures where your rig stands in the course every frame (the camera's world pose with the
+head pose it handed the game taken off). When it moves by more than half a metre or 10° and holds still, that is your
+teleport: one message to the others, and every other game is moved to the same rig. Each group rig carries a
+revision and is applied once (up to three tries, in case the game moves itself back); after that, whatever the game
+does is the player's own teleport again. For the same reason snap turning is held at 0° while a session runs: a turn
+by one player would turn the course under everybody else.
 
-The matching runtime change is in `myMartek/Klepton`, branch `avp-play` (`runtime/guest/kl_personas.c`,
-`visionos/Sources/KleptonPersonas.swift`, the shared-space offset in `runtime/xr/kl_ovrp.c`;
-`DEBUG_ENV_VARS.md` › *Walkabout with Spatial Personas*). A toolchain without it builds the game as usual and says so
+**Seats are fixed.** The spatial template gives each role (`player1` … `player8`) a seat 0.9 m apart, so physical
+distances between players are the same in the room and in the game. The participant with the lowest id hands out the
+roles and the current group rig and sends them to whoever joins; a stale message never overwrites a newer revision.
+
+The matching runtime change comes with the toolchain archive attached to the test build (not yet on
+`myMartek/Klepton`): `runtime/guest/kl_personas.c`,
+`visionos/Sources/KleptonPersonas.swift`,
+`DEBUG_ENV_VARS.md` › *Walkabout with Spatial Personas*. A toolchain without it builds the game as usual and says so
 in the job's log.
 
-## What a two-headset run has to settle
+## What the next two-headset run has to settle
 
-- Whether a Compositor Services space that is already open when the session arrives is re-based into the shared
-  space, or whether the game has to be started after SharePlay (the recommended order either way).
-- Whether ARKit's device anchor is stated in the shared space once a seat exists (the design assumes it is; the
-  panel shows the seat visionOS reports next to the logical one).
-- How far a seat may be from the origin before visionOS refuses it: a course is tens of metres across.
+- Whether the Personas appear at all with the picture in RealityKit (the panel should say *spatial* in a call).
+- Whether a teleport takes the other player along every time, and whether Walkabout keeps the rig it was moved to.
 - Whether the Persona stands on the head to the centimetre, or whether the game's rig and its camera differ by an
   offset the measurement does not see.
+- How much frame rate the RealityKit presentation costs on a busy course.
