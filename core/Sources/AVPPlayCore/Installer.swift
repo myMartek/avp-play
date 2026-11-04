@@ -1080,6 +1080,27 @@ public struct Installer: Sendable {
         } else {
             report(L("Assets: \(localCount) files are already on the device.", "Assets: \(localCount) Dateien liegen schon auf dem Gerät."))
         }
+        // Die zwei Metadaten neben dem Baum (`apktool.yml`, `AndroidManifest.xml`): Aus ihnen liest die Laufzeit
+        // Versionscode und Paketnamen des Spiels und damit den Namen der OBB-Datei. Ein Bau mit Gerät schiebt sie über
+        // `stage_assets.sh --meta` nach; ein Auftrag ohne Bau (ein geteilter Bau eines Freunds, docs/friends.md) hat
+        // diesen Schritt nicht – und ohne sie hielt sich Walkabout für Beat Saber 545 und blieb schwarz (2026-11-04).
+        if localCount > 0 {
+            let tree = toolchain.assetsDirectory(recipe: recipe).deletingLastPathComponent()
+            let treeDest = "Documents/\(recipe.toolchain.target)"
+            let remoteMeta = try control.files(device: device, bundle: bundle, subdirectory: treeDest, recursive: false)
+            var copied: [String] = []
+            for name in ["apktool.yml", "AndroidManifest.xml"] {
+                let local = tree.appendingPathComponent(name)
+                guard let size = ContentStore.fileSize(local) else { continue }
+                if remoteMeta.contains(where: { ($0.relativePath as NSString).lastPathComponent == name && $0.size == size }) { continue }
+                try control.copy(local, to: device, bundle: bundle, destination: "\(treeDest)/\(name)")
+                copied.append(name)
+            }
+            if !copied.isEmpty {
+                report(L("Metadata: \(copied.joined(separator: ", ")) copied (version and package of the game).",
+                         "Metadaten: \(copied.joined(separator: ", ")) kopiert (Fassung und Paket des Spiels)."))
+            }
+        }
     }
 
     /// Writes `AssetFilesList` for the recipe into the game's container. Part of the stage step, which every install
