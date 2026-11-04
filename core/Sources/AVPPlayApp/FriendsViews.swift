@@ -195,6 +195,12 @@ struct FriendOfferBox: View {
                             "Aus \(shared.from)s Bau eingespielt (\(shared.bundleId), \(shared.stamp)). Die Dateien kommen aus deinem eigenen Kauf; „Zusatzinhalte abgleichen“ kopiert sie erneut. Ein neuer Bau kommt als neues Angebot."),
                           systemImage: "person.2.fill")
                         .font(.callout).fixedSize(horizontal: false, vertical: true)
+                    if model.isBusy(game.id) {
+                        Label(L("The game’s files are still being copied to the headset (see “Jobs”). Start the game only when that job has finished; before that it opens to a black picture.",
+                                "Die Dateien des Spiels werden noch aufs Headset kopiert (siehe „Aufträge“). Starte das Spiel erst, wenn dieser Auftrag fertig ist; vorher bleibt das Bild schwarz."),
+                              systemImage: "hourglass")
+                            .font(.callout).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true)
+                    }
                     Button(L("Forget the shared build", "Geteilten Bau zurücknehmen")) { model.setSharedInstall(game, bundleId: nil, stamp: nil, from: nil) }
                         .help(L("AVP Play then builds the game itself again; the app on the headset stays until you install over it.", "AVP Play baut das Spiel dann wieder selbst; die App auf dem Headset bleibt, bis du darüber installierst."))
                 }
