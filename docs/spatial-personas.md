@@ -1,13 +1,13 @@
 # Walkabout Mini Golf with Spatial Personas (experimental)
 
 A round of Walkabout with friends who are in a FaceTime call with you: the game draws no heads for the other
-players, their Spatial Personas stand where those heads would be, and a teleport by any player takes the whole group
-along. Locomotion is teleport only while this is on, and snap turning with the stick is off while a SharePlay session
-runs: turn with your body.
+players, their Spatial Personas stand where those heads would be, and a teleport by the player whose turn it is takes the
+whole group along. Locomotion is teleport only while this is on, and snap turning with the stick is off while a
+SharePlay session runs: turn with your body. If a Persona turns into a round tile (visionOS does that on a hot
+headset), the game shows that player's head again.
 
-This is an experiment. The first run with two headsets showed no Personas (see below why) and teleports that sprang
-back; both are changed since toolchain 859, and it has not been tried with two headsets again. Please report what
-you see.
+This is an experiment. Two runs with two headsets so far; what the second one found is changed in toolchain 861
+(see *What changed after the second run*). Please report what you see.
 
 ## Turning it on
 
@@ -43,12 +43,16 @@ last step changes, and it costs some performance.
 player's head at their rig plus their head. Both agree only when all players stand on the same rig. So the group
 shares one: the toolchain measures where your rig stands in the course every frame (the camera's world pose with the
 head pose it handed the game taken off). When it moves by more than half a metre or 10° and holds still, that is your
-teleport: one message to the others, and every other game is moved to the same rig. Each group rig carries a
+teleport: one message to the others, and every other game is moved to the same rig. Only the player whose turn it
+is moves the group (the game's own turn, `Ball.myTurn`); a teleport by anyone else is taken back. In the game's
+"simultaneous" turn mode everyone may. Each group rig carries a
 revision and is applied once (up to three tries, in case the game moves itself back); after that, whatever the game
-does is the player's own teleport again. For the same reason snap turning is held at 0° while a session runs: a turn
-by one player would turn the course under everybody else.
+does is the player's own teleport again. For the same reason snap turning is held at 0° while a session runs (the
+profile's snap angle; your own value comes back afterwards): a turn by one player would turn the course under
+everybody else.
 
-**Seats are fixed.** The spatial template gives each role (`player1` … `player8`) a seat 0.9 m apart, so physical
+**Seats are fixed.** The spatial template gives each role (`player1` … `player8`) a seat 0.9 m apart, 1.5 m in front
+of the start window, so physical
 distances between players are the same in the room and in the game. The participant with the lowest id hands out the
 roles and the current group rig and sends them to whoever joins; a stale message never overwrites a newer revision.
 
@@ -58,10 +62,20 @@ The matching runtime change comes with the toolchain archive attached to the tes
 `DEBUG_ENV_VARS.md` › *Walkabout with Spatial Personas*. A toolchain without it builds the game as usual and says so
 in the job's log.
 
+## What changed after the second run (toolchain 860/861)
+
+- **The other player's putter was gone.** Walkabout hides another player's putter while their head is within 1.2 m
+  of your eyes, and the seats are 0.9 m apart. In a SharePlay build that distance is 0.25 m now.
+- **Snap turning was not really off in 859.** It held the wrong value; now it holds the profile's snap angle.
+- **Standing inside the start window** when the session started there: the seats are 1.5 m in front of it now.
+- **Delay and heat.** The RealityKit picture was four times the pixels the game draws; it is the game's size now.
+  On a hot headset the RealityKit output halves its rate until it cools down.
+- **Controller buttons after a tap elsewhere.** A finger on a Persona or work in Mac Virtual Display takes the focus,
+  and then the buttons stop while tracking goes on. A look and a tap on the game should give it back now; the log
+  says which signal marks the moment (`[focus]` lines).
+
 ## What the next two-headset run has to settle
 
-- Whether the Personas appear at all with the picture in RealityKit (the panel should say *spatial* in a call).
-- Whether a teleport takes the other player along every time, and whether Walkabout keeps the rig it was moved to.
-- Whether the Persona stands on the head to the centimetre, or whether the game's rig and its camera differ by an
-  offset the measurement does not see.
-- How much frame rate the RealityKit presentation costs on a busy course.
+- Whether the other player's putter shows, and whether taking turns feels right.
+- Whether the picture feels responsive enough at the smaller size, and how long until a Persona turns into a tile.
+- Whether the buttons keep working after touching a Persona, or come back after one tap on the game.
