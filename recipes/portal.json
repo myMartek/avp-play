@@ -74,9 +74,9 @@
      "sha256": "9e1674866df01e6383a654eb4da7c770f9e788786e3bc5d412aece4f2432747e"
     },
     {
-     "path": "hl2/hl2_textures_dir.vpk",
-     "size": 224277,
-     "sha256": "a523334b897382fc59755036bb7502f284e39bff4800282c9d1a4b1646e20871"
+     "path": "hl2/hl2_sound_vo_english_dir.vpk",
+     "size": 97210,
+     "sha256": "d049e603d4c919cebfd5d53188ac6b874d1ba84a23eb17f7803b570fbdd34d10"
     }
    ]
   }
