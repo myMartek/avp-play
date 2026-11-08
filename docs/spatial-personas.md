@@ -71,11 +71,13 @@ in the job's log.
 - **Delay and heat.** The RealityKit picture was four times the pixels the game draws; it is the game's size now.
   On a hot headset the RealityKit output halves its rate until it cools down.
 - **Controller buttons after a tap elsewhere.** A finger on a Persona or work in Mac Virtual Display takes the focus,
-  and then the buttons stop while tracking goes on. A look and a tap on the game should give it back now; the log
-  says which signal marks the moment (`[focus]` lines).
+  and then the buttons stop while tracking goes on. Still open: the attempt in 861–874 (invisible tap walls around
+  you) made it worse, because visionOS turned every button press into a tap on those walls and only the start
+  button reached the game. Toolchain 875 takes the walls out and tells visionOS that controller buttons belong to
+  the game.
 
 ## What the next two-headset run has to settle
 
 - Whether the other player's putter shows, and whether taking turns feels right.
 - Whether the picture feels responsive enough at the smaller size, and how long until a Persona turns into a tile.
-- Whether the buttons keep working after touching a Persona, or come back after one tap on the game.
+- Whether all buttons work again, and whether they stop after touching a Persona.
