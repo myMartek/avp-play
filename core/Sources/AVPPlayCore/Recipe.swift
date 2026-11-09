@@ -27,6 +27,9 @@ public struct Recipe: Codable, Sendable, Identifiable {
     /// Asset packs that lie on the device as files of their own, for the list the toolchain's runtime reads
     /// (`AssetFilesList`). Without it, no list is written; one AVP Play wrote earlier is emptied, any other left alone.
     public var assetFiles: [AssetFileEntry]?
+    /// Hat das Spiel einen Steam Workshop, dessen Inhalte das Spiel als lokale Add-ons liest? Dann lassen sich Items
+    /// daraus auswählen; jedes wird zu einer wählbaren Datei (siehe `WorkshopList`).
+    public var workshop: WorkshopSupport?
 
     public struct IconSource: Codable, Sendable, Equatable {
         /// Steam-App-ID: Hintergrund und Logo aus dem lokalen Bildspeicher des Steam-Clients des Nutzers.
@@ -323,6 +326,9 @@ extension Recipe {
             throw RecipeError.invalid(L("Steam app ID", "Steam-App-ID"))
         }
         if let assetFiles { try AssetFilesList.validate(assetFiles, recipe: self) }
+        if let workshop, !workshop.isSane {
+            throw RecipeError.invalid(L("Steam Workshop entry", "Eintrag für den Steam Workshop"))
+        }
     }
 
     static func isSafeName(_ s: String) -> Bool {

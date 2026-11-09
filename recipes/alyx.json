@@ -165,5 +165,9 @@
  },
  "icon": {
   "steamAppId": "546560"
+ },
+ "workshop": {
+  "app": "546560",
+  "dest": "lx/game/hlvr_addons"
  }
 }
