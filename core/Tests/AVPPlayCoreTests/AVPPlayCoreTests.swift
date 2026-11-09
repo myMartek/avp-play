@@ -43,7 +43,7 @@ final class RecipeTests: XCTestCase {
         // Die Referenzspiele und Sonderapps sind da; dazu kommen Rezepte, die aus einem geprüften Entwurf entstanden
         // sind. Die tragen die Kennung des Entwurfs (`store-<App-Kennung>`), damit schon Geladenes weiter gilt.
         let ids = Set(all.map(\.id))
-        let byHand: Set<String> = ["alyx", "batman", "beatsaber140", "csvr", "doom3quest", "moss", "walkabout", "wrath2"]
+        let byHand: Set<String> = ["alyx", "batman", "beatsaber140", "csvr", "doom3quest", "moss", "portal", "walkabout", "wrath2"]
         XCTAssertTrue(ids.isSuperset(of: byHand))
         for recipe in all where !byHand.contains(recipe.id) {
             XCTAssertEqual(recipe.id, recipe.store.appId.map(DraftRecipe.identifier(appId:)), "\(recipe.id)")

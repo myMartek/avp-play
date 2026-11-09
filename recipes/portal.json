@@ -28,6 +28,99 @@
      "de": "SourceVR 0.1.28 von tinsarfal: die Source-Engine für Quest-Headsets, ein Paket für Valves Spiele. Spielinhalte bringt es nicht mit."
     }
    }
+  },
+  {
+   "name": "portal_sound_vo_german.vpk.sound.cache",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 747909,
+   "sha256": "7be591e8b3374c6c0f56a9e0ec074a571c66a82b0849f1ccfd682239de2b4320",
+   "dest": "android-files/SourceVRPort/common/portal",
+   "locale": "de-DE",
+   "title": {
+    "en": "German voice-over (Valve)",
+    "de": "Deutsche Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The German voices of your own Portal (Steam depot 408). With a Steam sign-in under Setup the app fetches them for you (about 146 MB).",
+     "de": "Die deutschen Stimmen deines eigenen Portal (Steam-Depot 408). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 146 MB)."
+    },
+    "steam": {
+     "app": "400",
+     "depots": [
+      {
+       "id": "408",
+       "manifest": "8794244784218856360",
+       "bytes": 145521369
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "portal_sound_vo_german_000.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 144753659,
+   "sha256": "5400e16b13a182fc090e4aca9bd67ff16e56535c6e8320c9b2a9fc7ecea1562e",
+   "dest": "android-files/SourceVRPort/common/portal",
+   "locale": "de-DE",
+   "title": {
+    "en": "German voice-over (Valve)",
+    "de": "Deutsche Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The German voices of your own Portal (Steam depot 408). With a Steam sign-in under Setup the app fetches them for you (about 146 MB).",
+     "de": "Die deutschen Stimmen deines eigenen Portal (Steam-Depot 408). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 146 MB)."
+    },
+    "steam": {
+     "app": "400",
+     "depots": [
+      {
+       "id": "408",
+       "manifest": "8794244784218856360",
+       "bytes": 145521369
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "portal_sound_vo_german_dir.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 19801,
+   "sha256": "4bd419cc9405fa17b11ca0577198663ac7b7ba6046031b38efbadf48a3082633",
+   "dest": "android-files/SourceVRPort/common/portal",
+   "locale": "de-DE",
+   "title": {
+    "en": "German voice-over (Valve)",
+    "de": "Deutsche Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The German voices of your own Portal (Steam depot 408). With a Steam sign-in under Setup the app fetches them for you (about 146 MB).",
+     "de": "Die deutschen Stimmen deines eigenen Portal (Steam-Depot 408). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 146 MB)."
+    },
+    "steam": {
+     "app": "400",
+     "depots": [
+      {
+       "id": "408",
+       "manifest": "8794244784218856360",
+       "bytes": 145521369
+      }
+     ]
+    }
+   }
   }
  ],
  "trees": [

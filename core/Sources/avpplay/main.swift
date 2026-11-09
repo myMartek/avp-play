@@ -112,7 +112,7 @@ avpplay – command line for the AVP Play core library
   avpplay steam setup|login <name>|logout      Valve's SteamCMD: fetch it, sign in to Steam (you type the password into Valve's tool), sign out
   avpplay steam library --steam-account <name>  the account's Steam games with an Android build
   avpplay steam prepare <app ID> --steam-account <name>   download a Steam game's Android build and write an untested recipe from it
-  avpplay steam fetch <id> --steam-account <name> [--with <file name>]   get the files a recipe needs from your own Steam purchase
+  avpplay steam fetch <id> --steam-account <name> [--with <file name>] [--locale de-DE]   get the files a recipe needs from your own Steam purchase
   avpplay purchases <id>                       confirmed in-game purchases and the add-on content that goes with them
            --skus              also name each purchase as the store names it
   avpplay plan <id>   [selection]              show what would be downloaded (no request to the download site)
@@ -199,7 +199,7 @@ avpplay – Kommandozeile zur Kern-Bibliothek von AVP Play
   avpplay steam setup|login <Name>|logout      Valves SteamCMD: holen, bei Steam anmelden (das Passwort tippst du in Valves Werkzeug), abmelden
   avpplay steam library --steam-account <Name>  die Steam-Spiele des Kontos mit Android-Fassung
   avpplay steam prepare <App-ID> --steam-account <Name>   die Android-Fassung eines Steam-Spiels laden und daraus ein ungetestetes Rezept schreiben
-  avpplay steam fetch <id> --steam-account <Name> [--with <Dateiname>]   die Dateien eines Rezepts aus dem eigenen Steam-Kauf holen
+  avpplay steam fetch <id> --steam-account <Name> [--with <Dateiname>] [--locale de-DE]   die Dateien eines Rezepts aus dem eigenen Steam-Kauf holen
   avpplay purchases <id>                       bestätigte Käufe im Spiel und zugehörige Zusatzinhalte
            --skus              jeden Kauf auch so nennen, wie der Store ihn nennt
   avpplay plan <id>   [Auswahl]                zeigen, was geladen würde (keine Abfrage an die Download-Seite)
@@ -527,7 +527,10 @@ case "steam":
         guard let account = o.value("steam-account"), SteamTool.isAccountName(account) else { fail("\(SteamError.badAccountName)") }
         do {
             let r = try RecipeStore(directory: recipesDirectory(o)).load(id: o.positional[2])
-            try SteamFetcher(tool: tool, store: contentStore(o), account: account).fetch(recipe: r, optionalNames: Set(o.values["with"] ?? []), progress: { p in
+            // Wie beim Auftrag: --with nennt Dateien, --locale Sprachen; Valves Werkzeug bekommt Namen.
+            let selection = FetchSelection(locales: Set(o.values["locale"] ?? []), optionalNames: Set(o.values["with"] ?? []))
+            let chosen = Set(FetchPlan.wantedFiles(recipe: r, selection: selection).filter { !$0.required }.map(\.name))
+            try SteamFetcher(tool: tool, store: contentStore(o), account: account).fetch(recipe: r, optionalNames: chosen, progress: { p in
                 FileHandle.standardError.write(Data(String(format: "\r  %.1f %%  ", 100 * Double(p.done) / Double(max(p.total, 1))).utf8))
             }, report: { print($0) })
         } catch { fail("\(error)") }

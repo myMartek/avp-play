@@ -492,11 +492,15 @@ public struct Installer: Sendable {
     /// Was aus dem eigenen Steam-Kauf kommt und im Bestand fehlt, holt Valves Werkzeug – bei einem Spiel aus Steam
     /// als Teil des Auftrags, damit „Installieren“ dort dasselbe tut wie bei einem Spiel aus dem Meta-Store.
     func fetchFromSteam() throws {
+        // Alles, was die Auswahl will und nicht Pflicht ist – auch die über ihre Sprache gewählten Dateien
+        // (`locale`, die Sprachausgabe eines Steam-Spiels): Valves Werkzeug kennt nur Namen, keine Sprachen.
+        let chosen = Set(FetchPlan.wantedFiles(recipe: recipe, selection: selection()).filter { !$0.required }.map(\.name))
+            .union(request.optionalNames)
         guard recipe.source == .steam, let account = request.steamAccount, SteamTool.isAccountName(account),
-              !SteamFetcher.needed(recipe: recipe, store: store, optionalNames: Set(request.optionalNames)).files.isEmpty else { return }
+              !SteamFetcher.needed(recipe: recipe, store: store, optionalNames: chosen).files.isEmpty else { return }
         let report = self.report, progress = self.progress
         try SteamFetcher(store: store, account: account).fetch(
-            recipe: recipe, optionalNames: Set(request.optionalNames),
+            recipe: recipe, optionalNames: chosen,
             progress: { progress(InstallProgress(step: .fetch, done: $0.done, total: $0.total)) },
             report: { report($0) })
     }
