@@ -8,7 +8,7 @@
  "store": {},
  "toolchain": {
   "target": "sourcevr-portal",
-  "minCommit": "fbd5ad7"
+  "minCommit": "a2a285a"
  },
  "files": [
   {
@@ -194,12 +194,16 @@
     "de": "Beim ersten Start fragt der Einrichtungsassistent des Spiels nach Waffenhand und Komfort-Einstellungen. AVP Play setzt einmalig zwei Voreinstellungen: ein stehendes Bild hinter dem Hauptmenü statt der Kamerafahrt, und Portal-Rekursionstiefe 1 (Tiefe 2 halbierte die Bildrate im Portal); beides lässt sich in den VR-Einstellungen des Spiels ändern."
    },
    {
-    "en": "Known: on some starts a portal ring or the aiming ring came out black; a restart cured it. The cause is being looked for.",
-    "de": "Bekannt: Bei manchen Starts war ein Portalring oder der Zielring schwarz; ein Neustart half. Die Ursache wird noch gesucht."
+    "en": "Since toolchain 872 (2026-11-09, seen on the device): portals are see-through again, the portal rings and the aiming ring always have their colours (no more black ones on some starts), and a hit no longer puts a box over the picture.",
+    "de": "Seit Toolchain 872 (2026-11-09, am Gerät gesehen): Portale sind wieder durchsichtig, Portalringe und Zielring haben immer ihre Farben (keine schwarzen mehr bei manchen Starts), und ein Treffer legt keinen Kasten mehr über das Bild."
    },
    {
-    "en": "Needs the fork from fbd5ad7 on: the SourceVR targets, sRGB-compressed textures offered natively, the two defaults.",
-    "de": "Braucht den Fork ab fbd5ad7: die SourceVR-Targets, nativ angebotene sRGB-Kompression, die zwei Voreinstellungen."
+    "en": "Menus and subtitles follow the language chosen in the start window. German voice-over is a language download (tick \"Deutsch\" on the game page, 146 MB); it comes from your own Steam account, which must own Portal.",
+    "de": "Menüs und Untertitel folgen der im Startfenster gewählten Sprache. Die deutsche Sprachausgabe ist ein Sprachdownload (auf der Spielseite „Deutsch“ anhaken, 146 MB); sie kommt aus dem eigenen Steam-Konto, das Portal besitzen muss."
+   },
+   {
+    "en": "Needs the fork from a2a285a on (toolchain 872): the SourceVR targets, sRGB-compressed textures offered natively, the two defaults, the depth and texture fixes, the language.",
+    "de": "Braucht den Fork ab a2a285a (Toolchain 872): die SourceVR-Targets, nativ angebotene sRGB-Kompression, die zwei Voreinstellungen, die Tiefen- und Texturkorrekturen, die Sprache."
    }
   ]
  }
