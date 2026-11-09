@@ -121,6 +121,285 @@
      ]
     }
    }
+  },
+  {
+   "name": "portal_sound_vo_french.vpk.sound.cache",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 894883,
+   "sha256": "cfadcd10ab5bd6d656faaa83bdd079538ba6192600040fcafcd2aea18698f215",
+   "dest": "android-files/SourceVRPort/common/portal",
+   "locale": "fr-FR",
+   "title": {
+    "en": "French voice-over (Valve)",
+    "de": "Französische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The French voices of your own Portal (Steam depot 407). With a Steam sign-in under Setup the app fetches them for you (about 147 MB).",
+     "de": "Die französischen Stimmen deines eigenen Portal (Steam-Depot 407). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 147 MB)."
+    },
+    "steam": {
+     "app": "400",
+     "depots": [
+      {
+       "id": "407",
+       "manifest": "8242589767738537927",
+       "bytes": 146568277
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "portal_sound_vo_french_000.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 145653593,
+   "sha256": "aafc820ea534e3a408bba5cadb05f0bd2917996b5c22719bc60de232714a0cfd",
+   "dest": "android-files/SourceVRPort/common/portal",
+   "locale": "fr-FR",
+   "title": {
+    "en": "French voice-over (Valve)",
+    "de": "Französische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The French voices of your own Portal (Steam depot 407). With a Steam sign-in under Setup the app fetches them for you (about 147 MB).",
+     "de": "Die französischen Stimmen deines eigenen Portal (Steam-Depot 407). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 147 MB)."
+    },
+    "steam": {
+     "app": "400",
+     "depots": [
+      {
+       "id": "407",
+       "manifest": "8242589767738537927",
+       "bytes": 146568277
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "portal_sound_vo_french_dir.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 19801,
+   "sha256": "c57e7912ab6fa5080730fc5712c8ec739a14f8a09fd5ddd6d64039275a981605",
+   "dest": "android-files/SourceVRPort/common/portal",
+   "locale": "fr-FR",
+   "title": {
+    "en": "French voice-over (Valve)",
+    "de": "Französische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The French voices of your own Portal (Steam depot 407). With a Steam sign-in under Setup the app fetches them for you (about 147 MB).",
+     "de": "Die französischen Stimmen deines eigenen Portal (Steam-Depot 407). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 147 MB)."
+    },
+    "steam": {
+     "app": "400",
+     "depots": [
+      {
+       "id": "407",
+       "manifest": "8242589767738537927",
+       "bytes": 146568277
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "portal_sound_vo_spanish.vpk.sound.cache",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 737008,
+   "sha256": "7a330c3158483d23158edb107b550c229c20aeeeccdac0469d7ee4e95121a89f",
+   "dest": "android-files/SourceVRPort/common/portal",
+   "locale": "es-ES",
+   "title": {
+    "en": "Spanish voice-over (Valve)",
+    "de": "Spanische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Spanish voices of your own Portal (Steam depot 406). With a Steam sign-in under Setup the app fetches them for you (about 147 MB).",
+     "de": "Die spanischen Stimmen deines eigenen Portal (Steam-Depot 406). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 147 MB)."
+    },
+    "steam": {
+     "app": "400",
+     "depots": [
+      {
+       "id": "406",
+       "manifest": "8904830885129684315",
+       "bytes": 147473667
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "portal_sound_vo_spanish_000.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 146716649,
+   "sha256": "7ed05086448b6394cfd437d9baac65e39cd2d990cd18ded0ca625eac8e0f0507",
+   "dest": "android-files/SourceVRPort/common/portal",
+   "locale": "es-ES",
+   "title": {
+    "en": "Spanish voice-over (Valve)",
+    "de": "Spanische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Spanish voices of your own Portal (Steam depot 406). With a Steam sign-in under Setup the app fetches them for you (about 147 MB).",
+     "de": "Die spanischen Stimmen deines eigenen Portal (Steam-Depot 406). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 147 MB)."
+    },
+    "steam": {
+     "app": "400",
+     "depots": [
+      {
+       "id": "406",
+       "manifest": "8904830885129684315",
+       "bytes": 147473667
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "portal_sound_vo_spanish_dir.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 20010,
+   "sha256": "37dbec16c9af5f0c8aed92ac8d47880de7cb868f30dc8bdbddfaeb4a7730064f",
+   "dest": "android-files/SourceVRPort/common/portal",
+   "locale": "es-ES",
+   "title": {
+    "en": "Spanish voice-over (Valve)",
+    "de": "Spanische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Spanish voices of your own Portal (Steam depot 406). With a Steam sign-in under Setup the app fetches them for you (about 147 MB).",
+     "de": "Die spanischen Stimmen deines eigenen Portal (Steam-Depot 406). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 147 MB)."
+    },
+    "steam": {
+     "app": "400",
+     "depots": [
+      {
+       "id": "406",
+       "manifest": "8904830885129684315",
+       "bytes": 147473667
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "portal_sound_vo_russian.vpk.sound.cache",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 100523,
+   "sha256": "e53fb1487f518b207757f4659e96836dc1bbfc6c827be99a67cf67f72a1f9cb4",
+   "dest": "android-files/SourceVRPort/common/portal",
+   "locale": "ru-RU",
+   "title": {
+    "en": "Russian voice-over (Valve)",
+    "de": "Russische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Russian voices of your own Portal (Steam depot 405). With a Steam sign-in under Setup the app fetches them for you (about 86 MB).",
+     "de": "Die russischen Stimmen deines eigenen Portal (Steam-Depot 405). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 86 MB)."
+    },
+    "steam": {
+     "app": "400",
+     "depots": [
+      {
+       "id": "405",
+       "manifest": "453200351187428393",
+       "bytes": 85905720
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "portal_sound_vo_russian_000.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 85784789,
+   "sha256": "f68721b8fed2b5067b01042d50544e3663aa9925006133a8db789096ee4b7b97",
+   "dest": "android-files/SourceVRPort/common/portal",
+   "locale": "ru-RU",
+   "title": {
+    "en": "Russian voice-over (Valve)",
+    "de": "Russische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Russian voices of your own Portal (Steam depot 405). With a Steam sign-in under Setup the app fetches them for you (about 86 MB).",
+     "de": "Die russischen Stimmen deines eigenen Portal (Steam-Depot 405). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 86 MB)."
+    },
+    "steam": {
+     "app": "400",
+     "depots": [
+      {
+       "id": "405",
+       "manifest": "453200351187428393",
+       "bytes": 85905720
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "portal_sound_vo_russian_dir.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 20408,
+   "sha256": "35524000b36c32ebce49766d7bfd5da7be850b3390c8b45e3bcf44bac43d7067",
+   "dest": "android-files/SourceVRPort/common/portal",
+   "locale": "ru-RU",
+   "title": {
+    "en": "Russian voice-over (Valve)",
+    "de": "Russische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Russian voices of your own Portal (Steam depot 405). With a Steam sign-in under Setup the app fetches them for you (about 86 MB).",
+     "de": "Die russischen Stimmen deines eigenen Portal (Steam-Depot 405). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 86 MB)."
+    },
+    "steam": {
+     "app": "400",
+     "depots": [
+      {
+       "id": "405",
+       "manifest": "453200351187428393",
+       "bytes": 85905720
+      }
+     ]
+    }
+   }
   }
  ],
  "trees": [
@@ -198,8 +477,8 @@
     "de": "Seit Toolchain 873 (2026-11-09, am Gerät gesehen): Portale sind wieder durchsichtig, Portalringe und Zielring haben immer ihre Farben (keine schwarzen mehr bei manchen Starts), und ein Treffer legt keinen Kasten mehr über das Bild, und das Ladebild hält den Start nicht mehr minutenlang auf (Dank an gseddon)."
    },
    {
-    "en": "Menus and subtitles follow the language chosen in the start window. German voice-over is a language download (tick \"Deutsch\" on the game page, 146 MB); it comes from your own Steam account, which must own Portal.",
-    "de": "Menüs und Untertitel folgen der im Startfenster gewählten Sprache. Die deutsche Sprachausgabe ist ein Sprachdownload (auf der Spielseite „Deutsch“ anhaken, 146 MB); sie kommt aus dem eigenen Steam-Konto, das Portal besitzen muss."
+    "en": "Menus and subtitles follow the language chosen in the start window. Voice-over in German, French, Spanish or Russian is a language download (tick it on the game page, 86–147 MB); it comes from your own Steam account, which must own Portal.",
+    "de": "Menüs und Untertitel folgen der im Startfenster gewählten Sprache. Sprachausgabe auf Deutsch, Französisch, Spanisch oder Russisch ist ein Sprachdownload (auf der Spielseite anhaken, 86–147 MB); sie kommt aus dem eigenen Steam-Konto, das Portal besitzen muss."
    },
    {
     "en": "Needs the fork from 60a6973 on (toolchain 873): the SourceVR targets, sRGB-compressed textures offered natively, the two defaults, the depth and texture fixes, the language, the fair lock handoff while loading.",

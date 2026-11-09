@@ -189,6 +189,15 @@ final class SteamSourceTests: XCTestCase {
         let voices: Set = ["portal_sound_vo_german_dir.vpk", "portal_sound_vo_german_000.vpk", "portal_sound_vo_german.vpk.sound.cache"]
         XCTAssertEqual(SteamFetcher.chosenNames(recipe: portal, locales: ["de-DE"], optionalNames: []), voices)
         XCTAssertEqual(SteamFetcher.chosenNames(recipe: portal, locales: [], optionalNames: []), [])
+        // Jede der vier Sprachausgaben aus Steam ist für sich wählbar, mit ihrem eigenen Depot.
+        for (locale, word, depot) in [("fr-FR", "french", "407"), ("es-ES", "spanish", "406"), ("ru-RU", "russian", "405")] {
+            let files = portal.files.filter { $0.locale == locale }
+            XCTAssertEqual(Set(files.map(\.name)), ["portal_sound_vo_\(word)_dir.vpk", "portal_sound_vo_\(word)_000.vpk",
+                                                    "portal_sound_vo_\(word).vpk.sound.cache"])
+            XCTAssertEqual(Set(files.compactMap { $0.source?.steam?.depots.first?.id }), [depot])
+            XCTAssertEqual(files.compactMap(\.size).reduce(0, +), files.first?.source?.steam?.depots.first?.bytes)
+            XCTAssertEqual(SteamFetcher.chosenNames(recipe: portal, locales: [locale], optionalNames: []), Set(files.map(\.name)))
+        }
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: dir) }
         let chosen = SteamFetcher.chosenNames(recipe: portal, locales: ["de-DE"], optionalNames: [])
