@@ -452,6 +452,19 @@ public struct SteamFetcher: Sendable {
         recipe.files.contains { $0.source?.steam != nil } || (recipe.trees ?? []).contains { $0.source.steam != nil }
     }
 
+    /// Ob ein Auftrag fehlende Steam-Dateien selbst holt: bei einem Spiel aus Steam und bei einer Sonderapp, die ihre
+    /// Spieldaten aus einem Steam-Kauf nimmt (Portal) – nicht bei einem Meta-Spiel, das nur einzelne Teile über Steam kennt.
+    public static func fetchesInJob(_ recipe: Recipe) -> Bool {
+        recipe.source == .steam || (recipe.source == nil && usesSteam(recipe))
+    }
+
+    /// Die wählbaren Dateien, die eine Auswahl will – auch die über ihre Sprache gewählten (die Sprachausgabe von
+    /// Portal): Valves Werkzeug kennt nur Namen, keine Sprachen.
+    public static func chosenNames(recipe: Recipe, locales: Set<String>, optionalNames: Set<String>) -> Set<String> {
+        Set(FetchPlan.wantedFiles(recipe: recipe, selection: FetchSelection(locales: locales, optionalNames: optionalNames))
+            .filter { !$0.required }.map(\.name)).union(optionalNames)
+    }
+
     /// Was im Bestand fehlt und über Steam zu holen wäre. Wählbare Dateien gehören nur dazu, wenn sie gewählt sind –
     /// sonst käme etwa eine Sprachausgabe von über einem Gigabyte mit, nach der niemand gefragt hat.
     public static func needed(recipe: Recipe, store: ContentStore, optionalNames: Set<String> = []) -> (files: [RecipeFile], trees: [RecipeTree]) {

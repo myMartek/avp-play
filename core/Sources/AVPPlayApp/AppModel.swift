@@ -1746,8 +1746,9 @@ final class AppModel: ObservableObject {
         if downloadOnly { request.downloadOnly = true }
         request.team = teamId
         request.device = device?.udid
-        // Ein Spiel aus Steam: Valves Werkzeug fragt und lädt mit der Anmeldung dieses Kontos.
-        if recipe.source == .steam, !steamAccount.isEmpty { request.steamAccount = steamAccount }
+        // Ein Spiel aus Steam: Valves Werkzeug fragt und lädt mit der Anmeldung dieses Kontos. Eine Sonderapp mit
+        // Spieldaten aus Steam (Portal) lädt so, was ihr fehlt – gefragt wird dort nichts.
+        if SteamFetcher.fetchesInJob(recipe), !steamAccount.isEmpty { request.steamAccount = steamAccount }
         if !game.otherSourceBuilds.isEmpty { request.otherSourceBuilds = game.otherSourceBuilds }
         let chosen = options(for: game)
         request.locales = chosen.locales

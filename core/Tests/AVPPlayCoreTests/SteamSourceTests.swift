@@ -179,4 +179,36 @@ final class SteamSourceTests: XCTestCase {
         special.store.steamAppId = nil
         XCTAssertEqual(GameStatus.of(recipe: special, store: ContentStore(root: dir), apps: nil, toolchainVersion: nil).userProvidedMissing.count, 2)
     }
+
+    /// Portals deutsche Stimmen: angehakt wird die Sprache, Valves Werkzeug bekommt die Dateinamen, und ein Auftrag
+    /// für die Sonderapp holt sie selbst – ein Meta-Spiel mit einzelnen Steam-Teilen (Alyx' Workshop) aber nicht.
+    func testPortalVoicesFollowTheLanguageAndTheJobFetchesThem() throws {
+        let recipes = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+            .deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("recipes")
+        let portal = try RecipeStore(directory: recipes).load(id: "portal")
+        let voices: Set = ["portal_sound_vo_german_dir.vpk", "portal_sound_vo_german_000.vpk", "portal_sound_vo_german.vpk.sound.cache"]
+        XCTAssertEqual(SteamFetcher.chosenNames(recipe: portal, locales: ["de-DE"], optionalNames: []), voices)
+        XCTAssertEqual(SteamFetcher.chosenNames(recipe: portal, locales: [], optionalNames: []), [])
+        // Jede der vier Sprachausgaben aus Steam ist für sich wählbar, mit ihrem eigenen Depot.
+        for (locale, word, depot) in [("fr-FR", "french", "407"), ("es-ES", "spanish", "406"), ("ru-RU", "russian", "405")] {
+            let files = portal.files.filter { $0.locale == locale }
+            XCTAssertEqual(Set(files.map(\.name)), ["portal_sound_vo_\(word)_dir.vpk", "portal_sound_vo_\(word)_000.vpk",
+                                                    "portal_sound_vo_\(word).vpk.sound.cache"])
+            XCTAssertEqual(Set(files.compactMap { $0.source?.steam?.depots.first?.id }), [depot])
+            XCTAssertEqual(files.compactMap(\.size).reduce(0, +), files.first?.source?.steam?.depots.first?.bytes)
+            XCTAssertEqual(SteamFetcher.chosenNames(recipe: portal, locales: [locale], optionalNames: []), Set(files.map(\.name)))
+        }
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let chosen = SteamFetcher.chosenNames(recipe: portal, locales: ["de-DE"], optionalNames: [])
+        XCTAssertEqual(Set(SteamFetcher.needed(recipe: portal, store: ContentStore(root: dir), optionalNames: chosen).files.map(\.name)), voices)
+
+        XCTAssertNil(portal.source)
+        XCTAssertTrue(SteamFetcher.fetchesInJob(portal))
+        XCTAssertTrue(SteamFetcher.fetchesInJob(steam()))
+        XCTAssertFalse(SteamFetcher.fetchesInJob(meta()))
+        var metaWithSteamParts = meta()
+        metaWithSteamParts.files.append(file("1.vpk", "workshop", "lx", steam: true))
+        XCTAssertFalse(SteamFetcher.fetchesInJob(metaWithSteamParts))
+    }
 }
