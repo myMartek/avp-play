@@ -113,6 +113,7 @@ avpplay – command line for the AVP Play core library
   avpplay steam library --steam-account <name>  the account's Steam games with an Android build
   avpplay steam prepare <app ID> --steam-account <name>   download a Steam game's Android build and write an untested recipe from it
   avpplay steam fetch <id> --steam-account <name> [--with <file name>]   get the files a recipe needs from your own Steam purchase
+  avpplay workshop <id> [list|add <link or ID>… --steam-account <name>|remove <ID>]   Steam Workshop items for a game that reads them (Half-Life: Alyx)
   avpplay purchases <id>                       confirmed in-game purchases and the add-on content that goes with them
            --skus              also name each purchase as the store names it
   avpplay plan <id>   [selection]              show what would be downloaded (no request to the download site)
@@ -200,6 +201,7 @@ avpplay – Kommandozeile zur Kern-Bibliothek von AVP Play
   avpplay steam library --steam-account <Name>  die Steam-Spiele des Kontos mit Android-Fassung
   avpplay steam prepare <App-ID> --steam-account <Name>   die Android-Fassung eines Steam-Spiels laden und daraus ein ungetestetes Rezept schreiben
   avpplay steam fetch <id> --steam-account <Name> [--with <Dateiname>]   die Dateien eines Rezepts aus dem eigenen Steam-Kauf holen
+  avpplay workshop <id> [list|add <Link oder Kennung>… --steam-account <Name>|remove <Kennung>]   Items aus dem Steam Workshop für ein Spiel, das sie liest (Half-Life: Alyx)
   avpplay purchases <id>                       bestätigte Käufe im Spiel und zugehörige Zusatzinhalte
            --skus              jeden Kauf auch so nennen, wie der Store ihn nennt
   avpplay plan <id>   [Auswahl]                zeigen, was geladen würde (keine Abfrage an die Download-Seite)
@@ -292,13 +294,15 @@ func recipe(_ o: Options, at index: Int = 1) -> Recipe {
             }
             wanted = source
         }
-        guard let wanted, wanted != shipped.source else { return shipped }
+        // Gewählte Items aus dem Steam Workshop sind wählbare Dateien des Spiels (`--with <Kennung>.vpk`).
+        let workshop = WorkshopList.load()
+        guard let wanted, wanted != shipped.source else { return workshop.apply(to: shipped) }
         guard let other = recipes.loadSources().first(where: { $0.id == shipped.id && $0.source == wanted }) else {
             // Nur wer die Quelle ausdrücklich nennt, bekommt gesagt, dass es sie nicht gibt.
-            if o.value("source") == nil { return shipped }
+            if o.value("source") == nil { return workshop.apply(to: shipped) }
             fail(L("There is no \(wanted.rawValue) recipe for \(shipped.title).", "Für \(shipped.title) gibt es kein Rezept aus \(wanted.rawValue)."))
         }
-        return other
+        return workshop.apply(to: other)
     } catch { fail("\(error)") }
 }
 
@@ -1103,6 +1107,49 @@ case "toolchains":
     }
     for (game, pin) in ToolchainChoices.load().games.sorted(by: { $0.key < $1.key }) {
         print(L("\(game) is built with version \(pin.name) (\(pin.commit)).", "\(game) wird mit Version \(pin.name) (\(pin.commit)) gebaut."))
+    }
+
+case "workshop":
+    // Items aus dem Steam Workshop eines Spiels: laden und merken, auflisten, vergessen.
+    let r = recipe(o)
+    guard let support = r.workshop else { fail("\(WorkshopError.notSupported)") }
+    var list = WorkshopList.load()
+    switch o.positional.count > 2 ? o.positional[2] : "list" {
+    case "add":
+        let ids = o.positional.dropFirst(3).compactMap(Workshop.itemId(from:))
+        guard !ids.isEmpty, ids.count == o.positional.count - 3 else {
+            fail(L("Usage: avpplay workshop <id> add <Workshop link or item ID>… --steam-account <name>",
+                   "Aufruf: avpplay workshop <id> add <Workshop-Link oder Item-Kennung>… --steam-account <Name>"))
+        }
+        guard let account = o.value("steam-account"), SteamTool.isAccountName(account) else { fail("\(SteamError.badAccountName)") }
+        do {
+            let (details, requiredBy) = try await WorkshopDetails.resolve(ids, app: support.app)
+            for d in details { print("  \(d.id)\t\(d.title)\t\(Installer.gigabytes(d.size))" + (requiredBy[d.id].map { L(" (needed by \($0.joined(separator: ", ")))", " (gebraucht von \($0.joined(separator: ", ")))") } ?? "")) }
+            let items = try WorkshopFetcher(store: contentStore(o), account: account)
+                .download(details, requiredBy: requiredBy, recipe: r, known: list.items(app: support.app), report: { print($0) })
+            for item in items { list.put(item, app: support.app) }
+            try list.save()
+            print(L("In the list. Copy them to the Vision Pro with: avpplay stage \(r.id) --with <ID>.vpk",
+                    "In der Liste. Auf die Vision Pro mit: avpplay stage \(r.id) --with <Kennung>.vpk"))
+        } catch { fail("\(error)") }
+    case "remove":
+        guard o.positional.count > 3, let id = Workshop.itemId(from: o.positional[3]),
+              let item = list.shown(app: support.app).first(where: { $0.id == id }) else {
+            fail(L("That item is not in the list.", "Dieses Item steht nicht in der Liste."))
+        }
+        list.remove(id: id, app: support.app)
+        do { try list.save() } catch { fail("\(error)") }
+        try? FileManager.default.removeItem(at: contentStore(o).url(for: item.recipeFile(support: support), in: r))
+        print(L("\(item.title) is no longer in the list and no longer on this Mac. On the Vision Pro it goes at the next copy without it.",
+                "\(item.title) steht nicht mehr in der Liste und liegt nicht mehr auf diesem Mac. Auf der Vision Pro geht es beim nächsten Kopieren ohne es."))
+    case "list":
+        let items = list.shown(app: support.app)
+        for item in items {
+            print("\(item.id)\t\(item.title)\t\(Installer.gigabytes(item.size))\t\(support.dest)/\(item.folder)" + (item.requiredBy.map { "\t← \($0.joined(separator: ","))" } ?? ""))
+        }
+        print(L("\(items.count) Workshop items. Workshop: \(support.browseURL.absoluteString)", "\(items.count) Workshop-Items. Workshop: \(support.browseURL.absoluteString)"))
+    default:
+        fail(L("Unknown: \(o.positional[2]) (add, remove, list)", "Unbekannt: \(o.positional[2]) (add, remove, list)"))
     }
 
 case "servers":

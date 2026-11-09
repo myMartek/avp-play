@@ -848,6 +848,8 @@ struct GameDetail: View {
 
                 if !languageFiles.isEmpty || game.recipe.addons != nil || !extras.isEmpty { optionalContent }
 
+                if game.recipe.workshop != nil, game.prepared { WorkshopBox(game: game) }
+
                 if game.recipe.servers != nil { ServerListBox(game: game) }
 
                 if game.recipe.source != nil { OfflineBox(game: game) }
@@ -1009,7 +1011,8 @@ struct GameDetail: View {
         }
     }
 
-    private var extras: [RecipeFile] { AppModel.extras(of: game.recipe) }
+    /// Workshop-Items haben einen eigenen Abschnitt (`WorkshopBox`).
+    private var extras: [RecipeFile] { AppModel.extras(of: game.recipe).filter { $0.role != Workshop.role } }
 
     static func languageName(_ locale: String) -> String {
         L10n.locale.localizedString(forIdentifier: locale) ?? locale
@@ -1112,6 +1115,13 @@ struct ExtraContentRow: View {
     let game: Game
     let file: RecipeFile
 
+    /// Lässt sich die Datei zum installierten Spiel legen, ohne es neu zu bauen? Bei einer Datei, die das Spiel selbst
+    /// liest (ein Workshop-Item), mit jeder Fassung; sonst nur mit einer, die zum Stand der App passt.
+    private var canCopy: Bool {
+        if case .current = game.status.onDevice { return true }
+        return file.role == Workshop.role && game.installed
+    }
+
     var body: some View {
         let chosen = model.options(for: game)
         let on = chosen.optionalNames.contains(file.name)
@@ -1146,7 +1156,7 @@ struct ExtraContentRow: View {
             }
         }
         if file.clearable == true, game.installed {
-            if case .current = game.status.onDevice {
+            if canCopy {
                 HStack(alignment: .firstTextBaseline) {
                     Text(model.extrasBlocker(for: game)
                          ?? L("If it is on the Vision Pro, “Remove from Vision Pro” frees its space there; the game clears away the rest the next time it starts.",
@@ -1168,7 +1178,7 @@ struct ExtraContentRow: View {
     /// Was nach dem Haken kommt: holen, dann aufs Gerät.
     @ViewBuilder private var next: some View {
         if model.inLibrary(file, of: game) {
-            if case .current = game.status.onDevice {
+            if canCopy {
                 HStack(alignment: .firstTextBaseline) {
                     Text(model.extrasBlocker(for: game)
                          ?? L("On this Mac. “Copy to Vision Pro” adds it to the installed game without building it again.",

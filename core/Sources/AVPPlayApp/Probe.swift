@@ -165,9 +165,11 @@ enum Probe {
     /// Ein Spiel der Übersicht aus seinem geltenden Rezept: Stand im Bestand und auf dem Gerät, Titelbild, und was
     /// zur Wahl steht (weitere geprüfte Fassungen, eine andere Kaufquelle). Für sich aufrufbar, damit ein Wechsel
     /// der Kaufquelle nur dieses eine Spiel neu bestimmen muss und nicht alles.
-    static func game(_ r: Recipe, draft: Bool, tested: Recipe?, variants: [Recipe], sources: [Recipe], paths: Paths,
+    static func game(_ given: Recipe, draft: Bool, tested: Recipe?, variants: [Recipe], sources: [Recipe], paths: Paths,
                      apps: [InstalledApp]?, toolchainRevision: AppRevision?, pin: ToolchainChoices.Pin? = nil, bundlePrefix: String,
                      metalFX: Bool? = nil, coreModProfiles: [Toolchain.CoreModsProfile] = []) -> Game {
+        // Gewählte Items aus dem Steam Workshop sind wählbare Dateien des Spiels.
+        let r = given.workshop == nil ? given : WorkshopList.load().apply(to: given)
         // Geprüft ist die Fassung ohne Wahl und jede weitere mit eigenem Rezept; alles andere ist eine
         // ungetestete aus dem Store, und dann nennt das Spiel die, die ohne Wahl gilt.
         let own = tested.map { t in variants.filter { $0.id == t.id && $0.versionCode != t.versionCode } } ?? []
