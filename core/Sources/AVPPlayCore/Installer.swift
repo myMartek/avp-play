@@ -496,7 +496,7 @@ public struct Installer: Sendable {
         // (`locale`, die Sprachausgabe eines Steam-Spiels): Valves Werkzeug kennt nur Namen, keine Sprachen.
         let chosen = Set(FetchPlan.wantedFiles(recipe: recipe, selection: selection()).filter { !$0.required }.map(\.name))
             .union(request.optionalNames)
-        guard recipe.source == .steam, let account = request.steamAccount, SteamTool.isAccountName(account),
+        guard SteamFetcher.fetchesInJob(recipe), let account = request.steamAccount, SteamTool.isAccountName(account),
               !SteamFetcher.needed(recipe: recipe, store: store, optionalNames: chosen).files.isEmpty else { return }
         let report = self.report, progress = self.progress
         try SteamFetcher(store: store, account: account).fetch(

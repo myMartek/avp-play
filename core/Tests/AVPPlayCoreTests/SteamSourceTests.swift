@@ -179,4 +179,27 @@ final class SteamSourceTests: XCTestCase {
         special.store.steamAppId = nil
         XCTAssertEqual(GameStatus.of(recipe: special, store: ContentStore(root: dir), apps: nil, toolchainVersion: nil).userProvidedMissing.count, 2)
     }
+
+    /// Portals deutsche Stimmen: angehakt wird die Sprache, Valves Werkzeug bekommt die Dateinamen, und ein Auftrag
+    /// für die Sonderapp holt sie selbst – ein Meta-Spiel mit einzelnen Steam-Teilen (Alyx' Workshop) aber nicht.
+    func testPortalVoicesFollowTheLanguageAndTheJobFetchesThem() throws {
+        let recipes = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+            .deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("recipes")
+        let portal = try RecipeStore(directory: recipes).load(id: "portal")
+        let voices: Set = ["portal_sound_vo_german_dir.vpk", "portal_sound_vo_german_000.vpk", "portal_sound_vo_german.vpk.sound.cache"]
+        XCTAssertEqual(SteamFetcher.chosenNames(recipe: portal, locales: ["de-DE"], optionalNames: []), voices)
+        XCTAssertEqual(SteamFetcher.chosenNames(recipe: portal, locales: [], optionalNames: []), [])
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let chosen = SteamFetcher.chosenNames(recipe: portal, locales: ["de-DE"], optionalNames: [])
+        XCTAssertEqual(Set(SteamFetcher.needed(recipe: portal, store: ContentStore(root: dir), optionalNames: chosen).files.map(\.name)), voices)
+
+        XCTAssertNil(portal.source)
+        XCTAssertTrue(SteamFetcher.fetchesInJob(portal))
+        XCTAssertTrue(SteamFetcher.fetchesInJob(steam()))
+        XCTAssertFalse(SteamFetcher.fetchesInJob(meta()))
+        var metaWithSteamParts = meta()
+        metaWithSteamParts.files.append(file("1.vpk", "workshop", "lx", steam: true))
+        XCTAssertFalse(SteamFetcher.fetchesInJob(metaWithSteamParts))
+    }
 }

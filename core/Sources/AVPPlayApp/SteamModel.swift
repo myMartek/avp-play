@@ -202,8 +202,9 @@ extension AppModel {
     func fetchFromSteam(_ game: Game) {
         guard steamBlocker(for: game) == nil, !steamBusy.contains(game.id) else { return }
         let id = game.id, recipe = game.recipe, account = steamAccount, paths = paths, stops = steamStops
-        // Wählbares kommt nur mit, wenn es angehakt ist.
-        let optional = Set(options(for: game).optionalNames)
+        // Wählbares kommt nur mit, wenn es angehakt ist – einzeln oder über seine Sprache (Portals deutsche Stimmen).
+        let chosen = options(for: game)
+        let optional = SteamFetcher.chosenNames(recipe: recipe, locales: Set(chosen.locales), optionalNames: Set(chosen.optionalNames))
         stops.clear(id)
         steamBusy.insert(id)
         steamProgress[id] = nil
