@@ -84,8 +84,24 @@ Half-Life: Alyx, Digital Crown and controller recovery, Portal fixes and languag
 of 875. Toolchain 875 was higher by number than 874 but lacked all of it, so Portal refused to build with it and
 other games missed the crown fixes.
 
+## What changed after the run of 2026-11-08 (toolchain 886)
+
+- **Personas beside the avatar's hands.** Each headset counts positions from its own starting point, while visionOS
+  places Personas in the space SharePlay shares. Each game now measures where its own starting point lies in that
+  shared space (from what visionOS reports about you and where the headset is) and puts the group's position there.
+  Only the place the group stands on moves; the game's head is never shifted.
+- **Starting a level under the map.** The game puts everyone on the first tee by itself, and the turn rule took that
+  back for everyone who was not on turn. For a short while after a new course or a new hole, the game's own moves now
+  always count.
+- **Taking turns.** The turn the game shows (the greyed-out ball is the one not on turn) is what the rule reads; in
+  the last run it changed back and forth correctly on the headset that sent its log. Every teleport now says in the
+  log whose turn it was.
+- **The other player's putter.** The 1.2 m rule was off in both builds, and the putter was still missing. Hiding the
+  heads now leaves alone everything that is not at the head, and the log says every ten seconds what the other
+  player's putter is doing.
+
 ## What the next two-headset run has to settle
 
-- Whether the other player's putter shows, and whether taking turns feels right.
-- Whether the picture feels responsive enough at the smaller size, and how long until a Persona turns into a tile.
-- Whether all buttons work again, and whether they stop after touching a Persona.
+- Whether each Persona now stands on its avatar, and whether the level starts on the tee for both.
+- Whether the other player's putter shows; if not, the `[personas] other player:` lines say why.
+- Whether taking turns feels right; both players' logs show who was on turn at each teleport.
