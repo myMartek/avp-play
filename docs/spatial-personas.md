@@ -76,12 +76,13 @@ in the job's log.
   button reached the game. Toolchain 875 takes the walls out and tells visionOS that controller buttons belong to
   the game.
 
-## Built on AVP Play 1.10.8 (toolchain 883)
+## Built on AVP Play 1.10.9 (toolchain 885)
 
-This test build is AVP Play 1.10.8 with the Spatial Personas changes on top: toolchain 883 is release toolchain 874
-(Steam Workshop for Half-Life: Alyx, Digital Crown and controller recovery, Portal fixes and languages) plus the nine
-Walkabout commits of 875. Toolchain 875 lacked everything of 874 although its number is higher, so Portal refused to
-build with it and other games missed the crown fixes.
+This test build is AVP Play 1.10.9 with the Spatial Personas changes on top: toolchain 885 is release toolchain 876
+(Half-Life 2 via SourceVR, the colour fixes for the SourceVR games, and everything of 874: Steam Workshop for
+Half-Life: Alyx, Digital Crown and controller recovery, Portal fixes and languages) plus the nine Walkabout commits
+of 875. Toolchain 875 was higher by number than 874 but lacked all of it, so Portal refused to build with it and
+other games missed the crown fixes.
 
 ## What the next two-headset run has to settle
 
