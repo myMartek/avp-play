@@ -110,6 +110,15 @@ session and participant, the role and the build number; no name and no address. 
 only the project's admin can read them. The start window's Personas panel has a switch, *Send the test log to the
 project's server*, to turn it off.
 
+## Built on AVP Play 1.10.12 (toolchain 894)
+
+Beta 2 changes nothing in Walkabout or in the Personas experiment. It brings the test build level with AVP Play
+1.10.12: Steam Workshop for Half-Life: Alyx from the Remote (1.10.10), and for Half-Life 2 the sky, the water in the
+canals, the weapon angle 27, the pick-up outline and the gravity gloves (1.10.11 and 1.10.12). Toolchain 894 is
+toolchain 887 with release toolchain 882 merged in. Walkabout's own changes keep the number 887, so a Walkabout
+built with Beta 1 stays current and nobody has to share it again. Half-Life 2 and Portal are offered an update
+once.
+
 ## What the next two-headset run has to settle
 
 - Whether each Persona now stands on its avatar, and whether the level starts on the tee for both.
