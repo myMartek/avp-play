@@ -8,7 +8,7 @@
  "store": {},
  "toolchain": {
   "target": "sourcevr-hl2",
-  "minCommit": "fe2bdaa"
+  "minCommit": "d671b9d"
  },
  "files": [
   {
@@ -1761,8 +1761,8 @@
     "de": "Sonderapp: kein Titel aus dem Meta-Store. Die Engine ist tinsarfals freies SourceVR; die Spieldaten stammen aus dem eigenen Steam-Kauf von Half-Life 2 (App 220)."
    },
    {
-    "en": "Played on the device from the train into the station (2026-11-09/10): faces, hands and the dark rooms render correctly. Later chapters (vehicles, Ravenholm) were not played yet.",
-    "de": "Am Gerät vom Zug bis in den Bahnhof gespielt (2026-11-09/10): Gesichter, Hände und die dunklen Räume werden richtig gezeichnet. Spätere Kapitel (Fahrzeuge, Ravenholm) sind noch nicht gespielt."
+    "en": "Played on the device from the train to the plaza in front of the station (2026-11-09/10): faces, hands, the dark rooms and the sky render correctly. Later chapters (vehicles, Ravenholm) were not played yet.",
+    "de": "Am Gerät vom Zug bis auf den Platz vor dem Bahnhof gespielt (2026-11-09/10): Gesichter, Hände, die dunklen Räume und der Himmel werden richtig gezeichnet. Spätere Kapitel (Fahrzeuge, Ravenholm) sind noch nicht gespielt."
    },
    {
     "en": "On the first start the game's own setup wizard asks for the gun hand and comfort settings; all of them can be changed later in the game's VR settings.",
@@ -1773,8 +1773,8 @@
     "de": "Menüs und Untertitel folgen der im Startfenster gewählten Sprache. Sprachausgabe auf Deutsch, Französisch, Spanisch, Russisch, Italienisch oder Koreanisch ist ein Sprachdownload (auf der Spielseite ankreuzen, je rund 770 MB); sie kommt aus dem eigenen Steam-Konto, das Half-Life 2 besitzen muss."
    },
    {
-    "en": "Needs the fork from fe2bdaa on (toolchain 876): one sRGB encode per pixel and no colour casts in dark lightmaps (without them, shadowed rooms showed yellow, red and cyan patches).",
-    "de": "Braucht den Fork ab fe2bdaa (Toolchain 876): eine sRGB-Kodierung je Pixel und keine Farbstiche in dunklen Lightmaps (ohne sie zeigten Schattenräume gelbe, rote und cyanfarbene Flecken)."
+    "en": "Needs the fork from d671b9d on (toolchain 879): one sRGB encode per pixel and no colour casts in dark lightmaps (without them, shadowed rooms showed yellow, red and cyan patches), and the sky, the hands and the light glows under the engine's reversed depth buffer (before, the sky above the station plaza was black and the hands carried black triangles).",
+    "de": "Braucht den Fork ab d671b9d (Toolchain 879): eine sRGB-Kodierung je Pixel und keine Farbstiche in dunklen Lightmaps (ohne sie zeigten Schattenräume gelbe, rote und cyanfarbene Flecken), dazu Himmel, Hände und Lichtschein unter dem umgekehrten Tiefenpuffer der Engine (vorher war der Himmel über dem Bahnhofsplatz schwarz und die Hände trugen schwarze Dreiecke)."
    }
   ]
  }
