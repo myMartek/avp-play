@@ -100,8 +100,18 @@ other games missed the crown fixes.
   heads now leaves alone everything that is not at the head, and the log says every ten seconds what the other
   player's putter is doing.
 
+## The test log on the project's server (toolchain 887)
+
+The two players of a test usually sit in two homes, so each headset's log only tells half of a run. While this test
+build runs, the game sends its lines about the experiment to the project's server (avpplay.martek.de): positions in
+the course, whose turn it is (every ten seconds, and at every teleport), the shared frame, the Personas' state and the
+focus. With them goes a random number this headset made for itself, the first eight characters of the SharePlay
+session and participant, the role and the build number; no name and no address. The server keeps them 14 days, and
+only the project's admin can read them. The start window's Personas panel has a switch, *Send the test log to the
+project's server*, to turn it off.
+
 ## What the next two-headset run has to settle
 
 - Whether each Persona now stands on its avatar, and whether the level starts on the tee for both.
 - Whether the other player's putter shows; if not, the `[personas] other player:` lines say why.
-- Whether taking turns feels right; both players' logs show who was on turn at each teleport.
+- Whether taking turns feels right, and whether the turn changes after a stroke: the server's log has both players.
