@@ -202,7 +202,8 @@ extension AppModel {
 
         // Wählbare Inhalte
         let languages = GameDetail.languageFiles(of: game.recipe)
-        let extras = AppModel.extras(of: game.recipe)
+        // Items aus dem Steam Workshop haben ihren eigenen Abschnitt (unten), wie auf dem Mac.
+        let extras = AppModel.extras(of: game.recipe).filter { $0.role != Workshop.role }
         if !languages.isEmpty || game.recipe.addons != nil || !extras.isEmpty {
             let chosen = options(for: game)
             var items: [Item] = []
@@ -241,6 +242,11 @@ extension AppModel {
                 }
             }
             sections.append(RemoteSection(id: "content", title: L("Optional Content", "Wählbare Inhalte"), items: items))
+        }
+
+        // Steam Workshop
+        if game.recipe.workshop != nil, game.prepared {
+            sections.append(remoteWorkshopSection(game))
         }
 
         // Rückmeldung
@@ -310,6 +316,53 @@ extension AppModel {
         }
         sections.append(RemoteSection(id: "know", title: L("Good to Know", "Gut zu wissen"), items: know))
         return sections
+    }
+
+    /// Der Abschnitt „Steam Workshop“, wie auf dem Mac. `workshopBrowse` ist ein Link auf den Workshop: Eine
+    /// Fernbedienung ab 1.1 öffnet ihn in ihrem eigenen Browser und schickt ein Item von dort mit `workshopAdd`; eine
+    /// ältere öffnet ihn im Browser des Systems, und der Link kommt über „Per Link oder Kennung hinzufügen“.
+    private func remoteWorkshopSection(_ game: Game) -> RemoteSection {
+        var items: [Item] = []
+        let entries = workshopEntries(game)
+        let steaming = steamBusy.contains(game.id)
+        let blocker = workshopBlocker(for: game)
+        if let url = game.recipe.workshop?.browseURL {
+            items.append(Item(id: "workshopBrowse", kind: .link, title: L("Browse Workshop …", "Workshop durchsuchen …"), value: url.absoluteString))
+        }
+        items.append(Item(id: "workshopAdd", kind: .action, title: L("Add by Link or ID …", "Per Link oder Kennung hinzufügen …"),
+                          detail: blocker ?? L("The Mac fetches the item with its Steam sign-in and then copies it to the installed game on the Vision Pro by itself.",
+                                               "Der Mac holt das Item mit seiner Steam-Anmeldung und legt es danach von selbst zum installierten Spiel auf die Vision Pro."),
+                          enabled: blocker == nil, prompt: L("Workshop link or item ID", "Workshop-Link oder Item-Kennung")))
+        if steaming {
+            items.append(Item(id: "workshopBusy", kind: .progress, title: steamSaid[game.id] ?? L("Steam is working …", "Steam arbeitet …")))
+            items.append(Item(id: "workshopStop", kind: .action, title: L("Stop", "Anhalten")))
+        } else if let said = steamSaid[game.id] {
+            items.append(Item(id: "workshopSaid", kind: .text, title: "", detail: said, style: .secondary))
+        }
+        for entry in entries {
+            var facts = [Installer.gigabytes(entry.item.size)]
+            facts.append(inLibrary(entry.file, of: game) ? L("On the Mac", "Auf dem Mac") : L("Not on the Mac yet", "Noch nicht auf dem Mac"))
+            if let needed = entry.item.requiredBy, !needed.isEmpty {
+                let names = needed.map { id in entries.first(where: { $0.item.id == id })?.item.title ?? id }
+                facts.append(L("Needed by \(names.joined(separator: ", "))", "Gebraucht von \(names.joined(separator: ", "))"))
+            }
+            items.append(Item(id: "workshopItem:\(entry.item.id)", kind: .text, title: entry.item.title, detail: facts.joined(separator: " · ")))
+            items.append(Item(id: "workshopRemove:\(entry.item.id)", kind: .action, title: L("Remove from List", "Aus der Liste nehmen"),
+                              enabled: !isBusy(game.id) && !steaming, style: .destructive,
+                              confirm: L("“\(entry.item.title)” goes off this Mac. The next sync frees its space on the Vision Pro, and the game clears away the rest at its next start.",
+                                         "„\(entry.item.title)“ geht von diesem Mac. Der nächste Abgleich gibt seinen Platz auf der Vision Pro frei, den Rest räumt das Spiel beim nächsten Start weg.")))
+        }
+        if workshopWithdrawPending(game) {
+            let why = extrasBlocker(for: game)
+            items.append(Item(id: "workshopSync", kind: .action, title: L("Sync with Vision Pro", "Mit der Vision Pro abgleichen"),
+                              detail: why ?? L("You removed items from the list. If they are on the Vision Pro, this frees their space there.",
+                                               "Du hast Items aus der Liste genommen. Liegen sie auf der Vision Pro, gibt das ihren Platz dort frei."),
+                              enabled: why == nil))
+        }
+        return RemoteSection(id: "workshop", title: L("Steam Workshop", "Steam Workshop"),
+                             footer: L("Maps, weapons and other add-ons made by players. In the game, switch an item on under Manage Addons in the main menu.",
+                                       "Karten, Waffen und andere Add-ons von Spielern. Im Spiel schaltest du ein Item im Hauptmenü unter „Addons verwalten“ ein."),
+                             items: items)
     }
 
     private func toolchainOptions(_ game: Game, cache: RemotePanelCache) -> ToolchainOptions {
@@ -693,6 +746,27 @@ extension AppModel {
             guard let value, let option = ToolchainBox.all(toolchainOptions(game, cache: cache)).first(where: { $0.id == value }) else { return nil }
             chooseToolchain(game, option)
             return toolchainNote[game.id]
+        case "workshopAdd":
+            guard game.recipe.workshop != nil else { return nil }
+            if let why = workshopBlocker(for: game) { return why }
+            guard let value, Workshop.itemId(from: value) != nil else {
+                return L("That is neither a Workshop link nor an item ID.", "Das ist weder ein Workshop-Link noch eine Item-Kennung.")
+            }
+            addWorkshop(game, from: [value])
+        case "workshopStop": stopSteam(game)
+        case _ where item.hasPrefix("workshopRemove:"):
+            let id = String(item.dropFirst(15))
+            guard let entry = workshopEntries(game).first(where: { $0.item.id == id }) else { return nil }
+            guard !isBusy(game.id), !steamBusy.contains(game.id) else {
+                return L("A job for this game is running.", "Für dieses Spiel läuft gerade ein Auftrag.")
+            }
+            removeWorkshop(game, entry.item, file: entry.file)
+        case "workshopSync":
+            if let why = extrasBlocker(for: game) { return why }
+            syncWorkshop(game)
+        case "workshopBrowse":
+            // Eine Fernbedienung vor 1.1 kennt den eigenen Browser nicht; sie öffnet den Link selbst.
+            return nil
         case "loadReleased": loadReleasedToolchains()
         case "checkPurchase": checkPurchase(game)
         case _ where item.hasPrefix("feedback:"):
