@@ -83,6 +83,7 @@ cat > "$NEW/Contents/Info.plist" <<PLIST
   <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundleShortVersionString</key><string>$VERSION</string>
   <key>CFBundleVersion</key><string>$BUILD</string>
+$( [ -n "${AVPPLAY_PRERELEASE:-}" ] && printf '  <key>AVPPlayPrerelease</key><string>%s</string>\n' "$AVPPLAY_PRERELEASE" )
   <key>CFBundleDevelopmentRegion</key><string>en</string>
   <key>CFBundleLocalizations</key><array><string>en</string><string>de</string></array>
   <key>LSMinimumSystemVersion</key><string>14.0</string>

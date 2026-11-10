@@ -2,6 +2,9 @@
 # Baut das Release zum Herunterladen: dist/release/AVP-Play-<Version>.dmg
 #
 #   AVPPLAY_APP_VERSION      Versionsnummer (Standard 1.0.0)
+#   AVPPLAY_PRERELEASE       für einen Testbau, etwa „beta.2“: die Version bleibt für die ganze Testreihe gleich,
+#                            das Abbild heißt AVP-Play-<Version>-<Testbau>.dmg und das Programm trägt den Testbau
+#                            als AVPPlayPrerelease in der Info.plist; die Build-Nummer steigt wie immer
 #   AVPPLAY_SIGN_IDENTITY    "Developer ID Application: Name (TEAMID)" – ohne sie entsteht ein Paket, das macOS
 #                            auf fremden Rechnern nicht ohne Weiteres öffnet
 #   AVPPLAY_NOTARY_PROFILE   Name eines Profils von `xcrun notarytool store-credentials` für Apples Beglaubigung
@@ -13,6 +16,9 @@ cd "$(dirname "$0")/.."
 ROOT="$(cd .. && pwd)"
 VERSION="${AVPPLAY_APP_VERSION:-1.1.16}"
 export AVPPLAY_APP_VERSION="$VERSION"
+PRE="${AVPPLAY_PRERELEASE:-}"
+[ -z "$PRE" ] || [[ "$PRE" =~ ^[a-z]+\.[0-9]+$ ]] || { echo "!! AVPPLAY_PRERELEASE wie beta.2: $PRE" >&2; exit 1; }
+export AVPPLAY_PRERELEASE="$PRE"
 
 tools/make-app.sh
 APP="$ROOT/dist/AVP Play.app"
@@ -29,7 +35,7 @@ if [ -n "${AVPPLAY_SIGN_IDENTITY:-}" ] && [ -n "${AVPPLAY_NOTARY_PROFILE:-}" ]; 
 fi
 
 OUT="$ROOT/dist/release"
-DMG="$OUT/AVP-Play-$VERSION.dmg"
+DMG="$OUT/AVP-Play-$VERSION${PRE:+-$PRE}.dmg"
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
 mkdir -p "$OUT"
