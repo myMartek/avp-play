@@ -481,6 +481,10 @@
     "de": "Menüs und Untertitel folgen der im Startfenster gewählten Sprache. Sprachausgabe auf Deutsch, Französisch, Spanisch oder Russisch ist ein Sprachdownload (auf der Spielseite anhaken, 86–147 MB); sie kommt aus dem eigenen Steam-Konto, das Portal besitzen muss."
    },
    {
+    "en": "Since toolchain 876 (2026-11-10): the picture is no longer washed out – one sRGB encode per pixel instead of two, and no colour casts in the darkest shadows (seen on the Mac; on the device in Half-Life 2, which shares the engine).",
+    "de": "Seit Toolchain 876 (2026-11-10): Das Bild ist nicht mehr ausgewaschen – eine sRGB-Kodierung je Pixel statt zwei, und keine Farbstiche in den dunkelsten Schatten (am Mac gesehen; am Gerät in Half-Life 2, das dieselbe Engine nutzt)."
+   },
+   {
     "en": "Needs the fork from 4475305 on (toolchain 874): the SourceVR targets, sRGB-compressed textures offered natively, the two defaults, the depth and texture fixes, the language, the fair lock handoff while loading.",
     "de": "Braucht den Fork ab 4475305 (Toolchain 874): die SourceVR-Targets, nativ angebotene sRGB-Kompression, die zwei Voreinstellungen, die Tiefen- und Texturkorrekturen, die Sprache, die faire Sperrübergabe beim Laden."
    }

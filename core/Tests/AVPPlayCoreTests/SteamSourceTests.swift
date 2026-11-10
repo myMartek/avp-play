@@ -211,4 +211,26 @@ final class SteamSourceTests: XCTestCase {
         metaWithSteamParts.files.append(file("1.vpk", "workshop", "lx", steam: true))
         XCTAssertFalse(SteamFetcher.fetchesInJob(metaWithSteamParts))
     }
+
+    /// Half-Life 2: sechs Sprachausgaben aus Steam, jede mit ihrem eigenen Depot und vollständig, und wie Portal
+    /// eine Sonderapp, deren Auftrag sie selbst holt.
+    func testHalfLife2VoicesFollowTheLanguage() throws {
+        let recipes = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+            .deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("recipes")
+        let hl2 = try RecipeStore(directory: recipes).load(id: "hl2")
+        XCTAssertEqual(hl2.toolchain.target, "sourcevr-hl2")
+        for (locale, word, depot) in [("de-DE", "german", "228"), ("fr-FR", "french", "227"), ("es-ES", "spanish", "226"),
+                                      ("ru-RU", "russian", "225"), ("it-IT", "italian", "232"), ("ko-KR", "koreana", "229")] {
+            let files = hl2.files.filter { $0.locale == locale }
+            XCTAssertFalse(files.isEmpty, locale)
+            XCTAssertTrue(files.allSatisfy { $0.name.hasPrefix("hl2_sound_vo_\(word)") || $0.name.contains(word) }, locale)
+            XCTAssertEqual(Set(files.compactMap { $0.source?.steam?.depots.first?.id }), [depot])
+            XCTAssertEqual(files.compactMap(\.size).reduce(0, +), files.first?.source?.steam?.depots.first?.bytes)
+            XCTAssertEqual(SteamFetcher.chosenNames(recipe: hl2, locales: [locale], optionalNames: []), Set(files.map(\.name)))
+        }
+        XCTAssertEqual(SteamFetcher.chosenNames(recipe: hl2, locales: [], optionalNames: []), [])
+        XCTAssertNil(hl2.source)
+        XCTAssertTrue(SteamFetcher.fetchesInJob(hl2))
+    }
+
 }
