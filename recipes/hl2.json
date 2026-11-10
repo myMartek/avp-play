@@ -1,0 +1,1781 @@
+{
+ "schema": 1,
+ "id": "hl2",
+ "title": "Half-Life 2",
+ "package": "com.sourcevrport.hl2vr",
+ "versionName": "0.5.5+d6c0a068",
+ "versionCode": 50501348,
+ "store": {},
+ "toolchain": {
+  "target": "sourcevr-hl2",
+  "minCommit": "fe2bdaa"
+ },
+ "files": [
+  {
+   "name": "SourceVRCore-0.1.28.apk",
+   "role": "apk",
+   "id": "",
+   "size": 740888356,
+   "sha256": "5b0acd75fb4adba92e63bc5b5266e6a1b1d3aa721e82fc0995893d0792050976",
+   "required": true,
+   "dest": "",
+   "localName": "sourcevr-hl2.apk",
+   "source": {
+    "kind": "url",
+    "url": "https://github.com/tinsarfal/SourceVR/releases/download/0.1.28/SourceVRCore-0.1.28.apk",
+    "hint": {
+     "en": "SourceVR 0.1.28 by tinsarfal: the Source engine for Quest headsets, one package for Valve's games. It brings no game content.",
+     "de": "SourceVR 0.1.28 von tinsarfal: die Source-Engine für Quest-Headsets, ein Paket für Valves Spiele. Spielinhalte bringt es nicht mit."
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_german.vpk.sound.cache",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 4477486,
+   "sha256": "fa8cd465d97fc89b574bc4bd063b25556c6bd34ab5dc641609592b75259b469c",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "de-DE",
+   "title": {
+    "en": "German voice-over (Valve)",
+    "de": "Deutsche Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The German voices of your own Half-Life 2 (Steam depot 228). With a Steam sign-in under Setup the app fetches them for you (about 769 MB).",
+     "de": "Die deutschen Stimmen deines eigenen Half-Life 2 (Steam-Depot 228). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 769 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "228",
+       "manifest": "6436857496404272512",
+       "bytes": 768779276
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_german_000.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 109899266,
+   "sha256": "179202e7c42af4eb034a1639afb037659714ea42c2f2efa51e2e1b0f6e9afea9",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "de-DE",
+   "title": {
+    "en": "German voice-over (Valve)",
+    "de": "Deutsche Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The German voices of your own Half-Life 2 (Steam depot 228). With a Steam sign-in under Setup the app fetches them for you (about 769 MB).",
+     "de": "Die deutschen Stimmen deines eigenen Half-Life 2 (Steam-Depot 228). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 769 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "228",
+       "manifest": "6436857496404272512",
+       "bytes": 768779276
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_german_001.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 109282840,
+   "sha256": "c4674763ba38dfc0fb3400c8ed7a4ed6297b4f65236ddaea208fe8657d96fb3b",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "de-DE",
+   "title": {
+    "en": "German voice-over (Valve)",
+    "de": "Deutsche Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The German voices of your own Half-Life 2 (Steam depot 228). With a Steam sign-in under Setup the app fetches them for you (about 769 MB).",
+     "de": "Die deutschen Stimmen deines eigenen Half-Life 2 (Steam-Depot 228). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 769 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "228",
+       "manifest": "6436857496404272512",
+       "bytes": 768779276
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_german_002.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 109174876,
+   "sha256": "9953e6283f16aa25eb41fd600dc0c66be37151b5b92cc9059778bd5af4d602c6",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "de-DE",
+   "title": {
+    "en": "German voice-over (Valve)",
+    "de": "Deutsche Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The German voices of your own Half-Life 2 (Steam depot 228). With a Steam sign-in under Setup the app fetches them for you (about 769 MB).",
+     "de": "Die deutschen Stimmen deines eigenen Half-Life 2 (Steam-Depot 228). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 769 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "228",
+       "manifest": "6436857496404272512",
+       "bytes": 768779276
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_german_003.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 109016237,
+   "sha256": "2186e7c3f2880e0ec42445ef9d44c0870cccdb760a830586311419569d631e52",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "de-DE",
+   "title": {
+    "en": "German voice-over (Valve)",
+    "de": "Deutsche Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The German voices of your own Half-Life 2 (Steam depot 228). With a Steam sign-in under Setup the app fetches them for you (about 769 MB).",
+     "de": "Die deutschen Stimmen deines eigenen Half-Life 2 (Steam-Depot 228). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 769 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "228",
+       "manifest": "6436857496404272512",
+       "bytes": 768779276
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_german_004.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 109046055,
+   "sha256": "012165c186bb4a7960e1d996a9165236cb0a14d7394baa40fe12ee6b18ac057a",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "de-DE",
+   "title": {
+    "en": "German voice-over (Valve)",
+    "de": "Deutsche Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The German voices of your own Half-Life 2 (Steam depot 228). With a Steam sign-in under Setup the app fetches them for you (about 769 MB).",
+     "de": "Die deutschen Stimmen deines eigenen Half-Life 2 (Steam-Depot 228). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 769 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "228",
+       "manifest": "6436857496404272512",
+       "bytes": 768779276
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_german_005.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 108917210,
+   "sha256": "bbfcc047d279275acce3058c56c2cdbb7390baba69e4ce959859dfc2414ba0d9",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "de-DE",
+   "title": {
+    "en": "German voice-over (Valve)",
+    "de": "Deutsche Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The German voices of your own Half-Life 2 (Steam depot 228). With a Steam sign-in under Setup the app fetches them for you (about 769 MB).",
+     "de": "Die deutschen Stimmen deines eigenen Half-Life 2 (Steam-Depot 228). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 769 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "228",
+       "manifest": "6436857496404272512",
+       "bytes": 768779276
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_german_006.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 108830904,
+   "sha256": "619b6677d904504ef5bc204176422eab6f69d4e76f434cda2fc522959f70c60c",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "de-DE",
+   "title": {
+    "en": "German voice-over (Valve)",
+    "de": "Deutsche Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The German voices of your own Half-Life 2 (Steam depot 228). With a Steam sign-in under Setup the app fetches them for you (about 769 MB).",
+     "de": "Die deutschen Stimmen deines eigenen Half-Life 2 (Steam-Depot 228). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 769 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "228",
+       "manifest": "6436857496404272512",
+       "bytes": 768779276
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_german_dir.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 134402,
+   "sha256": "d83333982f05b0e5c8dbde3181e7bc1776642bc00f4c9ad9accace2f9a8c33bd",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "de-DE",
+   "title": {
+    "en": "German voice-over (Valve)",
+    "de": "Deutsche Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The German voices of your own Half-Life 2 (Steam depot 228). With a Steam sign-in under Setup the app fetches them for you (about 769 MB).",
+     "de": "Die deutschen Stimmen deines eigenen Half-Life 2 (Steam-Depot 228). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 769 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "228",
+       "manifest": "6436857496404272512",
+       "bytes": 768779276
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_french.vpk.sound.cache",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 4442259,
+   "sha256": "6f23bffef87f2bc2a23846fa6690d987aca7936fa8e7bd442db31a22544e99f3",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "fr-FR",
+   "title": {
+    "en": "French voice-over (Valve)",
+    "de": "Französische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The French voices of your own Half-Life 2 (Steam depot 227). With a Steam sign-in under Setup the app fetches them for you (about 766 MB).",
+     "de": "Die französischen Stimmen deines eigenen Half-Life 2 (Steam-Depot 227). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 766 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "227",
+       "manifest": "7050670928848178928",
+       "bytes": 766271181
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_french_000.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 109092854,
+   "sha256": "74f4a219dea978455f7eeb9e311f8cd7eb872ddd7d71b9108f32541c339326a2",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "fr-FR",
+   "title": {
+    "en": "French voice-over (Valve)",
+    "de": "Französische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The French voices of your own Half-Life 2 (Steam depot 227). With a Steam sign-in under Setup the app fetches them for you (about 766 MB).",
+     "de": "Die französischen Stimmen deines eigenen Half-Life 2 (Steam-Depot 227). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 766 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "227",
+       "manifest": "7050670928848178928",
+       "bytes": 766271181
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_french_001.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 111303789,
+   "sha256": "3102e6a8c92c7b8982d8de28a247175dccda0446a2b9156ca0142b50750c8bf6",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "fr-FR",
+   "title": {
+    "en": "French voice-over (Valve)",
+    "de": "Französische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The French voices of your own Half-Life 2 (Steam depot 227). With a Steam sign-in under Setup the app fetches them for you (about 766 MB).",
+     "de": "Die französischen Stimmen deines eigenen Half-Life 2 (Steam-Depot 227). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 766 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "227",
+       "manifest": "7050670928848178928",
+       "bytes": 766271181
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_french_002.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 108340663,
+   "sha256": "8fd07abd5dceb37327e0903843a58a53cb0e8e8c4c1866dade5bb2febd9c7ebc",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "fr-FR",
+   "title": {
+    "en": "French voice-over (Valve)",
+    "de": "Französische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The French voices of your own Half-Life 2 (Steam depot 227). With a Steam sign-in under Setup the app fetches them for you (about 766 MB).",
+     "de": "Die französischen Stimmen deines eigenen Half-Life 2 (Steam-Depot 227). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 766 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "227",
+       "manifest": "7050670928848178928",
+       "bytes": 766271181
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_french_003.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 108353451,
+   "sha256": "d5e83c3cde2273cd83751f8d1444464ea3808b1392ffca432fe93ba4a4f58624",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "fr-FR",
+   "title": {
+    "en": "French voice-over (Valve)",
+    "de": "Französische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The French voices of your own Half-Life 2 (Steam depot 227). With a Steam sign-in under Setup the app fetches them for you (about 766 MB).",
+     "de": "Die französischen Stimmen deines eigenen Half-Life 2 (Steam-Depot 227). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 766 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "227",
+       "manifest": "7050670928848178928",
+       "bytes": 766271181
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_french_004.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 108232952,
+   "sha256": "9ea0c23f830b7373e85888d1bcb54ae3a4db0b74c99dfdf47a0c6d720644387b",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "fr-FR",
+   "title": {
+    "en": "French voice-over (Valve)",
+    "de": "Französische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The French voices of your own Half-Life 2 (Steam depot 227). With a Steam sign-in under Setup the app fetches them for you (about 766 MB).",
+     "de": "Die französischen Stimmen deines eigenen Half-Life 2 (Steam-Depot 227). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 766 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "227",
+       "manifest": "7050670928848178928",
+       "bytes": 766271181
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_french_005.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 108338470,
+   "sha256": "fd6261415093bdf540a070df3f7a8b38d67783dee572e40405ac646e154dc2f2",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "fr-FR",
+   "title": {
+    "en": "French voice-over (Valve)",
+    "de": "Französische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The French voices of your own Half-Life 2 (Steam depot 227). With a Steam sign-in under Setup the app fetches them for you (about 766 MB).",
+     "de": "Die französischen Stimmen deines eigenen Half-Life 2 (Steam-Depot 227). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 766 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "227",
+       "manifest": "7050670928848178928",
+       "bytes": 766271181
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_french_006.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 108032286,
+   "sha256": "2951b4b92a657d5ef2bd329b073a4d3ed0d29d8627c05bcf664df81dd615ec0b",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "fr-FR",
+   "title": {
+    "en": "French voice-over (Valve)",
+    "de": "Französische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The French voices of your own Half-Life 2 (Steam depot 227). With a Steam sign-in under Setup the app fetches them for you (about 766 MB).",
+     "de": "Die französischen Stimmen deines eigenen Half-Life 2 (Steam-Depot 227). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 766 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "227",
+       "manifest": "7050670928848178928",
+       "bytes": 766271181
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_french_dir.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 134457,
+   "sha256": "538dc3e486b5162015fa28eca74ff6a51d7a4b5834ada77b96fc29f58ef23286",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "fr-FR",
+   "title": {
+    "en": "French voice-over (Valve)",
+    "de": "Französische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The French voices of your own Half-Life 2 (Steam depot 227). With a Steam sign-in under Setup the app fetches them for you (about 766 MB).",
+     "de": "Die französischen Stimmen deines eigenen Half-Life 2 (Steam-Depot 227). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 766 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "227",
+       "manifest": "7050670928848178928",
+       "bytes": 766271181
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_spanish.vpk.sound.cache",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 4534373,
+   "sha256": "be5259cd911735630c173249e3c0cf0927899627fa9db44f04894deda4fdf188",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "es-ES",
+   "title": {
+    "en": "Spanish voice-over (Valve)",
+    "de": "Spanische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Spanish voices of your own Half-Life 2 (Steam depot 226). With a Steam sign-in under Setup the app fetches them for you (about 768 MB).",
+     "de": "Die spanischen Stimmen deines eigenen Half-Life 2 (Steam-Depot 226). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 768 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "226",
+       "manifest": "2714357289061426116",
+       "bytes": 767863769
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_spanish_000.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 109509817,
+   "sha256": "97b2856cd33268dbd6885cc28049d2914e8a0786826c60dbcedbc13e8ed545d5",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "es-ES",
+   "title": {
+    "en": "Spanish voice-over (Valve)",
+    "de": "Spanische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Spanish voices of your own Half-Life 2 (Steam depot 226). With a Steam sign-in under Setup the app fetches them for you (about 768 MB).",
+     "de": "Die spanischen Stimmen deines eigenen Half-Life 2 (Steam-Depot 226). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 768 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "226",
+       "manifest": "2714357289061426116",
+       "bytes": 767863769
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_spanish_001.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 109556787,
+   "sha256": "7b437698c0bf20d7b92e5f0442008823923443bd6dcab9bc41329da4fa06a311",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "es-ES",
+   "title": {
+    "en": "Spanish voice-over (Valve)",
+    "de": "Spanische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Spanish voices of your own Half-Life 2 (Steam depot 226). With a Steam sign-in under Setup the app fetches them for you (about 768 MB).",
+     "de": "Die spanischen Stimmen deines eigenen Half-Life 2 (Steam-Depot 226). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 768 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "226",
+       "manifest": "2714357289061426116",
+       "bytes": 767863769
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_spanish_002.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 108928424,
+   "sha256": "4ae775292c2ef24f37b20dccbd757c4842003800abc684569dc0b7c4700ec3e2",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "es-ES",
+   "title": {
+    "en": "Spanish voice-over (Valve)",
+    "de": "Spanische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Spanish voices of your own Half-Life 2 (Steam depot 226). With a Steam sign-in under Setup the app fetches them for you (about 768 MB).",
+     "de": "Die spanischen Stimmen deines eigenen Half-Life 2 (Steam-Depot 226). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 768 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "226",
+       "manifest": "2714357289061426116",
+       "bytes": 767863769
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_spanish_003.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 108886990,
+   "sha256": "e7fddc4e1a9f387ffdb3d0221a272aeb96702571a506cc964652fe43fbf21abc",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "es-ES",
+   "title": {
+    "en": "Spanish voice-over (Valve)",
+    "de": "Spanische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Spanish voices of your own Half-Life 2 (Steam depot 226). With a Steam sign-in under Setup the app fetches them for you (about 768 MB).",
+     "de": "Die spanischen Stimmen deines eigenen Half-Life 2 (Steam-Depot 226). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 768 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "226",
+       "manifest": "2714357289061426116",
+       "bytes": 767863769
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_spanish_004.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 108776324,
+   "sha256": "c56d7e031ee43f5e467e5fbd1956c08ba4356a6b74e13cf0d2386627c6a88bb4",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "es-ES",
+   "title": {
+    "en": "Spanish voice-over (Valve)",
+    "de": "Spanische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Spanish voices of your own Half-Life 2 (Steam depot 226). With a Steam sign-in under Setup the app fetches them for you (about 768 MB).",
+     "de": "Die spanischen Stimmen deines eigenen Half-Life 2 (Steam-Depot 226). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 768 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "226",
+       "manifest": "2714357289061426116",
+       "bytes": 767863769
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_spanish_005.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 108926273,
+   "sha256": "c3951632331eb2da57c44ffe7a74aa90bb9e8e72a72371c74fe491d5009c735c",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "es-ES",
+   "title": {
+    "en": "Spanish voice-over (Valve)",
+    "de": "Spanische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Spanish voices of your own Half-Life 2 (Steam depot 226). With a Steam sign-in under Setup the app fetches them for you (about 768 MB).",
+     "de": "Die spanischen Stimmen deines eigenen Half-Life 2 (Steam-Depot 226). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 768 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "226",
+       "manifest": "2714357289061426116",
+       "bytes": 767863769
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_spanish_006.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 108610380,
+   "sha256": "35ad5ba60905da4012883d9bfc2d0c4eb697ceb70bd72b50c157307724330843",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "es-ES",
+   "title": {
+    "en": "Spanish voice-over (Valve)",
+    "de": "Spanische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Spanish voices of your own Half-Life 2 (Steam depot 226). With a Steam sign-in under Setup the app fetches them for you (about 768 MB).",
+     "de": "Die spanischen Stimmen deines eigenen Half-Life 2 (Steam-Depot 226). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 768 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "226",
+       "manifest": "2714357289061426116",
+       "bytes": 767863769
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_spanish_dir.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 134401,
+   "sha256": "9cefcfaafa601847c172b8e8b18c6d3ca53d1b082b73acd3c00dbce8c992ad2c",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "es-ES",
+   "title": {
+    "en": "Spanish voice-over (Valve)",
+    "de": "Spanische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Spanish voices of your own Half-Life 2 (Steam depot 226). With a Steam sign-in under Setup the app fetches them for you (about 768 MB).",
+     "de": "Die spanischen Stimmen deines eigenen Half-Life 2 (Steam-Depot 226). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 768 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "226",
+       "manifest": "2714357289061426116",
+       "bytes": 767863769
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_russian.vpk.sound.cache",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 6093250,
+   "sha256": "e58df3e9ddf35a97815c091f56eaac9f2db7ee272712f87d2e2033eb6ceb4ac2",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "ru-RU",
+   "title": {
+    "en": "Russian voice-over (Valve)",
+    "de": "Russische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Russian voices of your own Half-Life 2 (Steam depot 225). With a Steam sign-in under Setup the app fetches them for you (about 815 MB).",
+     "de": "Die russischen Stimmen deines eigenen Half-Life 2 (Steam-Depot 225). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 815 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "225",
+       "manifest": "1805911430347137415",
+       "bytes": 815201947
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_russian_000.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 115796489,
+   "sha256": "6847f08aa55d94d35d77905d37a439c81f014739c3e9cf699db12c81d9dee36e",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "ru-RU",
+   "title": {
+    "en": "Russian voice-over (Valve)",
+    "de": "Russische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Russian voices of your own Half-Life 2 (Steam depot 225). With a Steam sign-in under Setup the app fetches them for you (about 815 MB).",
+     "de": "Die russischen Stimmen deines eigenen Half-Life 2 (Steam-Depot 225). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 815 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "225",
+       "manifest": "1805911430347137415",
+       "bytes": 815201947
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_russian_001.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 116864103,
+   "sha256": "f742c93a107d6004acbf4cc000dc63add02ecec7d2fc6be375897b088e02d233",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "ru-RU",
+   "title": {
+    "en": "Russian voice-over (Valve)",
+    "de": "Russische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Russian voices of your own Half-Life 2 (Steam depot 225). With a Steam sign-in under Setup the app fetches them for you (about 815 MB).",
+     "de": "Die russischen Stimmen deines eigenen Half-Life 2 (Steam-Depot 225). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 815 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "225",
+       "manifest": "1805911430347137415",
+       "bytes": 815201947
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_russian_002.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 115276754,
+   "sha256": "04107cbc0a4298e7824d58f805bd1b89043a28c1c97aedb5359c3ec73370835f",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "ru-RU",
+   "title": {
+    "en": "Russian voice-over (Valve)",
+    "de": "Russische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Russian voices of your own Half-Life 2 (Steam depot 225). With a Steam sign-in under Setup the app fetches them for you (about 815 MB).",
+     "de": "Die russischen Stimmen deines eigenen Half-Life 2 (Steam-Depot 225). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 815 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "225",
+       "manifest": "1805911430347137415",
+       "bytes": 815201947
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_russian_003.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 115350382,
+   "sha256": "1d286a0b7479df575c3a510c13f44af30157b36d951fbaf93068d04e9e485cea",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "ru-RU",
+   "title": {
+    "en": "Russian voice-over (Valve)",
+    "de": "Russische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Russian voices of your own Half-Life 2 (Steam depot 225). With a Steam sign-in under Setup the app fetches them for you (about 815 MB).",
+     "de": "Die russischen Stimmen deines eigenen Half-Life 2 (Steam-Depot 225). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 815 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "225",
+       "manifest": "1805911430347137415",
+       "bytes": 815201947
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_russian_004.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 115289338,
+   "sha256": "1a8f5e12394700389834844e97df7cea6000fea61807a39c890f23e26bc89111",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "ru-RU",
+   "title": {
+    "en": "Russian voice-over (Valve)",
+    "de": "Russische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Russian voices of your own Half-Life 2 (Steam depot 225). With a Steam sign-in under Setup the app fetches them for you (about 815 MB).",
+     "de": "Die russischen Stimmen deines eigenen Half-Life 2 (Steam-Depot 225). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 815 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "225",
+       "manifest": "1805911430347137415",
+       "bytes": 815201947
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_russian_005.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 115311143,
+   "sha256": "b83dbe3d57b983ce58d623070599f1bfbfb6a9b2dd46841dc8ecb5bc4013174c",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "ru-RU",
+   "title": {
+    "en": "Russian voice-over (Valve)",
+    "de": "Russische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Russian voices of your own Half-Life 2 (Steam depot 225). With a Steam sign-in under Setup the app fetches them for you (about 815 MB).",
+     "de": "Die russischen Stimmen deines eigenen Half-Life 2 (Steam-Depot 225). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 815 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "225",
+       "manifest": "1805911430347137415",
+       "bytes": 815201947
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_russian_006.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 115084643,
+   "sha256": "d7127415fc4d58b84257cfff1855ebff1b915512e79d504716990936e89ab938",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "ru-RU",
+   "title": {
+    "en": "Russian voice-over (Valve)",
+    "de": "Russische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Russian voices of your own Half-Life 2 (Steam depot 225). With a Steam sign-in under Setup the app fetches them for you (about 815 MB).",
+     "de": "Die russischen Stimmen deines eigenen Half-Life 2 (Steam-Depot 225). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 815 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "225",
+       "manifest": "1805911430347137415",
+       "bytes": 815201947
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_russian_dir.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 135845,
+   "sha256": "1413c8fb94dcc751455b134d941d4282ebe49c5e441473812f8881b550c09fb9",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "ru-RU",
+   "title": {
+    "en": "Russian voice-over (Valve)",
+    "de": "Russische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Russian voices of your own Half-Life 2 (Steam depot 225). With a Steam sign-in under Setup the app fetches them for you (about 815 MB).",
+     "de": "Die russischen Stimmen deines eigenen Half-Life 2 (Steam-Depot 225). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 815 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "225",
+       "manifest": "1805911430347137415",
+       "bytes": 815201947
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_italian.vpk.sound.cache",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 4543066,
+   "sha256": "af1cbc52d5cef4fd0f93ae44f78fd6b6dae9b337194f3b85a8bbcfa312e665ba",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "it-IT",
+   "title": {
+    "en": "Italian voice-over (Valve)",
+    "de": "Italienische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Italian voices of your own Half-Life 2 (Steam depot 232). With a Steam sign-in under Setup the app fetches them for you (about 769 MB).",
+     "de": "Die italienischen Stimmen deines eigenen Half-Life 2 (Steam-Depot 232). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 769 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "232",
+       "manifest": "5674666767121162923",
+       "bytes": 768973777
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_italian_000.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 109989602,
+   "sha256": "8bc04a203c73b2bd8e3046afad6580d24e2faf9d54efe8abc86069985e58a809",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "it-IT",
+   "title": {
+    "en": "Italian voice-over (Valve)",
+    "de": "Italienische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Italian voices of your own Half-Life 2 (Steam depot 232). With a Steam sign-in under Setup the app fetches them for you (about 769 MB).",
+     "de": "Die italienischen Stimmen deines eigenen Half-Life 2 (Steam-Depot 232). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 769 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "232",
+       "manifest": "5674666767121162923",
+       "bytes": 768973777
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_italian_001.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 109219077,
+   "sha256": "2569f613c3e15e9cce79c959c97d40d6a9caa5620244956313284914bd175420",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "it-IT",
+   "title": {
+    "en": "Italian voice-over (Valve)",
+    "de": "Italienische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Italian voices of your own Half-Life 2 (Steam depot 232). With a Steam sign-in under Setup the app fetches them for you (about 769 MB).",
+     "de": "Die italienischen Stimmen deines eigenen Half-Life 2 (Steam-Depot 232). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 769 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "232",
+       "manifest": "5674666767121162923",
+       "bytes": 768973777
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_italian_002.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 109219307,
+   "sha256": "9e77ca37c98adc846c4426ba036385c13d680d1bb3a191cdb9ea9dc50b0064e6",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "it-IT",
+   "title": {
+    "en": "Italian voice-over (Valve)",
+    "de": "Italienische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Italian voices of your own Half-Life 2 (Steam depot 232). With a Steam sign-in under Setup the app fetches them for you (about 769 MB).",
+     "de": "Die italienischen Stimmen deines eigenen Half-Life 2 (Steam-Depot 232). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 769 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "232",
+       "manifest": "5674666767121162923",
+       "bytes": 768973777
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_italian_003.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 109009499,
+   "sha256": "c2830fe66838fdf31410eaa2dc643c262582050e00e24abd24ae0096088499c5",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "it-IT",
+   "title": {
+    "en": "Italian voice-over (Valve)",
+    "de": "Italienische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Italian voices of your own Half-Life 2 (Steam depot 232). With a Steam sign-in under Setup the app fetches them for you (about 769 MB).",
+     "de": "Die italienischen Stimmen deines eigenen Half-Life 2 (Steam-Depot 232). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 769 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "232",
+       "manifest": "5674666767121162923",
+       "bytes": 768973777
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_italian_004.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 109068476,
+   "sha256": "d7fff2617101220ac21ed7d396cbb7620ff0c0d96f0458da9bd62951330db7dd",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "it-IT",
+   "title": {
+    "en": "Italian voice-over (Valve)",
+    "de": "Italienische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Italian voices of your own Half-Life 2 (Steam depot 232). With a Steam sign-in under Setup the app fetches them for you (about 769 MB).",
+     "de": "Die italienischen Stimmen deines eigenen Half-Life 2 (Steam-Depot 232). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 769 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "232",
+       "manifest": "5674666767121162923",
+       "bytes": 768973777
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_italian_005.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 108936092,
+   "sha256": "5ea8c32d3fdbeb2f1edc811c48e69825525320da715f3ca9410888518ba9208a",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "it-IT",
+   "title": {
+    "en": "Italian voice-over (Valve)",
+    "de": "Italienische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Italian voices of your own Half-Life 2 (Steam depot 232). With a Steam sign-in under Setup the app fetches them for you (about 769 MB).",
+     "de": "Die italienischen Stimmen deines eigenen Half-Life 2 (Steam-Depot 232). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 769 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "232",
+       "manifest": "5674666767121162923",
+       "bytes": 768973777
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_italian_006.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 108854228,
+   "sha256": "4f63174891a430d2b2faed8ebf16dfe5ea32384fba0b38374befc834cdf87024",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "it-IT",
+   "title": {
+    "en": "Italian voice-over (Valve)",
+    "de": "Italienische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Italian voices of your own Half-Life 2 (Steam depot 232). With a Steam sign-in under Setup the app fetches them for you (about 769 MB).",
+     "de": "Die italienischen Stimmen deines eigenen Half-Life 2 (Steam-Depot 232). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 769 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "232",
+       "manifest": "5674666767121162923",
+       "bytes": 768973777
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_italian_dir.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 134430,
+   "sha256": "a00577cf3cf068bf807b6efb7b77201d6ea4af4c6c01d768d11e2fd068c28795",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "it-IT",
+   "title": {
+    "en": "Italian voice-over (Valve)",
+    "de": "Italienische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Italian voices of your own Half-Life 2 (Steam depot 232). With a Steam sign-in under Setup the app fetches them for you (about 769 MB).",
+     "de": "Die italienischen Stimmen deines eigenen Half-Life 2 (Steam-Depot 232). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 769 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "232",
+       "manifest": "5674666767121162923",
+       "bytes": 768973777
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_koreana.vpk.sound.cache",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 4506456,
+   "sha256": "ac02a8fc347f034b620654092973a8c78636f323ea4d042f2027f42525f51ea6",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "ko-KR",
+   "title": {
+    "en": "Korean voice-over (Valve)",
+    "de": "Koreanische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Korean voices of your own Half-Life 2 (Steam depot 229). With a Steam sign-in under Setup the app fetches them for you (about 771 MB).",
+     "de": "Die koreanischen Stimmen deines eigenen Half-Life 2 (Steam-Depot 229). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 771 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "229",
+       "manifest": "8840945565145076094",
+       "bytes": 770717838
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_koreana_000.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 109763232,
+   "sha256": "152808eb98bfc9c38e9b1639d5f77874a99cc43ee6f1b5cb06706cbfd58d372f",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "ko-KR",
+   "title": {
+    "en": "Korean voice-over (Valve)",
+    "de": "Koreanische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Korean voices of your own Half-Life 2 (Steam depot 229). With a Steam sign-in under Setup the app fetches them for you (about 771 MB).",
+     "de": "Die koreanischen Stimmen deines eigenen Half-Life 2 (Steam-Depot 229). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 771 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "229",
+       "manifest": "8840945565145076094",
+       "bytes": 770717838
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_koreana_001.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 109757657,
+   "sha256": "b956c8b5668053aed0a85a140ad81d9b28aefb01d06800d33e8aa0a9306e5262",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "ko-KR",
+   "title": {
+    "en": "Korean voice-over (Valve)",
+    "de": "Koreanische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Korean voices of your own Half-Life 2 (Steam depot 229). With a Steam sign-in under Setup the app fetches them for you (about 771 MB).",
+     "de": "Die koreanischen Stimmen deines eigenen Half-Life 2 (Steam-Depot 229). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 771 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "229",
+       "manifest": "8840945565145076094",
+       "bytes": 770717838
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_koreana_002.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 109484411,
+   "sha256": "565e16cd38abbdf60d1e5b159967e7b66f773693b7584a9ca421b2a9f8648270",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "ko-KR",
+   "title": {
+    "en": "Korean voice-over (Valve)",
+    "de": "Koreanische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Korean voices of your own Half-Life 2 (Steam depot 229). With a Steam sign-in under Setup the app fetches them for you (about 771 MB).",
+     "de": "Die koreanischen Stimmen deines eigenen Half-Life 2 (Steam-Depot 229). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 771 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "229",
+       "manifest": "8840945565145076094",
+       "bytes": 770717838
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_koreana_003.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 109435787,
+   "sha256": "802b1411012903bf1931ed1f0bd4320f0da4cf07ce1580dd06f68bc4532fc090",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "ko-KR",
+   "title": {
+    "en": "Korean voice-over (Valve)",
+    "de": "Koreanische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Korean voices of your own Half-Life 2 (Steam depot 229). With a Steam sign-in under Setup the app fetches them for you (about 771 MB).",
+     "de": "Die koreanischen Stimmen deines eigenen Half-Life 2 (Steam-Depot 229). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 771 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "229",
+       "manifest": "8840945565145076094",
+       "bytes": 770717838
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_koreana_004.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 109312696,
+   "sha256": "3a06e9eaeda43c40bb2238b96ac2c70323fb49bd488bf9d0b7fe827d1d108bf3",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "ko-KR",
+   "title": {
+    "en": "Korean voice-over (Valve)",
+    "de": "Koreanische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Korean voices of your own Half-Life 2 (Steam depot 229). With a Steam sign-in under Setup the app fetches them for you (about 771 MB).",
+     "de": "Die koreanischen Stimmen deines eigenen Half-Life 2 (Steam-Depot 229). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 771 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "229",
+       "manifest": "8840945565145076094",
+       "bytes": 770717838
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_koreana_005.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 109289816,
+   "sha256": "220788cfb18c91864039b94a5bdc82a9ab4d80df94c2565d2ac9fe3d8a3d41d4",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "ko-KR",
+   "title": {
+    "en": "Korean voice-over (Valve)",
+    "de": "Koreanische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Korean voices of your own Half-Life 2 (Steam depot 229). With a Steam sign-in under Setup the app fetches them for you (about 771 MB).",
+     "de": "Die koreanischen Stimmen deines eigenen Half-Life 2 (Steam-Depot 229). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 771 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "229",
+       "manifest": "8840945565145076094",
+       "bytes": 770717838
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_koreana_006.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 109033245,
+   "sha256": "f2669c4a899e8b65eb8d69b19f7b9738eb9e1bd860f95e0ba561b744393f8183",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "ko-KR",
+   "title": {
+    "en": "Korean voice-over (Valve)",
+    "de": "Koreanische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Korean voices of your own Half-Life 2 (Steam depot 229). With a Steam sign-in under Setup the app fetches them for you (about 771 MB).",
+     "de": "Die koreanischen Stimmen deines eigenen Half-Life 2 (Steam-Depot 229). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 771 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "229",
+       "manifest": "8840945565145076094",
+       "bytes": 770717838
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "hl2_sound_vo_koreana_dir.vpk",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 134538,
+   "sha256": "438e511ffe638f2af1bb33e242805a122a5d163739576e33d128969783aecdff",
+   "dest": "android-files/SourceVRPort/common/hl2",
+   "locale": "ko-KR",
+   "title": {
+    "en": "Korean voice-over (Valve)",
+    "de": "Koreanische Sprachausgabe (Valve)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Korean voices of your own Half-Life 2 (Steam depot 229). With a Steam sign-in under Setup the app fetches them for you (about 771 MB).",
+     "de": "Die koreanischen Stimmen deines eigenen Half-Life 2 (Steam-Depot 229). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 771 MB)."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "229",
+       "manifest": "8840945565145076094",
+       "bytes": 770717838
+      }
+     ]
+    }
+   }
+  }
+ ],
+ "trees": [
+  {
+   "name": "gamedata",
+   "role": "data",
+   "dest": "android-files/SourceVRPort/common",
+   "only": [
+    "hl2",
+    "platform"
+   ],
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The folders 'hl2' and 'platform' of your own Half-Life 2 (Steam, app 220). With a Steam sign-in under Setup the app fetches them for you (about 5 GB). By hand: choose the folder that contains both, for example the 'Half-Life 2' folder of a Steam library on Windows or Linux.",
+     "de": "Die Ordner 'hl2' und 'platform' deines eigenen Half-Life 2 (Steam, App 220). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 5 GB). Von Hand: den Ordner wählen, der beide enthält, etwa den Ordner 'Half-Life 2' einer Steam-Bibliothek unter Windows oder Linux."
+    },
+    "steam": {
+     "app": "220",
+     "depots": [
+      {
+       "id": "221",
+       "manifest": "4622516436473900521",
+       "bytes": 5437140737
+      }
+     ]
+    }
+   },
+   "markers": [
+    {
+     "path": "hl2/hl2_misc_dir.vpk",
+     "size": 718054,
+     "sha256": "a42bca25a56de84950dd5f5fc5562401a5a776fc031a892e9fed734e635f55a4"
+    },
+    {
+     "path": "hl2/maps/d1_trainstation_01.bsp",
+     "size": 27531544,
+     "sha256": "a865921a052bf42c60b1a93dff7465b1aa3147b14cc13f029a88d3459064cb17"
+    },
+    {
+     "path": "platform/platform_misc_dir.vpk",
+     "size": 15065,
+     "sha256": "a33f4fb3c60a1d30c03a8c2a7ef68e83579e51ba0362f8f7e217dc5d43e2a1cc"
+    }
+   ]
+  }
+ ],
+ "icon": {
+  "steamAppId": "220"
+ },
+ "status": {
+  "playability": "verified",
+  "download": "special",
+  "notes": [
+   {
+    "en": "Special app: not a Meta Store title. The engine is tinsarfal's free SourceVR; the game data comes from your own Steam purchase of Half-Life 2 (app 220).",
+    "de": "Sonderapp: kein Titel aus dem Meta-Store. Die Engine ist tinsarfals freies SourceVR; die Spieldaten stammen aus dem eigenen Steam-Kauf von Half-Life 2 (App 220)."
+   },
+   {
+    "en": "Played on the device from the train into the station (2026-11-09/10): faces, hands and the dark rooms render correctly. Later chapters (vehicles, Ravenholm) were not played yet.",
+    "de": "Am Gerät vom Zug bis in den Bahnhof gespielt (2026-11-09/10): Gesichter, Hände und die dunklen Räume werden richtig gezeichnet. Spätere Kapitel (Fahrzeuge, Ravenholm) sind noch nicht gespielt."
+   },
+   {
+    "en": "On the first start the game's own setup wizard asks for the gun hand and comfort settings; all of them can be changed later in the game's VR settings.",
+    "de": "Beim ersten Start fragt der Einrichtungsassistent des Spiels nach Waffenhand und Komfort-Einstellungen; alles lässt sich später in den VR-Einstellungen des Spiels ändern."
+   },
+   {
+    "en": "Menus and subtitles follow the language chosen in the start window. Voice-over in German, French, Spanish, Russian, Italian or Korean is a language download (tick it on the game page, about 770 MB each); it comes from your own Steam account, which must own Half-Life 2.",
+    "de": "Menüs und Untertitel folgen der im Startfenster gewählten Sprache. Sprachausgabe auf Deutsch, Französisch, Spanisch, Russisch, Italienisch oder Koreanisch ist ein Sprachdownload (auf der Spielseite ankreuzen, je rund 770 MB); sie kommt aus dem eigenen Steam-Konto, das Half-Life 2 besitzen muss."
+   },
+   {
+    "en": "Needs the fork from fe2bdaa on (toolchain 876): one sRGB encode per pixel and no colour casts in dark lightmaps (without them, shadowed rooms showed yellow, red and cyan patches).",
+    "de": "Braucht den Fork ab fe2bdaa (Toolchain 876): eine sRGB-Kodierung je Pixel und keine Farbstiche in dunklen Lightmaps (ohne sie zeigten Schattenräume gelbe, rote und cyanfarbene Flecken)."
+   }
+  ]
+ }
+}
