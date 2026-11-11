@@ -42,12 +42,19 @@ public enum MetaListing {
     }
 
     /// Liest die Zeilen des Werkzeugs: `  <Name>  <Größe>  [ART] <Kennung>`, als Text oder in JSON-Protokollzeilen.
+    /// Ab Version 211 schreibt das Werkzeug jede Datei als eigenen JSON-Eintrag (`"type":"asset"`) statt als
+    /// Protokollzeile (avp-play issue #114) – beides wird gelesen.
     public static func parse(_ output: String) -> [ListedFile] {
         var files: [ListedFile] = []
         for raw in output.split(whereSeparator: \.isNewline) {
             var line = String(raw)
             if line.hasPrefix("{"), let data = line.data(using: .utf8),
-               let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any], let message = object["message"] as? String {
+               let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                if let asset = assetRecord(object) {
+                    files.append(asset)
+                    continue
+                }
+                guard let message = object["message"] as? String else { continue }
                 line = message
             }
             guard line.hasPrefix(" "), let open = line.lastIndex(of: "["), let close = line[open...].firstIndex(of: "]") else { continue }
@@ -63,6 +70,27 @@ public enum MetaListing {
             files.append(ListedFile(name: name, id: id, kind: kind, sizeText: size))
         }
         return files
+    }
+
+    /// Ein Dateieintrag des Werkzeugs ab Version 211:
+    /// `{"type":"asset","id":"…","file_name":"Game.apk","kind":"apk","size_bytes":255639171}`.
+    static func assetRecord(_ object: [String: Any]) -> ListedFile? {
+        guard object["type"] as? String == "asset", let name = object["file_name"] as? String,
+              let rawKind = object["kind"] as? String else { return nil }
+        let id = (object["id"] as? String) ?? (object["id"] as? NSNumber)?.stringValue ?? ""
+        let kind = rawKind.uppercased()
+        guard CatalogGame.isIdentifier(id), Recipe.isSafeName(name), !kind.isEmpty,
+              kind.allSatisfy({ $0.isUppercase || $0 == "_" }) else { return nil }
+        let bytes = (object["size_bytes"] as? NSNumber)?.int64Value
+        return ListedFile(name: name, id: id, kind: kind, sizeText: bytes.map(sizeText) ?? "")
+    }
+
+    /// Die Größe, wie das Werkzeug sie im Text schreibt („243.8MB“, „2.4GB“, „140KB“; Basis 1024).
+    static func sizeText(_ bytes: Int64) -> String {
+        let kib = Double(bytes) / 1024, mib = kib / 1024
+        if mib >= 1024 { return String(format: "%.1fGB", mib / 1024) }
+        if mib >= 1 { return String(format: "%.1fMB", mib) }
+        return String(format: "%.0fKB", kib)
     }
 
     /// Ruft das Werkzeug auf. `tool` muss zuvor als Metas Werkzeug geprüft sein (`MetaTool.verify`).

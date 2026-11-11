@@ -1280,6 +1280,24 @@ final class UntestedGameTests: XCTestCase {
     {"type":"log","level":"info","message":"\\nTotal time: 0m 0s.\\n"}
     """
 
+    /// Werkzeug 211.0.0 (avp-play issue #114): die Datei als eigener Eintrag, nicht als Protokollzeile.
+    func testAListingInJsonRecordsIsRead() {
+        let records = """
+        {"schema_version":1,"type":"log","level":"info","message":"\\nThe following file(s) would be downloaded:"}
+        {"schema_version":1,"type":"asset","id":"38610271308617856","file_name":"ShapeLabLite.apk","kind":"apk","size_bytes":255639171}
+        {"schema_version":1,"type":"asset","id":"8254813211290055","file_name":"main.151047.com.example.game.obb","kind":"obb","size_bytes":2576980378}
+        {"schema_version":1,"type":"asset","id":"24544644515232330","file_name":"small.bundle","kind":"asset","size_bytes":143360}
+        {"schema_version":1,"type":"asset","id":"24544644515232331","file_name":"../escape.bundle","kind":"asset","size_bytes":1}
+        {"schema_version":1,"type":"asset","id":"abc","file_name":"no-id.bundle","kind":"asset","size_bytes":1}
+        {"schema_version":1,"type":"log","level":"info","message":"\\nTotal time: 0m 5s.\\n"}
+        """
+        let files = MetaListing.parse(records)
+        XCTAssertEqual(files.map(\.name), ["ShapeLabLite.apk", "main.151047.com.example.game.obb", "small.bundle"])
+        XCTAssertEqual(files.map(\.kind), ["APK", "OBB", "ASSET"])
+        XCTAssertEqual(files[0].id, "38610271308617856")
+        XCTAssertEqual(files.map(\.sizeText), ["243.8MB", "2.4GB", "140KB"])
+    }
+
     func testListingIsReadFromJsonAndPlainLines() {
         let files = MetaListing.parse(listing)
         XCTAssertEqual(files.map(\.name), ["Some Game-Android-Shipping-arm64.apk", "main.151047.com.example.game.obb", "plain text line.bundle"])
