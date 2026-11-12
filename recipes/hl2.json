@@ -8,7 +8,7 @@
  "store": {},
  "toolchain": {
   "target": "sourcevr-hl2",
-  "minCommit": "00ddb91"
+  "minCommit": "1e00a31"
  },
  "files": [
   {
@@ -1773,8 +1773,8 @@
     "de": "Menüs und Untertitel folgen der im Startfenster gewählten Sprache. Sprachausgabe auf Deutsch, Französisch, Spanisch, Russisch, Italienisch oder Koreanisch ist ein Sprachdownload (auf der Spielseite ankreuzen, je rund 770 MB); sie kommt aus dem eigenen Steam-Konto, das Half-Life 2 besitzen muss."
    },
    {
-    "en": "Needs the fork from 00ddb91 on (toolchain 882): one sRGB encode per pixel and no colour casts in dark lightmaps (without them, shadowed rooms showed yellow, red and cyan patches); the sky, the light glows and the water under the engine's reversed depth buffer (with 876 the sky above the station plaza was black, with 879 the canal bed drew through the water); and the weapon angle 27, the pick-up outline and the gravity gloves as defaults.",
-    "de": "Braucht den Fork ab 00ddb91 (Toolchain 882): eine sRGB-Kodierung je Pixel und keine Farbstiche in dunklen Lightmaps (ohne sie zeigten Schattenräume gelbe, rote und cyanfarbene Flecken); Himmel, Lichtschein und Wasser unter dem umgekehrten Tiefenpuffer der Engine (mit 876 war der Himmel über dem Bahnhofsplatz schwarz, mit 879 zeichnete sich der Kanalboden durch das Wasser); dazu Waffenwinkel 27, Objekt-Hervorhebung und Gravity Gloves als Standard."
+    "en": "Needs the fork from 1e00a31 on (toolchain 888): one sRGB encode per pixel and no colour casts in dark lightmaps (without them, shadowed rooms showed yellow, red and cyan patches); the sky, the light glows and the water under the engine's reversed depth buffer (with 876 the sky above the station plaza was black, with 879 the canal bed drew through the water); the flashlight as one light spot (with 882 its light was tiled over the room when the lamp sits on the hand); and the weapon angle 27, the pick-up outline and the gravity gloves as defaults.",
+    "de": "Braucht den Fork ab 1e00a31 (Toolchain 888): eine sRGB-Kodierung je Pixel und keine Farbstiche in dunklen Lightmaps (ohne sie zeigten Schattenräume gelbe, rote und cyanfarbene Flecken); Himmel, Lichtschein und Wasser unter dem umgekehrten Tiefenpuffer der Engine (mit 876 war der Himmel über dem Bahnhofsplatz schwarz, mit 879 zeichnete sich der Kanalboden durch das Wasser); die Taschenlampe als ein Lichtfleck (mit 882 lag ihr Licht gekachelt über dem Raum, wenn die Lampe an der Hand sitzt); dazu Waffenwinkel 27, Objekt-Hervorhebung und Gravity Gloves als Standard."
    }
   ]
  }
