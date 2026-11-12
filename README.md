@@ -146,6 +146,10 @@ Reports and fixes from the app help just as much – see *Community Verified* be
 - **[naldo29](https://github.com/naldo29)**, who ported the Beat Saber mods to the Vision Pro
   ([beat-saber-with-custom-song-support](https://github.com/naldo29/beat-saber-with-custom-song-support)), and the
   **Beat Saber modding community**, whose mods it runs – each named in [THIRD-PARTY.md](THIRD-PARTY.md#beat-saber-mods).
+- **[kavardev](https://github.com/kavardev)** for the Digital Crown work
+  ([issue 110](https://github.com/myMartek/avp-play/issues/110)): a game that ends at once on a crown press,
+  controllers that come back after a system interruption, and progressive immersion – a per-game switch that
+  lets you turn the crown to draw the game into a portal over your room.
 - **Everyone who sent in a fix or a report** – the *Community Verified* games are their work.
 
 ## Legal
