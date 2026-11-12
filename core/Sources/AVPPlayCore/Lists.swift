@@ -115,9 +115,46 @@ public enum GameList {
 
     /// Eine einzelne Liste – das, was die Übersicht gerade zeigt, etwa nur die Favoriten oder nur das Installierte.
     /// - Parameter title: was die Liste enthält, in Worten („Favourites, installed“).
-    public static func text(title: String, entries: [Entry], appVersion: String, toolchain: String, made: String) -> String {
-        (head(appVersion: appVersion, toolchain: toolchain, made: made)
+    /// - Parameter note: ein Satz zur Vollständigkeit, wenn die Liste nicht alles enthält (siehe `partNote`).
+    public static func text(title: String, entries: [Entry], note: String? = nil, appVersion: String, toolchain: String, made: String) -> String {
+        (head(appVersion: appVersion, toolchain: toolchain, made: made) + (note.map { [$0] } ?? [])
             + section(title, entries, empty: L("No game matches.", "Kein Spiel passt."))).joined(separator: "\n") + "\n"
+    }
+
+    /// Was vor dem Schreiben einer Liste der Übersicht noch zu holen ist.
+    public enum Completion: Equatable, Sendable {
+        /// Dieser Mac kennt die Liste schon ganz: Installiertes, Geladenes, Favoriten, eigene Filter, das eigene Konto.
+        case known
+        /// Der Katalog liefert den Rest in wenigen Seiten: die Treffer einer Suche, oder die gekennzeichneten
+        /// Spiele (geprüft, von Nutzern bestätigt, Mixed Reality, Hand-Tracking) – sie stehen im Katalog vorn.
+        case pages
+        /// Der ganze Katalog mit seinen tausenden Spielen: Der wird nicht geholt, die Liste enthält, was geladen ist.
+        case loadedPart
+    }
+
+    /// - Parameters:
+    ///   - local: ein Filter ist gesetzt, dessen Spiele dieser Mac vollständig kennt.
+    ///   - online: der Online-Katalog ist eingeschaltet; ohne ihn gibt es nur die mitgelieferten Spiele.
+    ///   - labelled: ein Filter nach einem Kennzeichen ist gesetzt.
+    ///   - searching: es steht etwas im Suchfeld.
+    public static func completion(local: Bool, online: Bool, labelled: Bool, searching: Bool) -> Completion {
+        if local || !online { return .known }
+        return labelled || searching ? .pages : .loadedPart
+    }
+
+    /// So viele Seiten des Katalogs holt eine Liste höchstens nach.
+    public static let pageLimit = 40
+
+    /// Der Satz, der in einer Liste steht, die nur einen Teil enthält.
+    /// - Parameter total: wie viele Spiele der Katalog führt; `nil`, wenn der Katalog nicht alles geliefert hat,
+    ///   was zu den Filtern passt.
+    public static func partNote(loaded: Int, total: Int?) -> String {
+        guard let total else {
+            return L("The catalogue did not deliver everything that matches: this list may be incomplete.",
+                     "Der Katalog hat nicht alles geliefert, was passt: Diese Liste kann unvollständig sein.")
+        }
+        return L("Only the part of the catalogue the app has loaded so far: \(loaded) of \(total) games. With a filter or a search the list is complete.",
+                 "Nur der Teil des Katalogs, den die App bisher geladen hat: \(loaded) von \(total) Spielen. Mit einem Filter oder einer Suche wird die Liste vollständig.")
     }
 
     /// - Parameter made: der Tag, als Text; steht nur in der Kopfzeile.
