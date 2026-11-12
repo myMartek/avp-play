@@ -68,10 +68,16 @@ extension AppModel {
     /// Dasselbe für beliebige Spiele – etwa die eines eigenen Filters.
     @discardableResult
     func loadMissing<S: Sequence>(_ ids: S) async -> Int where S.Element == String {
-        let ids = Array(ids)
+        await loadMissingApps(ids.compactMap(DraftRecipe.appId(of:)))
+    }
+
+    /// Dasselbe mit den Kennungen des Stores – etwa die Bibliothek des Kontos.
+    @discardableResult
+    func loadMissingApps<S: Sequence>(_ appIds: S) async -> Int where S.Element == String {
+        let ids = Set(appIds)
         func missing() -> [String] {
             let loaded = Set(catalog.map(\.appId)).union(games.compactMap { $0.recipe.catalogAppId })
-            return Set(ids.compactMap(DraftRecipe.appId(of:))).filter { !loaded.contains($0) }.sorted()
+            return ids.filter { !loaded.contains($0) }.sorted()
         }
         let wanted = missing()
         guard !wanted.isEmpty else { return 0 }
@@ -250,41 +256,54 @@ extension AppModel {
         // Nachladen nur, solange die geladenen Seiten noch ganz aus solchen Spielen bestehen. Dasselbe gilt für
         // Mixed Reality und Hand-Tracking: Die Angabe trägt nur, was das Projekt oder ein eingesandter Fix zum Laufen
         // gebracht hat.
-        if filterVerified || filterCommunity || filterMixedReality || filterHandTracking {
-            let labelled = catalog.filter { $0.status == "verified" || $0.status == "community" }.count
-            if labelled < catalogNextPage * 60 { return false }
-        }
+        if filterVerified || filterCommunity || filterMixedReality || filterHandTracking { return moreLabelled }
         return catalogMore
+    }
+
+    /// Ob der Katalog noch gekennzeichnete Spiele hat, die nicht geladen sind: Sie stehen vorn, also solange die
+    /// geladenen Seiten noch ganz aus solchen bestehen.
+    var moreLabelled: Bool {
+        guard onlineCatalog, catalogMore else { return false }
+        return catalog.filter { $0.status == "verified" || $0.status == "community" }.count >= catalogNextPage * 60
     }
 
     /// Lädt die nächste Seite nach – ausgelöst, wenn das Ende der Liste in Sicht kommt.
     func loadMoreCatalog() {
-        guard canLoadMore, !loadingMore else { return }
-        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        Task { await loadNextCatalogPage() }
+    }
+
+    /// Dasselbe, und wartet darauf – für eine Liste, die alles enthalten soll, was zu den Filtern passt.
+    /// Falsch, wenn es nichts nachzuladen gab, gerade schon geladen wird oder der Katalog nicht geantwortet hat.
+    /// - Parameter labelled: die nächste Seite des ganzen Katalogs, solange dort noch gekennzeichnete Spiele
+    ///   kommen – gleich, was im Suchfeld steht.
+    @discardableResult
+    func loadNextCatalogPage(labelled: Bool = false) async -> Bool {
+        guard labelled ? moreLabelled : canLoadMore, !loadingMore else { return false }
+        let query = labelled ? "" : searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         loadingMore = true
-        Task {
-            do {
-                if query.isEmpty {
-                    let next = try await catalogClient.catalog(page: catalogNextPage)
-                    merge(next.games)
-                    catalogMore = next.more && !next.games.isEmpty
-                    catalogTotal = next.total ?? catalogTotal
-                    catalogNextPage += 1
-                } else {
-                    let next = try await catalogClient.catalog(query: query, page: searchNextPage)
-                    merge(next.games)
-                    if query == searchedQuery {
-                        searchMore = next.more && !next.games.isEmpty
-                        searchNextPage += 1
-                    }
+        defer { loadingMore = false }
+        do {
+            if query.isEmpty {
+                let next = try await catalogClient.catalog(page: catalogNextPage)
+                merge(next.games)
+                catalogMore = next.more && !next.games.isEmpty
+                catalogTotal = next.total ?? catalogTotal
+                catalogNextPage += 1
+            } else {
+                let next = try await catalogClient.catalog(query: query, page: searchNextPage)
+                merge(next.games)
+                if query == searchedQuery {
+                    searchMore = next.more && !next.games.isEmpty
+                    searchNextPage += 1
                 }
-                catalogProblem = nil
-            } catch {
-                // Kein Dauerversuch: Nachladen gibt es erst wieder nach einem neuen Laden der ersten Seite.
-                catalogProblem = "\(error)"
-                if query.isEmpty { catalogMore = false } else { searchMore = false }
             }
-            loadingMore = false
+            catalogProblem = nil
+            return true
+        } catch {
+            // Kein Dauerversuch: Nachladen gibt es erst wieder nach einem neuen Laden der ersten Seite.
+            catalogProblem = "\(error)"
+            if query.isEmpty { catalogMore = false } else { searchMore = false }
+            return false
         }
     }
 

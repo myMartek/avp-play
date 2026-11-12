@@ -194,6 +194,15 @@ final class AppModel: ObservableObject {
     func startUp() async {
         guard !launched else { return }
         launched = true
+        #if DEBUG
+        // Test der Listenausgabe (siehe `debugExportShownList`): nur der Katalog, kein Konto, kein Dienst.
+        if ProcessInfo.processInfo.environment["AVPPLAY_TEST_EXPORT"] != nil {
+            refresh()
+            loadCatalog()
+            debugExportShownList()
+            return
+        }
+        #endif
         installBundledToolchainIfNewer()
         Task.detached(priority: .background) { CoverCache().prune() }
         refresh()
@@ -314,6 +323,8 @@ final class AppModel: ObservableObject {
     @Published var catalogTotal: Int?
     @Published var catalogMore = false
     @Published var loadingMore = false
+    /// Eine Liste der Übersicht wird gerade zusammengestellt (der Katalog liefert noch Seiten dafür).
+    @Published var exportingList = false
     var catalogNextPage = 0
     /// Nach welchen eigenen Spielen der Katalog schon gezielt gefragt wurde.
     var askedOwn: Set<String> = []

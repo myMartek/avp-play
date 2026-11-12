@@ -133,8 +133,8 @@ extension AppModel {
     }
 
     /// Die Spiele, die die Übersicht gerade zeigt – etwa nur die Favoriten oder nur das Installierte.
-    func shownGamesText(now: Date = Date()) -> String {
-        GameList.text(title: shownListTitle, entries: shownGames.map(listEntry), appVersion: appVersion,
+    func shownGamesText(note: String? = nil, now: Date = Date()) -> String {
+        GameList.text(title: shownListTitle, entries: shownGames.map(listEntry), note: note, appVersion: appVersion,
                       toolchain: toolchain.map { String($0.version()) } ?? "", made: now.formatted(date: .abbreviated, time: .omitted))
     }
 
@@ -142,14 +142,21 @@ extension AppModel {
     /// heraus – genau das, was dort gerade zu sehen ist.
     ///
     /// Vorher werden die Favoriten nachgeladen, die der Katalog noch nicht geliefert hat: Die Liste soll alle
-    /// enthalten, nicht nur die, bis zu denen jemand geblättert hat.
+    /// enthalten, nicht nur die, bis zu denen jemand geblättert hat. Aus der Übersicht heraus geht das mit jedem
+    /// Filter: Was der Katalog in wenigen Seiten liefern kann, wird vorher geholt (`completeShownList`).
     func exportGameList(shownOnly: Bool = false) {
         Task {
             if shownOnly {
-                // Was die gesetzten Filter vollständig machen will: die Favoriten und die Spiele der eigenen Filter.
-                let unloaded = await loadMissing(listedIds)
-                writeList(shownGamesText(), name: L("games", "Spiele"))
-                if unloaded > 0 { notice = AppModel.unloadedNote(unloaded) }
+                guard !exportingList else { return }
+                exportingList = true
+                defer { exportingList = false }
+                // Was die gesetzten Filter vollständig machen will: die Favoriten und die Spiele der eigenen Filter,
+                // und unter „Im Besitz“ die Bibliothek des Kontos.
+                var unloaded = await loadMissing(listedIds)
+                if filterOwned { unloaded += await loadMissingApps(libraryIds) }
+                let note = await completeShownList()
+                writeList(shownGamesText(note: note), name: L("games", "Spiele"))
+                if let note { notice = note } else if unloaded > 0 { notice = AppModel.unloadedNote(unloaded) }
                 return
             }
             let unloaded = await loadAllFavourites()
@@ -193,11 +200,70 @@ extension AppModel {
         return ids.sorted()
     }
 
-    /// Ob die Übersicht gerade etwas zeigt, das sich als vollständige Liste ausgeben lässt: Was installiert, geladen,
-    /// gemerkt oder einem eigenen Filter zugeordnet ist, kennt dieser Mac ganz. Ohne einen dieser Filter zeigt die
-    /// Übersicht nur den Teil des Katalogs, der schon geladen ist – das wäre keine Liste, sondern ein Ausschnitt.
-    /// Ein eigener Filter zum Ausblenden allein macht die Liste nicht vollständig, wohl aber zusammen mit einem der anderen.
-    var canExportShown: Bool { filterInstalled || filterDownloaded || favouritesWanted || customOnlyWanted || (horizonPlusWanted && horizonPlus != nil) }
+    /// Ob die Übersicht gerade etwas zeigt, das dieser Mac ganz kennt: was installiert, geladen, gemerkt, einem
+    /// eigenen Filter zugeordnet oder im eigenen Konto ist, und die Steam-Liste. Ein eigener Filter zum Ausblenden
+    /// allein macht die Liste nicht vollständig, wohl aber zusammen mit einem der anderen.
+    var shownListKnown: Bool {
+        filterInstalled || filterDownloaded || favouritesWanted || customOnlyWanted || (horizonPlusWanted && horizonPlus != nil)
+            || filterOwned || (filterSteam && !filterMeta)
+    }
+
+    /// Was eine Liste der Übersicht vor dem Schreiben noch braucht (siehe `GameList.Completion`).
+    var shownListCompletion: GameList.Completion {
+        GameList.completion(local: shownListKnown, online: onlineCatalog,
+                            labelled: filterVerified || filterCommunity || filterMixedReality || filterHandTracking,
+                            searching: searchText.trimmingCharacters(in: .whitespacesAndNewlines).count >= 3)
+    }
+
+    /// Holt vom Katalog, was zu den gesetzten Filtern noch fehlt, soweit das in wenigen Seiten geht: die
+    /// gekennzeichneten Spiele oder die Treffer der Suche. Antwortet mit dem Satz, der in der Liste stehen muss,
+    /// wenn sie danach trotzdem nur einen Teil enthält – ohne Filter und Suche wäre das Ganze der Katalog selbst.
+    func completeShownList() async -> String? {
+        switch shownListCompletion {
+        case .known:
+            return nil
+        case .loadedPart:
+            return GameList.partNote(loaded: catalog.count, total: catalogTotal ?? catalog.count)
+        case .pages:
+            // Mit einem Filter nach Kennzeichen: alle gekennzeichneten Spiele holen, sie stehen im Katalog vorn. Die
+            // Suche engt dann hier ein. Sonst: alle Treffer der Suche – eine eben getippte hat ihre erste Seite
+            // vielleicht noch nicht.
+            let labelled = filterVerified || filterCommunity || filterMixedReality || filterHandTracking
+            let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !labelled, query != searchedQuery { searchCatalog() }
+            var pages = 0, waits = 0
+            while pages < GameList.pageLimit, waits < 200 {
+                if loadingMore || (!labelled && searching) {
+                    waits += 1
+                    try? await Task.sleep(nanoseconds: 150_000_000)
+                    continue
+                }
+                guard labelled ? moreLabelled : canLoadMore, await loadNextCatalogPage(labelled: labelled) else { break }
+                pages += 1
+            }
+            // Noch Seiten übrig (Obergrenze), oder der Katalog hat nicht geantwortet.
+            let left = labelled ? moreLabelled : canLoadMore
+            return left || catalogProblem != nil ? GameList.partNote(loaded: catalog.count, total: nil) : nil
+        }
+    }
+
+    #if DEBUG
+    /// Nur im Test-Bau: `AVPPLAY_TEST_EXPORT=<Datei>` schreibt die Liste der Übersicht mit den gesetzten Filtern
+    /// (etwa `-filterVerified YES`) ohne Dialog dorthin und beendet die App – der Weg, den „Liste exportieren“ geht.
+    func debugExportShownList() {
+        guard let path = ProcessInfo.processInfo.environment["AVPPLAY_TEST_EXPORT"], path.hasPrefix("/") else { return }
+        Task {
+            for _ in 0..<100 where catalogNextPage == 0 && catalogProblem == nil { try? await Task.sleep(nanoseconds: 200_000_000) }
+            let before = catalog.count
+            let completion = shownListCompletion
+            let note = await completeShownList()
+            let text = shownGamesText(note: note)
+                + "\n[test] completion \(completion), catalogue \(before) -> \(catalog.count) of \(catalogTotal ?? -1), pages \(catalogNextPage), problem \(catalogProblem ?? "none")\n"
+            try? Data(text.utf8).write(to: URL(fileURLWithPath: path), options: .atomic)
+            exit(0)
+        }
+    }
+    #endif
 
     private func writeList(_ text: String, name: String) {
         let panel = NSSavePanel()

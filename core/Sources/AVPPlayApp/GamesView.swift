@@ -52,15 +52,33 @@ struct GamesView: View {
         }
     }
 
+    /// Was die Liste enthalten wird – je nachdem, ob dieser Mac sie ganz kennt, der Katalog den Rest liefert oder
+    /// nur der geladene Teil des Katalogs da ist.
+    private var exportHelp: String {
+        let base = L("Writes the games that match the filters and the search into a text file to pass on. Only a list: no game files, nothing about your account or device.",
+                     "Schreibt die Spiele, die zu den Filtern und der Suche passen, in eine Textdatei zum Weitergeben. Nur eine Liste: keine Spieldateien, nichts über dein Konto oder Gerät.")
+        switch model.shownListCompletion {
+        case .known:
+            return base + " " + L("All of them, also favourites the overview has not loaded yet.",
+                                  "Alle, auch Favoriten, die die Übersicht noch nicht geladen hat.")
+        case .pages:
+            return base + " " + L("All of them: what the overview has not loaded yet is fetched from the catalogue first.",
+                                  "Alle: Was die Übersicht noch nicht geladen hat, wird vorher aus dem Katalog geholt.")
+        case .loadedPart:
+            return base + " " + L("Without a filter or a search that is the part of the catalogue loaded so far, and the list says so.",
+                                  "Ohne Filter oder Suche ist das der Teil des Katalogs, der bisher geladen ist; die Liste sagt das dazu.")
+        }
+    }
+
     /// Was neben den Filtern steht: die Liste ausgeben, alles aktualisieren, und was gerade im Hintergrund läuft.
     @ViewBuilder private var listActions: some View {
         Button(L("Export List …", "Liste exportieren …")) { model.exportGameList(shownOnly: true) }
-            .controlSize(.small).disabled(!model.canExportShown)
-            .help(model.canExportShown
-                  ? L("Writes the games that match the filters and the search into a text file to pass on – all of them, also favourites the overview has not loaded yet. Only a list: no game files, nothing about your account or device.",
-                      "Schreibt die Spiele, die zu den Filtern und der Suche passen, in eine Textdatei zum Weitergeben – alle, auch Favoriten, die die Übersicht noch nicht geladen hat. Nur eine Liste: keine Spieldateien, nichts über dein Konto oder Gerät.")
-                  : L("Set “Installed”, “Downloaded, Not Installed”, “Favourites”, “Favourites Not Downloaded” or one of your filters to “Show Only These” first: only those are lists this Mac knows completely.",
-                      "Setze zuerst „Installiert“, „Geladen, nicht installiert“, „Favoriten“, „Nicht geladene Favoriten“ oder einen eigenen Filter auf „Nur diese zeigen“: Nur das sind Listen, die dieser Mac vollständig kennt."))
+            .controlSize(.small).disabled(model.exportingList)
+            .help(exportHelp)
+        if model.exportingList {
+            ProgressView().controlSize(.small)
+            Text(L("Collecting the list …", "Liste wird zusammengestellt …")).font(.callout).foregroundStyle(.secondary)
+        }
         if model.searching {
             ProgressView().controlSize(.small)
             Text(L("Searching the catalogue …", "Katalog wird durchsucht …")).font(.callout).foregroundStyle(.secondary)

@@ -181,6 +181,27 @@ final class SavesAndListsTests: XCTestCase {
         XCTAssertEqual(StoreIndex.fileSafe(" /: "), "Game")
     }
 
+    func testAListOfTheOverviewWorksWithEveryFilter() {
+        // Was dieser Mac ganz kennt, braucht nichts vom Katalog – auch ohne Online-Katalog.
+        XCTAssertEqual(GameList.completion(local: true, online: true, labelled: true, searching: true), .known)
+        XCTAssertEqual(GameList.completion(local: false, online: false, labelled: true, searching: false), .known)
+        // „Geprüft“ oder „Von Nutzern bestätigt“ allein, oder eine Suche: Der Katalog liefert den Rest.
+        XCTAssertEqual(GameList.completion(local: false, online: true, labelled: true, searching: false), .pages)
+        XCTAssertEqual(GameList.completion(local: false, online: true, labelled: false, searching: true), .pages)
+        // Ohne Filter und Suche: der geladene Teil, und die Liste sagt das.
+        XCTAssertEqual(GameList.completion(local: false, online: true, labelled: false, searching: false), .loadedPart)
+
+        let moss = GameList.Entry(title: "Moss", storeId: "1654565391314903", version: "1.0.3", label: "verified", downloaded: true, installed: true)
+        let note = GameList.partNote(loaded: 180, total: 18106)
+        XCTAssertTrue(note.contains("180") && note.contains("18106"))
+        let part = GameList.text(title: "All games the app has loaded", entries: [moss], note: note, appVersion: "1.10.14", toolchain: "888", made: "12 Nov 2026")
+        let lines = part.components(separatedBy: "\n")
+        XCTAssertTrue(lines.contains(note))
+        XCTAssertLessThan(lines.firstIndex(of: note)!, lines.firstIndex { $0.hasPrefix("## ") }!, "der Satz steht vor der Liste")
+        XCTAssertFalse(GameList.text(title: "Games shown: verified", entries: [moss], appVersion: "1.10.14", toolchain: "888", made: "12 Nov 2026")
+            .contains(GameList.partNote(loaded: 1, total: nil)))
+    }
+
     func testTheGameListSaysWhatSomeoneHasAndNothingElse() {
         let before = L10n.language
         defer { L10n.language = before }
