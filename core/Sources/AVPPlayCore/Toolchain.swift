@@ -27,6 +27,9 @@ public enum ToolchainError: Error, CustomStringConvertible {
             return L("The game's shader list could not be built from its files (\(detail)).",
                      "Die Shader-Liste des Spiels ließ sich nicht aus seinen Dateien bauen (\(detail)).")
         case .notAToolchain(let p): return L("There is no toolchain at \(p) (visionos/run.sh is missing).", "Unter \(p) liegt keine Toolchain (visionos/run.sh fehlt).")
+        case .wrongKind(let game, let have, let need) where need == Toolchain.kleptonKind:
+            return L("\(game) is built with AVP Play's own toolchain. This one (\(have)) builds only the game it was made for.",
+                     "\(game) wird mit der Toolchain von AVP Play gebaut. Diese hier (\(have)) baut nur das Spiel, für das sie gemacht ist.")
         case .wrongKind(let game, let have, let need):
             return L("\(game) is built with a toolchain of its own (\(need)), not with this one (\(have)). Choose the game's own toolchain: avpplay toolchain use <id> --toolchain <folder>, or on the game's page.",
                      "\(game) wird mit einer eigenen Toolchain gebaut (\(need)), nicht mit dieser (\(have)). Wähle die eigene Toolchain des Spiels: avpplay toolchain use <id> --toolchain <Ordner>, oder auf der Seite des Spiels.")

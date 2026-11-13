@@ -1,0 +1,141 @@
+{
+ "schema": 1,
+ "id": "skyrimvr",
+ "title": "The Elder Scrolls V: Skyrim VR",
+ "package": "steam-app-611670",
+ "versionName": "Steam-Build 2743427",
+ "versionCode": 2743427,
+ "store": {},
+ "toolchain": {
+  "target": "skyrimvr",
+  "minCommit": "2533c9d",
+  "kind": "vxruntime"
+ },
+ "files": [],
+ "trees": [
+  {
+   "name": "game",
+   "role": "game",
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "Skyrim VR from your own Steam account (the Windows build). With a Steam sign-in under Setup the app fetches it for you (about 15 GB). By hand: in the Steam client's console run 'download_depot 611670 611673', 'download_depot 611670 611672', 'download_depot 611670 611671' and 'download_depot 611670 228990', then merge the four folders into one (in this order, without overwriting).",
+     "de": "Skyrim VR aus dem eigenen Steam-Konto (Windows-Fassung). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App es für dich (rund 15 GB). Von Hand: in der Konsole des Steam-Clients 'download_depot 611670 611673', 'download_depot 611670 611672', 'download_depot 611670 611671' und 'download_depot 611670 228990' ausführen und die vier Ordner zu einem zusammenführen (in dieser Reihenfolge, ohne zu überschreiben)."
+    },
+    "steam": {
+     "app": "611670",
+     "depots": [
+      {
+       "id": "611673",
+       "manifest": "4815482462544068657",
+       "bytes": 35530960
+      },
+      {
+       "id": "611672",
+       "manifest": "1928013110065929089",
+       "bytes": 439323938
+      },
+      {
+       "id": "611671",
+       "manifest": "3877383290467193767",
+       "bytes": 14641416342
+      },
+      {
+       "id": "228990",
+       "manifest": "1829726630299308803",
+       "bytes": 102931551
+      }
+     ]
+    }
+   },
+   "markers": [
+    {
+     "path": "SkyrimVR.exe",
+     "size": 35530960,
+     "sha256": "6961efb4f4775a307b0fc9a3d637542c1e090be207d3b09467eab216b7f87971"
+    },
+    {
+     "path": "Data/SkyrimVR.esm",
+     "size": 332403,
+     "sha256": "cf261da8cbfe281c87fae4b379edc5ad6635bd2fc58f1bb587eec18e7ed5df87"
+    },
+    {
+     "path": "binkw64.dll",
+     "size": 298496,
+     "sha256": "152aeb57ba9a5c36cc721a61ae69878ad43c7f6c5cfb87904a1eed037496dedd"
+    },
+    {
+     "path": "_CommonRedist/DirectX/Jun2010/Aug2009_d3dx9_42_x64.cab",
+     "size": 930116,
+     "sha256": "832f6a4415c873ed8acca0d5c9e65fe163d9567f0ce29fb3fda11d7afd1e11c7"
+    },
+    {
+     "path": "_CommonRedist/DirectX/Jun2010/Feb2010_X3DAudio_x64.cab",
+     "size": 54678,
+     "sha256": "832b6d48e169b4725ae482ea4d1c3360a09631a89b2fac3aba81a50805a50adc"
+    }
+   ]
+  },
+  {
+   "name": "steamvr",
+   "role": "sysroot",
+   "only": [
+    "vrwebhelper"
+   ],
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "One of Microsoft's C++ runtime libraries, in the build SteamVR ships (SteamVR is free on Steam). With a Steam sign-in under Setup the app fetches it for you (a 1.2 GB download, of which 340 MB are kept). By hand: 'download_depot 250820 250821' in the Steam client's console; the folder 'bin' of that depot is what is wanted.",
+     "de": "Eine von Microsofts C++-Laufzeitbibliotheken, in der Fassung, die SteamVR mitbringt (SteamVR ist bei Steam kostenlos). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (1,2 GB Download, von denen 340 MB bleiben). Von Hand: 'download_depot 250820 250821' in der Konsole des Steam-Clients; gebraucht wird der Ordner 'bin' dieses Depots."
+    },
+    "steam": {
+     "app": "250820",
+     "folder": "bin",
+     "depots": [
+      {
+       "id": "250821",
+       "manifest": "4622758417595673465",
+       "bytes": 1207779371
+      }
+     ]
+    }
+   },
+   "markers": [
+    {
+     "path": "vrwebhelper/win64/msvcp140.dll",
+     "size": 548504,
+     "sha256": "0252b3f087712b7fe1ddb3aeb4c391747446cd1a421ffd03ba460fe643e1c48b"
+    }
+   ]
+  }
+ ],
+ "status": {
+  "playability": "untested",
+  "download": "special",
+  "notes": [
+   {
+    "en": "Special app: not a Meta Store title and not a Klepton game. The Windows PC version of Skyrim VR runs on the Vision Pro itself, through “Skyrim VR on Apple Vision Pro” by gseddon (github.com/gseddon/Skyrim-VR-Vision-Pro), which builds on VeRantyx, xrizer and Klepton's OpenXR code.",
+    "de": "Sonderapp: kein Titel aus dem Meta-Store und kein Klepton-Spiel. Die Windows-PC-Fassung von Skyrim VR läuft auf der Vision Pro selbst, über „Skyrim VR on Apple Vision Pro“ von gseddon (github.com/gseddon/Skyrim-VR-Vision-Pro), das auf VeRantyx, xrizer und Kleptons OpenXR-Code aufbaut."
+   },
+   {
+    "en": "The game's program code is translated for Apple's chips on this Mac before the install, and its 10,807 shaders are built here too. The first install therefore takes a good while; later ones reuse the result.",
+    "de": "Der Programmcode des Spiels wird vor der Installation auf diesem Mac für Apples Chips übersetzt, und seine 10.807 Shader werden ebenfalls hier gebaut. Die erste Installation dauert deshalb eine ganze Weile; spätere verwenden das Ergebnis wieder."
+   },
+   {
+    "en": "The game files (about 15 GB) come from your own Steam purchase. Nothing of the game, of Valve's or of Microsoft's files is ever distributed; the translated code stays on this Mac and your headset.",
+    "de": "Die Spieldateien (rund 15 GB) stammen aus dem eigenen Steam-Kauf. Vom Spiel und von Valves oder Microsofts Dateien wird nie etwas weitergegeben; der übersetzte Code bleibt auf diesem Mac und dem eigenen Headset."
+   },
+   {
+    "en": "Needs a paid Apple Developer account (the app uses a memory permission Apple does not grant to free accounts) and PlayStation VR2 Sense controllers. Connect both controllers before pressing Start: controllers that connect later get their buttons but not their thumbsticks.",
+    "de": "Braucht ein bezahltes Apple-Entwicklerkonto (die App nutzt eine Speicher-Berechtigung, die Apple kostenlosen Konten nicht gibt) und PlayStation-VR2-Sense-Controller. Beide Controller vor dem Druck auf Start verbinden: Später verbundene bekommen ihre Tasten, aber nicht ihre Sticks."
+   },
+   {
+    "en": "Built from plain Skyrim VR. The mods the project supports (SKSE VR, HIGGS, PLANCK, VRIK, SkyUI VR) are not installed through AVP Play yet.",
+    "de": "Gebaut aus dem unveränderten Skyrim VR. Die Mods, die das Projekt unterstützt (SKSE VR, HIGGS, PLANCK, VRIK, SkyUI VR), werden über AVP Play noch nicht installiert."
+   }
+  ]
+ },
+ "icon": {
+  "steamAppId": "611670"
+ }
+}
