@@ -223,7 +223,7 @@ struct ToolchainBox: View {
                    "Das ist eine Arbeitskopie, an der jemand etwas geändert hat, etwa ein KI-Assistent beim Reparieren dieses Spiels. „Aktualisieren“ ersetzt den Bau durch einen aus der neuesten Toolchain (\(newest)), ohne diese Änderungen; „Alle aktualisieren“ und das Erneuern der Signaturen lassen ihn in Ruhe. Um weiter aus der Arbeitskopie zu bauen, wähle sie unten."))
                 .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
         } else {
-            Text(L("This game is built with the newest toolchain (\(newest)).", "Dieses Spiel wird mit der neuesten Toolchain gebaut (\(newest))."))
+            Text(ToolchainOptions.unchosenSummary(recipe: game.recipe, newest: newest)).fixedSize(horizontal: false, vertical: true)
         }
     }
 

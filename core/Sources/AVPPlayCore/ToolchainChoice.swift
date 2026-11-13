@@ -285,6 +285,20 @@ public struct ToolchainOptions: Equatable, Sendable {
 
     public init() {}
 
+    /// What a game's page says where nothing is chosen for the game: that it is built with the newest toolchain – or,
+    /// for a game with a toolchain of its own (`Recipe.Toolchain.kind`), with that one, and where it comes from.
+    public static func unchosenSummary(recipe: Recipe, newest: String) -> String {
+        guard let kind = recipe.toolchain.kind else {
+            return L("This game is built with the newest toolchain (\(newest)).", "Dieses Spiel wird mit der neuesten Toolchain gebaut (\(newest)).")
+        }
+        guard let source = recipe.toolchain.source else {
+            return L("This game is built with a toolchain of its own (\(kind)), not with AVP Play's. It has to be chosen by hand: avpplay toolchain use \(recipe.id) --toolchain <folder>.",
+                     "Dieses Spiel wird mit einer eigenen Toolchain gebaut (\(kind)), nicht mit der von AVP Play. Sie muss von Hand gewählt werden: avpplay toolchain use \(recipe.id) --toolchain <Ordner>.")
+        }
+        return L("This game is built with a toolchain of its own (\(kind) \(source.version)), not with AVP Play's. The app fetches it from \(source.repository) when the game is installed.",
+                 "Dieses Spiel wird mit einer eigenen Toolchain gebaut (\(kind) \(source.version)), nicht mit der von AVP Play. Die App holt sie von \(source.repository), wenn das Spiel installiert wird.")
+    }
+
     /// Angeboten wird nur, womit sich das Rezept des Spiels bauen lässt: was dessen Mindeststand enthält.
     /// Für ein Paket auf GitHub lässt sich das vor dem Laden nur schätzen – aus der Reihenfolge, in der die
     /// neueste Toolchain ihre Vorgänger nennt; geprüft wird es nach dem Laden.
@@ -298,6 +312,9 @@ public struct ToolchainOptions: Equatable, Sendable {
         var options = ToolchainOptions()
         if let newest {
             options.newest = ToolchainOption(id: ToolchainOption.newestId, kind: .newest, version: newest.version(), commit: newest.commit())
+        } else if recipe.toolchain.kind != nil, let source = recipe.toolchain.source {
+            // A game with a toolchain of its own: “no choice” means the state its recipe names.
+            options.newest = ToolchainOption(id: ToolchainOption.newestId, kind: .newest, version: source.version, commit: source.shortCommit)
         }
         let installed = packager.installed().filter { !$0.isModified }
         options.installed = installed.filter(builds).map {

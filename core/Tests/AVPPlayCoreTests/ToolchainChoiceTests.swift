@@ -785,6 +785,16 @@ final class ToolchainChoiceTests: XCTestCase {
         let forSpecial = ToolchainOptions.make(recipe: special, pin: pin, packager: packager, newest: newest, released: released,
                                                workspace: dir.appendingPathComponent("none"))
         XCTAssertNil(forSpecial.newest)
+        // With a source in the recipe, “no choice” is the state the recipe names – never Klepton's newest.
+        var sourced = special
+        sourced.toolchain.source = ToolchainSource(repository: "https://github.com/a/b", commit: String(repeating: "b", count: 40), version: 410)
+        let forSourced = ToolchainOptions.make(recipe: sourced, pin: nil, packager: packager, newest: newest, released: released,
+                                               workspace: dir.appendingPathComponent("none"))
+        XCTAssertEqual(forSourced.newest?.version, 410)
+        XCTAssertEqual(forSourced.newest?.commit, "bbbbbbb")
+        XCTAssertTrue(ToolchainOptions.unchosenSummary(recipe: sourced, newest: "4").contains("vxruntime 410"))
+        XCTAssertTrue(ToolchainOptions.unchosenSummary(recipe: special, newest: "?").contains("avpplay toolchain use skyrimvr"))
+        XCTAssertTrue(ToolchainOptions.unchosenSummary(recipe: recipe(), newest: "4").contains("(4)"))
         XCTAssertTrue(forSpecial.installed.isEmpty)
         XCTAssertTrue(forSpecial.released.isEmpty)
         XCTAssertEqual(forSpecial.copies.map(\.commit), ["bbbbbbb"])

@@ -380,7 +380,7 @@ extension AppModel {
                               style: .warning))
         } else {
             items.append(Item(id: "summary", kind: .text, title: "",
-                              detail: L("This game is built with the newest toolchain (\(newest)).", "Dieses Spiel wird mit der neuesten Toolchain gebaut (\(newest)).")))
+                              detail: ToolchainOptions.unchosenSummary(recipe: game.recipe, newest: newest)))
         }
         let all = ToolchainBox.all(options)
         let onMac = L("On the Mac", "Auf dem Mac"), copies = L("Modified working copies", "Bearbeitete Arbeitskopien")
