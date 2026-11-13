@@ -11,7 +11,7 @@ extension AppModel {
     /// Die Toolchain, mit der dieses Spiel gebaut wird: die dafür gewählte, sonst die neueste. `nil`, wenn keine
     /// installiert ist – oder die gewählte nicht mehr da ist; dann sagt `blocker(for:)`, was zu tun ist.
     func toolchain(for game: Game) -> Toolchain? {
-        guard let pin = toolchainChoices.games[game.id] else { return toolchain }
+        guard let pin = toolchainChoices.pin(for: game.recipe) else { return toolchain }
         return paths.packager.toolchain(for: pin)
     }
 

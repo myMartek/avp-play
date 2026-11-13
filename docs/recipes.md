@@ -35,6 +35,39 @@ Recipes never contain game content, credentials or account data – only identif
 `toolchain.target` names the target in the toolchain; `minCommit` is the oldest toolchain state the recipe works
 with. The app refuses to build with an older toolchain.
 
+### A toolchain of the game's own
+
+Nearly every game is built with the project's toolchain, the Klepton fork. A game that is neither an Android nor a
+Linux program cannot be: it needs a toolchain of another kind, and its recipe says so.
+
+```jsonc
+"toolchain": {
+  "target": "skyrimvr",
+  "minCommit": "0123456",
+  "kind": "vxruntime",          // which kind of toolchain builds this game; absent for every Klepton game
+  "source": {                   // optional: where the app fetches that toolchain from
+    "repository": "https://github.com/<owner>/<name>",
+    "commit": "0123456789abcdef0123456789abcdef01234567",   // all 40 characters; minCommit is its beginning
+    "version": 410,             // the number stamped into the built app; a larger one in a later recipe offers an update
+    "path": "tools/avpplay_toolchain"   // the folder in the repository that holds visionos/run.sh; absent: its root
+  }
+}
+```
+
+- A game with a `kind` is only ever built with a toolchain that says it is of that kind (`"kind"` in its
+  `toolchain.json`), and such a toolchain builds nothing else. The game's page offers no Klepton package for it,
+  and no other game is offered its toolchain.
+- With `source`, the app fetches exactly that commit as part of the game's first job, into
+  `~/.avpplay/toolchains/<kind>-<version>-<commit>` (not under “Application Support”: these build tools do not
+  survive a blank in a path), checks that it got that commit, and writes the toolchain's description itself. The
+  recipe therefore pins the toolchain state as it pins the game's files. Without `source`, the toolchain has to be
+  chosen by hand: `avpplay toolchain use <id> --toolchain <folder>`, which also overrides a `source`.
+- Such a toolchain is a folder that keeps AVP Play's contract with a toolchain: `visionos/run.sh device` builds and
+  installs and ends with the line `BUILD SUCCEEDED`, `visionos/stage_sync.py` mirrors and copies the game's folder
+  trees, `visionos/targets.py` has a `TARGETS` row for the target, and `visionos/gen_xcodeproj.py` names the build
+  options it honours. The row may name where the trees go on the device (`devicetree`, a path below `Documents/`),
+  which is where the app reads the copy's progress.
+
 ## Files
 
 ```jsonc

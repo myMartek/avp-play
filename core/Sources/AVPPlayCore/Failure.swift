@@ -81,9 +81,9 @@ public enum FailureKind: String, Codable, Sendable {
                 case .deviceLocked, .deviceFull: return .device
                 default: return .apple
                 }
-            case .notAToolchain, .tooOld, .signingBlocked: return .setup
+            case .notAToolchain, .tooOld, .wrongKind, .signingBlocked: return .setup
             }
-        case is FetchError, is URLError, is ToolDownloadError: return .download
+        case is FetchError, is URLError, is ToolDownloadError, is ExternalToolchainError: return .download
         default: return .other
         }
     }

@@ -291,7 +291,10 @@ public struct ToolchainOptions: Equatable, Sendable {
     public static func make(recipe: Recipe, pin: ToolchainChoices.Pin?, packager: ToolchainPackager, newest: Toolchain?,
                      released: [ReleasedToolchain]?, workspace: URL = FixWorkspace.root) -> ToolchainOptions {
         let need = recipe.toolchain.minCommit
-        func builds(_ t: Toolchain) -> Bool { need.isEmpty || t.satisfies(minCommit: need) }
+        // Only what is of the game's kind: a game with a toolchain of its own is not offered Klepton, and no other
+        // game is offered that toolchain.
+        func builds(_ t: Toolchain) -> Bool { t.builds(recipe) && (need.isEmpty || t.satisfies(minCommit: need)) }
+        let newest = newest.flatMap { $0.builds(recipe) ? $0 : nil }
         var options = ToolchainOptions()
         if let newest {
             options.newest = ToolchainOption(id: ToolchainOption.newestId, kind: .newest, version: newest.version(), commit: newest.commit())
@@ -318,7 +321,8 @@ public struct ToolchainOptions: Equatable, Sendable {
         let ancestors = newest?.manifest?.ancestors ?? []
         func place(_ commit: String) -> Int? { ancestors.firstIndex { $0.hasPrefix(commit) || commit.hasPrefix($0) } }
         let needed = need.isEmpty ? nil : place(need)
-        options.released = (released ?? []).filter { r in
+        // The packages on GitHub are Klepton's.
+        options.released = (recipe.toolchain.kind == nil ? released ?? [] : []).filter { r in
             guard !have.contains(r.commit), r.version < (newest?.version() ?? Int.max) else { return false }
             guard !need.isEmpty else { return true }
             guard let needed else { return false }

@@ -357,11 +357,26 @@ public struct Installer: Sendable {
     func target() throws -> (device: Device, bundle: String, toolchain: Toolchain) {
         let device = try control.pick(udid: request.device)
         let bundle = resolvedBundleId
+        try fetchOwnToolchainIfMissing()
         let toolchain = try Toolchain(root: URL(fileURLWithPath: request.toolchain))
+        guard toolchain.builds(recipe) else {
+            throw ToolchainError.wrongKind(game: recipe.title, have: toolchain.kind, need: recipe.toolchain.kind ?? Toolchain.kleptonKind)
+        }
         guard toolchain.satisfies(minCommit: recipe.toolchain.minCommit) else {
             throw ToolchainError.tooOld(have: toolchain.commit(), need: recipe.toolchain.minCommit)
         }
         return (device, bundle, toolchain)
+    }
+
+    /// A game with a toolchain of its own, named by its recipe (`Recipe.Toolchain.source`): fetched on first use, to
+    /// the place the job was given. Anything else the job names as its toolchain is left as it is.
+    func fetchOwnToolchainIfMissing() throws {
+        let wanted = URL(fileURLWithPath: request.toolchain).standardizedFileURL
+        let external = ExternalToolchains()
+        guard !FileManager.default.fileExists(atPath: wanted.appendingPathComponent("visionos/run.sh").path),
+              let own = external.directory(for: recipe), own.standardizedFileURL.path == wanted.path else { return }
+        guard !offline else { throw ExternalToolchainError.offline(recipe.title) }
+        try external.fetch(for: recipe, report: report)
     }
 
     // MARK: Schritte
@@ -989,7 +1004,7 @@ public struct Installer: Sendable {
             let totalBytes = want.values.reduce(0, +)
             let polling = StopFlag()
             defer { polling.stop() }
-            pollTreeProgress(device: device, bundle: bundle, subdirectory: Installer.treeDestination, total: totalBytes, until: polling)
+            pollTreeProgress(device: device, bundle: bundle, subdirectory: toolchain.treeDestination(recipe: recipe), total: totalBytes, until: polling)
             // Bei stundenlangen Übertragungen reißt die Verbindung gelegentlich ab (das Gerät schläft ein, ein Socket
             // schließt). Der Abgleich ist wiederholbar – was schon drüben ist, lässt devicectl aus –, also geht es
             // nach einer Pause weiter, statt den Auftrag anzuhalten. Nur Abbrüche der Übertragung werden wiederholt;
@@ -1192,9 +1207,6 @@ public struct Installer: Sendable {
         try Data("AVP Play: \(recipe.id) \(tree.name)\n".utf8).write(to: note)
         try control.copy(note, to: device, bundle: bundle, destination: "\(directory)/\(tree.deviceStampName)")
     }
-
-    /// Wo die Toolchain die Ordnerbestände auf dem Gerät ablegt (siehe stage_sync.py: `<container>/Documents/lx`).
-    static let treeDestination = "Documents/lx"
 
     /// Fragt das Gerät während eines Ordnerabgleichs alle halbe Minute, wie viel unter einem Ordner liegt (abzüglich
     /// dessen, was dort schon vorher lag), und meldet das als Fortschritt – bis `until` gesetzt ist. Eine Abfrage, die während der Übertragung scheitert,

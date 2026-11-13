@@ -347,6 +347,8 @@ func installRequest(_ o: Options, recipe id: String? = nil) -> InstallRequest {
     // zuletzt das Arbeitsverzeichnis der Entwicklung neben den Rezepten.
     let toolchain = o.value("toolchain") ?? ProcessInfo.processInfo.environment["AVPPLAY_TOOLCHAIN"]
         ?? id.flatMap { chosenToolchain(o, recipe: $0) }
+        // A game with a toolchain of its own: where the app keeps that (the job fetches it if it is not there yet).
+        ?? id.flatMap { try? RecipeStore(directory: recipesDirectory(o)).load(id: $0) }.flatMap { ExternalToolchains().directory(for: $0)?.path }
         ?? toolchainPackager(o).installed().first?.root.path
         ?? recipesDirectory(o).deletingLastPathComponent().appendingPathComponent("klepton-fork-test").path
     var request = InstallRequest(toolchain: URL(fileURLWithPath: toolchain).standardizedFileURL.path)
@@ -1417,6 +1419,9 @@ case "toolchain":
                 }
                 let t = try Toolchain(root: URL(fileURLWithPath: folder).standardizedFileURL)
                 guard t.manifest != nil else { throw PackageError.notAWorkingCopy(t.root.path) }
+                guard t.builds(r) else {
+                    throw ToolchainError.wrongKind(game: r.title, have: t.kind, need: r.toolchain.kind ?? Toolchain.kleptonKind)
+                }
                 guard r.toolchain.minCommit.isEmpty || t.satisfies(minCommit: r.toolchain.minCommit) else {
                     throw ToolchainError.tooOld(have: t.commit(), need: r.toolchain.minCommit)
                 }
@@ -1445,9 +1450,9 @@ case "status":
             print(L("Toolchain: version \(toolchain.version()) (\(toolchain.commit()))",
                     "Toolchain: Version \(toolchain.version()) (\(toolchain.commit()))"))
         }
-        let pins = ToolchainChoices.load().games
+        let choices = ToolchainChoices.load()
         for r in try RecipeStore(directory: recipesDirectory(o)).loadAll() {
-            let st = GameStatus.of(recipe: r, store: store, apps: apps, toolchainVersion: toolchain?.appRevisions().forTarget(r.toolchain.target), pin: pins[r.id])
+            let st = GameStatus.of(recipe: r, store: store, apps: apps, toolchainVersion: toolchain?.appRevisions().forTarget(r.toolchain.target), pin: choices.pin(for: r))
             var bestand = L("\(st.filesPresent)/\(st.filesRequired) files", "\(st.filesPresent)/\(st.filesRequired) Dateien")
             if st.treesRequired > 0 {
                 bestand += L(", \(st.treesPresent)/\(st.treesRequired) folders", ", \(st.treesPresent)/\(st.treesRequired) Ordner")
@@ -1458,7 +1463,7 @@ case "status":
             case .notInstalled: geraet = L("not installed", "nicht installiert")
             case .current(let stamp): geraet = L("installed, \(stamp)", "installiert, \(stamp)")
             case .olderToolchain(let stamp):
-                geraet = pins[r.id].map { L("installed, \(stamp) – not built with toolchain \($0.name), which is chosen for this game",
+                geraet = choices.pin(for: r).map { L("installed, \(stamp) – not built with toolchain \($0.name), which is chosen for this game",
                                             "installiert, \(stamp) – nicht mit Toolchain \($0.name) gebaut, die für dieses Spiel gewählt ist") }
                     ?? L("installed, \(stamp) – built with an older toolchain", "installiert, \(stamp) – mit älterer Toolchain gebaut")
             case .olderGame(let stamp):

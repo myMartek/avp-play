@@ -727,7 +727,7 @@ final class AppModel: ObservableObject {
         // (Gerät fragen, jeden Ordner im Bestand zählen) dauert Sekunden und ändert an den anderen Spielen nichts.
         let id = game.id, catalog = game.catalog
         let paths = paths, apps = installedApps, revision = toolchainRevision, prefix = bundlePrefix, drafts = draftsDirectory
-        let pin = toolchainChoices.games[id], metalFX = metalFXExpected
+        let pin = toolchainChoices.pin(for: game.recipe), metalFX = metalFXExpected
         let modProfiles = toolchain(for: game)?.coreModsProfiles ?? []
         Task.detached(priority: .userInitiated) {
             var fresh: Game?
@@ -1080,7 +1080,7 @@ final class AppModel: ObservableObject {
     func refreshStatus(of id: String) {
         guard var fresh = allGames.first(where: { $0.id == id }) ?? games.first(where: { $0.id == id }) else { return }
         fresh.status = GameStatus.of(recipe: fresh.recipe, store: paths.store, apps: installedApps, toolchainVersion: toolchainRevision?.forTarget(fresh.recipe.toolchain.target),
-                                     pin: toolchainChoices.games[id], bundlePrefix: bundlePrefix,
+                                     pin: toolchainChoices.pin(for: fresh.recipe), bundlePrefix: bundlePrefix,
                                      otherSourceBuilds: Set(fresh.otherSourceBuilds),
                                      metalFX: metalFXExpected,
                                      coreMods: toolchain(for: fresh).flatMap { AppModel.coreModsExpected(recipe: fresh.recipe, profiles: $0.coreModsProfiles) })
@@ -1225,13 +1225,22 @@ final class AppModel: ObservableObject {
                      "„\(name)“ ist angehakt, liegt aber noch nicht auf diesem Mac (siehe „Wählbare Inhalte“).")
         }
         // Ist für das Spiel eine Toolchain gewählt, wird mit keiner anderen gebaut – auch nicht, wenn sie fehlt.
-        let pin = toolchainChoices.games[game.id]
+        let pin = toolchainChoices.pin(for: game.recipe)
+        // The game's own toolchain, named by its recipe and not fetched yet, is no obstacle: the job fetches it.
+        let fetchedByJob = toolchainChoices.usesRecipeToolchain(game.recipe)
         if let arriving = toolchainArriving[game.id] {
             return L("Toolchain \(arriving.version) is being downloaded for this game.", "Toolchain \(arriving.version) wird für dieses Spiel geladen.")
         }
-        if let pin, paths.packager.toolchain(for: pin) == nil {
+        if let pin, !fetchedByJob, paths.packager.toolchain(for: pin) == nil {
             return L("Toolchain \(pin.name), chosen for this game, is no longer on this Mac. Choose one under “Toolchain” below.",
                      "Toolchain \(pin.name), für dieses Spiel gewählt, liegt nicht mehr auf diesem Mac. Wähle unten unter „Toolchain“ eine.")
+        }
+        // A game with a toolchain of its own is never built with another one.
+        if let t = toolchain(for: game), !t.builds(game.recipe) {
+            return pin == nil ? L("This game is built with a toolchain of its own (\(game.recipe.toolchain.kind ?? Toolchain.kleptonKind)), which is not set up on this Mac yet.",
+                                  "Dieses Spiel wird mit einer eigenen Toolchain gebaut (\(game.recipe.toolchain.kind ?? Toolchain.kleptonKind)), die auf diesem Mac noch nicht eingerichtet ist.")
+                              : L("The toolchain chosen for this game is not the kind it is built with (see “Toolchain” below).",
+                                  "Die für dieses Spiel gewählte Toolchain ist nicht die Art, mit der es gebaut wird (siehe unten unter „Toolchain“).")
         }
         // Ein Entwurf, der ohne Toolchain nachgeschlagen wurde, nennt noch keinen Mindeststand; der wird beim Anlegen
         // des Auftrags eingesetzt.
@@ -1744,7 +1753,9 @@ final class AppModel: ObservableObject {
         // Nur wer baut oder aufs Gerät kopiert, braucht die Toolchain.
         let downloadOnly = steps == InstallStep.download
         let toolchain = toolchain(for: game)
-        guard toolchain != nil || downloadOnly else { return }
+        // The game's own toolchain may not be on this Mac yet; the job fetches it to this place.
+        let ownToolchain = toolchainChoices.usesRecipeToolchain(game.recipe) ? ExternalToolchains().directory(for: game.recipe)?.path : nil
+        guard toolchain != nil || ownToolchain != nil || downloadOnly else { return }
         // Ein Entwurf, der ohne Toolchain nachgeschlagen wurde: Jetzt, wo gebaut wird, steht fest, mit welchem Stand.
         var recipe = game.recipe
         if game.draft, recipe.toolchain.minCommit.isEmpty, !downloadOnly, let toolchain {
@@ -1753,7 +1764,7 @@ final class AppModel: ObservableObject {
             encoder.outputFormatting = [.sortedKeys, .prettyPrinted]
             try? encoder.encode(recipe).write(to: draftsDirectory.appendingPathComponent("\(recipe.id).json"), options: .atomic)
         }
-        var request = InstallRequest(toolchain: toolchain?.root.path ?? "")
+        var request = InstallRequest(toolchain: toolchain?.root.path ?? ownToolchain ?? "")
         if downloadOnly { request.downloadOnly = true }
         request.team = teamId
         request.device = device?.udid
@@ -1805,7 +1816,7 @@ final class AppModel: ObservableObject {
         let fresh = games.filter { game in
             // Ein Bau aus einer bearbeiteten Arbeitskopie, die für das Spiel nicht gewählt ist, wird nicht im
             // Sammelauftrag ersetzt: Das entscheidet der Nutzer auf der Seite des Spiels.
-            if game.status.builtWith?.modified == true, toolchainChoices.games[game.id] == nil { return false }
+            if game.status.builtWith?.modified == true, toolchainChoices.pin(for: game.recipe) == nil { return false }
             switch game.status.onDevice {
             case .olderToolchain, .olderGame, .unstamped: return blocker(for: game) == nil
             case .current, .notInstalled, .unknown, .otherSource: return false

@@ -329,7 +329,7 @@ extension AppModel {
             let recipe = DraftRecipe.placeholder(game: entry)
             out.append(Game(recipe: recipe,
                             status: GameStatus.of(recipe: recipe, store: paths.store, apps: installedApps, toolchainVersion: toolchainRevision?.forTarget(recipe.toolchain.target),
-                                                  pin: toolchainChoices.games[recipe.id], bundlePrefix: prefix,
+                                                  pin: toolchainChoices.pin(for: recipe), bundlePrefix: prefix,
                                                   metalFX: metalFXExpected),
                             cover: nil, catalog: entry, draft: true))
         }
@@ -343,7 +343,7 @@ extension AppModel {
             let recipe = SteamDraft.placeholder(app: app)
             var game = Game(recipe: recipe,
                             status: GameStatus.of(recipe: recipe, store: paths.store, apps: installedApps, toolchainVersion: toolchainRevision?.forTarget(recipe.toolchain.target),
-                                                  pin: toolchainChoices.games[recipe.id], bundlePrefix: prefix, metalFX: metalFXExpected),
+                                                  pin: toolchainChoices.pin(for: recipe), bundlePrefix: prefix, metalFX: metalFXExpected),
                             cover: nil, catalog: nil, draft: true)
             game.ownershipKeys = ["steam:\(app.appId)"]
             game.steamCatalog = steamInfo[app.appId]

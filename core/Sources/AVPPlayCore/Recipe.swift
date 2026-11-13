@@ -78,6 +78,21 @@ public struct Recipe: Codable, Sendable, Identifiable {
     public struct Toolchain: Codable, Sendable {
         public var target: String
         public var minCommit: String
+        /// Which kind of toolchain builds this game, where it is not the usual one (Klepton): a game that is neither
+        /// an Android nor a Linux program needs a toolchain of its own (`vxruntime`: a Windows game recompiled ahead of
+        /// time). The game is then only ever built with a toolchain that says it is of this kind, and such a toolchain
+        /// builds nothing else. Absent for every Klepton game.
+        public var kind: String?
+        /// For a game with a toolchain of its own: where that comes from (`ToolchainSource`). The app fetches it as
+        /// part of the game's first job. Without it the toolchain has to be chosen by hand.
+        public var source: ToolchainSource?
+
+        public init(target: String, minCommit: String, kind: String? = nil, source: ToolchainSource? = nil) {
+            self.target = target
+            self.minCommit = minCommit
+            self.kind = kind
+            self.source = source
+        }
     }
     public struct Status: Codable, Sendable {
         public var playability: String
@@ -212,6 +227,18 @@ extension Recipe {
     public func validate() throws {
         guard schema == Recipe.supportedSchema else { throw RecipeError.unsupportedSchema(schema) }
         guard Recipe.isSafeName(id) else { throw RecipeError.invalid(L("identifier '\(id)'", "Kennung '\(id)'")) }
+        // A toolchain of another kind is named plainly, and one that is fetched is fetched from a sane place – and
+        // only for a game that says which kind it is, so that nothing fetched ever stands in for Klepton.
+        if let kind = toolchain.kind {
+            guard Recipe.isSafeName(kind), kind != AVPPlayCore.Toolchain.kleptonKind, kind.allSatisfy({ $0.isASCII && ($0.isLowercase || $0.isNumber) }) else {
+                throw RecipeError.invalid(L("toolchain kind '\(kind)'", "Toolchain-Art '\(kind)'"))
+            }
+        }
+        if let source = toolchain.source {
+            guard toolchain.kind != nil, source.isSane, toolchain.minCommit.count >= 7, source.commit.hasPrefix(toolchain.minCommit) else {
+                throw RecipeError.invalid(L("toolchain source", "Quelle der Toolchain"))
+            }
+        }
         // Steam-Kennungen werden zu Argumenten für Valves Werkzeug: nur Ziffern. Und ein Rezept hat eine Kaufquelle.
         func steamId(_ s: String) -> Bool { (1...24).contains(s.count) && s.allSatisfy { $0.isASCII && $0.isNumber } }
         if let steam = store.steamAppId {
