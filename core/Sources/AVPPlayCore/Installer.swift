@@ -150,6 +150,9 @@ public struct InstallRequest: Codable, Sendable, Equatable {
     /// und gebaut wird aus dem, was auf diesem Mac liegt. Ohne Angabe: wie die Einstellung der App für alle Spiele
     /// (`InstallDefaults.offline`).
     public var offline: Bool?
+    /// Nur bei AVP Play Remote: nach dem Installieren übergeben, was sie braucht, um Spiele allein auf der Brille zu
+    /// installieren (`CompanionHandover`). Ohne Angabe: nichts übergeben.
+    public var handover: CompanionHandover.Plan?
 
     public init(toolchain: String) { self.toolchain = toolchain }
 }

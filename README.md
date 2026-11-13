@@ -62,6 +62,13 @@ code, and everything between the two stays in your network, encrypted. AVP Play 
 [its source code](https://github.com/myMartek/avp-play-remote) with your Apple team and puts it on the Vision Pro. See
 [Remote Control](https://github.com/myMartek/avp-play/wiki/Remote-Control) in the wiki.
 
+**Installing without a Mac (experimental).** With a paid Apple Developer Program membership, AVP Play Remote can
+also do the work itself: download a game from Meta, build it, sign it and install it on the Vision Pro while the
+Mac is off. It is off until you switch on *Installing Games Without a Mac (Experimental)* on the *AVP Play Remote*
+page and install the Remote again; AVP Play then builds this part into it and hands over the toolchain's runtime,
+the game recipes and your Meta library. Not every game has been tried this way – installing from the Mac stays the
+tested way. See [Remote Control](https://github.com/myMartek/avp-play/wiki/Remote-Control) in the wiki.
+
 **In the menu bar.** An icon in the menu bar shows the running job with its progress, whether the Vision Pro and
 AVP Play Remote are connected and, with a free Apple account, when the next game runs out. With *Keep running in the
 menu bar when the window is closed* (Settings › Menu Bar) you can close the window: jobs keep going, AVP Play Remote
@@ -93,7 +100,10 @@ only, without its window.
 
 - **Sign-ins go to the stores' own tools** – Meta's `ovr-platform-util` and Valve's SteamCMD, both downloaded
   from their makers. What you type goes to those tools and is not stored; Meta's token stays in the macOS keychain
-  and is sent only to Meta. Game pictures come from the stores' public pages, without your sign-in.
+  and is sent only to Meta. The one exception is yours to make: for installing without a Mac you can switch on
+  *Also hand over the Meta sign-in*, and only then the token is copied to AVP Play Remote on your own headset,
+  kept in that app's keychain and sent from there to Meta only. The same goes for your Apple team key, which goes
+  to Apple only. Game pictures come from the stores' public pages, without your sign-in.
 - **Only what you own.** Ownership is asked before anything is downloaded, add-ons only for confirmed purchases.
   Requests stop at the first unexpected answer; the app never probes what a store might hand out.
 - **Your games stay yours.** Files, builds and saved games live on your Mac and your headset. Nothing is shared

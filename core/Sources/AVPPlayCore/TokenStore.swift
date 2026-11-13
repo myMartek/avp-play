@@ -103,7 +103,7 @@ public struct TokenStore: Sendable {
         return p.terminationStatus == 0
     }
 
-    private static func security(interactive command: String) throws {
+    static func security(interactive command: String) throws {
         let p = Process()
         p.executableURL = URL(fileURLWithPath: "/usr/bin/security")
         p.arguments = ["-i"]
