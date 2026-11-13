@@ -139,6 +139,9 @@ avpplay – command line for the AVP Play core library
   avpplay saves [<id> …] [--saves <folder>]    fetch the saved games of installed games from the Vision Pro to this Mac (nothing changes on the device)
   avpplay saves <id> --restore                 put the newest copy back on the Vision Pro, replacing what is there (which is fetched first)
   avpplay servers <id> [add <address> [--name <name>] [--admin-stdin] | remove <address> | push]
+  avpplay remote install --team <id> [--handover [--with-token]] [--tag <vX.Y.Z>] [--from <source folder>] [--prefix <prefix>] [--bundle-id <id>]
+  avpplay remote handover [--with-token] [--pairing <file>] [--template <zip> [--mods-template <zip>]] [--prefix <prefix>] [--bundle-id <id>]
+                          [--asc-key-id <id> --asc-issuer-id <id> --asc-key <file>] [--pairing-port <port>]
                                                your own game servers for a game that understands such a list; the admin
                                                password is read from standard input and kept in the keychain
   avpplay job start <id> --team <team ID>      job: check, download, build, install, copy, unlock
@@ -228,6 +231,9 @@ avpplay – Kommandozeile zur Kern-Bibliothek von AVP Play
   avpplay saves [<id> …] [--saves <Ordner>]    Spielstände installierter Spiele von der Vision Pro auf den Mac holen (auf dem Gerät ändert sich nichts)
   avpplay saves <id> --restore                 den neuesten Stand auf die Vision Pro zurückspielen; ersetzt, was dort liegt (das wird vorher geholt)
   avpplay servers <id> [add <Adresse> [--name <Name>] [--admin-stdin] | remove <Adresse> | push]
+  avpplay remote install --team <ID> [--handover [--with-token]] [--tag <vX.Y.Z>] [--from <Quellordner>] [--prefix <Präfix>] [--bundle-id <Kennung>]
+  avpplay remote handover [--with-token] [--pairing <Datei>] [--template <zip> [--mods-template <zip>]] [--prefix <Präfix>] [--bundle-id <Kennung>]
+                          [--asc-key-id <ID> --asc-issuer-id <ID> --asc-key <Datei>] [--pairing-port <Port>]
                                                eigene Spielserver für ein Spiel, das so eine Liste versteht; das Admin-Passwort
                                                wird von der Standardeingabe gelesen und im Schlüsselbund abgelegt
   avpplay job start <id> --team <Team-ID>      Auftrag: prüfen, laden, bauen, installieren, kopieren, freischalten
@@ -275,7 +281,8 @@ Allgemein: --account <Name>    Eintrag im Schlüsselbund (Standard: default)
 
 let valued: Set<String> = ["account", "steam-account", "source", "store", "recipes", "locale", "with", "only", "interval", "from", "to", "force", "name",
                            "team", "device", "bundle-id", "display-name", "display-suffix", "toolchain", "controller-mode", "icon", "tool", "jobs", "toolchains", "saves", "resolution",
-                           "room-measuring", "game-language", "klepton", "markdown", "json", "references", "out", "leave-out", "summary", "top"]
+                           "room-measuring", "game-language", "klepton", "markdown", "json", "references", "out", "leave-out", "summary", "top",
+                           "prefix", "pairing", "pairing-port", "template", "mods-template", "asc-key-id", "asc-issuer-id", "asc-key", "tag"]
 let o = Options(Array(CommandLine.arguments.dropFirst()), valued: valued)
 guard let command = o.positional.first else { print(usage()); exit(0) }
 OtherSources.use(recipes: recipesDirectory(o))
@@ -1154,6 +1161,93 @@ case "workshop":
     default:
         fail(L("Unknown: \(o.positional[2]) (add, remove, list)", "Unbekannt: \(o.positional[2]) (add, remove, list)"))
     }
+
+case "remote":
+    // Die Übergabe an AVP Play Remote (CompanionHandover): was die Remote braucht, um Spiele allein auf der Brille
+    // zu installieren. Das Meta-Token geht nur mit --with-token mit.
+    if o.positional.count > 1, o.positional[1] == "install" {
+        // Baut und installiert AVP Play Remote wie die App: die neueste Fassung von GitHub (oder --tag), mit
+        // --handover die Fassung, die Spiele allein auf der Brille installiert, samt Übergabe. --from <Ordner> nimmt
+        // den Quellcode aus einem Ordner (zum Entwickeln).
+        guard let team = o.value("team") else { fail(L("Give the Apple team with --team.", "Das Apple-Team mit --team angeben.")) }
+        do {
+            do {
+                let release: CompanionApp.Release
+                if let tag = o.value("tag") {
+                    release = CompanionApp.Release(tag: tag, version: tag.hasPrefix("v") ? String(tag.dropFirst()) : tag, page: nil)
+                } else {
+                    release = try await CompanionApp.latestRelease()
+                }
+                let prefix = o.value("prefix") ?? Toolchain.defaultBundlePrefix(freeTeam: AppleTeams.isFree(team) ? team : nil)
+                var request = InstallRequest(toolchain: "")
+                request.team = team
+                request.device = o.value("device")
+                request.bundleId = o.value("bundle-id") ?? CompanionApp.bundleId(prefix: prefix)
+                request.replaceRunning = o.flags.contains("replace-running") ? true : nil
+                if o.flags.contains("handover") {
+                    let root = o.value("toolchain") ?? ProcessInfo.processInfo.environment["AVPPLAY_TOOLCHAIN"] ?? toolchainPackager(o).installed().first?.root.path
+                    request.handover = CompanionHandover.Plan(bundlePrefix: prefix, withToken: o.flags.contains("with-token"),
+                                                              account: o.value("account") ?? "default", recipes: recipesDirectory(o),
+                                                              library: MetaLibraryCache(store: contentStore(o)).url,
+                                                              toolchain: root.map { URL(fileURLWithPath: $0).standardizedFileURL })
+                }
+                var installer = CompanionInstaller(recipe: CompanionApp.recipe(release: release), request: request) { print($0) }
+                installer.localSource = o.value("from").map { URL(fileURLWithPath: $0).standardizedFileURL }
+                let steps: [InstallStep] = request.handover == nil ? [.fetch, .build] : [.fetch, .build, .stage]
+                for step in steps {
+                    print("[\(step.title)]")
+                    try await installer.perform(step)
+                }
+            } catch { fail("\(error)") }
+        }
+        exit(0)
+    }
+    guard o.positional.count > 1, o.positional[1] == "handover" else {
+        fail(L("Unknown: avpplay remote \(o.positional.dropFirst().first ?? "") (install, handover)",
+               "Unbekannt: avpplay remote \(o.positional.dropFirst().first ?? "") (install, handover)"))
+    }
+    do {
+        let control = DeviceControl()
+        let device = try control.pick(udid: o.value("device"))
+        let prefix = o.value("prefix") ?? Toolchain.defaultBundlePrefix()
+        let bundle = o.value("bundle-id") ?? CompanionApp.bundleId(prefix: prefix)
+        var inputs = CompanionHandover.Inputs(bundlePrefix: prefix)
+        if let port = o.value("pairing-port").flatMap(Int.init) { inputs.pairingPort = port }
+        if o.flags.contains("with-token") { inputs.token = try TokenStore().read(account: o.value("account") ?? "default") }
+        inputs.library = MetaLibraryCache(store: contentStore(o)).url
+        inputs.recipes = recipesDirectory(o)
+        inputs.pairing = o.value("pairing").map { URL(fileURLWithPath: $0) }
+        if let id = o.value("asc-key-id"), let issuer = o.value("asc-issuer-id"), let file = o.value("asc-key") {
+            inputs.appleKey = .init(keyId: id, issuerId: issuer, file: URL(fileURLWithPath: file))
+        }
+        if let template = o.value("template") {
+            inputs.template = URL(fileURLWithPath: template)
+            if let mods = o.value("mods-template") { inputs.modTemplates = [URL(fileURLWithPath: mods)] }
+        } else if let root = o.value("toolchain") ?? ProcessInfo.processInfo.environment["AVPPLAY_TOOLCHAIN"] ?? toolchainPackager(o).installed().first?.root.path {
+            let toolchain = try Toolchain(root: URL(fileURLWithPath: root).standardizedFileURL)
+            let cache = CompanionApp.directory.appendingPathComponent("templates", isDirectory: true)
+            inputs.template = try CompanionHandover.template(toolchain: toolchain, cache: cache) { print($0) }
+            if inputs.template != nil { inputs.modTemplates = CompanionHandover.modTemplates(toolchain: toolchain, cache: cache) }
+            if inputs.template == nil {
+                warn(L("Toolchain \(toolchain.name) cannot build a runtime template; none is handed over.",
+                       "Die Toolchain \(toolchain.name) kann keine Laufzeit-Vorlage bauen; es wird keine übergeben."))
+            }
+        }
+        let staging = FileManager.default.temporaryDirectory.appendingPathComponent("avpplay-handover-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: staging) }
+        let items = try CompanionHandover.prepare(inputs, staging: staging)
+        // Wie in der App: nur an eine Remote, die eine Übergabe annimmt. --force übergeht das (für einen Testbau, der
+        // sein Kennzeichen noch nicht geschrieben hat).
+        if !o.flags.contains("force"), !CompanionHandover.accepts((try? control.files(device: device, bundle: bundle, subdirectory: "Documents")) ?? []) {
+            throw CompanionHandover.HandoverError.notCapable
+        }
+        let folder = CompanionHandover.folder
+        let present = ((try? control.files(device: device, bundle: bundle, subdirectory: folder)) ?? [])
+        try CompanionHandover.push(items, present: present, copy: { local, destination in
+            try control.copy(local, to: device, bundle: bundle, destination: destination)
+        }, report: { print($0) })
+        print(L("AVP Play Remote takes it over at its next start.", "AVP Play Remote übernimmt es beim nächsten Start."))
+    } catch { fail("\(error)") }
 
 case "servers":
     let r = recipe(o)

@@ -61,6 +61,13 @@ extension AppModel {
         return nil
     }
 
+    /// Warum die installierte App neu gebaut werden sollte, obwohl ihre Fassung die neueste ist (`CompanionApp.rebuildReason`).
+    var companionRebuildReason: String? {
+        guard companionInstalled else { return nil }
+        return CompanionApp.rebuildReason(variant: CompanionApp.variant(), bundleId: companionBundleId, handover: handoverPlan(),
+                                          freeTeam: team?.free == true)
+    }
+
     var companionActionTitle: String {
         switch companionState {
         case .updatable: return L("Update", "Aktualisieren")
@@ -73,7 +80,9 @@ extension AppModel {
         switch companionState {
         case .unknown: return L("The Vision Pro is not reachable right now.", "Die Vision Pro ist gerade nicht erreichbar.")
         case .notInstalled: return L("Not installed yet.", "Noch nicht installiert.")
-        case .current(let version): return L("Installed, version \(version) – up to date.", "Installiert, Fassung \(version) – auf dem neuesten Stand.")
+        case .current(let version):
+            if let reason = companionRebuildReason { return L("Installed, version \(version). ", "Installiert, Fassung \(version). ") + reason }
+            return L("Installed, version \(version) – up to date.", "Installiert, Fassung \(version) – auf dem neuesten Stand.")
         case .updatable(let installed, let latest):
             return L("Installed, version \(installed). Version \(latest) is out – “Update” builds and installs it; pairings are kept.",
                      "Installiert, Fassung \(installed). Fassung \(latest) ist erschienen – „Aktualisieren“ baut und installiert sie; Kopplungen bleiben.")
@@ -103,9 +112,11 @@ extension AppModel {
         request.device = device?.udid
         request.bundleId = companionBundleId
         request.live = true
+        // Mit eingeschalteter Übergabe bekommt die Remote danach, was sie braucht, um Spiele allein zu installieren.
+        request.handover = handoverPlan()
         do {
             let job = try paths.jobs.enqueue(Job(recipe: CompanionApp.recipe(release: release), request: request,
-                                                 steps: [.fetch, .build], toolchainCommit: ""))
+                                                 steps: request.handover == nil ? [.fetch, .build] : [.fetch, .build, .stage], toolchainCommit: ""))
             queued.append(job.id)
             reloadJobs()
             selectedJob = job.id
@@ -259,6 +270,8 @@ struct CompanionDetail: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(6)
                 }
+
+                CompanionHandoverBox()
 
                 GroupBox(L("Getting Started", "So geht es los")) {
                     VStack(alignment: .leading, spacing: 8) {
