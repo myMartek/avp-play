@@ -75,7 +75,8 @@ Linux program cannot be: it needs a toolchain of another kind, and its recipe sa
   Mac: AVP Play runs it before the build with `KLEPTON_GAME_MODS=<ids>`, shows its lines `@@mods total|n`,
   `@@mods have|name|how`, `@@mods need|name|page` and `@@mods done|n` in its own words, and takes exit status 2 as
   "the player has not downloaded everything yet". Where a file needs the player, the script opens the page in the
-  browser and waits for the file. `run.sh device` then builds with the sets in `KLEPTON_GAME_MODS` (empty: none) and
+  browser and waits for the file; when the player cancels the job, AVP Play ends the script with SIGTERM, and the
+  script ends whatever it started. `source.key` may carry a `hint`: which of the things on the key's page is the key. `run.sh device` then builds with the sets in `KLEPTON_GAME_MODS` (empty: none) and
   `stage_sync.py` puts their files on the device. AVP Play holds no mod files; the key, if the player stored one
   (`avpplay mods <id> --set-key`, or the Mods box), stays in the keychain and reaches only that script.
 

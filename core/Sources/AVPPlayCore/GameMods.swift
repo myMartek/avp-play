@@ -41,6 +41,9 @@ public struct GameMods: Codable, Sendable, Equatable {
             public var variable: String
             /// Where the player makes the key.
             public var page: String?
+            /// Which of the things on that page is the key, in a sentence (the page of Nexus Mods lists a key for every
+            /// program that ever asked for one, and the player's own at the very bottom).
+            public var hint: LocalizedText?
             /// The key only downloads for a paid account of that site; a free one goes through the browser anyway.
             public var premiumOnly: Bool?
         }
@@ -163,7 +166,7 @@ extension Toolchain {
     /// wants it used, goes into the script's environment under the name the description gives and nowhere else: not
     /// into the log (the script's promise) and not into this program's own output.
     public func fetchGameMods(sets: [String], mods: GameMods, key: String?, environment: [String: String], log: URL,
-                              report: (String) -> Void) throws {
+                              stop: GameModsFetchStop? = nil, report: (String) -> Void) throws {
         var env = ProcessInfo.processInfo.environment
         env["PATH"] = "/usr/bin:/bin:/usr/sbin:/sbin"
         env.merge(environment) { _, new in new }
@@ -184,6 +187,7 @@ extension Toolchain {
         p.standardError = out
         p.standardInput = FileHandle.nullDevice
         try p.run()
+        stop?.attach(p)
         let source = mods.source?.name ?? L("the mods' site", "der Seite der Mods")
         var pending = Data()
         var stopped = ""
@@ -206,11 +210,44 @@ extension Toolchain {
         }
         if !pending.isEmpty { take(String(decoding: pending, as: UTF8.self)) }
         p.waitUntilExit()
+        if stop?.isStopped == true { throw CancellationError() }
         switch p.terminationStatus {
         case 0: return
         case 2: throw GameModsError.notFetched(hint: stopped, log: log)
         default: throw GameModsError.fetchFailed(hint: stopped, log: log)
         }
+    }
+}
+
+/// Ends a running fetch when the job is cancelled. The fetch waits on the player (a download in the browser, up to a
+/// quarter of an hour each), so "the current step finishes first" would mean: not for a long time, or never. The
+/// toolchain's script takes SIGTERM as "the player cancelled" and ends what it started itself.
+public final class GameModsFetchStop: @unchecked Sendable {
+    private let lock = NSLock()
+    private var process: Process?
+    private var stopped = false
+
+    public init() {}
+
+    public var isStopped: Bool {
+        lock.lock(); defer { lock.unlock() }
+        return stopped
+    }
+
+    func attach(_ p: Process) {
+        lock.lock()
+        process = p
+        let already = stopped
+        lock.unlock()
+        if already, p.isRunning { p.terminate() }
+    }
+
+    public func stop() {
+        lock.lock()
+        stopped = true
+        let p = process
+        lock.unlock()
+        if let p, p.isRunning { p.terminate() }
     }
 }
 

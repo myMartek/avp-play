@@ -13,7 +13,7 @@ final class GameModsTests: XCTestCase {
 
     static let modsJSON = """
     {"schema": 1, "about": {"en": "From your own account.", "de": "Über dein eigenes Konto."},
-     "source": {"name": "Nexus Mods", "account": "https://example.invalid/register", "key": {"variable": "NEXUS_API_KEY", "page": "https://example.invalid/keys", "premiumOnly": true}},
+     "source": {"name": "Nexus Mods", "account": "https://example.invalid/register", "key": {"variable": "NEXUS_API_KEY", "page": "https://example.invalid/keys", "hint": {"en": "The one at the bottom.", "de": "Der ganz unten."}, "premiumOnly": true}},
      "sets": [{"id": "core", "title": {"en": "Hands", "de": "Hände"}, "default": false, "macRun": true, "downloadBytes": 9000000, "entries": ["higgs"],
                "mods": [{"name": "HIGGS", "version": "1.10.10", "about": "grab"}]},
               {"id": "skyland", "title": "Textures", "downloadBytes": 2632276741}]}
@@ -100,6 +100,33 @@ final class GameModsTests: XCTestCase {
         }
         XCTAssertThrowsError(try t.fetchGameMods(sets: ["core"], mods: mods, key: nil, environment: ["FAIL": "1"], log: log) { _ in }) { error in
             guard case GameModsError.fetchFailed = error else { return XCTFail("\(error)") }
+        }
+    }
+
+    func testACancelledJobEndsTheFetchAtOnce() throws {
+        // The script waits on the player, as the real one does on a download that may never come.
+        let script = """
+        import time
+        print("@@mods total|1", flush=True)
+        print("@@mods need|VRIK|https://example.invalid/vrik", flush=True)
+        time.sleep(120)
+        """
+        let t = try toolchain(fetch: script)
+        let mods = try XCTUnwrap(t.gameMods())
+        XCTAssertEqual(mods.source?.key?.hint?.text.isEmpty, false)
+        let log = temp().appendingPathComponent("mods.log")
+        let stop = GameModsFetchStop()
+        DispatchQueue.global().asyncAfter(deadline: .now() + 1) { stop.stop() }
+        let began = Date()
+        XCTAssertThrowsError(try t.fetchGameMods(sets: ["core"], mods: mods, key: nil, environment: [:], log: log, stop: stop) { _ in }) { error in
+            XCTAssertTrue(error is CancellationError, "\(error)")
+        }
+        XCTAssertLessThan(Date().timeIntervalSince(began), 20, "the fetch ended with the cancel, not with the script")
+        // Cancelled before the script even started: it is ended as soon as it runs.
+        let early = GameModsFetchStop()
+        early.stop()
+        XCTAssertThrowsError(try t.fetchGameMods(sets: ["core"], mods: mods, key: nil, environment: [:], log: log, stop: early) { _ in }) { error in
+            XCTAssertTrue(error is CancellationError, "\(error)")
         }
     }
 

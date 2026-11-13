@@ -1422,6 +1422,9 @@ private struct GameModsBox: View {
                             }
                         }
                         if let keyNote { Text(keyNote).font(.callout).foregroundStyle(.red) }
+                        if let hint = key.hint?.text {
+                            Text(hint).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                        }
                         HStack(spacing: 12) {
                             if let page = key.page, let url = URL(string: page) {
                                 Link(L("Where the key is made", "Wo der Schlüssel entsteht"), destination: url)

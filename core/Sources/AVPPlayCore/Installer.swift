@@ -758,8 +758,14 @@ public struct Installer: Sendable {
                     report(L("Mods: the game will run on this Mac for a few minutes during the build (muted, in the background), so that the mods' changes can be built in.",
                              "Mods: Das Spiel läuft während des Baus einige Minuten auf diesem Mac (stumm, im Hintergrund), damit die Änderungen der Mods eingebaut werden können."))
                 }
-                try toolchain.fetchGameMods(sets: modSets, mods: mods, key: key, environment: extraEnvironment,
-                                            log: store.directory(for: recipe).appendingPathComponent(".last-mods.log"), report: report)
+                // Cancelling the job ends the fetch at once: it may be waiting on a download that will never come.
+                let stop = GameModsFetchStop()
+                let fetchKey = key, fetchEnvironment = extraEnvironment
+                let fetchLog = store.directory(for: recipe).appendingPathComponent(".last-mods.log")
+                try await withTaskCancellationHandler {
+                    try toolchain.fetchGameMods(sets: modSets, mods: mods, key: fetchKey, environment: fetchEnvironment,
+                                                log: fetchLog, stop: stop, report: report)
+                } onCancel: { stop.stop() }
             }
             extraEnvironment[Toolchain.gameModsVariable] = modSets.joined(separator: ",")
         } else if !(request.gameMods ?? []).isEmpty {
