@@ -133,6 +133,10 @@ avpplay – command line for the AVP Play core library
   avpplay toolchain use <id> --toolchain <folder> | --newest
                                                build this game with that toolchain from now on (an installed package or a
                                                working copy) – or with the newest one again
+  avpplay mods <id>                            the mod sets the game's own toolchain can build it with, and whether a key
+                                               for their site is stored (Skyrim VR: Nexus Mods)
+  avpplay mods <id> --set-key                  store your own key for that site in the keychain; it is read from standard
+                                               input, never from an argument (--clear-key removes it)
   avpplay install <id> --team <team ID>        build, install, copy missing data, unlock add-on content
   avpplay stage <id>                           only copy missing data and add-on content (no build)
   avpplay renew [--dry-run] [--force <id>]     sign installed games again whose signature runs out soon (what the background service does)
@@ -168,6 +172,11 @@ avpplay – command line for the AVP Play core library
                                      Settings › Advanced › Test; the game page's option “XR prediction” does the same)
              --core-mods             build with the game's mods (Beat Saber: custom songs), where the toolchain has them for
                                      this version; otherwise the game is built without them (the game page's “Mods” does the same)
+             --game-mods <sets>      build with these mod sets of the game's own toolchain (ids from `avpplay mods <id>`,
+                                     comma-separated; `default`: the ones that are on by default); their files are fetched
+                                     first, through your browser where the site needs you (the game page's “Mods” does the same)
+             --mods-key              fetch those files with the key stored by `avpplay mods <id> --set-key` (a paid account
+                                     of the site) instead of through the browser
              --room-measuring <on|off>  "Measure room" and the play area in the game from the start (default: the app's
                                      setting for all games, on unless changed; in the game under Settings › Play area)
              --game-language <code>  the language the game starts with: device, en, a locale like fr_FR, or game (no preset);
@@ -225,6 +234,10 @@ avpplay – Kommandozeile zur Kern-Bibliothek von AVP Play
   avpplay toolchain use <id> --toolchain <Ordner> | --newest
                                                dieses Spiel ab jetzt mit dieser Toolchain bauen (ein installiertes Paket oder
                                                eine Arbeitskopie) – oder wieder mit der neuesten
+  avpplay mods <id>                            die Mod-Sets, mit denen die eigene Toolchain des Spiels es bauen kann, und ob ein
+                                               Schlüssel für deren Seite hinterlegt ist (Skyrim VR: Nexus Mods)
+  avpplay mods <id> --set-key                  deinen eigenen Schlüssel für diese Seite im Schlüsselbund hinterlegen; er wird von
+                                               der Standardeingabe gelesen, nie aus einem Argument (--clear-key entfernt ihn)
   avpplay install <id> --team <Team-ID>        bauen, installieren, Daten ergänzend kopieren, Zusatzinhalte freischalten
   avpplay stage <id>                           nur Daten und Zusatzinhalte ergänzend kopieren (ohne Build)
   avpplay renew [--dry-run] [--force <id>]     installierte Spiele neu signieren, deren Signatur bald abläuft (was der Hintergrunddienst tut)
@@ -261,6 +274,11 @@ avpplay – Kommandozeile zur Kern-Bibliothek von AVP Play
                                      Einstellungen › Erweitert › Test; die Option „XR-Vorhersage“ auf der Seite des Spiels tut dasselbe)
              --core-mods             mit den Mods des Spiels bauen (Beat Saber: eigene Songs), wo die Toolchain sie für diese
                                      Fassung hat; sonst wird ohne sie gebaut („Mods“ auf der Seite des Spiels tut dasselbe)
+             --game-mods <Sets>      mit diesen Mod-Sets der eigenen Toolchain des Spiels bauen (Kennungen aus `avpplay mods <id>`,
+                                     durch Komma getrennt; `default`: die, die von sich aus an sind); ihre Dateien werden vorher
+                                     geholt, über deinen Browser, wo die Seite dich braucht („Mods“ auf der Seite des Spiels tut dasselbe)
+             --mods-key              diese Dateien mit dem per `avpplay mods <id> --set-key` hinterlegten Schlüssel holen (ein
+                                     bezahltes Konto der Seite) statt über den Browser
              --room-measuring <on|off>  „Raum vermessen“ und der Spielbereich im Spiel von Anfang an (Vorgabe: die Einstellung
                                      der App für alle Spiele, an, solange sie nicht geändert ist; im Spiel unter Einstellungen › Spielbereich)
              --game-language <Code>  die Sprache, mit der das Spiel beginnt: device, en, eine Sprache wie fr_FR oder game (keine
@@ -281,7 +299,7 @@ Allgemein: --account <Name>    Eintrag im Schlüsselbund (Standard: default)
 
 let valued: Set<String> = ["account", "steam-account", "source", "store", "recipes", "locale", "with", "only", "interval", "from", "to", "force", "name",
                            "team", "device", "bundle-id", "display-name", "display-suffix", "toolchain", "controller-mode", "icon", "tool", "jobs", "toolchains", "saves", "resolution",
-                           "room-measuring", "game-language", "klepton", "markdown", "json", "references", "out", "leave-out", "summary", "top",
+                           "room-measuring", "game-language", "game-mods", "klepton", "markdown", "json", "references", "out", "leave-out", "summary", "top",
                            "prefix", "pairing", "pairing-port", "template", "mods-template", "asc-key-id", "asc-issuer-id", "asc-key", "tag"]
 let o = Options(Array(CommandLine.arguments.dropFirst()), valued: valued)
 guard let command = o.positional.first else { print(usage()); exit(0) }
@@ -380,6 +398,14 @@ func installRequest(_ o: Options, recipe id: String? = nil) -> InstallRequest {
     if o.flags.contains("metalfx") { request.metalFX = true }
     if o.flags.contains("xr-prediction") { request.xrPrediction = true }
     if o.flags.contains("core-mods") { request.coreMods = true }
+    if let value = o.value("game-mods") {
+        if value == "default" {
+            request.gameMods = (try? Toolchain(root: URL(fileURLWithPath: toolchain)))?.gameMods()?.defaultSets ?? []
+        } else {
+            request.gameMods = value.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty && $0 != "none" }
+        }
+    }
+    if o.flags.contains("mods-key") { request.modsKey = true }
     if let value = o.value("room-measuring") {
         guard value == "on" || value == "off" else {
             fail(L("--room-measuring must be on or off", "--room-measuring muss on oder off sein"))
@@ -1434,6 +1460,52 @@ case "toolchain":
         } catch { fail("\(error)") }
     default:
         fail(L("Unknown toolchain command '\(o.positional[1])'.", "Unbekannter Toolchain-Befehl '\(o.positional[1])'."))
+    }
+
+case "mods":
+    // The mod sets of a game's own toolchain (`GameMods`), and the key for their site.
+    let r = recipe(o)
+    let request = installRequest(o, recipe: r.id)
+    guard let toolchain = try? Toolchain(root: URL(fileURLWithPath: request.toolchain)), toolchain.builds(r), let mods = toolchain.gameMods() else {
+        fail(L("\(r.title) has no mods to choose here (its toolchain offers none, or is not on this Mac yet).",
+               "Für \(r.title) gibt es hier keine Mods zur Wahl (seine Toolchain bietet keine an oder liegt noch nicht auf diesem Mac)."))
+    }
+    let keys = ModsKeyStore()
+    if o.flags.contains("set-key") || o.flags.contains("clear-key") {
+        guard let variable = mods.source?.key?.variable else {
+            fail(L("These mods take no key.", "Diese Mods nehmen keinen Schlüssel."))
+        }
+        if o.flags.contains("clear-key") {
+            print(keys.delete(variable: variable) ? L("The key is removed from the keychain.", "Der Schlüssel ist aus dem Schlüsselbund entfernt.")
+                                                  : L("No key was stored.", "Es war kein Schlüssel hinterlegt."))
+        } else {
+            guard let line = readLine(strippingNewline: true) else { fail(L("No key on standard input.", "Kein Schlüssel auf der Standardeingabe.")) }
+            do {
+                try keys.write(key: line, variable: variable)
+                print(L("The key for \(mods.source?.name ?? "the site") is stored in the keychain. Use it with --mods-key.",
+                        "Der Schlüssel für \(mods.source?.name ?? "die Seite") ist im Schlüsselbund hinterlegt. Benutzt wird er mit --mods-key."))
+            } catch { fail(L("The key was not stored: \(error)", "Der Schlüssel wurde nicht hinterlegt: \(error)")) }
+        }
+        break
+    }
+    if let about = mods.about?.text, !about.isEmpty { print(about + "\n") }
+    let built = GameModsRecord.built(store: contentStore(o), recipe: r)
+    for set in mods.sets {
+        let marks = [set.default == true ? L("on by default", "von sich aus an") : nil,
+                     built.contains(set.id) ? L("in the last build", "im letzten Bau") : nil,
+                     set.downloadBytes.map { gigabytes($0) }].compactMap { $0 }.joined(separator: ", ")
+        print("\(set.id)  \(set.title.text)\(marks.isEmpty ? "" : "  (\(marks))")")
+        if let about = set.about?.text { print("    \(about)") }
+        for m in set.mods ?? [] {
+            print("    - \(m.name)\(m.version.map { " \($0)" } ?? "")\(m.about.map { ": \($0.text)" } ?? "")")
+        }
+    }
+    if let source = mods.source, let key = source.key {
+        print("")
+        print(keys.has(variable: key.variable)
+              ? L("A key for \(source.name) is stored; --mods-key uses it.", "Ein Schlüssel für \(source.name) ist hinterlegt; --mods-key benutzt ihn.")
+              : L("No key for \(source.name) is stored\(key.page.map { " (it is made at \($0))" } ?? ""); without one the downloads go through your browser.",
+                  "Für \(source.name) ist kein Schlüssel hinterlegt\(key.page.map { " (er entsteht unter \($0))" } ?? ""); ohne gehen die Downloads über deinen Browser."))
     }
 
 case "status":

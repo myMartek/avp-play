@@ -67,6 +67,17 @@ Linux program cannot be: it needs a toolchain of another kind, and its recipe sa
   trees, `visionos/targets.py` has a `TARGETS` row for the target, and `visionos/gen_xcodeproj.py` names the build
   options it honours. The row may name where the trees go on the device (`devicetree`, a path below `Documents/`),
   which is where the app reads the copy's progress.
+- Mods of a toolchain. A toolchain that can build its game with mods names `KLEPTON_GAME_MODS` in
+  `visionos/gen_xcodeproj.py` and brings two more files. `visionos/mods.json` describes the sets the player can
+  switch on (`schema` 1; `sets` with `id`, `title`, `about`, `default`, `macRun`, `downloadBytes` and the `mods` of
+  each; `source` with the name of the site the files come from and, where the player's own key can fetch them, the
+  environment variable it is handed over in). `visionos/mods_fetch.py` gets the files of the chosen sets onto the
+  Mac: AVP Play runs it before the build with `KLEPTON_GAME_MODS=<ids>`, shows its lines `@@mods total|n`,
+  `@@mods have|name|how`, `@@mods need|name|page` and `@@mods done|n` in its own words, and takes exit status 2 as
+  "the player has not downloaded everything yet". Where a file needs the player, the script opens the page in the
+  browser and waits for the file. `run.sh device` then builds with the sets in `KLEPTON_GAME_MODS` (empty: none) and
+  `stage_sync.py` puts their files on the device. AVP Play holds no mod files; the key, if the player stored one
+  (`avpplay mods <id> --set-key`, or the Mods box), stays in the keychain and reaches only that script.
 
 ## Files
 

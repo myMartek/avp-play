@@ -130,8 +130,8 @@
     "de": "Braucht ein bezahltes Apple-Entwicklerkonto (die App nutzt eine Speicher-Berechtigung, die Apple kostenlosen Konten nicht gibt) und PlayStation-VR2-Sense-Controller. Beide Controller vor dem Druck auf Start verbinden: Später verbundene bekommen ihre Tasten, aber nicht ihre Sticks."
    },
    {
-    "en": "Built from plain Skyrim VR. The mods the project supports (SKSE VR, HIGGS, PLANCK, VRIK, SkyUI VR) are not installed through AVP Play yet.",
-    "de": "Gebaut aus dem unveränderten Skyrim VR. Die Mods, die das Projekt unterstützt (SKSE VR, HIGGS, PLANCK, VRIK, SkyUI VR), werden über AVP Play noch nicht installiert."
+    "en": "Mods are a choice on this page (“Mods”): hands, body and menus (SKSE VR, HIGGS, PLANCK, VRIK, SkyUI VR) and sharper textures (Skyland AIO). Their files come from Nexus Mods with your own account; the first build with the hands set runs the game on the Mac for a few minutes.",
+    "de": "Mods sind eine Wahl auf dieser Seite („Mods“): Hände, Körper und Menüs (SKSE VR, HIGGS, PLANCK, VRIK, SkyUI VR) und schärfere Texturen (Skyland AIO). Ihre Dateien kommen von Nexus Mods über dein eigenes Konto; der erste Bau mit dem Hände-Set lässt das Spiel einige Minuten auf dem Mac laufen."
    }
   ]
  },

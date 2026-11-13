@@ -861,6 +861,7 @@ struct GameDetail: View {
                 if game.prepared, model.toolchainText != nil { ToolchainBox(game: game) }
 
                 if model.offersCoreMods(game) { CoreModsBox(game: game) }
+        if model.gameMods(game) != nil { GameModsBox(game: game) }
 
                 if model.hasSaves(game), game.installed || model.saveSnapshots[game.id] != nil { SavesBox(game: game) }
 
@@ -1348,6 +1349,101 @@ private struct OfflineBox: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading).padding(6)
+        }
+    }
+}
+
+/// The mods a game's own toolchain can build it with (`GameMods`): a switch per set, and the player's key for the
+/// site the files come from.
+private struct GameModsBox: View {
+    @EnvironmentObject var model: AppModel
+    let game: Game
+    @State private var keyText = ""
+    @State private var keyStored = false
+    @State private var keyNote: String?
+
+    var body: some View {
+        if let mods = model.gameMods(game) {
+            let chosen = model.gameModSets(game)
+            GroupBox(L("Mods", "Mods")) {
+                VStack(alignment: .leading, spacing: 10) {
+                    ForEach(mods.sets) { set in
+                        Toggle(isOn: Binding(get: { chosen.contains(set.id) }, set: { model.setGameModSet(set.id, on: $0, for: game) })) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(set.title.text)
+                                if let about = set.about?.text {
+                                    Text(about).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                                }
+                                if let list = set.mods, !list.isEmpty {
+                                    Text(list.map { $0.name + ($0.version.map { " \($0)" } ?? "") }.joined(separator: " · "))
+                                        .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
+                        }
+                    }
+                    if let about = mods.about?.text {
+                        Text(about).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    }
+                    Text(L("Switching mods on or off is an update of the game: install it again afterwards. Your saved games stay.",
+                           "Mods ein- oder auszuschalten ist ein Update des Spiels: Installiere es danach erneut. Deine Spielstände bleiben."))
+                        .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    if let source = mods.source, let key = source.key {
+                        Divider()
+                        Toggle(isOn: Binding(get: { model.modsKeyOn && keyStored }, set: { model.modsKeyOn = $0 })) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(L("Download with my \(source.name) key", "Mit meinem \(source.name)-Schlüssel laden"))
+                                Text(key.premiumOnly == true
+                                     ? L("With a paid \(source.name) account (Premium) the files download by themselves. Without it, or with this off, AVP Play opens each download page in your browser.",
+                                         "Mit einem bezahlten \(source.name)-Konto (Premium) laden die Dateien von selbst. Ohne, oder wenn das hier aus ist, öffnet AVP Play jede Download-Seite in deinem Browser.")
+                                     : L("The files download by themselves with your key. With this off, AVP Play opens each download page in your browser.",
+                                         "Mit deinem Schlüssel laden die Dateien von selbst. Wenn das hier aus ist, öffnet AVP Play jede Download-Seite in deinem Browser."))
+                                    .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                        .disabled(!keyStored)
+                        HStack {
+                            SecureField(keyStored ? L("A key is stored", "Ein Schlüssel ist hinterlegt") : L("Your personal API key", "Dein persönlicher API-Schlüssel"), text: $keyText)
+                                .textFieldStyle(.roundedBorder)
+                            Button(L("Save", "Sichern")) {
+                                do {
+                                    try ModsKeyStore().write(key: keyText, variable: key.variable)
+                                    keyText = ""; keyStored = true; keyNote = nil
+                                    model.modsKeyOn = true
+                                } catch {
+                                    keyNote = L("That does not look like a key, or the keychain did not take it.", "Das sieht nicht nach einem Schlüssel aus, oder der Schlüsselbund hat ihn nicht angenommen.")
+                                }
+                            }
+                            .disabled(keyText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                            if keyStored {
+                                Button(L("Remove", "Entfernen")) {
+                                    ModsKeyStore().delete(variable: key.variable)
+                                    keyStored = false; model.modsKeyOn = false
+                                }
+                            }
+                        }
+                        if let keyNote { Text(keyNote).font(.callout).foregroundStyle(.red) }
+                        HStack(spacing: 12) {
+                            if let page = key.page, let url = URL(string: page) {
+                                Link(L("Where the key is made", "Wo der Schlüssel entsteht"), destination: url)
+                            }
+                            if let account = source.account, let url = URL(string: account) {
+                                Link(L("Create a free \(source.name) account", "Kostenloses \(source.name)-Konto anlegen"), destination: url)
+                            }
+                        }
+                        .font(.callout)
+                        Text(L("The key stays in your Mac's keychain and is only handed to the download step.",
+                               "Der Schlüssel bleibt im Schlüsselbund deines Macs und geht nur an den Download-Schritt."))
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading).padding(6)
+            }
+            .task(id: game.id) {
+                if let variable = mods.source?.key?.variable {
+                    let stored = await Task.detached { ModsKeyStore().has(variable: variable) }.value
+                    keyStored = stored
+                }
+            }
         }
     }
 }

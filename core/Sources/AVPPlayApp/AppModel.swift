@@ -125,6 +125,9 @@ struct GameOptions: Codable, Equatable {
     /// (`defaultOn`, bisher nur bei Beat Saber an). Gilt nur für eine Fassung, für die die Toolchain Mods hat; für jede
     /// andere wird ohne sie gebaut, und die Wahl bleibt für später stehen.
     var coreMods: Bool?
+    /// The mod sets of the game's own toolchain to build with (`GameMods`; the "Mods" box). Without a choice: the sets
+    /// the toolchain's description switches on by default (so far none).
+    var gameMods: [String]?
     /// Dieses Spiel ohne Meta und Steam installieren (`InstallRequest.offline`). Ohne Angabe: wie für alle Spiele
     /// eingestellt (`AppModel.offlineMode`).
     var offline: Bool?
@@ -1061,6 +1064,42 @@ final class AppModel: ObservableObject {
         return (games.map { toolchain(for: $0) } + [toolchain]).lazy.compactMap { $0?.modCredits }.first
     }
 
+    // MARK: Mods of a game's own toolchain (`GameMods`)
+
+    /// The mods the game's toolchain offers; nil when it has none (or the toolchain is not on this Mac yet).
+    func gameMods(_ game: Game) -> GameMods? {
+        toolchain(for: game)?.gameMods()
+    }
+
+    /// The sets this game is built with: the player's choice, else the description's defaults.
+    func gameModSets(_ game: Game) -> [String] {
+        guard let mods = gameMods(game) else { return [] }
+        return mods.known(options(for: game).gameMods ?? mods.defaultSets)
+    }
+
+    func setGameModSet(_ id: String, on: Bool, for game: Game) {
+        guard let mods = gameMods(game) else { return }
+        var sets = Set(gameModSets(game))
+        if on { sets.insert(id) } else { sets.remove(id) }
+        var next = options(for: game)
+        next.gameMods = mods.known(Array(sets))
+        setOptions(next, for: game)
+        refreshStatus(of: game.id)
+    }
+
+    /// What a current build should carry of them: the choice, where the toolchain has such mods; else nil (not compared).
+    nonisolated static func gameModsExpected(recipe: Recipe, mods: GameMods?) -> [String]? {
+        guard let mods else { return nil }
+        let stored = UserDefaults.standard.data(forKey: "gameOptions").flatMap { try? JSONDecoder().decode([String: GameOptions].self, from: $0) }
+        return mods.known(stored?[recipe.id]?.gameMods ?? mods.defaultSets)
+    }
+
+    /// Whether the player's key for the mods' site is used for the downloads (their own choice, for all games).
+    var modsKeyOn: Bool {
+        get { UserDefaults.standard.bool(forKey: "modsKeyOn") }
+        set { UserDefaults.standard.set(newValue, forKey: "modsKeyOn"); objectWillChange.send() }
+    }
+
     func setCoreMods(_ on: Bool, for game: Game) {
         var next = options(for: game)
         next.coreMods = on
@@ -1083,7 +1122,8 @@ final class AppModel: ObservableObject {
                                      pin: toolchainChoices.pin(for: fresh.recipe), bundlePrefix: bundlePrefix,
                                      otherSourceBuilds: Set(fresh.otherSourceBuilds),
                                      metalFX: metalFXExpected,
-                                     coreMods: toolchain(for: fresh).flatMap { AppModel.coreModsExpected(recipe: fresh.recipe, profiles: $0.coreModsProfiles) })
+                                     coreMods: toolchain(for: fresh).flatMap { AppModel.coreModsExpected(recipe: fresh.recipe, profiles: $0.coreModsProfiles) },
+                                     gameMods: AppModel.gameModsExpected(recipe: fresh.recipe, mods: toolchain(for: fresh)?.gameMods()))
         replace(fresh)
     }
 
@@ -1785,6 +1825,11 @@ final class AppModel: ObservableObject {
         }
         // Die Mods: wie für das Spiel gewählt. Gibt es sie für diese Fassung nicht, baut der Auftrag ohne sie und sagt es.
         if steps.contains(.build), chosen.coreMods ?? (coreModsProfile(game)?.defaultOn == true) { request.coreMods = true }
+        // The mod sets of the game's own toolchain, and whether the player's key fetches their files.
+        if steps.contains(.build), gameMods(game) != nil {
+            request.gameMods = gameModSets(game)
+            if modsKeyOn { request.modsKey = true }
+        }
         if steps.contains(.build), metalFXUpscaling {
             request.metalFX = true
             request.resolution = metalFXResolution

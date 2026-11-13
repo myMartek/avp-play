@@ -83,7 +83,7 @@ public enum FailureKind: String, Codable, Sendable {
                 }
             case .notAToolchain, .tooOld, .wrongKind, .signingBlocked: return .setup
             }
-        case is FetchError, is URLError, is ToolDownloadError, is ExternalToolchainError: return .download
+        case is FetchError, is URLError, is ToolDownloadError, is ExternalToolchainError, is GameModsError: return .download
         default: return .other
         }
     }

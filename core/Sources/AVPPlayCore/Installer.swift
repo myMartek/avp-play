@@ -135,6 +135,12 @@ public struct InstallRequest: Codable, Sendable, Equatable {
     /// Das Spiel mit seinen Mods bauen (Beat Saber: eigene Songs) – die Option „Mods“ auf der Seite des Spiels.
     /// Ohne Angabe: nein. Nur für eine Fassung, für die die Toolchain Mods hat (`Toolchain.coreModsProfile`).
     public var coreMods: Bool?
+    /// The mod sets of the game's own toolchain to build with (`GameMods`; ids of its `visionos/mods.json`) – the
+    /// "Mods" box on the game's page. Without it, or empty: none. Sets the toolchain does not have are left out.
+    public var gameMods: [String]?
+    /// Fetch the mod files with the player's key for the mods' site, when one is stored (`ModsKeyStore`). Without
+    /// it: no, every file goes through the browser.
+    public var modsKey: Bool?
     /// Initial launcher mode; an existing per-game headset preference always wins.
     public var controllerMode: ControllerMode?
     /// `false`: the game is built for standard controllers only (`ControllerMode.supportKey`,
@@ -732,6 +738,34 @@ public struct Installer: Sendable {
         // Die Raumvermessung: an, außer die Einstellung der App für alle Spiele (oder der Auftrag) sagt aus.
         let roomMeasuring = request.roomMeasuring ?? InstallDefaults.roomMeasuring()
         var extraEnvironment = TreeStore(store: store).toolchainEnvironment(recipe: recipe)
+        // Mods of the game's own toolchain (`GameMods`): their files first, which may need the player in the browser,
+        // then the build is told the sets. Never from this program's own environment: only the request switches them on.
+        var modSets: [String] = []
+        if let mods = toolchain.gameMods() {
+            modSets = mods.known(request.gameMods ?? [])
+            if !modSets.isEmpty {
+                let titles = mods.sets.filter { modSets.contains($0.id) }.map(\.title.text).joined(separator: ", ")
+                report(L("Mods: this build brings \(titles).", "Mods: Dieser Bau bringt \(titles) mit."))
+                var key: String?
+                if request.modsKey == true, let variable = mods.source?.key?.variable {
+                    key = ModsKeyStore().read(variable: variable)
+                    if key == nil {
+                        report(L("Mods: no key for \(mods.source?.name ?? "the site") is stored; the downloads go through the browser.",
+                                 "Mods: Für \(mods.source?.name ?? "die Seite") ist kein Schlüssel hinterlegt; die Downloads gehen über den Browser."))
+                    }
+                }
+                if mods.sets.contains(where: { modSets.contains($0.id) && $0.macRun == true }) {
+                    report(L("Mods: the game will run on this Mac for a few minutes during the build (muted, in the background), so that the mods' changes can be built in.",
+                             "Mods: Das Spiel läuft während des Baus einige Minuten auf diesem Mac (stumm, im Hintergrund), damit die Änderungen der Mods eingebaut werden können."))
+                }
+                try toolchain.fetchGameMods(sets: modSets, mods: mods, key: key, environment: extraEnvironment,
+                                            log: store.directory(for: recipe).appendingPathComponent(".last-mods.log"), report: report)
+            }
+            extraEnvironment[Toolchain.gameModsVariable] = modSets.joined(separator: ",")
+        } else if !(request.gameMods ?? []).isEmpty {
+            report(L("Mods: this toolchain has none for the game; it is built without them.",
+                     "Mods: Diese Toolchain hat für das Spiel keine; es wird ohne sie gebaut."))
+        }
         if toolchain.supportsRoomMeasuring {
             extraEnvironment[Toolchain.roomMeasuringVariable] = roomMeasuring ? "1" : "0"
             if !roomMeasuring {
@@ -772,6 +806,7 @@ public struct Installer: Sendable {
             return try await build()
         }
         report(String(format: L("Built and installed (%.0f s).", "Gebaut und installiert (%.0f s)."), Date().timeIntervalSince(started)))
+        if toolchain.gameMods() != nil { GameModsRecord.save(modSets, store: store, recipe: recipe) }
         // Womit signiert wurde und bis wann: Daran erinnert die App rechtzeitig vor dem Ablauf.
         var record = SigningRecord(team: team, free: free, installed: Date(), expires: toolchain.signingExpiry(recipe: recipe),
                                    bundleId: bundle)
