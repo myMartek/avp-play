@@ -762,9 +762,15 @@ public struct Installer: Sendable {
                 let stop = GameModsFetchStop()
                 let fetchKey = key, fetchEnvironment = extraEnvironment
                 let fetchLog = store.directory(for: recipe).appendingPathComponent(".last-mods.log")
+                // A download with the player's key says how far it is: the job shows it as the bar of a file.
+                let installProgress = self.progress
                 try await withTaskCancellationHandler {
                     try toolchain.fetchGameMods(sets: modSets, mods: mods, key: fetchKey, environment: fetchEnvironment,
-                                                log: fetchLog, stop: stop, report: report)
+                                                log: fetchLog, stop: stop, progress: { p in
+                        guard let p else { return installProgress(InstallProgress(step: .build, done: 0, total: 0)) }
+                        installProgress(InstallProgress(step: .build, done: p.done, total: p.total ?? 0,
+                                                        file: .init(index: p.index, count: p.count, name: p.name, done: p.done, total: p.total)))
+                    }, report: report)
                 } onCancel: { stop.stop() }
             }
             extraEnvironment[Toolchain.gameModsVariable] = modSets.joined(separator: ",")

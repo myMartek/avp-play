@@ -108,7 +108,18 @@ public enum GameModsFetch {
         case total(Int)
         case have(name: String, how: String)
         case need(name: String, page: String)
+        /// A download with the player's key: bytes here and, where the site says it, bytes in all.
+        case progress(name: String, done: Int64, total: Int64?)
         case done(Int)
+    }
+
+    /// How far the file that is downloading is, and which of the files it is: for the job's progress bar.
+    public struct Progress: Sendable, Equatable {
+        public var index: Int
+        public var count: Int
+        public var name: String
+        public var done: Int64
+        public var total: Int64?
     }
 
     /// A line of the script's output as an event; nil for every other line (those are for the log only).
@@ -121,6 +132,12 @@ public enum GameModsFetch {
         case "done": return parts.count > 1 ? Int(parts[1]).map(Event.done) : nil
         case "have": return parts.count > 1 ? .have(name: clean(parts[1]), how: parts.count > 2 ? clean(parts[2]) : "") : nil
         case "need": return parts.count > 2 ? .need(name: clean(parts[1]), page: clean(parts[2])) : nil
+        case "progress":
+            guard parts.count > 2 else { return nil }
+            let numbers = parts[2].split(separator: "|", omittingEmptySubsequences: false).map { Int64($0) }
+            guard let done = numbers.first ?? nil, done >= 0 else { return nil }
+            let total = numbers.count > 1 ? numbers[1] : nil
+            return .progress(name: clean(parts[1]), done: done, total: total.flatMap { $0 > 0 ? $0 : nil })
         default: return nil
         }
     }
@@ -143,6 +160,8 @@ public enum GameModsFetch {
         case .need(let name, let page):
             return L("Mods: waiting for your download of \(name) – its page is open in the browser (\(page)).",
                      "Mods: Warte auf deinen Download von \(name) – die Seite ist im Browser geöffnet (\(page)).")
+        case .progress:
+            return nil                        // (a bar, not a line of the log: `Toolchain.fetchGameMods(progress:)`)
         case .done:
             return L("Mods: all files are on this Mac.", "Mods: Alle Dateien liegen auf diesem Mac.")
         }
@@ -166,7 +185,8 @@ extension Toolchain {
     /// wants it used, goes into the script's environment under the name the description gives and nowhere else: not
     /// into the log (the script's promise) and not into this program's own output.
     public func fetchGameMods(sets: [String], mods: GameMods, key: String?, environment: [String: String], log: URL,
-                              stop: GameModsFetchStop? = nil, report: (String) -> Void) throws {
+                              stop: GameModsFetchStop? = nil, progress: ((GameModsFetch.Progress?) -> Void)? = nil,
+                              report: (String) -> Void) throws {
         var env = ProcessInfo.processInfo.environment
         env["PATH"] = "/usr/bin:/bin:/usr/sbin:/sbin"
         env.merge(environment) { _, new in new }
@@ -191,9 +211,21 @@ extension Toolchain {
         let source = mods.source?.name ?? L("the mods' site", "der Seite der Mods")
         var pending = Data()
         var stopped = ""
+        var count = 0, have = 0
+        defer { progress?(nil) }
         func take(_ line: String) {
+            // (the progress lines come once a second for as long as a download runs: not into the log)
+            if case .progress(let name, let done, let total)? = GameModsFetch.event(in: line) {
+                progress?(GameModsFetch.Progress(index: have + 1, count: max(count, have + 1), name: name, done: done, total: total))
+                return
+            }
             handle.write(Data((line + "\n").utf8))
             if let event = GameModsFetch.event(in: line) {
+                switch event {
+                case .total(let n): count = n
+                case .have: have += 1; progress?(nil)
+                default: break
+                }
                 if let sentence = GameModsFetch.sentence(for: event, source: source, usesKey: key != nil) { report(sentence) }
             } else if line.hasPrefix("!! mods:") {
                 stopped = GameModsFetch.clean(String(line.dropFirst("!! mods:".count)).trimmingCharacters(in: .whitespaces))

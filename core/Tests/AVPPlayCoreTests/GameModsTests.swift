@@ -76,6 +76,9 @@ final class GameModsTests: XCTestCase {
         print("@@mods total|2", flush=True)
         print("sets=" + os.environ.get("KLEPTON_GAME_MODS", "?") + " key=" + ("yes" if os.environ.get("NEXUS_API_KEY") == "KEY-1234567890abcdef" else os.environ.get("NEXUS_API_KEY", "none")), flush=True)
         print("@@mods have|HIGGS|kept from before", flush=True)
+        print("@@mods progress|Skyland AIO|0|2632276741", flush=True)
+        print("@@mods progress|Skyland AIO|884000000|2632276741", flush=True)
+        print("@@mods progress|Skyland AIO|900000000|0", flush=True)
         if os.environ.get("FAIL") == "2":
             print("!! mods: VRIK was not downloaded within 15 minutes.", flush=True); sys.exit(2)
         if os.environ.get("FAIL") == "1":
@@ -86,9 +89,18 @@ final class GameModsTests: XCTestCase {
         let mods = try XCTUnwrap(t.gameMods())
         let log = temp().appendingPathComponent("mods.log")
         var said: [String] = []
-        try t.fetchGameMods(sets: ["core", "skyland"], mods: mods, key: "KEY-1234567890abcdef", environment: ["NEXUS_API_KEY": "from-elsewhere"], log: log) { said.append($0) }
+        var bars: [GameModsFetch.Progress?] = []
+        try t.fetchGameMods(sets: ["core", "skyland"], mods: mods, key: "KEY-1234567890abcdef", environment: ["NEXUS_API_KEY": "from-elsewhere"], log: log,
+                            progress: { bars.append($0) }) { said.append($0) }
         XCTAssertEqual(said.count, 3, "\(said)")
+        // The second of two files, with its size while the site says it; the bar goes when a file is there and at the end.
+        XCTAssertEqual(bars, [nil,
+                              .init(index: 2, count: 2, name: "Skyland AIO", done: 0, total: 2_632_276_741),
+                              .init(index: 2, count: 2, name: "Skyland AIO", done: 884_000_000, total: 2_632_276_741),
+                              .init(index: 2, count: 2, name: "Skyland AIO", done: 900_000_000, total: nil),
+                              nil])
         let text = try String(contentsOf: log, encoding: .utf8)
+        XCTAssertFalse(text.contains("@@mods progress"), "the progress lines stay out of the log")
         XCTAssertTrue(text.contains("sets=core,skyland key=yes"), text)
         said = []
         try t.fetchGameMods(sets: ["core"], mods: mods, key: nil, environment: ["NEXUS_API_KEY": "from-elsewhere"], log: log) { said.append($0) }

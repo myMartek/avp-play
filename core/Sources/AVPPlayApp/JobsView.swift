@@ -238,6 +238,10 @@ struct JobDetail: View {
                     FileProgressLine(file: file).id("fetch-file-\(job.id)-\(file.index)")
                 }
             }
+            // Mods eines Spiels mit eigener Toolchain: Lädt eine Datei mit dem Schlüssel des Spielers, steht hier ihr Stand.
+            if phase == .running, job.current == .build, let p = model.copyProgress[job.id], p.step == .build, let file = p.file {
+                FileProgressLine(file: file).id("mods-file-\(job.id)-\(file.index)")
+            }
             if phase == .running, job.current == .stage, let progress = model.copyProgress[job.id], progress.total > 0 {
                 // Bei einer großen Datei wird das Gerät währenddessen gefragt, wie viel von ihr schon dort liegt.
                 ProgressLine(done: progress.done, total: progress.total,

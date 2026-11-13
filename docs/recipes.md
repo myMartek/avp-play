@@ -73,7 +73,8 @@ Linux program cannot be: it needs a toolchain of another kind, and its recipe sa
   each; `source` with the name of the site the files come from and, where the player's own key can fetch them, the
   environment variable it is handed over in). `visionos/mods_fetch.py` gets the files of the chosen sets onto the
   Mac: AVP Play runs it before the build with `KLEPTON_GAME_MODS=<ids>`, shows its lines `@@mods total|n`,
-  `@@mods have|name|how`, `@@mods need|name|page` and `@@mods done|n` in its own words, and takes exit status 2 as
+  `@@mods have|name|how`, `@@mods need|name|page` and `@@mods done|n` in its own words, draws
+  `@@mods progress|name|bytes here|bytes in all` (a download with the key, about once a second) as the bar of a file, and takes exit status 2 as
   "the player has not downloaded everything yet". Where a file needs the player, the script opens the page in the
   browser and waits for the file; when the player cancels the job, AVP Play ends the script with SIGTERM, and the
   script ends whatever it started. `source.key` may carry a `hint`: which of the things on the key's page is the key. `run.sh device` then builds with the sets in `KLEPTON_GAME_MODS` (empty: none) and
