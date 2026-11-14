@@ -72,6 +72,16 @@ Where a repository has no licence file yet, its authors said MIT is what they wa
 named where players see it: the game's start window (Settings › Mods) and AVP Play (Settings › Software used) list
 them as here.
 
+## Skyrim VR on Apple Vision Pro
+
+The Skyrim VR recipe is built with [Skyrim VR on Apple Vision Pro](https://github.com/gseddon/Skyrim-VR-Vision-Pro)
+by gseddon (MIT; it builds on VeRantyx's VXRuntime, on [xrizer](https://github.com/Supreeeme/xrizer) (GPL-3.0), on
+Klepton's OpenXR code (MIT) and on parts of Wine and FFmpeg (LGPL-2.1-or-later); its `THIRD_PARTY_NOTICES.md` lists
+them). Nothing of it is part of the app or of the toolchain package: when you install the game, AVP Play fetches the
+source at the commit the recipe names (from <https://github.com/myMartek/Skyrim-VR-Vision-Pro>, a fork that carries
+the adapter for AVP Play until it is part of the original) and builds it on your Mac. The game's translated program
+is made from your own game files there and stays on your Mac and your headset.
+
 ## xrizer
 
 From version 1.0.8 on, the Half-Life: Alyx recipe downloads a build of [xrizer](https://github.com/Supreeeme/xrizer) (OpenVR on top of

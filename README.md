@@ -160,6 +160,11 @@ Reports and fixes from the app help just as much – see *Community Verified* be
   ([issue 110](https://github.com/myMartek/avp-play/issues/110)): a game that ends at once on a crown press,
   controllers that come back after a system interruption, and progressive immersion – a per-game switch that
   lets you turn the crown to draw the game into a portal over your room.
+- **[gseddon](https://github.com/gseddon)** for
+  [Skyrim VR on Apple Vision Pro](https://github.com/gseddon/Skyrim-VR-Vision-Pro): the Windows game itself runs on
+  the headset there, its program translated on your Mac before the install. AVP Play builds Skyrim VR with that
+  project (it fetches the source when you install the game) and only adds the way in: the files from your own
+  Steam purchase, the mods, the languages, the install.
 - **Everyone who sent in a fix or a report** – the *Community Verified* games are their work.
 
 ## Legal

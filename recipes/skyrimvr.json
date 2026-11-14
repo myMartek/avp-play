@@ -8,8 +8,14 @@
  "store": {},
  "toolchain": {
   "target": "skyrimvr",
-  "minCommit": "2533c9d",
-  "kind": "vxruntime"
+  "kind": "vxruntime",
+  "minCommit": "86ff408",
+  "source": {
+   "repository": "https://github.com/myMartek/Skyrim-VR-Vision-Pro",
+   "commit": "86ff408193e6bfc7424747c080d41dc8a5e62be4",
+   "version": 432,
+   "path": "tools/avpplay_toolchain"
+  }
  },
  "files": [
   {
@@ -29,8 +35,8 @@
    "source": {
     "kind": "user",
     "hint": {
-     "en": "The German voices of your own Skyrim VR (Steam depot 611676). With a Steam sign-in under Setup the app fetches them for you (about 2 GB). The game's texts are in German without it.",
-     "de": "Die deutschen Stimmen deines eigenen Skyrim VR (Steam-Depot 611676). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 2 GB). Die Texte des Spiels sind auch ohne sie deutsch."
+     "en": "The German voices of your own Skyrim VR (Steam depot 611676). With a Steam sign-in under Setup the app fetches them for you (about 2.0 GB). The game's texts are in German without it.",
+     "de": "Die deutschen Stimmen deines eigenen Skyrim VR (Steam-Depot 611676). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 2,0 GB). Die Texte des Spiels sind auch ohne sie deutsch."
     },
     "steam": {
      "app": "611670",
@@ -103,6 +109,365 @@
        "id": "611675",
        "manifest": "1030179458833278956",
        "bytes": 1885370647
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "Skyrim - Voices_es0.bsa",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 1879699949,
+   "sha256": "7990d8476157d23677c78f3f16208463efebc9e0ff27d36468bfe3ef10e40f56",
+   "dest": "root/SkyrimVR/Data",
+   "locale": "es-ES",
+   "clearable": true,
+   "title": {
+    "en": "Spanish voices",
+    "de": "Spanische Sprachausgabe"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Spanish voices of your own Skyrim VR (Steam depot 611677). With a Steam sign-in under Setup the app fetches them for you (about 1.9 GB). The game's texts are in Spanish without it.",
+     "de": "Die spanischen Stimmen deines eigenen Skyrim VR (Steam-Depot 611677). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 1,9 GB). Die Texte des Spiels sind auch ohne sie spanisch."
+    },
+    "steam": {
+     "app": "611670",
+     "depots": [
+      {
+       "id": "611677",
+       "manifest": "1677132629223966488",
+       "bytes": 1879701808
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "Skyrim - Voices_pl0.bsa",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 2033772547,
+   "sha256": "e58992c98155cef72919043cede2e37517579cb0e47a56904a18a59886e63013",
+   "dest": "root/SkyrimVR/Data",
+   "locale": "pl-PL",
+   "clearable": true,
+   "title": {
+    "en": "Polish voices",
+    "de": "Polnische Sprachausgabe"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Polish voices of your own Skyrim VR (Steam depot 611678). With a Steam sign-in under Setup the app fetches them for you (about 2.0 GB). The game's texts are in Polish without it.",
+     "de": "Die polnischen Stimmen deines eigenen Skyrim VR (Steam-Depot 611678). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 2,0 GB). Die Texte des Spiels sind auch ohne sie polnisch."
+    },
+    "steam": {
+     "app": "611670",
+     "depots": [
+      {
+       "id": "611678",
+       "manifest": "2469242488019796501",
+       "bytes": 2034324021
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "Dawnguard_Polish.pl.DLSTRINGS",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 124616,
+   "sha256": "65a2ad7761470932397bdbc697a81a8c60a2deb3eb84764d1d5d3c71a3633845",
+   "dest": "root/lang/pl/Data/Strings",
+   "localName": "Dawnguard_Polish.DLSTRINGS",
+   "locale": "pl-PL",
+   "clearable": true,
+   "title": {
+    "en": "Polish voices",
+    "de": "Polnische Sprachausgabe"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Polish voices of your own Skyrim VR (Steam depot 611678). With a Steam sign-in under Setup the app fetches them for you (about 2.0 GB). The game's texts are in Polish without it.",
+     "de": "Die polnischen Stimmen deines eigenen Skyrim VR (Steam-Depot 611678). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 2,0 GB). Die Texte des Spiels sind auch ohne sie polnisch."
+    },
+    "steam": {
+     "app": "611670",
+     "depots": [
+      {
+       "id": "611678",
+       "manifest": "2469242488019796501",
+       "bytes": 2034324021
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "Skyrim - Voices_ru0.bsa",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 2033032883,
+   "sha256": "ff4a39a5e20a66cb27b75f61f4166a656f13fbe5d0c73b5db7b1d67d0579eaf4",
+   "dest": "root/SkyrimVR/Data",
+   "locale": "ru-RU",
+   "clearable": true,
+   "title": {
+    "en": "Russian voices",
+    "de": "Russische Sprachausgabe"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Russian voices of your own Skyrim VR (Steam depot 611679). With a Steam sign-in under Setup the app fetches them for you (about 2.0 GB). The game's texts are in Russian without it.",
+     "de": "Die russischen Stimmen deines eigenen Skyrim VR (Steam-Depot 611679). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 2,0 GB). Die Texte des Spiels sind auch ohne sie russisch."
+    },
+    "steam": {
+     "app": "611670",
+     "depots": [
+      {
+       "id": "611679",
+       "manifest": "865322299747175442",
+       "bytes": 2033034798
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "Skyrim - Voices_ja0.bsa",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 1981761928,
+   "sha256": "c92ffdd700d5abf146e5a9a579d8142149488162a5d584093b3ece6542534a6e",
+   "dest": "root/SkyrimVR/Data",
+   "locale": "ja-JP",
+   "clearable": true,
+   "title": {
+    "en": "Japanese texts and voices",
+    "de": "Japanische Texte und Sprachausgabe"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Japanese texts and voices of your own Skyrim VR (Steam depot 824121). With a Steam sign-in under Setup the app fetches them for you (about 2.5 GB).",
+     "de": "Die japanischen Texte und Stimmen deines eigenen Skyrim VR (Steam-Depot 824121). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 2,5 GB)."
+    },
+    "steam": {
+     "app": "611670",
+     "depots": [
+      {
+       "id": "824121",
+       "manifest": "8068773427951618792",
+       "bytes": 2470149784
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "Skyrim - Interface.ja.bsa",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 24002343,
+   "sha256": "645967bc7dfe9a3cdaab8b867a132dea3425908e2b16e23bdab78591b491e3a2",
+   "dest": "root/lang/ja/Data",
+   "localName": "Skyrim - Interface.bsa",
+   "locale": "ja-JP",
+   "clearable": true,
+   "title": {
+    "en": "Japanese texts and voices",
+    "de": "Japanische Texte und Sprachausgabe"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Japanese texts and voices of your own Skyrim VR (Steam depot 824121). With a Steam sign-in under Setup the app fetches them for you (about 2.5 GB).",
+     "de": "Die japanischen Texte und Stimmen deines eigenen Skyrim VR (Steam-Depot 824121). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 2,5 GB)."
+    },
+    "steam": {
+     "app": "611670",
+     "depots": [
+      {
+       "id": "824121",
+       "manifest": "8068773427951618792",
+       "bytes": 2470149784
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "Skyrim - Patch.ja.bsa",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 24517190,
+   "sha256": "7faad99a010a48d6e5618c84dfdc2ea2f77988c9710aa544efc88203bb8a3391",
+   "dest": "root/lang/ja/Data",
+   "localName": "Skyrim - Patch.bsa",
+   "locale": "ja-JP",
+   "clearable": true,
+   "title": {
+    "en": "Japanese texts and voices",
+    "de": "Japanische Texte und Sprachausgabe"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Japanese texts and voices of your own Skyrim VR (Steam depot 824121). With a Steam sign-in under Setup the app fetches them for you (about 2.5 GB).",
+     "de": "Die japanischen Texte und Stimmen deines eigenen Skyrim VR (Steam-Depot 824121). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 2,5 GB)."
+    },
+    "steam": {
+     "app": "611670",
+     "depots": [
+      {
+       "id": "824121",
+       "manifest": "8068773427951618792",
+       "bytes": 2470149784
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "Skyrim_VR - Main.ja.bsa",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 439866463,
+   "sha256": "9037ae6862cdce355b0054c9e7633bace715e7b4448f1a811be5cc06f1e1864b",
+   "dest": "root/lang/ja/Data",
+   "localName": "Skyrim_VR - Main.bsa",
+   "locale": "ja-JP",
+   "clearable": true,
+   "title": {
+    "en": "Japanese texts and voices",
+    "de": "Japanische Texte und Sprachausgabe"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Japanese texts and voices of your own Skyrim VR (Steam depot 824121). With a Steam sign-in under Setup the app fetches them for you (about 2.5 GB).",
+     "de": "Die japanischen Texte und Stimmen deines eigenen Skyrim VR (Steam-Depot 824121). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 2,5 GB)."
+    },
+    "steam": {
+     "app": "611670",
+     "depots": [
+      {
+       "id": "824121",
+       "manifest": "8068773427951618792",
+       "bytes": 2470149784
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "Skyrim - Interface.zh.bsa",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 20537278,
+   "sha256": "350401d4b2d874a5f3725dc8d5c5375ea6596f18d368be88e6d2b3cb3ab6ae96",
+   "dest": "root/lang/zh/Data",
+   "localName": "Skyrim - Interface.bsa",
+   "locale": "zh-TW",
+   "clearable": true,
+   "title": {
+    "en": "Chinese texts (traditional)",
+    "de": "Chinesische Texte (traditionell)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The traditional-Chinese texts of your own Skyrim VR (Steam depot 824120; the voices stay English). With a Steam sign-in under Setup the app fetches them for you (about 0.5 GB).",
+     "de": "Die Texte deines eigenen Skyrim VR in traditionellem Chinesisch (Steam-Depot 824120; die Stimmen bleiben englisch). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 0,5 GB)."
+    },
+    "steam": {
+     "app": "611670",
+     "depots": [
+      {
+       "id": "824120",
+       "manifest": "7631913855644462826",
+       "bytes": 480010464
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "Skyrim - Patch.zh.bsa",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 21048656,
+   "sha256": "99cde5817265b70f88b147d63c4e29799e8a78b4b8a54992e2606746865e003b",
+   "dest": "root/lang/zh/Data",
+   "localName": "Skyrim - Patch.bsa",
+   "locale": "zh-TW",
+   "clearable": true,
+   "title": {
+    "en": "Chinese texts (traditional)",
+    "de": "Chinesische Texte (traditionell)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The traditional-Chinese texts of your own Skyrim VR (Steam depot 824120; the voices stay English). With a Steam sign-in under Setup the app fetches them for you (about 0.5 GB).",
+     "de": "Die Texte deines eigenen Skyrim VR in traditionellem Chinesisch (Steam-Depot 824120; die Stimmen bleiben englisch). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 0,5 GB)."
+    },
+    "steam": {
+     "app": "611670",
+     "depots": [
+      {
+       "id": "824120",
+       "manifest": "7631913855644462826",
+       "bytes": 480010464
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "Skyrim_VR - Main.zh.bsa",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 438422671,
+   "sha256": "b53b544e97be733d95ff1e0ae904bc5b3837c6d9551d9b089e3f3d9c6a77481d",
+   "dest": "root/lang/zh/Data",
+   "localName": "Skyrim_VR - Main.bsa",
+   "locale": "zh-TW",
+   "clearable": true,
+   "title": {
+    "en": "Chinese texts (traditional)",
+    "de": "Chinesische Texte (traditionell)"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The traditional-Chinese texts of your own Skyrim VR (Steam depot 824120; the voices stay English). With a Steam sign-in under Setup the app fetches them for you (about 0.5 GB).",
+     "de": "Die Texte deines eigenen Skyrim VR in traditionellem Chinesisch (Steam-Depot 824120; die Stimmen bleiben englisch). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 0,5 GB)."
+    },
+    "steam": {
+     "app": "611670",
+     "depots": [
+      {
+       "id": "824120",
+       "manifest": "7631913855644462826",
+       "bytes": 480010464
       }
      ]
     }
@@ -207,7 +572,7 @@
   }
  ],
  "status": {
-  "playability": "untested",
+  "playability": "verified",
   "download": "special",
   "notes": [
    {
@@ -229,6 +594,10 @@
    {
     "en": "Mods are a choice on this page (“Mods”): hands, body and menus (SKSE VR, HIGGS, PLANCK, VRIK, SkyUI VR) and sharper textures (Skyland AIO). Their files come from Nexus Mods with your own account; the first build with the hands set runs the game on the Mac for a few minutes.",
     "de": "Mods sind eine Wahl auf dieser Seite („Mods“): Hände, Körper und Menüs (SKSE VR, HIGGS, PLANCK, VRIK, SkyUI VR) und schärfere Texturen (Skyland AIO). Ihre Dateien kommen von Nexus Mods über dein eigenes Konto; der erste Bau mit dem Hände-Set lässt das Spiel einige Minuten auf dem Mac laufen."
+   },
+   {
+    "en": "Played on a Vision Pro M5 with PS VR2 Sense controllers over several sessions (2026-11-13/14): the start in the cart, the first village, saving and loading, with about 24 to 30 pictures a second. With the mod sets the body shows, and grabbing and pulling objects works; German texts and voices were played. The other languages, and the later parts of the game, were not.",
+    "de": "Auf einer Vision Pro M5 mit PS VR2 Sense Controllern über mehrere Sitzungen gespielt (2026-11-13/14): der Anfang im Karren, das erste Dorf, Speichern und Laden, mit etwa 24 bis 30 Bildern pro Sekunde. Mit den Mod-Sets ist der Körper zu sehen, und Greifen und Heranziehen von Gegenständen funktioniert; deutsche Texte und Stimmen wurden gespielt. Die anderen Sprachen und die späteren Teile des Spiels nicht."
    }
   ]
  },
