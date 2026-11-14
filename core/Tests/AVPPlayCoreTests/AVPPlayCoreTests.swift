@@ -56,7 +56,23 @@ final class RecipeTests: XCTestCase {
         // account, and both are for the toolchain (nothing goes to the device as a data folder).
         let skyrim = try XCTUnwrap(all.first { $0.id == "skyrimvr" })
         XCTAssertEqual(skyrim.toolchain.kind, "vxruntime")
-        XCTAssertTrue(skyrim.files.isEmpty)
+        // Its only files are the voices of other languages: optional, chosen by language, each one archive from that
+        // language's Steam depot, copied into the game's Data folder on the device and emptied there when no longer
+        // wanted (the app treats an empty archive as absent). The texts need no file.
+        XCTAssertFalse(skyrim.files.isEmpty)
+        for file in skyrim.files {
+            XCTAssertFalse(file.required, file.name)
+            XCTAssertEqual(file.role, "audio-locale", file.name)
+            XCTAssertNotNil(file.locale, file.name)
+            XCTAssertEqual(file.dest, "root/SkyrimVR/Data", file.name)
+            XCTAssertEqual(file.clearable, true, file.name)
+            XCTAssertTrue(file.name.hasPrefix("Skyrim - Voices_") && file.name.hasSuffix("0.bsa"), file.name)
+            XCTAssertEqual(file.source?.steam?.app, "611670", file.name)
+            XCTAssertEqual(file.source?.steam?.depots.count, 1, file.name)
+            XCTAssertNotNil(file.sha256, file.name)
+        }
+        XCTAssertEqual(Set(skyrim.files.compactMap(\.locale)).count, skyrim.files.count, "one archive per language")
+        XCTAssertTrue(skyrim.files.contains { $0.locale == "de-DE" && $0.name == "Skyrim - Voices_de0.bsa" })
         XCTAssertEqual(TreeStore.toolchainTrees(of: skyrim).map(\.role), [.game, .sysroot])
         XCTAssertTrue(TreeStore.dataTrees(of: skyrim).isEmpty)
         XCTAssertTrue(SteamFetcher.fetchesInJob(skyrim))

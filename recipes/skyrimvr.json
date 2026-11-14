@@ -11,7 +11,104 @@
   "minCommit": "2533c9d",
   "kind": "vxruntime"
  },
- "files": [],
+ "files": [
+  {
+   "name": "Skyrim - Voices_de0.bsa",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 2000441411,
+   "sha256": "78f15224f186c99bc6cc6c0159d562046ee1033f5db1df1f6be526974f100958",
+   "dest": "root/SkyrimVR/Data",
+   "locale": "de-DE",
+   "clearable": true,
+   "title": {
+    "en": "German voices",
+    "de": "Deutsche Sprachausgabe"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The German voices of your own Skyrim VR (Steam depot 611676). With a Steam sign-in under Setup the app fetches them for you (about 2 GB). The game's texts are in German without it.",
+     "de": "Die deutschen Stimmen deines eigenen Skyrim VR (Steam-Depot 611676). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 2 GB). Die Texte des Spiels sind auch ohne sie deutsch."
+    },
+    "steam": {
+     "app": "611670",
+     "depots": [
+      {
+       "id": "611676",
+       "manifest": "8886890815580383395",
+       "bytes": 2000443269
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "Skyrim - Voices_fr0.bsa",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 1832782510,
+   "sha256": "787d4528d64d66a93bf50fc466aa6f0092257fd7c106abfe53cccf236c462283",
+   "dest": "root/SkyrimVR/Data",
+   "locale": "fr-FR",
+   "clearable": true,
+   "title": {
+    "en": "French voices",
+    "de": "Französische Sprachausgabe"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The French voices of your own Skyrim VR (Steam depot 611674). With a Steam sign-in under Setup the app fetches them for you (about 1.8 GB). The game's texts are in French without it.",
+     "de": "Die französischen Stimmen deines eigenen Skyrim VR (Steam-Depot 611674). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 1,8 GB). Die Texte des Spiels sind auch ohne sie französisch."
+    },
+    "steam": {
+     "app": "611670",
+     "depots": [
+      {
+       "id": "611674",
+       "manifest": "1870271470279661303",
+       "bytes": 1832784368
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "Skyrim - Voices_it0.bsa",
+   "role": "audio-locale",
+   "id": "",
+   "required": false,
+   "size": 1885368788,
+   "sha256": "3c2141da04cce29bcacc2227b0ed0d7370243bf6377620fee8a014325afeb0e1",
+   "dest": "root/SkyrimVR/Data",
+   "locale": "it-IT",
+   "clearable": true,
+   "title": {
+    "en": "Italian voices",
+    "de": "Italienische Sprachausgabe"
+   },
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "The Italian voices of your own Skyrim VR (Steam depot 611675). With a Steam sign-in under Setup the app fetches them for you (about 1.9 GB). The game's texts are in Italian without it.",
+     "de": "Die italienischen Stimmen deines eigenen Skyrim VR (Steam-Depot 611675). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App sie für dich (rund 1,9 GB). Die Texte des Spiels sind auch ohne sie italienisch."
+    },
+    "steam": {
+     "app": "611670",
+     "depots": [
+      {
+       "id": "611675",
+       "manifest": "1030179458833278956",
+       "bytes": 1885370647
+      }
+     ]
+    }
+   }
+  }
+ ],
  "trees": [
   {
    "name": "game",
