@@ -9,6 +9,7 @@
  "toolchain": {
   "target": "skyrimvr",
   "kind": "vxruntime",
+  "title": "VXRuntime",
   "minCommit": "dff375f",
   "source": {
    "repository": "https://github.com/myMartek/Skyrim-VR-Vision-Pro",

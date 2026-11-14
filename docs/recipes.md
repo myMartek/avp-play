@@ -45,6 +45,7 @@ Linux program cannot be: it needs a toolchain of another kind, and its recipe sa
   "target": "skyrimvr",
   "minCommit": "0123456",
   "kind": "vxruntime",          // which kind of toolchain builds this game; absent for every Klepton game
+  "title": "VXRuntime",         // optional: what the app calls that toolchain; absent: the kind stands there
   "source": {                   // optional: where the app fetches that toolchain from
     "repository": "https://github.com/<owner>/<name>",
     "commit": "0123456789abcdef0123456789abcdef01234567",   // all 40 characters; minCommit is its beginning
@@ -57,6 +58,9 @@ Linux program cannot be: it needs a toolchain of another kind, and its recipe sa
 - A game with a `kind` is only ever built with a toolchain that says it is of that kind (`"kind"` in its
   `toolchain.json`), and such a toolchain builds nothing else. The game's page offers no Klepton package for it,
   and no other game is offered its toolchain.
+- The app never shows such a toolchain's number bare: it counts another project's states, not Klepton's. The
+  game's page, the Remote and every status line put the `title` in front (“VXRuntime 434”) and say that the game
+  is built with a toolchain of its own.
 - With `source`, the app fetches exactly that commit as part of the game's first job, into
   `~/.avpplay/toolchains/<kind>-<version>-<commit>` (not under “Application Support”: these build tools do not
   survive a blank in a path), checks that it got that commit, and writes the toolchain's description itself. The

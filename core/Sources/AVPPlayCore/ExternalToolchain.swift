@@ -181,7 +181,8 @@ public struct ExternalToolchains: Sendable {
 
         try? fm.removeItem(at: target)
         try fm.moveItem(at: fresh, to: target)
-        report(L("Toolchain \(kind) \(source.version) is ready.", "Toolchain \(kind) \(source.version) ist bereit."))
+        let named = recipe.toolchainName(String(source.version))
+        report(L("This game's toolchain \(named) is ready.", "Die Toolchain dieses Spiels, \(named), ist bereit."))
         return try Toolchain(root: directory)
     }
 }

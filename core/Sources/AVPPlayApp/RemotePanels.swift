@@ -402,9 +402,7 @@ extension AppModel {
         var items: [Item] = []
         if let pin {
             items.append(Item(id: "summary", kind: .text, title: "",
-                              detail: !pin.modified && pin.commit == options.newest?.commit
-                                ? L("This game stays on toolchain \(pin.name) – the newest right now.", "Dieses Spiel bleibt bei Toolchain \(pin.name) – im Moment die neueste.")
-                                : L("This game is built with toolchain \(pin.name), not with the newest (\(newest)).", "Dieses Spiel wird mit Toolchain \(pin.name) gebaut, nicht mit der neuesten (\(newest))."),
+                              detail: ToolchainBox.pinnedSummary(pin, recipe: game.recipe, options: options),
                               style: .warning))
         } else {
             items.append(Item(id: "summary", kind: .text, title: "",
@@ -421,7 +419,7 @@ extension AppModel {
             case .copy: section = copies
             case .released: section = github
             }
-            return RemoteChoice(id: o.id, title: ToolchainBox.label(o, in: options), section: section)
+            return RemoteChoice(id: o.id, title: ToolchainBox.label(o, in: options, recipe: game.recipe), section: section)
         }
         let selected = pin.map { options.missing != nil ? ToolchainOption.missingId : ToolchainOption.key(for: $0) } ?? ToolchainOption.newestId
         items.append(Item(id: "toolchain", kind: .choice, title: L("Build with", "Bauen mit"), value: selected, choices: choices,
@@ -436,7 +434,7 @@ extension AppModel {
         } else if releasedToolchains == nil {
             items.append(Item(id: "loadReleased", kind: .action, title: L("Show Older Toolchains from GitHub", "Ältere Toolchains von GitHub zeigen")))
         }
-        return RemoteSection(id: "toolchain", title: "Toolchain",
+        return RemoteSection(id: "toolchain", title: ToolchainBox.title(game.recipe),
                              footer: L("Which toolchain builds this game when it is installed, updated or its signature is renewed. A change does nothing on the Vision Pro until you install; saved games and data are kept.",
                                        "Welche Toolchain dieses Spiel baut – beim Installieren, Aktualisieren und Erneuern der Signatur. Ein Wechsel ändert nichts auf der Vision Pro, bis du installierst; Spielstände und Daten bleiben."),
                              items: items)

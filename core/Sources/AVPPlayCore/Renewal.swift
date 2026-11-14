@@ -141,8 +141,8 @@ public enum Renewal {
         let chosen: Toolchain
         if let pin = choices.pin(for: recipe) {
             guard let kept = packager.toolchain(for: pin) else {
-                skip(L("toolchain \(pin.name), chosen for this game, is no longer on this Mac. Choose one on the game's page.",
-                       "Toolchain \(pin.name), für dieses Spiel gewählt, liegt nicht mehr auf diesem Mac. Wähle auf der Seite des Spiels eine."))
+                skip(L("toolchain \(recipe.toolchainName(pin.name)), chosen for this game, is no longer on this Mac. Choose one on the game's page.",
+                       "Toolchain \(recipe.toolchainName(pin.name)), für dieses Spiel gewählt, liegt nicht mehr auf diesem Mac. Wähle auf der Seite des Spiels eine."))
                 return nil
             }
             chosen = kept
@@ -155,8 +155,8 @@ public enum Renewal {
             chosen = newest
         }
         guard chosen.builds(recipe) else {
-            skip(L("is built with a toolchain of its own (\(recipe.toolchain.kind ?? Toolchain.kleptonKind)), which is not chosen for it. Choose it on the game's page.",
-                   "wird mit einer eigenen Toolchain gebaut (\(recipe.toolchain.kind ?? Toolchain.kleptonKind)), die dafür nicht gewählt ist. Wähle sie auf der Seite des Spiels."))
+            skip(L("is built with a toolchain of its own (\(recipe.ownToolchainTitle ?? Toolchain.kleptonKind)), which is not chosen for it. Choose it on the game's page.",
+                   "wird mit einer eigenen Toolchain gebaut (\(recipe.ownToolchainTitle ?? Toolchain.kleptonKind)), die dafür nicht gewählt ist. Wähle sie auf der Seite des Spiels."))
             return nil
         }
         guard chosen.satisfies(minCommit: recipe.toolchain.minCommit) else {

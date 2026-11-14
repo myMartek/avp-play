@@ -86,12 +86,17 @@ public struct Recipe: Codable, Sendable, Identifiable {
         /// For a game with a toolchain of its own: where that comes from (`ToolchainSource`). The app fetches it as
         /// part of the game's first job. Without it the toolchain has to be chosen by hand.
         public var source: ToolchainSource?
+        /// For a game with a toolchain of its own: what that toolchain is called where the app names it (“VXRuntime”).
+        /// Its state numbers count something else than Klepton's, so they are never shown without this name. Absent:
+        /// the `kind` stands there.
+        public var title: String?
 
-        public init(target: String, minCommit: String, kind: String? = nil, source: ToolchainSource? = nil) {
+        public init(target: String, minCommit: String, kind: String? = nil, source: ToolchainSource? = nil, title: String? = nil) {
             self.target = target
             self.minCommit = minCommit
             self.kind = kind
             self.source = source
+            self.title = title
         }
     }
     public struct Status: Codable, Sendable {
@@ -222,6 +227,14 @@ public enum RecipeError: Error, CustomStringConvertible, Equatable {
 extension Recipe {
     public static let supportedSchema = 1
 
+    /// What the game's own toolchain is called, for a game that is not built with Klepton: its title, else its kind.
+    public var ownToolchainTitle: String? { toolchain.kind.map { toolchain.title ?? $0 } }
+
+    /// How a state of this game's toolchain is named in sentences and lists: the plain number for Klepton
+    /// (“891”), and with the toolchain's name in front for a game with a toolchain of its own (“VXRuntime 434”) –
+    /// that number counts another project's states and must not read as one of AVP Play's.
+    public func toolchainName(_ name: String) -> String { ownToolchainTitle.map { "\($0) \(name)" } ?? name }
+
     /// Prüft, was ein Rezept aus fremder Hand nicht dürfen soll: Pfade nach außen, uneindeutige Namen,
     /// IDs, die keine sind. Wird beim Laden immer ausgeführt.
     public func validate() throws {
@@ -232,6 +245,12 @@ extension Recipe {
         if let kind = toolchain.kind {
             guard Recipe.isSafeName(kind), kind != AVPPlayCore.Toolchain.kleptonKind, kind.allSatisfy({ $0.isASCII && ($0.isLowercase || $0.isNumber) }) else {
                 throw RecipeError.invalid(L("toolchain kind '\(kind)'", "Toolchain-Art '\(kind)'"))
+            }
+        }
+        if let title = toolchain.title {
+            guard toolchain.kind != nil, (1...40).contains(title.count), title == title.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !title.unicodeScalars.contains(where: { CharacterSet.controlCharacters.contains($0) || CharacterSet.newlines.contains($0) }) else {
+                throw RecipeError.invalid(L("toolchain title", "Name der Toolchain"))
             }
         }
         if let source = toolchain.source {

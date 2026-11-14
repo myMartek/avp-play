@@ -288,15 +288,15 @@ public struct ToolchainOptions: Equatable, Sendable {
     /// What a game's page says where nothing is chosen for the game: that it is built with the newest toolchain – or,
     /// for a game with a toolchain of its own (`Recipe.Toolchain.kind`), with that one, and where it comes from.
     public static func unchosenSummary(recipe: Recipe, newest: String) -> String {
-        guard let kind = recipe.toolchain.kind else {
+        guard let own = recipe.ownToolchainTitle else {
             return L("This game is built with the newest toolchain (\(newest)).", "Dieses Spiel wird mit der neuesten Toolchain gebaut (\(newest)).")
         }
         guard let source = recipe.toolchain.source else {
-            return L("This game is built with a toolchain of its own (\(kind)), not with AVP Play's. It has to be chosen by hand: avpplay toolchain use \(recipe.id) --toolchain <folder>.",
-                     "Dieses Spiel wird mit einer eigenen Toolchain gebaut (\(kind)), nicht mit der von AVP Play. Sie muss von Hand gewählt werden: avpplay toolchain use \(recipe.id) --toolchain <Ordner>.")
+            return L("This game is not built with AVP Play's toolchain but with one of its own: \(own). It has to be chosen by hand: avpplay toolchain use \(recipe.id) --toolchain <folder>.",
+                     "Dieses Spiel wird nicht mit der Toolchain von AVP Play gebaut, sondern mit einer eigenen: \(own). Sie muss von Hand gewählt werden: avpplay toolchain use \(recipe.id) --toolchain <Ordner>.")
         }
-        return L("This game is built with a toolchain of its own (\(kind) \(source.version)), not with AVP Play's. The app fetches it from \(source.repository) when the game is installed.",
-                 "Dieses Spiel wird mit einer eigenen Toolchain gebaut (\(kind) \(source.version)), nicht mit der von AVP Play. Die App holt sie von \(source.repository), wenn das Spiel installiert wird.")
+        return L("This game is not built with AVP Play's toolchain but with one of its own: \(own) \(source.version). That number counts the states of \(own) and has nothing to do with the number of AVP Play's toolchain. The app fetches it from \(source.repository) when the game is installed.",
+                 "Dieses Spiel wird nicht mit der Toolchain von AVP Play gebaut, sondern mit einer eigenen: \(own) \(source.version). Diese Nummer zählt die Stände von \(own) und hat mit der Nummer der Toolchain von AVP Play nichts zu tun. Die App holt sie von \(source.repository), wenn das Spiel installiert wird.")
     }
 
     /// Angeboten wird nur, womit sich das Rezept des Spiels bauen lässt: was dessen Mindeststand enthält.

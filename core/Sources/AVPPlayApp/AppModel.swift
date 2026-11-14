@@ -1272,13 +1272,14 @@ final class AppModel: ObservableObject {
             return L("Toolchain \(arriving.version) is being downloaded for this game.", "Toolchain \(arriving.version) wird für dieses Spiel geladen.")
         }
         if let pin, !fetchedByJob, paths.packager.toolchain(for: pin) == nil {
-            return L("Toolchain \(pin.name), chosen for this game, is no longer on this Mac. Choose one under “Toolchain” below.",
-                     "Toolchain \(pin.name), für dieses Spiel gewählt, liegt nicht mehr auf diesem Mac. Wähle unten unter „Toolchain“ eine.")
+            let named = game.recipe.toolchainName(pin.name)
+            return L("Toolchain \(named), chosen for this game, is no longer on this Mac. Choose one under “Toolchain” below.",
+                     "Toolchain \(named), für dieses Spiel gewählt, liegt nicht mehr auf diesem Mac. Wähle unten unter „Toolchain“ eine.")
         }
         // A game with a toolchain of its own is never built with another one.
         if let t = toolchain(for: game), !t.builds(game.recipe) {
-            return pin == nil ? L("This game is built with a toolchain of its own (\(game.recipe.toolchain.kind ?? Toolchain.kleptonKind)), which is not set up on this Mac yet.",
-                                  "Dieses Spiel wird mit einer eigenen Toolchain gebaut (\(game.recipe.toolchain.kind ?? Toolchain.kleptonKind)), die auf diesem Mac noch nicht eingerichtet ist.")
+            return pin == nil ? L("This game is built with a toolchain of its own (\(game.recipe.ownToolchainTitle ?? Toolchain.kleptonKind)), which is not set up on this Mac yet.",
+                                  "Dieses Spiel wird mit einer eigenen Toolchain gebaut (\(game.recipe.ownToolchainTitle ?? Toolchain.kleptonKind)), die auf diesem Mac noch nicht eingerichtet ist.")
                               : L("The toolchain chosen for this game is not the kind it is built with (see “Toolchain” below).",
                                   "Die für dieses Spiel gewählte Toolchain ist nicht die Art, mit der es gebaut wird (siehe unten unter „Toolchain“).")
         }

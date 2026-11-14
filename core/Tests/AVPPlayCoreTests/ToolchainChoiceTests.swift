@@ -793,6 +793,20 @@ final class ToolchainChoiceTests: XCTestCase {
         XCTAssertEqual(forSourced.newest?.version, 410)
         XCTAssertEqual(forSourced.newest?.commit, "bbbbbbb")
         XCTAssertTrue(ToolchainOptions.unchosenSummary(recipe: sourced, newest: "4").contains("vxruntime 410"))
+        // The toolchain's number never stands bare: the recipe's title for it, else its kind, goes in front.
+        XCTAssertEqual(sourced.toolchainName("410"), "vxruntime 410")
+        sourced.toolchain.title = "VXRuntime"
+        XCTAssertNoThrow(try sourced.validate())
+        XCTAssertEqual(sourced.toolchainName("410 (modified)"), "VXRuntime 410 (modified)")
+        XCTAssertTrue(ToolchainOptions.unchosenSummary(recipe: sourced, newest: "4").contains("VXRuntime 410"))
+        XCTAssertEqual(recipe().toolchainName("4"), "4")
+        XCTAssertNil(recipe().ownToolchainTitle)
+        // A title belongs to a toolchain of another kind only, and is one short line.
+        var titled = recipe()
+        titled.toolchain.title = "VXRuntime"
+        XCTAssertThrowsError(try titled.validate())
+        sourced.toolchain.title = "two\nlines"
+        XCTAssertThrowsError(try sourced.validate())
         XCTAssertTrue(ToolchainOptions.unchosenSummary(recipe: special, newest: "?").contains("avpplay toolchain use skyrimvr"))
         XCTAssertTrue(ToolchainOptions.unchosenSummary(recipe: recipe(), newest: "4").contains("(4)"))
         XCTAssertTrue(forSpecial.installed.isEmpty)

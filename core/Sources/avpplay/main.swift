@@ -353,8 +353,9 @@ func jobStore(_ o: Options) -> JobStore {
 func chosenToolchain(_ o: Options, recipe id: String) -> String? {
     guard let pin = ToolchainChoices.load().games[id] else { return nil }
     guard let kept = toolchainPackager(o).toolchain(for: pin) else {
-        fail(L("Toolchain \(pin.name), chosen for this game, is no longer on this Mac. Name one with --toolchain <folder>, or go back to the newest with: avpplay toolchain use \(id) --newest",
-               "Toolchain \(pin.name), für dieses Spiel gewählt, liegt nicht mehr auf diesem Mac. Nenne eine mit --toolchain <Ordner>, oder kehre zur neuesten zurück mit: avpplay toolchain use \(id) --newest"))
+        let named = (try? RecipeStore(directory: recipesDirectory(o)).load(id: id))?.toolchainName(pin.name) ?? pin.name
+        fail(L("Toolchain \(named), chosen for this game, is no longer on this Mac. Name one with --toolchain <folder>, or go back to the newest with: avpplay toolchain use \(id) --newest",
+               "Toolchain \(named), für dieses Spiel gewählt, liegt nicht mehr auf diesem Mac. Nenne eine mit --toolchain <Ordner>, oder kehre zur neuesten zurück mit: avpplay toolchain use \(id) --newest"))
     }
     return kept.root.path
 }
@@ -1438,7 +1439,12 @@ case "toolchain":
             if o.flags.contains("newest") {
                 choices.choose(nil, for: r.id)
                 try choices.save()
-                print(L("\(r.title) is built with the newest toolchain again.", "\(r.title) wird wieder mit der neuesten Toolchain gebaut."))
+                if let own = r.ownToolchainTitle, let source = r.toolchain.source {
+                    print(L("\(r.title) is built with the state its recipe names again (\(own) \(source.version)).",
+                            "\(r.title) wird wieder mit dem Stand gebaut, den sein Rezept nennt (\(own) \(source.version))."))
+                } else {
+                    print(L("\(r.title) is built with the newest toolchain again.", "\(r.title) wird wieder mit der neuesten Toolchain gebaut."))
+                }
             } else {
                 guard let folder = o.value("toolchain") else {
                     fail(L("Give the toolchain with --toolchain <folder>, or --newest.", "Die Toolchain mit --toolchain <Ordner> angeben, oder --newest."))

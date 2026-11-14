@@ -1257,16 +1257,18 @@ extension AppModel {
         case .current:
             // Wo eine Toolchain gewählt ist oder der Bau aus einer bearbeiteten Arbeitskopie stammt, steht sie dabei.
             if let pin = toolchainChoices.games[game.id] {
-                return L("Installed, built with toolchain \(pin.name), which is chosen for this game.", "Installiert, gebaut mit Toolchain \(pin.name), die für dieses Spiel gewählt ist.")
+                let named = game.recipe.toolchainName(pin.name)
+                return L("Installed, built with toolchain \(named), which is chosen for this game.", "Installiert, gebaut mit Toolchain \(named), die für dieses Spiel gewählt ist.")
             }
             if let built = game.status.builtWith, built.modified {
-                return L("Installed, built with toolchain \(Toolchain.name(version: built.toolchain, modified: true)).", "Installiert, gebaut mit Toolchain \(Toolchain.name(version: built.toolchain, modified: true)).")
+                return L("Installed, built with toolchain \(game.recipe.toolchainName(Toolchain.name(version: built.toolchain, modified: true))).", "Installiert, gebaut mit Toolchain \(game.recipe.toolchainName(Toolchain.name(version: built.toolchain, modified: true))).")
             }
             return L("Installed and up to date.", "Installiert und auf dem neuesten Stand.")
         case .olderToolchain:
             if let pin = toolchainChoices.games[game.id] {
-                return L("Installed, but not built with toolchain \(pin.name), which is chosen for this game – “Update” builds it with that one; saved games and data are kept.",
-                         "Installiert, aber nicht mit Toolchain \(pin.name) gebaut, die für dieses Spiel gewählt ist – „Aktualisieren“ baut es mit ihr; Spielstände und Daten bleiben.")
+                let named = game.recipe.toolchainName(pin.name)
+                return L("Installed, but not built with toolchain \(named), which is chosen for this game – “Update” builds it with that one; saved games and data are kept.",
+                         "Installiert, aber nicht mit Toolchain \(named) gebaut, die für dieses Spiel gewählt ist – „Aktualisieren“ baut es mit ihr; Spielstände und Daten bleiben.")
             }
             if let built = game.status.builtWith, let wanted = metalFXExpected, built.metalFX != wanted,
                built.toolchain >= (toolchainRevision?.forTarget(game.recipe.toolchain.target) ?? 0) {
@@ -1277,8 +1279,12 @@ extension AppModel {
                         "Installiert mit von Anfang an eingeschaltetem MetalFX-Hochskalieren; die Einstellung ist jetzt aus – „Aktualisieren“ baut es ohne; Spielstände und Daten bleiben.")
             }
             if let built = game.status.builtWith, built.modified {
-                return L("Installed, built with toolchain \(Toolchain.name(version: built.toolchain, modified: true)). “Update” replaces this build with one from the newest toolchain, without the changes of the modified one (see “Toolchain” below); saved games and data are kept.",
-                         "Installiert, gebaut mit Toolchain \(Toolchain.name(version: built.toolchain, modified: true)). „Aktualisieren“ ersetzt diesen Bau durch einen aus der neuesten Toolchain, ohne die Änderungen der modifizierten (siehe unten unter „Toolchain“); Spielstände und Daten bleiben.")
+                return L("Installed, built with toolchain \(game.recipe.toolchainName(Toolchain.name(version: built.toolchain, modified: true))). “Update” replaces this build with one from the newest toolchain, without the changes of the modified one (see “Toolchain” below); saved games and data are kept.",
+                         "Installiert, gebaut mit Toolchain \(game.recipe.toolchainName(Toolchain.name(version: built.toolchain, modified: true))). „Aktualisieren“ ersetzt diesen Bau durch einen aus der neuesten Toolchain, ohne die Änderungen der modifizierten (siehe unten unter „Toolchain“); Spielstände und Daten bleiben.")
+            }
+            if let own = game.recipe.ownToolchainTitle, let source = game.recipe.toolchain.source {
+                return L("Installed. Its own toolchain has a newer state (\(own) \(source.version)) – “Update” builds the game with it; saved games and data are kept.",
+                         "Installiert. Seine eigene Toolchain hat einen neueren Stand (\(own) \(source.version)) – „Aktualisieren“ baut das Spiel damit; Spielstände und Daten bleiben.")
             }
             return L("Installed. The current toolchain produces a newer build – “Update” builds it; saved games and data are kept.", "Installiert. Mit der jetzigen Toolchain gibt es eine neuere Fassung – „Aktualisieren“ baut sie; Spielstände und Daten bleiben.")
         case .olderGame(let stamp): return L("Installed in an older version of the game (\(stamp)). This app now has version \(game.recipe.versionName) – “Update” downloads what is new and installs it; saved games and data are kept.",
