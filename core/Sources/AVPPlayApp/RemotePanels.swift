@@ -429,7 +429,9 @@ extension AppModel {
                                                                      "Toolchain \(arriving.version) wird von GitHub geladen und geprüft …")))
         }
         if let note = toolchainNote[game.id] { items.append(Item(id: "toolchain-note", kind: .text, title: "", detail: note, style: .warning)) }
-        if releasedToolchainsLoading {
+        // A toolchain of the game's own is not in AVP Play's releases: nothing older to fetch from there.
+        if game.recipe.toolchain.kind != nil {
+        } else if releasedToolchainsLoading {
             items.append(Item(id: "released-loading", kind: .progress, title: L("Asking GitHub …", "GitHub wird gefragt …")))
         } else if releasedToolchains == nil {
             items.append(Item(id: "loadReleased", kind: .action, title: L("Show Older Toolchains from GitHub", "Ältere Toolchains von GitHub zeigen")))

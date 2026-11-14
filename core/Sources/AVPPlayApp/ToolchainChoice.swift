@@ -277,23 +277,30 @@ struct ToolchainBox: View {
             .pickerStyle(.menu)
             .frame(maxWidth: 520, alignment: .leading)
             .disabled(model.toolchainArriving[game.id] != nil)
-            Text(L("Which toolchain builds this game – when it is installed or updated and when its signature is renewed. Only toolchains that can build this game's recipe are listed. A change does nothing on the Vision Pro until you install; saved games and data are kept. The project tests each game with the newest toolchain: an older one lacks later fixes and settings.",
-                   "Welche Toolchain dieses Spiel baut – beim Installieren, beim Aktualisieren und wenn seine Signatur erneuert wird. Zur Wahl steht nur, womit sich das Rezept dieses Spiels bauen lässt. Ein Wechsel ändert nichts auf der Vision Pro, bis du installierst; Spielstände und Daten bleiben. Das Projekt prüft jedes Spiel mit der neuesten Toolchain: Einer älteren fehlen spätere Korrekturen und Einstellungen."))
-                .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            HStack {
-                if model.releasedToolchainsLoading {
-                    ProgressView().controlSize(.small)
-                } else if model.releasedToolchains == nil {
-                    Button(L("Show Older Toolchains from GitHub", "Ältere Toolchains von GitHub zeigen")) { model.loadReleasedToolchains() }
-                } else if options.released.isEmpty {
-                    Text(L("GitHub has no older toolchain that can build this game and is not on this Mac already.",
-                           "GitHub hat keine ältere Toolchain, die dieses Spiel bauen kann und nicht schon auf diesem Mac liegt."))
-                        .foregroundStyle(.secondary)
+            if let own = game.recipe.ownToolchainTitle {
+                // A toolchain of the game's own is not in AVP Play's releases: there is nothing older to fetch from there.
+                Text(L("Which state of \(own) builds this game – when it is installed or updated and when its signature is renewed. The choice is the state the game's recipe names, or a working copy of \(own) on this Mac; AVP Play's own toolchains cannot build this game. A change does nothing on the Vision Pro until you install; saved games and data are kept.",
+                       "Welcher Stand von \(own) dieses Spiel baut – beim Installieren, beim Aktualisieren und wenn seine Signatur erneuert wird. Zur Wahl stehen der Stand, den das Rezept des Spiels nennt, und Arbeitskopien von \(own) auf diesem Mac; die Toolchains von AVP Play selbst können dieses Spiel nicht bauen. Ein Wechsel ändert nichts auf der Vision Pro, bis du installierst; Spielstände und Daten bleiben."))
+                    .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            } else {
+                Text(L("Which toolchain builds this game – when it is installed or updated and when its signature is renewed. Only toolchains that can build this game's recipe are listed. A change does nothing on the Vision Pro until you install; saved games and data are kept. The project tests each game with the newest toolchain: an older one lacks later fixes and settings.",
+                       "Welche Toolchain dieses Spiel baut – beim Installieren, beim Aktualisieren und wenn seine Signatur erneuert wird. Zur Wahl steht nur, womit sich das Rezept dieses Spiels bauen lässt. Ein Wechsel ändert nichts auf der Vision Pro, bis du installierst; Spielstände und Daten bleiben. Das Projekt prüft jedes Spiel mit der neuesten Toolchain: Einer älteren fehlen spätere Korrekturen und Einstellungen."))
+                    .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                HStack {
+                    if model.releasedToolchainsLoading {
+                        ProgressView().controlSize(.small)
+                    } else if model.releasedToolchains == nil {
+                        Button(L("Show Older Toolchains from GitHub", "Ältere Toolchains von GitHub zeigen")) { model.loadReleasedToolchains() }
+                    } else if options.released.isEmpty {
+                        Text(L("GitHub has no older toolchain that can build this game and is not on this Mac already.",
+                               "GitHub hat keine ältere Toolchain, die dieses Spiel bauen kann und nicht schon auf diesem Mac liegt."))
+                            .foregroundStyle(.secondary)
+                    }
                 }
+                Text(L("Older toolchains come from the releases of AVP Play on GitHub (github.com/myMartek/avp-play). The list is fetched when you ask for it, a package when you choose it; nothing else is sent. A package is checked against its checksum before it is installed.",
+                       "Ältere Toolchains kommen aus den Veröffentlichungen von AVP Play auf GitHub (github.com/myMartek/avp-play). Die Liste wird geholt, wenn du danach fragst, ein Paket, wenn du es wählst; sonst wird nichts gesendet. Ein Paket wird vor dem Installieren gegen seine Prüfsumme geprüft."))
+                    .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
-            Text(L("Older toolchains come from the releases of AVP Play on GitHub (github.com/myMartek/avp-play). The list is fetched when you ask for it, a package when you choose it; nothing else is sent. A package is checked against its checksum before it is installed.",
-                   "Ältere Toolchains kommen aus den Veröffentlichungen von AVP Play auf GitHub (github.com/myMartek/avp-play). Die Liste wird geholt, wenn du danach fragst, ein Paket, wenn du es wählst; sonst wird nichts gesendet. Ein Paket wird vor dem Installieren gegen seine Prüfsumme geprüft."))
-                .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
         }
     }
 }
