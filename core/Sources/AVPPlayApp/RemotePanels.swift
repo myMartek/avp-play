@@ -244,6 +244,34 @@ extension AppModel {
             sections.append(RemoteSection(id: "content", title: L("Optional Content", "Wählbare Inhalte"), items: items))
         }
 
+        // Mods of the game's own toolchain (`GameMods`; the "Mods" box of the Mac's page): a switch per set. The key for the
+        // mods' site is typed in on the Mac only; here it says which way the files will come.
+        if let mods = gameMods(game) {
+            let chosen = gameModSets(game)
+            var items: [Item] = []
+            for set in mods.sets {
+                let list = (set.mods ?? []).map { $0.name + ($0.version.map { " \($0)" } ?? "") }.joined(separator: " · ")
+                let detail = [set.about?.text, list.isEmpty ? nil : list].compactMap { $0 }.joined(separator: "\n")
+                items.append(Item(id: "mods:\(set.id)", kind: .toggle, title: set.title.text, detail: detail.isEmpty ? nil : detail,
+                                  on: chosen.contains(set.id)))
+            }
+            if let about = mods.about?.text { items.append(Item(id: "mods-about", kind: .text, title: "", detail: about, style: .secondary)) }
+            items.append(Item(id: "mods-update", kind: .text, title: "",
+                              detail: L("Switching mods on or off is an update of the game: install it again afterwards. Your saved games stay.",
+                                        "Mods ein- oder auszuschalten ist ein Update des Spiels: Installiere es danach erneut. Deine Spielstände bleiben."),
+                              style: .secondary))
+            if mods.source?.key != nil {
+                items.append(Item(id: "mods-key", kind: .text, title: "",
+                                  detail: modsKeyOn
+                                    ? L("The Mac fetches the mod files with the key stored there.",
+                                        "Der Mac lädt die Mod-Dateien mit dem dort hinterlegten Schlüssel.")
+                                    : L("No key is in use on the Mac: it opens each download page in its browser, and the downloads have to be clicked there. A key can be stored on the Mac, on this game's page.",
+                                        "Auf dem Mac ist kein Schlüssel in Gebrauch: Er öffnet jede Download-Seite in seinem Browser, und die Downloads müssen dort angeklickt werden. Ein Schlüssel lässt sich am Mac auf der Seite dieses Spiels hinterlegen."),
+                                  style: modsKeyOn ? .secondary : .warning))
+            }
+            sections.append(RemoteSection(id: "mods", title: L("Mods", "Mods"), items: items))
+        }
+
         // Steam Workshop
         if game.recipe.workshop != nil, game.prepared {
             sections.append(remoteWorkshopSection(game))
@@ -714,6 +742,8 @@ extension AppModel {
             var next = options(for: game)
             next.locales = on ? Array(Set(next.locales + [locale])).sorted() : next.locales.filter { $0 != locale }
             setOptions(next, for: game)
+        case _ where item.hasPrefix("mods:"):
+            setGameModSet(String(item.dropFirst(5)), on: on, for: game)
         case _ where item.hasPrefix("extra:"):
             let name = String(item.dropFirst(6))
             var next = options(for: game)
