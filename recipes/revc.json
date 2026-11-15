@@ -60,7 +60,7 @@
   }
  ],
  "status": {
-  "playability": "untested",
+  "playability": "verified",
   "download": "special",
   "notes": [
    {
@@ -74,6 +74,10 @@
    {
     "en": "Needs a game controller (Xbox or PlayStation); there is no hand input. The first start prepares the textures once, with a progress bar.",
     "de": "Braucht einen Controller (Xbox oder PlayStation); Handeingabe gibt es nicht. Der erste Start bereitet die Texturen einmal vor, mit Fortschrittsbalken."
+   },
+   {
+    "en": "Played on a Vision Pro M5 with a game controller (2026-11-15/16): the start window, the game, its settings, the performance panel and MetalFX at a lower resolution. Installed by AVP Play from the Steam copy (app 12110). How far into the game it was played was not reported.",
+    "de": "Auf einer Vision Pro M5 mit Controller gespielt (2026-11-15/16): das Startfenster, das Spiel, seine Einstellungen, die Leistungsanzeige und MetalFX bei geringerer Auflösung. Von AVP Play aus der Steam-Fassung (App 12110) installiert. Wie weit ins Spiel gespielt wurde, ist nicht berichtet."
    }
   ]
  },
