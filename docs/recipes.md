@@ -125,6 +125,9 @@ toolchain (its target is of the kind `macho`); the builder is a field of its own
     `files`, `bytes`, `entries`, `libraries` (counted work), `parts` (done = parts finished; the list gives each
     part's reference seconds), `seconds` (a timed wait: done = seconds behind it when the line was written, total =
     its expected length). An unknown unit is shown as plain numbers.
+  - `WAIT <reason>` / `WAIT end` while the build waits for the user. Known reason: `screen-locked` – the game runs on
+    the Mac for a moment and cannot while the screen is locked. The job then asks the user to unlock the Mac and holds
+    the estimate still; the app keeps the display awake while a game's parts are built, against the idle lock.
 
   A line with a leading blank is the builder quoting a tool's output and never one of these; a line that does not
   parse is plain text. The reference times are the builder's; the app scales them by how fast this Mac turns out to

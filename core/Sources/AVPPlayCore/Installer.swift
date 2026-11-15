@@ -409,6 +409,12 @@ public struct Installer: Sendable {
         let report = self.report, progress = self.progress
         report(L("Building the game's parts on this Mac … (log: \(log.path))", "Die Spielteile werden auf diesem Mac gebaut … (Protokoll: \(log.path))"))
         let narrator = BuildNarrator(report: report)
+        // The build runs the game on this Mac for a few minutes, which it cannot while the screen is locked: no idle
+        // display sleep (and so no idle lock) and no idle sleep while the builder runs – also for a job started on
+        // the command line. The app holds the same for the whole job.
+        let awake = ProcessInfo.processInfo.beginActivity(options: [.idleDisplaySleepDisabled, .idleSystemSleepDisabled],
+                                                          reason: "Building a game's parts: the game runs on this Mac for a moment")
+        defer { ProcessInfo.processInfo.endActivity(awake) }
         let result = try await withTaskCancellationHandler {
             try build.run(out: out, log: log, stop: stop, progress: { built in
                 narrator.update(built)

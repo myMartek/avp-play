@@ -62,6 +62,9 @@ public struct BuildProgress: Sendable, Equatable {
         case failed(index: Int?, count: Int?, name: String, reason: String)
         /// `LOG <path>`
         case log(String)
+        /// `WAIT <reason>`: the build waits for the user (`screen-locked`: the Mac's screen must be unlocked);
+        /// `WAIT end`: it goes on.
+        case wait(String?)
 
         /// `nil` for a line that is none of these (also for a broken one: it is then only text).
         public static func parse(_ raw: String) -> Line? {
@@ -113,6 +116,9 @@ public struct BuildProgress: Sendable, Equatable {
             case "LOG":
                 let path = line.dropFirst(4).trimmingCharacters(in: .whitespaces)
                 return .log(path)
+            case "WAIT":
+                guard words.count == 2, words[1].count <= 40 else { return nil }
+                return .wait(words[1] == "end" ? nil : words[1])
             default:
                 return nil
             }
@@ -156,6 +162,10 @@ public struct BuildProgress: Sendable, Equatable {
     private var failureIndex: Int?
     private var failureReason: String?
     public var builderLog: String?
+    /// What the build waits for (`screen-locked`), and since when; `nil` while it works. The estimate stands still
+    /// meanwhile, and the time waited does not count as time of the step.
+    public var waiting: String?
+    public var waitingSince: Date?
 
     public init() {}
 
@@ -164,6 +174,7 @@ public struct BuildProgress: Sendable, Equatable {
             && a.currentName == b.currentName && a.currentStarted == b.currentStarted && a.ran == b.ran
             && a.skipped == b.skipped && a.measure == b.measure && a.measureChanged == b.measureChanged
             && a.partStarted == b.partStarted && a.finished == b.finished && a.failureReason == b.failureReason && a.stepFloor == b.stepFloor
+            && a.waiting == b.waiting && a.waitingSince == b.waitingSince
     }
 
     // MARK: Reading the lines
@@ -203,8 +214,25 @@ public struct BuildProgress: Sendable, Equatable {
             finished = now
         case .log(let path):
             builderLog = path
+        case .wait(let reason?):
+            if waiting == nil { waitingSince = now }
+            waiting = reason
+        case .wait(nil):
+            endWait(at: now)
         }
         return true
+    }
+
+    /// The wait is over: everything the estimate measures from moves on by the time waited, as if it had not been.
+    private mutating func endWait(at now: Date) {
+        guard let since = waitingSince else { waiting = nil; return }
+        let paused = max(0, now.timeIntervalSince(since))
+        currentStarted = currentStarted.map { $0.addingTimeInterval(paused) }
+        partStarted = partStarted.map { $0.addingTimeInterval(paused) }
+        measureChanged = measureChanged.map { $0.addingTimeInterval(paused) }
+        if let first = measureFirst { measureFirst = (first.at.addingTimeInterval(paused), first.done) }
+        waiting = nil
+        waitingSince = nil
     }
 
     /// The result line ends the last step.
@@ -216,6 +244,7 @@ public struct BuildProgress: Sendable, Equatable {
     }
 
     private mutating func endCurrent(at now: Date) {
+        if waiting != nil { endWait(at: now) }
         guard let i = current, let since = currentStarted, !skipped.contains(i) else { return }
         ran[i] = max(0, now.timeIntervalSince(since))
     }
@@ -295,7 +324,9 @@ public struct BuildProgress: Sendable, Equatable {
         return min(max(s, Self.scaleBounds.lowerBound), Self.scaleBounds.upperBound)
     }
 
-    public func estimate(at now: Date) -> Estimate {
+    public func estimate(at realNow: Date) -> Estimate {
+        // While the build waits for the user, everything stands still at the moment the wait began.
+        let now = waitingSince.map { min($0, realNow) } ?? realNow
         let cpu = scale(network: false, now: now)
         let net = scale(network: true, now: now)
         func typical(_ i: Int) -> Double? { entry(i).map { $0.seconds * ($0.network ? net : cpu) } }
@@ -358,7 +389,7 @@ public struct BuildProgress: Sendable, Equatable {
             overall = (Double(c - 1) + shown) / Double(n)
         }
         if finished != nil, failure == nil { overall = 1 }
-        let total = started.map { max(0, (finished ?? now).timeIntervalSince($0)) } ?? 0
+        let total = started.map { max(0, (finished ?? realNow).timeIntervalSince($0)) } ?? 0
         return Estimate(overall: overall, remaining: remaining, step: stepShare, stepElapsed: elapsed, elapsed: total,
                         stepTypical: current.flatMap(usualTime), slow: slow, open: open && finished == nil, scale: cpu, networkScale: net,
                         stepShown: shown)
@@ -543,6 +574,16 @@ extension BuildProgress {
         }
     }
 
+    /// What the user is asked to do while the build waits, in plain words.
+    public var waitText: String? {
+        guard let waiting else { return nil }
+        if waiting == "screen-locked" {
+            return L("Waiting: please unlock this Mac. Minecraft has to run on it for a moment to build the game; then it goes on by itself.",
+                     "Warte: Bitte entsperre diesen Mac. Minecraft muss darauf kurz laufen, um das Spiel zu bauen; danach geht es von selbst weiter.")
+        }
+        return L("Waiting (\(waiting)).", "Warte (\(waiting)).")
+    }
+
     /// The line under the step's bar: what it counted, or how long it runs against how long it usually takes.
     public func stepText(_ e: Estimate) -> String {
         var parts: [String] = []
@@ -564,8 +605,13 @@ extension BuildProgress {
         var parts: [String] = []
         if let c = current { parts.append(L("Step \(c) of \(max(count, c))", "Schritt \(c) von \(max(count, c))")) }
         parts.append("\(Int((e.overall * 100).rounded(.down))) %")
-        if let left = e.remaining, finished == nil { parts.append(BuildProgress.remainingText(left, atLeast: e.open)) }
+        if let left = e.remaining, finished == nil { parts.append(BuildProgress.pausable(BuildProgress.remainingText(left, atLeast: e.open), waiting != nil)) }
         return parts.joined(separator: " · ")
+    }
+
+    /// A time left that stands still while the build waits says so.
+    public static func pausable(_ text: String, _ paused: Bool) -> String {
+        paused ? L("\(text) (paused)", "\(text) (pausiert)") : text
     }
 
     /// The line under the whole build's bar in the job's view (the time left stands beside the bar, the step's
@@ -623,11 +669,12 @@ extension BuildProgress {
     public func summary(at now: Date) -> String {
         let e = estimate(at: now)
         var parts = [headline ?? L("Starting", "Beginnt")]
+        if waiting == "screen-locked" { parts.append(L("WAITING for this Mac to be unlocked", "WARTET, bis dieser Mac entsperrt ist")) }
         if let m = measure, let words = BuildProgress.countText(m) { parts.append(words) }
         if let s = e.step, measure?.unit != .seconds { parts.append(L("step \(Int((s * 100).rounded(.down))) %", "Schritt \(Int((s * 100).rounded(.down))) %")) }
         if e.slow { parts.append(L("taking longer than usual", "dauert länger als sonst")) }
         parts.append(L("whole build \(Int((e.overall * 100).rounded(.down))) %", "ganzer Bau \(Int((e.overall * 100).rounded(.down))) %"))
-        if let left = e.remaining { parts.append(BuildProgress.remainingText(left, atLeast: e.open)) }
+        if let left = e.remaining { parts.append(BuildProgress.pausable(BuildProgress.remainingText(left, atLeast: e.open), waiting != nil)) }
         return parts.joined(separator: " · ")
     }
 }
@@ -641,6 +688,7 @@ public final class BuildNarrator: @unchecked Sendable {
     private var toldStep: Int?
     private var skippedRun: ClosedRange<Int>?
     private var toldEnd = false
+    private var toldWait: String?
 
     public init(report: @escaping @Sendable (String) -> Void) { self.report = report }
 
@@ -669,6 +717,11 @@ public final class BuildNarrator: @unchecked Sendable {
                 if let left = p.estimate(at: now).remaining { line += " · " + BuildProgress.remainingText(left) }
                 lines.append(line)
             }
+        }
+        if p.waiting != toldWait {
+            if p.waiting != nil, let text = p.waitText { lines.append("  " + text) }
+            else if toldWait != nil { lines.append(L("  The wait is over; the build goes on.", "  Das Warten ist vorbei; der Bau geht weiter.")) }
+            toldWait = p.waiting
         }
         if p.finished != nil, !toldEnd {
             toldEnd = true

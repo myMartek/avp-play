@@ -343,6 +343,9 @@ public final class ProcessGroupStop: @unchecked Sendable {
 ///   `files`, `bytes`, `entries`, `libraries` (counted work), `parts` (done = parts finished; the weights are the
 ///   reference seconds of each part), `seconds` (a timed wait: done = seconds behind it when the line was written,
 ///   total = its expected length). An unknown unit is shown as plain numbers.
+/// - `WAIT <reason>` when the build waits for the user, `WAIT end` when it goes on. Known reason: `screen-locked`
+///   (the game must run on this Mac for a moment, and it cannot while the screen is locked). The display asks the
+///   user to unlock the Mac and holds the estimate still until `WAIT end`.
 ///
 /// A line with a leading blank is the builder quoting a tool's output, never one of these. Lines this side does not
 /// know are text for the log, and so is any of these lines that does not parse.

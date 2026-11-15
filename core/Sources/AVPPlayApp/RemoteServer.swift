@@ -647,7 +647,7 @@ extension AppModel {
             // A game's parts being built on this Mac: the same as the job's page here (`BuildProgressView`) – the
             // step in plain words with the whole build's bar and time left, then the step's own bar.
             let e = build.estimate(at: Date())
-            let left = e.remaining.map { BuildProgress.remainingText($0, atLeast: e.open) }
+            let left = e.remaining.map { BuildProgress.pausable(BuildProgress.remainingText($0, atLeast: e.open), build.waiting != nil) }
             bars.append(RemoteProgress(title: build.headline ?? L("Building the game's parts on this Mac", "Die Spielteile werden auf diesem Mac gebaut"),
                                        value: e.overall,
                                        text: L("\(Int((e.overall * 100).rounded(.down))) % of the whole build", "\(Int((e.overall * 100).rounded(.down))) % des ganzen Baus")
@@ -655,8 +655,11 @@ extension AppModel {
             // Not countable: no bar, the time against the usual time says how it goes.
             bars.append(RemoteProgress(value: e.step, text: build.stepText(e) + (build.currentName.isEmpty ? "" : "  (\(build.currentName))")))
             if let note = BuildStepNames.note(build.currentName) { bars.append(RemoteProgress(value: nil, text: note)) }
+            // Waiting for the user: first, so that the Remote's list shows it too.
+            if let wait = build.waitText { bars.insert(RemoteProgress(title: L("Waiting for this Mac", "Wartet auf diesen Mac"), value: nil, text: wait), at: 0) }
             overall = e.overall
-            buildText = ([build.current.map { L("Step \($0) of \(max(build.count, $0))", "Schritt \($0) von \(max(build.count, $0))") }, left]
+            buildText = ([build.waiting != nil ? L("Waiting: please unlock this Mac", "Warte: Bitte entsperre diesen Mac") : nil,
+                          build.current.map { L("Step \($0) of \(max(build.count, $0))", "Schritt \($0) von \(max(build.count, $0))") }, left]
                 .compactMap { $0 }).joined(separator: " · ")
         } else if phase == .running, job.current == .fetch {
             let copy = copyProgress[job.id].flatMap { $0.step == .fetch ? $0 : nil }

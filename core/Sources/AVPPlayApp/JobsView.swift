@@ -303,12 +303,24 @@ struct BuildProgressView: View {
                         Text(L("Building the game's parts on this Mac", "Die Spielteile werden auf diesem Mac gebaut")).font(.headline)
                         Spacer(minLength: 12)
                         if let left = e.remaining {
-                            Text(BuildProgress.remainingText(left, atLeast: e.open)).font(.headline).monospacedDigit()
-                                .foregroundStyle(e.open ? .secondary : .primary)
+                            Text(BuildProgress.pausable(BuildProgress.remainingText(left, atLeast: e.open), build.waiting != nil))
+                                .font(.headline).monospacedDigit()
+                                .foregroundStyle(e.open || build.waiting != nil ? .secondary : .primary)
                         }
                     }
                     ProgressView(value: e.overall).animation(.easeOut(duration: 0.4), value: e.overall)
                     Text(build.overallCaption(e)).font(.caption).foregroundStyle(.secondary).monospacedDigit()
+                }
+                // The build waits for the user: said first and plainly, it is the one thing to do.
+                if let wait = build.waitText {
+                    Label { Text(wait).fixedSize(horizontal: false, vertical: true) } icon: {
+                        Image(systemName: "lock.fill").foregroundStyle(.orange)
+                    }
+                    .font(.body.weight(.medium))
+                    .padding(10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
+                    .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color.orange.opacity(0.5)))
                 }
                 if let headline = build.headline {
                     GroupBox {

@@ -64,6 +64,11 @@ final class BuildProgressTests: XCTestCase {
                        .failed(index: 14, count: 20, name: "world", reason: "no output and no download progress for 20 min, so the stage was stopped as hung."))
         XCTAssertEqual(Line.parse("FAILED 0/20 setup: AVPPLAY_WORK is not set."), .failed(index: 0, count: 20, name: "setup", reason: "AVPPLAY_WORK is not set."))
         XCTAssertEqual(Line.parse("LOG /work/logs/build.log"), .log("/work/logs/build.log"))
+        XCTAssertEqual(Line.parse("WAIT screen-locked"), .wait("screen-locked"))
+        XCTAssertEqual(Line.parse("WAIT end"), .wait(nil))
+        XCTAssertNil(Line.parse("WAIT"))
+        XCTAssertNil(Line.parse("WAIT for a long time"))
+        XCTAssertNil(Line.parse(" WAIT screen-locked"))
         // what a tool printed and the builder quoted (a leading blank), broken lines, and plain text
         for other in [" STAGE 3/20 graalvm", " PROGRESS 1 2 files", " PLAN a:1", "PROGRESS", "PROGRESS 1 0 files", "PROGRESS x 2 files",
                       "PROGRESS -1 2 files", "PROGRESS 1 200 parts", "PLAN", "PLAN tree", "PLAN tree:x", "PLANET x:1", "PROGRESSIVE 1 2 files",
@@ -277,6 +282,50 @@ final class BuildProgressTests: XCTestCase {
         XCTAssertEqual(p.failure?.index, 14)
         XCTAssertEqual(p.failure?.reason, "no output and no download progress for 20 min, so the stage was stopped as hung.")
         XCTAssertEqual(p.builderLog, "/work/logs/build-20261115-052923-55649.log")
+    }
+
+    /// The world step of the real run that met a locked screen (the run of 2026-11-15 13:45; its world stage
+    /// started 13:57:57), as the builder now says it: it waits, the estimate stands still meanwhile, the user is told
+    /// what to do, and after the unlock everything goes on as if the wait had not been.
+    func testAWaitForAnUnlockedScreenPausesTheEstimate() throws {
+        let t0 = Date(timeIntervalSince1970: 1_800_000_000)
+        var p = BuildProgress()
+        p.apply("PLAN tree:2:d tools:3:d graalvm:3:d headers:2:d vivecraft:8:d minecraft:9:d openal:58:d lwjgl:158:d klsdl:12:d ltw:28:d voicechat:37:d shims:2:d classpath:3:d world:62 bake:141 launcher:17 image:975 relink:6 payload:31 zip:8", at: t0)
+        for i in 1...13 { p.apply("STAGE \(i)/20 \(p.plan![i - 1].name) (already done)", at: t0) }
+        p.apply("STAGE 14/20 world", at: t0)
+        p.apply("waiting: the screen of this Mac is locked; Minecraft can only run while it is unlocked.", at: t0.addingTimeInterval(1))
+        p.apply("WAIT screen-locked", at: t0.addingTimeInterval(1))
+        XCTAssertEqual(p.waiting, "screen-locked")
+        let atWait = p.estimate(at: t0.addingTimeInterval(1))
+        let later = p.estimate(at: t0.addingTimeInterval(1800))
+        XCTAssertEqual(later.remaining, atWait.remaining, "half an hour locked: the time left stands still")
+        XCTAssertEqual(later.stepElapsed, 1)
+        XCTAssertFalse(later.slow, "waiting is not taking longer than usual")
+        XCTAssertEqual(later.elapsed, 1800, "the clock of the whole build goes on")
+        XCTAssertTrue(p.overallText(later).hasSuffix("(paused)"), p.overallText(later))
+        XCTAssertTrue(p.waitText!.hasPrefix("Waiting: please unlock this Mac."))
+        L10n.language = .de
+        XCTAssertTrue(p.waitText!.hasPrefix("Warte: Bitte entsperre diesen Mac."))
+        L10n.language = .en
+        // unlocked after 30 minutes: the step has run one second, not thirty minutes
+        p.apply("WAIT end", at: t0.addingTimeInterval(1801))
+        XCTAssertNil(p.waiting)
+        let after = p.estimate(at: t0.addingTimeInterval(1811))
+        XCTAssertEqual(after.stepElapsed, 11, accuracy: 0.001)
+        XCTAssertEqual(after.remaining ?? 0, (atWait.remaining ?? 0) - 10, accuracy: 0.5)
+        p.apply("STAGE 15/20 bake", at: t0.addingTimeInterval(1860))
+        XCTAssertEqual(p.ran[14] ?? 0, 60, accuracy: 0.001, "the step's time without the wait")
+
+        let heard = Heard()
+        let narrator = BuildNarrator(report: { heard.add($0) })
+        var q = BuildProgress()
+        for (offset, line) in [(0.0, "STAGE 14/20 world"), (1, "WAIT screen-locked"), (900, "WAIT end")] {
+            q.apply(line, at: t0.addingTimeInterval(offset)); narrator.update(q, at: t0.addingTimeInterval(offset))
+        }
+        XCTAssertEqual(heard.lines.suffix(2), [
+            "  Waiting: please unlock this Mac. Minecraft has to run on it for a moment to build the game; then it goes on by itself.",
+            "  The wait is over; the build goes on.",
+        ])
     }
 
     /// A resume with only the last step left: almost all of the bar is done, and the time left is short.

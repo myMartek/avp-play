@@ -479,6 +479,8 @@ final class AppModel: ObservableObject {
     /// Das Entwicklerteam, das dieses Programm signiert hat; `nil` bei einem Bau ohne Identität.
     let ownTeam: String? = Bundle.main.bundleIdentifier == nil ? nil : Updater.team(of: Bundle.main.bundleURL)
     private var awake: NSObjectProtocol?
+    /// While a job of a game whose parts are built on this Mac runs: the display stays awake (see `pump`).
+    private var displayAwake: NSObjectProtocol?
     @Published private var options: [String: GameOptions] = [:]
     /// Die Filter der Übersicht; mehrere zugleich engen weiter ein.
     @AppStorage("filterVerified") var filterVerified = false
@@ -2000,6 +2002,13 @@ final class AppModel: ObservableObject {
             awake = ProcessInfo.processInfo.beginActivity(options: [.idleSystemSleepDisabled, .suddenTerminationDisabled],
                                                           reason: "Installing a game on Apple Vision Pro")
         }
+        // A game whose parts are built on this Mac runs the game itself for a few minutes of that build, and it
+        // cannot while the screen is locked. Keeping the display awake keeps the idle lock away for the whole job
+        // (a lock by hand still happens; the builder then waits for the unlock).
+        if job.recipe.builder != nil, displayAwake == nil {
+            displayAwake = ProcessInfo.processInfo.beginActivity(options: [.idleDisplaySleepDisabled, .idleSystemSleepDisabled],
+                                                                 reason: "Building a game's parts: the game runs on this Mac for a moment")
+        }
         askForNotifications()
         let paths = paths
         let (lines, feed) = AsyncStream<String>.makeStream()
@@ -2084,6 +2093,10 @@ final class AppModel: ObservableObject {
         let cancelled = stopRequested.remove(id) != nil
         if cancelled { _ = try? JobRunner(store: paths.jobs).cancel(id) }
         closeLog(id)
+        if let token = displayAwake {
+            ProcessInfo.processInfo.endActivity(token)
+            displayAwake = nil
+        }
         runningTask = nil
         runningJob = nil
         copyProgress[id] = nil
