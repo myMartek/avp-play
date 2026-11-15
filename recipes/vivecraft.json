@@ -8,12 +8,12 @@
  "store": {},
  "toolchain": {
   "target": "vivecraft",
-  "minCommit": "4540abb"
+  "minCommit": "16fecef"
  },
  "builder": {
   "source": {
    "repository": "https://github.com/myMartek/vivecraft-visionos",
-   "commit": "56ab58e71571539081183f1001650bebf6de367b",
+   "commit": "1006f3b98f304ad1249f8e54955c419dcc4a143b",
    "version": 1
   },
   "notes": [
