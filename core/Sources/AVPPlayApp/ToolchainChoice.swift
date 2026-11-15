@@ -8,6 +8,28 @@ extension AppModel {
         ToolchainChoices.load().packageCommits.union(toolchainChoices.packageCommits).union(toolchainArriving.values.map(\.commit))
     }
 
+    /// A game with a toolchain of its own, named by its recipe: fetched when the game's page is opened, not only by
+    /// its first job. What that toolchain says about the game – its mod sets above all – is on the page before the
+    /// first install that way; without it the first build would be one without mods. A few megabytes from the
+    /// address the page names. Not while offline is on, not next to a job, and after a failure only when asked.
+    func fetchOwnToolchainIfMissing(_ game: Game, again: Bool = false) {
+        let recipe = game.recipe, id = game.id
+        guard toolchainChoices.usesRecipeToolchain(recipe), !ownToolchainFetching.contains(id), again || ownToolchainProblem[id] == nil,
+              !isOffline(game), runningJob == nil, ExternalToolchains().installed(for: recipe) == nil else { return }
+        ownToolchainFetching.insert(id)
+        ownToolchainProblem[id] = nil
+        Task.detached(priority: .userInitiated) {
+            var problem: String?
+            do { try ExternalToolchains().fetch(for: recipe) } catch { problem = "\(error)" }
+            let failed = problem
+            await MainActor.run {
+                self.ownToolchainFetching.remove(id)
+                self.ownToolchainProblem[id] = failed
+                self.refreshStatus(of: id)
+            }
+        }
+    }
+
     /// Die Toolchain, mit der dieses Spiel gebaut wird: die dafür gewählte, sonst die neueste. `nil`, wenn keine
     /// installiert ist – oder die gewählte nicht mehr da ist; dann sagt `blocker(for:)`, was zu tun ist.
     func toolchain(for game: Game) -> Toolchain? {
@@ -203,6 +225,21 @@ struct ToolchainBox: View {
                     Label(note, systemImage: "exclamationmark.triangle").font(.callout).foregroundStyle(.orange)
                         .fixedSize(horizontal: false, vertical: true)
                 }
+                if let source = game.recipe.toolchain.source, game.recipe.toolchain.kind != nil {
+                    let named = game.recipe.toolchainName(String(source.version))
+                    if model.ownToolchainFetching.contains(game.id) {
+                        HStack {
+                            ProgressView().controlSize(.small)
+                            Text(L("Fetching \(named) from GitHub … The game's mods show here once it is on this Mac.",
+                                   "\(named) wird von GitHub geholt … Die Mods des Spiels stehen hier, sobald sie auf diesem Mac liegt.")).font(.callout)
+                        }
+                    } else if let problem = model.ownToolchainProblem[game.id] {
+                        Label(L("\(named) could not be fetched: \(problem) Without it this page cannot show the game's mods.",
+                                "\(named) ließ sich nicht holen: \(problem) Ohne sie kann diese Seite die Mods des Spiels nicht zeigen."),
+                              systemImage: "exclamationmark.triangle").font(.callout).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true)
+                        Button(L("Try Again", "Noch einmal versuchen")) { model.fetchOwnToolchainIfMissing(game, again: true) }
+                    }
+                }
                 DisclosureGroup(L("Choose the toolchain for this game", "Toolchain für dieses Spiel wählen"), isExpanded: $expanded) {
                     chooser.padding(.top, 6)
                 }
@@ -218,6 +255,7 @@ struct ToolchainBox: View {
             }.value
             if pin != nil || Snapshot.directory != nil { expanded = true }
         }
+        .task(id: game.id) { model.fetchOwnToolchainIfMissing(game) }
     }
 
     @ViewBuilder private var summary: some View {

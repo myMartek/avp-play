@@ -135,6 +135,12 @@ public struct ExternalToolchains: Sendable {
         guard !target.path.contains(" ") else { throw ExternalToolchainError.blankInPath(root.path) }
         let fm = FileManager.default
         try fm.createDirectory(at: root, withIntermediateDirectories: true)
+        // What a fetch left behind that never ended (the app was quit meanwhile) is of no use to anyone.
+        for left in (try? fm.contentsOfDirectory(at: root, includingPropertiesForKeys: [.contentModificationDateKey])) ?? []
+        where left.lastPathComponent.hasPrefix(".fetching-") {
+            let changed = (try? left.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
+            if let changed, Date().timeIntervalSince(changed) > 3600 { try? fm.removeItem(at: left) }
+        }
         let fresh = root.appendingPathComponent(".fetching-\(UUID().uuidString)", isDirectory: true)
         defer { try? fm.removeItem(at: fresh) }
         try fm.createDirectory(at: fresh, withIntermediateDirectories: true)

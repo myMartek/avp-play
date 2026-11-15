@@ -23,6 +23,31 @@ final class ExternalToolchainTests: XCTestCase {
         ToolchainSource(repository: "https://github.com/someone/Some-Game.Port", commit: commit, version: 410, path: path)
     }
 
+    /// A game's first job is created before its toolchain is fetched: the state it freezes, and the state it finds
+    /// when it starts, are the one the recipe pins – not “nothing” against “unknown”, which stopped every such job.
+    func testAJobForAToolchainNotFetchedYetIsInTheStateTheRecipePins() throws {
+        let external = ExternalToolchains(root: temp())
+        let r = recipe(source: source())
+        let place = try XCTUnwrap(external.directory(for: r)).path
+        XCTAssertEqual(Job.toolchainCommit(recipe: r, toolchain: place, external: external), "0123456")
+        let job = Job(recipe: r, request: InstallRequest(toolchain: place), steps: InstallStep.allCases,
+                      toolchainCommit: Job.toolchainCommit(recipe: r, toolchain: place, external: external) ?? "")
+        XCTAssertEqual(job.toolchainCommit, "0123456")
+        XCTAssertEqual(job.currentToolchainCommit(external: external), job.toolchainCommit)
+        // Any other place that holds no toolchain says nothing – and so does a game without a source.
+        XCTAssertNil(Job.toolchainCommit(recipe: r, toolchain: temp().path, external: external))
+        XCTAssertNil(Job.toolchainCommit(recipe: r, toolchain: "", external: external))
+        XCTAssertNil(Job.toolchainCommit(recipe: recipe(source: nil), toolchain: place, external: external))
+        // Once it is there, the toolchain itself is asked.
+        let there = URL(fileURLWithPath: place)
+        try FileManager.default.createDirectory(at: there.appendingPathComponent("visionos"), withIntermediateDirectories: true)
+        try "#!/bin/sh\n".write(to: there.appendingPathComponent("visionos/run.sh"), atomically: true, encoding: .utf8)
+        var manifest = ToolchainManifest(format: ToolchainManifest.currentFormat, version: 410, commit: "0123456", ancestors: ["0123456"], created: Date())
+        manifest.kind = "vxruntime"
+        try ToolchainPackager.encoder.encode(manifest).write(to: there.appendingPathComponent("toolchain.json"))
+        XCTAssertEqual(job.currentToolchainCommit(external: external), "0123456")
+    }
+
     func testOnlyAPlainGitHubAddressAndAFullCommitAreTaken() {
         XCTAssertTrue(source().isSane)
         XCTAssertTrue(source(path: nil).isSane)

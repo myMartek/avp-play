@@ -1572,7 +1572,7 @@ case "job":
         var installer = Installer(recipe: job.recipe, request: job.request, store: contentStore(o)) { print("  " + $0) }
         installer.metaTool = metaToolURL(o)
         do {
-            let now = (try? Toolchain(root: URL(fileURLWithPath: job.request.toolchain)).commit()) ?? L("unknown", "unbekannt")
+            let now = job.currentToolchainCommit() ?? L("unknown", "unbekannt")
             let done = try await runner.run(job, currentToolchain: now, log: { print($0) }) { step, _ in try await installer.perform(step) }
             print(done.isDownloadOnly
                 ? L("Job \(done.id) finished: the files of \(done.recipe.title) are downloaded.",
@@ -1609,7 +1609,9 @@ case "job":
         if downloadOnly { request.downloadOnly = true }
         do {
             // Eingefroren wird der Stand, mit dem der Auftrag beginnt. Wer nur lädt, braucht keine Toolchain.
-            let commit = downloadOnly ? "" : try Toolchain(root: URL(fileURLWithPath: request.toolchain)).commit()
+            // A game's own toolchain that the job has yet to fetch is in the state the recipe pins.
+            let commit = downloadOnly ? "" : try Job.toolchainCommit(recipe: r, toolchain: request.toolchain)
+                ?? Toolchain(root: URL(fileURLWithPath: request.toolchain)).commit()
             let steps = downloadOnly ? InstallStep.download : addonsOnly ? InstallStep.addonSync : buildOnly ? [.account, .fetch, .build] : InstallStep.allCases
             // Auch ein Auftrag der Kommandozeile bekommt seinen Platz, sonst stünde er in der Liste unter allen anderen.
             let job = try jobs.enqueue(Job(recipe: r, request: request, steps: steps, toolchainCommit: commit))

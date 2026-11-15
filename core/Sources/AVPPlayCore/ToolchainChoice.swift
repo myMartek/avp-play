@@ -295,8 +295,8 @@ public struct ToolchainOptions: Equatable, Sendable {
             return L("This game is not built with AVP Play's toolchain but with one of its own: \(own). It has to be chosen by hand: avpplay toolchain use \(recipe.id) --toolchain <folder>.",
                      "Dieses Spiel wird nicht mit der Toolchain von AVP Play gebaut, sondern mit einer eigenen: \(own). Sie muss von Hand gewählt werden: avpplay toolchain use \(recipe.id) --toolchain <Ordner>.")
         }
-        return L("This game is not built with AVP Play's toolchain but with one of its own: \(own) \(source.version). That number counts the states of \(own) and has nothing to do with the number of AVP Play's toolchain. The app fetches it from \(source.repository) when the game is installed.",
-                 "Dieses Spiel wird nicht mit der Toolchain von AVP Play gebaut, sondern mit einer eigenen: \(own) \(source.version). Diese Nummer zählt die Stände von \(own) und hat mit der Nummer der Toolchain von AVP Play nichts zu tun. Die App holt sie von \(source.repository), wenn das Spiel installiert wird.")
+        return L("This game is not built with AVP Play's toolchain but with one of its own: \(own) \(source.version). That number counts the states of \(own) and has nothing to do with the number of AVP Play's toolchain. The app fetches it from \(source.repository) by itself.",
+                 "Dieses Spiel wird nicht mit der Toolchain von AVP Play gebaut, sondern mit einer eigenen: \(own) \(source.version). Diese Nummer zählt die Stände von \(own) und hat mit der Nummer der Toolchain von AVP Play nichts zu tun. Die App holt sie selbst von \(source.repository).")
     }
 
     /// Angeboten wird nur, womit sich das Rezept des Spiels bauen lässt: was dessen Mindeststand enthält.

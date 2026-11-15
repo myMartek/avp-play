@@ -246,6 +246,23 @@ extension AppModel {
 
         // Mods of the game's own toolchain (`GameMods`; the "Mods" box of the Mac's page): a switch per set. The key for the
         // mods' site is typed in on the Mac only; here it says which way the files will come.
+        // Not on this Mac yet: fetched now, as the Mac's own page does, so that the sets are here before the first install.
+        if gameMods(game) == nil, toolchainChoices.usesRecipeToolchain(game.recipe), let source = game.recipe.toolchain.source {
+            let named = game.recipe.toolchainName(String(source.version))
+            if ownToolchainFetching.contains(game.id) {
+                sections.append(RemoteSection(id: "mods", title: L("Mods", "Mods"), items: [
+                    Item(id: "mods-fetching", kind: .progress, title: L("Fetching \(named) from GitHub; the game's mods show here afterwards …",
+                                                                      "\(named) wird von GitHub geholt; danach stehen hier die Mods des Spiels …"))]))
+            } else if let problem = ownToolchainProblem[game.id] {
+                sections.append(RemoteSection(id: "mods", title: L("Mods", "Mods"), items: [
+                    Item(id: "mods-problem", kind: .text, title: "",
+                         detail: L("\(named) could not be fetched: \(problem) Without it the game's mods cannot be shown; try again on the game's page on the Mac.",
+                                   "\(named) ließ sich nicht holen: \(problem) Ohne sie lassen sich die Mods des Spiels nicht zeigen; versuche es auf der Seite des Spiels am Mac noch einmal."),
+                         style: .warning)]))
+            } else {
+                Task { @MainActor [weak self] in self?.fetchOwnToolchainIfMissing(game) }
+            }
+        }
         if let mods = gameMods(game) {
             let chosen = gameModSets(game)
             var items: [Item] = []

@@ -166,6 +166,26 @@ public struct JobStore: Sendable {
     }
 }
 
+extension Job {
+    /// The state a job's toolchain is in right now, to hold against the one frozen when the job was created.
+    ///
+    /// A toolchain the game's recipe names (`Recipe.Toolchain.source`) and that is not on this Mac yet is in the
+    /// state the recipe pins: the job fetches exactly that commit as its first act, or fails. Without this a game's
+    /// first job could never start – there is no toolchain to ask before it has run. `nil`: nothing is there and
+    /// nothing says what will be.
+    public static func toolchainCommit(recipe: Recipe, toolchain path: String, external: ExternalToolchains = ExternalToolchains()) -> String? {
+        let root = URL(fileURLWithPath: path).standardizedFileURL
+        if let there = try? Toolchain(root: root) { return there.commit() }
+        guard recipe.toolchain.kind != nil, let source = recipe.toolchain.source, !path.isEmpty,
+              external.directory(for: recipe)?.standardizedFileURL.path == root.path else { return nil }
+        return source.shortCommit
+    }
+
+    public func currentToolchainCommit(external: ExternalToolchains = ExternalToolchains()) -> String? {
+        Job.toolchainCommit(recipe: recipe, toolchain: request.toolchain, external: external)
+    }
+}
+
 /// Führt einen Auftrag Schritt für Schritt aus und hält seinen Stand fest.
 public struct JobRunner: Sendable {
     let store: JobStore

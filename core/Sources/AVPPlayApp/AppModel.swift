@@ -445,6 +445,9 @@ final class AppModel: ObservableObject {
     /// Je Spiel die Nummer des Pakets, das gerade für es geladen wird.
     @Published var toolchainArriving: [String: ReleasedToolchain] = [:]
     @Published var toolchainNote: [String: String] = [:]
+    /// Games whose own toolchain (`Recipe.Toolchain.source`) is being fetched for their page, and what went wrong.
+    @Published var ownToolchainFetching: Set<String> = []
+    @Published var ownToolchainProblem: [String: String] = [:]
     /// Besorgt diese Bilder: zwei Abrufe zugleich, mit Zwischenspeicher.
     let covers = CoverLoader()
     @AppStorage("filterFavourites") var filterFavourites = false
@@ -1271,6 +1274,9 @@ final class AppModel: ObservableObject {
         if let arriving = toolchainArriving[game.id] {
             return L("Toolchain \(arriving.version) is being downloaded for this game.", "Toolchain \(arriving.version) wird für dieses Spiel geladen.")
         }
+        if ownToolchainFetching.contains(game.id) {
+            return L("This game's own toolchain is being fetched – a moment.", "Die eigene Toolchain dieses Spiels wird gerade geholt – einen Moment.")
+        }
         if let pin, !fetchedByJob, paths.packager.toolchain(for: pin) == nil {
             let named = game.recipe.toolchainName(pin.name)
             return L("Toolchain \(named), chosen for this game, is no longer on this Mac. Choose one under “Toolchain” below.",
@@ -1842,7 +1848,9 @@ final class AppModel: ObservableObject {
         request.live = true
         do {
             // Eingefroren wird der Stand, mit dem der Auftrag beginnt. Seinen Platz in der Reihe bekommt er dabei.
-            let job = try paths.jobs.enqueue(Job(recipe: recipe, request: request, steps: steps, toolchainCommit: toolchain?.commit() ?? ""))
+            // A game's own toolchain that the job has yet to fetch is in the state the recipe pins.
+            let frozen = toolchain?.commit() ?? Job.toolchainCommit(recipe: recipe, toolchain: request.toolchain) ?? ""
+            let job = try paths.jobs.enqueue(Job(recipe: recipe, request: request, steps: steps, toolchainCommit: frozen))
             queued.append(job.id)
             reloadJobs()
             if show {
@@ -2006,8 +2014,7 @@ final class AppModel: ObservableObject {
                                       } },
                                       report: { feed.yield("    " + $0) })
             installer.metaTool = metaTool
-            let now = companion != nil ? job.toolchainCommit
-                : (try? Toolchain(root: URL(fileURLWithPath: job.request.toolchain)).commit()) ?? "unbekannt"
+            let now = companion != nil ? job.toolchainCommit : job.currentToolchainCommit() ?? L("unknown", "unbekannt")
             do {
                 _ = try await JobRunner(store: paths.jobs).run(job, currentToolchain: now, log: { feed.yield($0) }) { step, _ in
                     try Task.checkCancellation()
