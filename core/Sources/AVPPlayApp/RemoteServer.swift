@@ -730,6 +730,8 @@ extension AppModel {
                 remote.fromSteam = game.fromSteam
                 remote.horizonPlus = horizon
                 remote.works = (game.recipe.source == .steam ? game.steamCatalog?.works : game.catalog?.works) ?? 0
+                // Spielteile werden gebaut, nicht geladen: Der Knopf der Remote heißt dann wie der auf der Seite am Mac.
+                if canDownload, game.partsToBuild, game.status.filesToDownload == 0 { remote.prepareTitle = L("Build Parts Only", "Nur Spielteile bauen") }
             }
     }
 

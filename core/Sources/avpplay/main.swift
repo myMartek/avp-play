@@ -148,8 +148,8 @@ avpplay – command line for the AVP Play core library
   avpplay saves [<id> …] [--saves <folder>]    fetch the saved games of installed games from the Vision Pro to this Mac (nothing changes on the device)
   avpplay saves <id> --restore                 put the newest copy back on the Vision Pro, replacing what is there (which is fetched first)
   avpplay servers <id> [add <address> [--name <name>] [--admin-stdin] | remove <address> | push]
-  avpplay remote install --team <id> [--handover [--with-token]] [--tag <vX.Y.Z>] [--from <source folder>] [--prefix <prefix>] [--bundle-id <id>]
-  avpplay remote handover [--with-token] [--pairing <file>] [--template <zip> [--mods-template <zip>]] [--prefix <prefix>] [--bundle-id <id>]
+  avpplay remote install --team <id> [--handover [--with-token] [--with-parts <game>]] [--tag <vX.Y.Z>] [--from <source folder>] [--prefix <prefix>] [--bundle-id <id>]
+  avpplay remote handover [--with-token] [--with-parts <game>] [--pairing <file>] [--template <zip> [--mods-template <zip>] [--macho-template <zip>]] [--prefix <prefix>] [--bundle-id <id>]
                           [--asc-key-id <id> --asc-issuer-id <id> --asc-key <file>] [--pairing-port <port>]
                                                your own game servers for a game that understands such a list; the admin
                                                password is read from standard input and kept in the keychain
@@ -254,8 +254,8 @@ avpplay – Kommandozeile zur Kern-Bibliothek von AVP Play
   avpplay saves [<id> …] [--saves <Ordner>]    Spielstände installierter Spiele von der Vision Pro auf den Mac holen (auf dem Gerät ändert sich nichts)
   avpplay saves <id> --restore                 den neuesten Stand auf die Vision Pro zurückspielen; ersetzt, was dort liegt (das wird vorher geholt)
   avpplay servers <id> [add <Adresse> [--name <Name>] [--admin-stdin] | remove <Adresse> | push]
-  avpplay remote install --team <ID> [--handover [--with-token]] [--tag <vX.Y.Z>] [--from <Quellordner>] [--prefix <Präfix>] [--bundle-id <Kennung>]
-  avpplay remote handover [--with-token] [--pairing <Datei>] [--template <zip> [--mods-template <zip>]] [--prefix <Präfix>] [--bundle-id <Kennung>]
+  avpplay remote install --team <ID> [--handover [--with-token] [--with-parts <Spiel>]] [--tag <vX.Y.Z>] [--from <Quellordner>] [--prefix <Präfix>] [--bundle-id <Kennung>]
+  avpplay remote handover [--with-token] [--with-parts <Spiel>] [--pairing <Datei>] [--template <zip> [--mods-template <zip>] [--macho-template <zip>]] [--prefix <Präfix>] [--bundle-id <Kennung>]
                           [--asc-key-id <ID> --asc-issuer-id <ID> --asc-key <Datei>] [--pairing-port <Port>]
                                                eigene Spielserver für ein Spiel, das so eine Liste versteht; das Admin-Passwort
                                                wird von der Standardeingabe gelesen und im Schlüsselbund abgelegt
@@ -310,7 +310,7 @@ Allgemein: --account <Name>    Eintrag im Schlüsselbund (Standard: default)
 let valued: Set<String> = ["account", "steam-account", "source", "store", "recipes", "locale", "with", "only", "interval", "from", "to", "force", "name",
                            "team", "device", "bundle-id", "display-name", "display-suffix", "toolchain", "builder", "controller-mode", "icon", "tool", "jobs", "toolchains", "saves", "resolution",
                            "room-measuring", "game-language", "game-mods", "klepton", "markdown", "json", "references", "out", "leave-out", "summary", "top",
-                           "prefix", "pairing", "pairing-port", "template", "mods-template", "asc-key-id", "asc-issuer-id", "asc-key", "tag"]
+                           "prefix", "pairing", "pairing-port", "template", "mods-template", "macho-template", "with-parts", "asc-key-id", "asc-issuer-id", "asc-key", "tag"]
 let o = Options(Array(CommandLine.arguments.dropFirst()), valued: valued)
 guard let command = o.positional.first else { print(usage()); exit(0) }
 OtherSources.use(recipes: recipesDirectory(o))
@@ -1227,10 +1227,14 @@ case "remote":
                 request.replaceRunning = o.flags.contains("replace-running") ? true : nil
                 if o.flags.contains("handover") {
                     let root = o.value("toolchain") ?? ProcessInfo.processInfo.environment["AVPPLAY_TOOLCHAIN"] ?? toolchainPackager(o).installed().first?.root.path
+                    // --with-parts <Spiel>[,<Spiel>]: die Spielteile eines hier gebauten Spiels gehen mit (ein paar hundert
+                    // Megabyte; ohne die Angabe nie). Wie viel das ist, steht im Protokoll, bevor kopiert wird.
                     request.handover = CompanionHandover.Plan(bundlePrefix: prefix, withToken: o.flags.contains("with-token"),
                                                               account: o.value("account") ?? "default", recipes: recipesDirectory(o),
                                                               library: MetaLibraryCache(store: contentStore(o)).url,
-                                                              toolchain: root.map { URL(fileURLWithPath: $0).standardizedFileURL })
+                                                              toolchain: root.map { URL(fileURLWithPath: $0).standardizedFileURL },
+                                                              store: contentStore(o).root,
+                                                              parts: o.value("with-parts")?.split(separator: ",").map(String.init))
                 }
                 var installer = CompanionInstaller(recipe: CompanionApp.recipe(release: release), request: request) { print($0) }
                 installer.localSource = o.value("from").map { URL(fileURLWithPath: $0).standardizedFileURL }
@@ -1261,14 +1265,24 @@ case "remote":
         if let id = o.value("asc-key-id"), let issuer = o.value("asc-issuer-id"), let file = o.value("asc-key") {
             inputs.appleKey = .init(keyId: id, issuerId: issuer, file: URL(fileURLWithPath: file))
         }
+        // Spiele, deren Programm auf diesem Mac gebaut wird: die Liste immer, die Spielteile nur mit --with-parts <Spiel>.
+        inputs.built = CompanionHandover.builtGames(in: recipesDirectory(o), store: contentStore(o),
+                                                    agreed: Set(o.value("with-parts")?.split(separator: ",").map(String.init) ?? []))
         if let template = o.value("template") {
             inputs.template = URL(fileURLWithPath: template)
             if let mods = o.value("mods-template") { inputs.modTemplates = [URL(fileURLWithPath: mods)] }
+            if let macho = o.value("macho-template") { inputs.machoTemplates = [URL(fileURLWithPath: macho)] }
         } else if let root = o.value("toolchain") ?? ProcessInfo.processInfo.environment["AVPPLAY_TOOLCHAIN"] ?? toolchainPackager(o).installed().first?.root.path {
             let toolchain = try Toolchain(root: URL(fileURLWithPath: root).standardizedFileURL)
             let cache = CompanionApp.directory.appendingPathComponent("templates", isDirectory: true)
-            inputs.template = try CompanionHandover.template(toolchain: toolchain, cache: cache) { print($0) }
-            if inputs.template != nil { inputs.modTemplates = CompanionHandover.modTemplates(toolchain: toolchain, cache: cache) }
+            inputs.template = try CompanionHandover.template(toolchain: toolchain, cache: cache, wantsMacho: !inputs.built.isEmpty,
+                                                             gameArchive: inputs.built.compactMap(\.archive).first) { print($0) }
+            if inputs.template != nil {
+                inputs.modTemplates = CompanionHandover.modTemplates(toolchain: toolchain, cache: cache)
+                let targets = Set(inputs.built.map(\.game.target))
+                inputs.machoTemplates = CompanionHandover.machoTemplates(toolchain: toolchain, cache: cache)
+                    .filter { CompanionHandover.machoTarget($0, toolchain: toolchain).map(targets.contains) ?? false }
+            }
             if inputs.template == nil {
                 warn(L("Toolchain \(toolchain.name) cannot build a runtime template; none is handed over.",
                        "Die Toolchain \(toolchain.name) kann keine Laufzeit-Vorlage bauen; es wird keine übergeben."))
@@ -1284,9 +1298,11 @@ case "remote":
         }
         let folder = CompanionHandover.folder
         let present = ((try? control.files(device: device, bundle: bundle, subdirectory: folder)) ?? [])
-        try CompanionHandover.push(items, present: present, copy: { local, destination in
-            try control.copy(local, to: device, bundle: bundle, destination: destination)
-        }, report: { print($0) })
+        for line in CompanionHandover.builtNotes(inputs.built, templates: inputs.machoTemplates) { print(line) }
+        try CompanionHandover.push(items, present: present,
+                                   elsewhere: { (try? control.files(device: device, bundle: bundle, subdirectory: $0)) ?? [] },
+                                   copy: { local, destination in try control.copy(local, to: device, bundle: bundle, destination: destination) },
+                                   report: { print($0) })
         print(L("AVP Play Remote takes it over at its next start.", "AVP Play Remote übernimmt es beim nächsten Start."))
     } catch { fail("\(error)") }
 

@@ -8,6 +8,17 @@ import SwiftUI
 extension AppModel {
     static let handoverKey = "remoteHandover"
     static let handoverTokenKey = "remoteHandoverToken"
+    /// Die Spiele, deren Spielteile mitgehen (Kennungen): Für jedes hat der Nutzer einzeln zugestimmt, nachdem ihm die
+    /// Größe genannt wurde. Leer, bis er das tut.
+    static let handoverPartsKey = "remoteHandoverParts"
+
+    var handoverParts: [String] { UserDefaults.standard.stringArray(forKey: AppModel.handoverPartsKey) ?? [] }
+
+    func setHandoverParts(_ id: String, _ on: Bool) {
+        var all = Set(handoverParts)
+        if on { all.insert(id) } else { all.remove(id) }
+        UserDefaults.standard.set(all.sorted(), forKey: AppModel.handoverPartsKey)
+    }
 
     var handoverEnabled: Bool { UserDefaults.standard.bool(forKey: AppModel.handoverKey) }
 
@@ -17,7 +28,7 @@ extension AppModel {
         return CompanionHandover.Plan(bundlePrefix: bundlePrefix,
                                       withToken: UserDefaults.standard.bool(forKey: AppModel.handoverTokenKey),
                                       recipes: paths.recipes, library: MetaLibraryCache(store: paths.store).url,
-                                      toolchain: paths.packager.installed().first?.root)
+                                      toolchain: paths.packager.installed().first?.root, store: paths.store.root, parts: handoverParts)
     }
 
     /// Warum sich gerade nichts übergeben lässt.
@@ -62,6 +73,11 @@ struct CompanionHandoverBox: View {
     @State private var keyId = ""
     @State private var issuerId = ""
     @State private var problem: String?
+    /// Spiele, deren Programm auf diesem Mac gebaut wird, und der Stand ihrer Spielteile.
+    @State private var offers: [CompanionHandover.PartsOffer] = []
+    @State private var agreed: Set<String> = []
+    /// Das Spiel, zu dem gerade gefragt wird, ob seine Spielteile kopiert werden dürfen.
+    @State private var asking: CompanionHandover.PartsOffer?
 
     private var freeTeam: Bool { model.team?.free == true }
 
@@ -88,6 +104,10 @@ struct CompanionHandoverBox: View {
                     appleKey
                     Divider()
                     token
+                    if !offers.isEmpty {
+                        Divider()
+                        builtGames
+                    }
                     Divider()
                     HStack {
                         Button(L("Hand Over Now", "Jetzt übergeben")) { model.handOverToCompanion() }
@@ -105,6 +125,53 @@ struct CompanionHandoverBox: View {
             .padding(6)
         }
         .task { await load() }
+        .alert(asking.map { L("Copy \(CompanionHandover.megabytes($0.bytes ?? 0)) to the Vision Pro?", "\(CompanionHandover.megabytes($0.bytes ?? 0)) auf die Vision Pro kopieren?") } ?? "",
+               isPresented: Binding(get: { asking != nil }, set: { if !$0 { asking = nil } }), presenting: asking) { offer in
+            Button(L("Hand Over (\(CompanionHandover.megabytes(offer.bytes ?? 0)))", "Mitgeben (\(CompanionHandover.megabytes(offer.bytes ?? 0)))")) {
+                model.setHandoverParts(offer.id, true)
+                agreed.insert(offer.id)
+            }
+            Button(L("Cancel", "Abbrechen"), role: .cancel) {}
+        } message: { offer in
+            Text(L("The game parts of \(offer.title) are \(CompanionHandover.megabytes(offer.bytes ?? 0)). From now on they are copied to AVP Play Remote on your Vision Pro with every handover – with “Hand Over Now”, and when AVP Play Remote is installed again – unless they are there already. They stay on the headset until you remove them in AVP Play Remote. Installing the game there needs about \(Installer.gigabytes(offer.spaceOnHeadset ?? 0)) of free space for a moment.",
+                   "Die Spielteile von \(offer.title) sind \(CompanionHandover.megabytes(offer.bytes ?? 0)) groß. Sie werden ab jetzt bei jeder Übergabe zu AVP Play Remote auf deiner Vision Pro kopiert – mit „Jetzt übergeben“ und wenn AVP Play Remote neu installiert wird –, sofern sie dort noch nicht liegen. Auf der Brille bleiben sie, bis du sie in AVP Play Remote entfernst. Die Installation des Spiels braucht dort für einen Moment etwa \(Installer.gigabytes(offer.spaceOnHeadset ?? 0)) freien Speicher."))
+        }
+    }
+
+    /// Spiele, deren Programm auf diesem Mac gebaut wird (Minecraft): Die Brille kann sie nicht bauen, aber installieren,
+    /// wenn dieser Mac die fertigen Spielteile mitgibt. Das sind ein paar hundert Megabyte – sie gehen nur mit, wenn der
+    /// Nutzer es für das Spiel einschaltet und die Frage nach der Größe bestätigt.
+    private var builtGames: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(L("Games built on this Mac", "Spiele, die auf diesem Mac gebaut werden")).font(.headline)
+            Text(L("AVP Play Remote cannot build such a game: only a Mac can. Once the game's parts are built here, this Mac can hand them over, and the headset then installs the game by itself. The parts are large, so they are only copied when you switch that on here.",
+                   "AVP Play Remote kann ein solches Spiel nicht bauen: Das kann nur ein Mac. Sind die Spielteile hier gebaut, kann dieser Mac sie mitgeben, und die Brille installiert das Spiel dann allein. Die Spielteile sind groß; kopiert werden sie deshalb nur, wenn du es hier einschaltest."))
+                .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            ForEach(offers) { offer in
+                if let bytes = offer.bytes {
+                    Toggle(L("Also hand over the game parts of \(offer.title) (\(CompanionHandover.megabytes(bytes)))",
+                             "Auch die Spielteile von \(offer.title) mitgeben (\(CompanionHandover.megabytes(bytes)))"),
+                           isOn: Binding(get: { agreed.contains(offer.id) }, set: { on in
+                               if on {
+                                   asking = offer      // erst die Frage mit der Größe; eingeschaltet wird bei „Mitgeben“
+                               } else {
+                                   model.setHandoverParts(offer.id, false)
+                                   agreed.remove(offer.id)
+                               }
+                           }))
+                    if !agreed.contains(offer.id) {
+                        Text(L("Off: nothing of this game is copied. AVP Play Remote then says that the game's parts have to be handed over from the Mac.",
+                               "Aus: Von diesem Spiel wird nichts kopiert. AVP Play Remote sagt dann, dass die Spielteile vom Mac übergeben werden müssen."))
+                            .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    }
+                } else {
+                    Label(L("\(offer.title): its parts are not built on this Mac yet. Install the game here once (the first install builds them, about 45 to 60 minutes); then they can be handed over. Until then AVP Play Remote says that the game has to be built on the Mac first.",
+                            "\(offer.title): Seine Spielteile sind auf diesem Mac noch nicht gebaut. Installiere das Spiel hier einmal (die erste Installation baut sie, etwa 45 bis 60 Minuten); danach lassen sie sich mitgeben. Bis dahin sagt AVP Play Remote, dass das Spiel zuerst auf dem Mac gebaut werden muss."),
+                          systemImage: "hammer")
+                        .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
     }
 
     private var appleKey: some View {
@@ -145,6 +212,13 @@ struct CompanionHandoverBox: View {
     /// Der Schlüsselbund wird über `security` gefragt; das gehört nicht auf den Hauptfaden.
     private func load() async {
         storedKeyId = await Task.detached { HandoverSecrets().appleKey()?.keyId }.value
+        if let recipes = model.paths.recipes {
+            let store = model.paths.store
+            offers = await Task.detached { CompanionHandover.partsOffers(in: recipes, store: store) }.value
+        }
+        // Zugestimmt ist nur, was es noch gibt: Sind die Spielteile weg, gilt die Zustimmung nicht für spätere, andere.
+        for id in model.handoverParts where !offers.contains(where: { $0.id == id && $0.bytes != nil }) { model.setHandoverParts(id, false) }
+        agreed = Set(model.handoverParts)
         loaded = true
     }
 

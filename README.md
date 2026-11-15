@@ -66,8 +66,10 @@ code, and everything between the two stays in your network, encrypted. AVP Play 
 also do the work itself: download a game from Meta, build it, sign it and install it on the Vision Pro while the
 Mac is off. It is off until you switch on *Installing Games Without a Mac (Experimental)* on the *AVP Play Remote*
 page and install the Remote again; AVP Play then builds this part into it and hands over the toolchain's runtime,
-the game recipes and your Meta library. Not every game has been tried this way – installing from the Mac stays the
-tested way. See [Remote Control](https://github.com/myMartek/avp-play/wiki/Remote-Control) in the wiki.
+the game recipes and your Meta library. A game whose parts are built on the Mac (Minecraft) cannot be built on the
+headset; it can be installed there once the Mac has built it and you have switched on handing over its parts on the
+same page (about 600 MB, copied only with your yes). Not every game has been tried this way – installing from the Mac
+stays the tested way. See [Remote Control](https://github.com/myMartek/avp-play/wiki/Remote-Control) in the wiki.
 
 **In the menu bar.** An icon in the menu bar shows the running job with its progress, whether the Vision Pro and
 AVP Play Remote are connected and, with a free Apple account, when the next game runs out. With *Keep running in the
