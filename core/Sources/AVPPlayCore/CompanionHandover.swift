@@ -485,16 +485,35 @@ public enum CompanionHandover {
         documents.contains { !$0.isDirectory && $0.relativePath == marker && $0.size > 0 }
     }
 
+    /// Diese zweite Datei legt eine Remote an, die auch Spiele installieren kann, deren Programm auf dem Mac gebaut
+    /// wird. Eine ältere liest davon nichts: Ihr ein paar hundert Megabyte Spielteile in den Ordner zu legen, die sie
+    /// weder nutzen noch entfernen kann, kommt nicht in Frage.
+    public static let builtMarker = "standalone-built.json"
+
+    public static func takesBuiltGames(_ documents: [RemoteFile]) -> Bool {
+        documents.contains { !$0.isDirectory && $0.relativePath == builtMarker && $0.size > 0 }
+    }
+
+    /// Was gesagt wird, wenn es hier gebaute Spiele gibt, die Remote auf der Brille sie aber noch nicht kennt.
+    public static var builtNotTaken: String {
+        L("The AVP Play Remote on the Vision Pro does not know games that are built on the Mac yet: it is an older version, or it has not been opened since it was installed. Nothing of such games was handed over. Install the newest AVP Play Remote, open it once and hand over again.",
+          "Die AVP Play Remote auf der Vision Pro kennt Spiele, die auf dem Mac gebaut werden, noch nicht: Sie ist eine ältere Fassung, oder sie wurde seit der Installation noch nicht geöffnet. Von solchen Spielen wurde nichts übergeben. Installiere die neueste AVP Play Remote, öffne sie einmal und übergib dann noch einmal.")
+    }
+
     /// Stellt die Übergabe nach `plan` zusammen und bringt sie aufs Gerät. `list` ist `DeviceControl.files` für
     /// einen Ordner der Remote, `copy` ist `DeviceControl.copy`. Die Zugangsdaten kommen aus dem Schlüsselbund und
     /// liegen nur für das Kopieren in einem Ordner für diesen Nutzer.
     ///
     /// - Parameter trusted: AVP Play hat die App selbst mit dem Teil für die Übergabe gebaut; dann braucht es ihr
     ///   Kennzeichen nicht (gleich nach der Installation gibt es das noch nicht).
-    public static func deliver(_ plan: Plan, cache: URL, trusted: Bool = false, secrets: HandoverSecrets = HandoverSecrets(),
+    /// - Parameter knowsBuiltGames: AVP Play hat die App selbst aus einem Quellcode gebaut, der Spiele kennt, deren
+    ///   Programm auf dem Mac gebaut wird; sonst entscheidet ihr zweites Kennzeichen (`builtMarker`).
+    public static func deliver(_ plan: Plan, cache: URL, trusted: Bool = false, knowsBuiltGames: Bool = false,
+                               secrets: HandoverSecrets = HandoverSecrets(),
                                tokens: TokenStore = TokenStore(), list: (String) throws -> [RemoteFile], copy: (URL, String) throws -> Void,
                                report: (String) -> Void) throws {
-        guard trusted || accepts((try? list("Documents")) ?? []) else { throw HandoverError.notCapable }
+        let documents = (try? list("Documents")) ?? []
+        guard trusted || accepts(documents) else { throw HandoverError.notCapable }
         let files = FileManager.default
         let staging = files.temporaryDirectory.appendingPathComponent("avpplay-handover-\(UUID().uuidString)", isDirectory: true)
         defer { try? files.removeItem(at: staging) }
@@ -518,7 +537,12 @@ public enum CompanionHandover {
             inputs.appleKey = AppleKey(keyId: key.keyId, issuerId: key.issuerId, file: try secret("key.p8", Data(key.pem.utf8)))
         }
         if let recipes = plan.recipes, let store = plan.store {
-            inputs.built = builtGames(in: recipes, store: ContentStore(root: store), agreed: Set(plan.parts ?? []))
+            let built = builtGames(in: recipes, store: ContentStore(root: store), agreed: Set(plan.parts ?? []))
+            if knowsBuiltGames || takesBuiltGames(documents) {
+                inputs.built = built
+            } else if !built.isEmpty {
+                report(builtNotTaken)
+            }
         }
         if let root = plan.toolchain, let toolchain = try? Toolchain(root: root) {
             inputs.template = try template(toolchain: toolchain, cache: cache, wantsMacho: !inputs.built.isEmpty,

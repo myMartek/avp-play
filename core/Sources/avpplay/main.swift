@@ -1265,9 +1265,16 @@ case "remote":
         if let id = o.value("asc-key-id"), let issuer = o.value("asc-issuer-id"), let file = o.value("asc-key") {
             inputs.appleKey = .init(keyId: id, issuerId: issuer, file: URL(fileURLWithPath: file))
         }
-        // Spiele, deren Programm auf diesem Mac gebaut wird: die Liste immer, die Spielteile nur mit --with-parts <Spiel>.
-        inputs.built = CompanionHandover.builtGames(in: recipesDirectory(o), store: contentStore(o),
-                                                    agreed: Set(o.value("with-parts")?.split(separator: ",").map(String.init) ?? []))
+        // Spiele, deren Programm auf diesem Mac gebaut wird: die Liste immer, die Spielteile nur mit --with-parts <Spiel> –
+        // und beides nur an eine Remote, die solche Spiele kennt (--force übergeht auch das, für einen Testbau).
+        let documents = (try? control.files(device: device, bundle: bundle, subdirectory: "Documents")) ?? []
+        let built = CompanionHandover.builtGames(in: recipesDirectory(o), store: contentStore(o),
+                                                 agreed: Set(o.value("with-parts")?.split(separator: ",").map(String.init) ?? []))
+        if o.flags.contains("force") || CompanionHandover.takesBuiltGames(documents) {
+            inputs.built = built
+        } else if !built.isEmpty {
+            warn(CompanionHandover.builtNotTaken)
+        }
         if let template = o.value("template") {
             inputs.template = URL(fileURLWithPath: template)
             if let mods = o.value("mods-template") { inputs.modTemplates = [URL(fileURLWithPath: mods)] }
@@ -1293,7 +1300,7 @@ case "remote":
         let items = try CompanionHandover.prepare(inputs, staging: staging)
         // Wie in der App: nur an eine Remote, die eine Übergabe annimmt. --force übergeht das (für einen Testbau, der
         // sein Kennzeichen noch nicht geschrieben hat).
-        if !o.flags.contains("force"), !CompanionHandover.accepts((try? control.files(device: device, bundle: bundle, subdirectory: "Documents")) ?? []) {
+        if !o.flags.contains("force"), !CompanionHandover.accepts(documents) {
             throw CompanionHandover.HandoverError.notCapable
         }
         let folder = CompanionHandover.folder

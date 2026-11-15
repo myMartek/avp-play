@@ -408,10 +408,12 @@ final class CompanionHandoverTests: XCTestCase {
         let zip = try buildParts(recipes, store: store)
         let root = try toolchainThatBuildsTemplates(macho: true)
         let stamp = Self.stamp(try Toolchain(root: root))
-        func deliver(_ plan: CompanionHandover.Plan) throws -> (copied: [String], said: [String]) {
+        func deliver(_ plan: CompanionHandover.Plan, markers: [String] = [CompanionHandover.marker, CompanionHandover.builtMarker],
+                     knows: Bool = false) throws -> (copied: [String], said: [String]) {
             var copied: [String] = [], said: [String] = []
-            try CompanionHandover.deliver(plan, cache: folder.appendingPathComponent("cache"), secrets: noSecrets, tokens: TokenStore(service: "avpplay-test-absent"),
-                                          list: { $0 == "Documents" ? [RemoteFile(relativePath: CompanionHandover.marker, size: 20, isDirectory: false)] : [] },
+            try CompanionHandover.deliver(plan, cache: folder.appendingPathComponent("cache"), knowsBuiltGames: knows, secrets: noSecrets,
+                                          tokens: TokenStore(service: "avpplay-test-absent"),
+                                          list: { $0 == "Documents" ? markers.map { RemoteFile(relativePath: $0, size: 20, isDirectory: false) } : [] },
                                           copy: { _, destination in copied.append(destination) }, report: { said.append($0) })
             return (copied, said)
         }
@@ -435,5 +437,16 @@ final class CompanionHandoverTests: XCTestCase {
         XCTAssertTrue(result.copied.contains("Documents/parts/blockgame/\(zip.lastPathComponent)"))
         XCTAssertEqual(result.copied.last, "Documents/parts/blockgame/parts.json")
         XCTAssertTrue(result.said.contains { $0.contains("Block Game") && ($0.contains("are copied") || $0.contains("kopiert")) })
+
+        // Eine Remote, die solche Spiele nicht kennt (eine ältere), bekommt nichts davon – auch mit Zustimmung nicht:
+        // Sie könnte die Spielteile weder nutzen noch entfernen. Das steht dann da.
+        result = try deliver(plan, markers: [CompanionHandover.marker])
+        XCTAssertFalse(result.copied.contains { $0.contains("parts") || $0.contains("built-") || $0.contains("klepton-macho-") }, "\(result.copied)")
+        XCTAssertTrue(result.said.contains(CompanionHandover.builtNotTaken))
+        // Hat AVP Play die Remote eben selbst aus einem Quellcode gebaut, der sie kennt, braucht es das Kennzeichen nicht.
+        result = try deliver(plan, markers: [CompanionHandover.marker], knows: true)
+        XCTAssertTrue(result.copied.contains("Documents/parts/blockgame/\(zip.lastPathComponent)"))
+        XCTAssertFalse(CompanionHandover.takesBuiltGames([RemoteFile(relativePath: CompanionHandover.builtMarker, size: 0, isDirectory: false)]))
+        XCTAssertFalse(CompanionHandover.takesBuiltGames([RemoteFile(relativePath: CompanionHandover.builtMarker, size: 9, isDirectory: true)]))
     }
 }
