@@ -75,8 +75,8 @@
     "de": "Nach der Installation wird nichts auf die Vision Pro kopiert: Die Dateien des Spiels stecken in seiner App."
    },
    {
-    "en": "Played by the project on an Apple Vision Pro M5 in November 2026, with a paid Apple Developer account. That build used the game parts of the port's release 1.0.3; parts built on a user's own Mac by the builder named here had not been played when this was written.",
-    "de": "Vom Projekt im November 2026 auf einer Apple Vision Pro M5 gespielt, mit einem bezahlten Apple-Entwicklerkonto. Dieser Bau nutzte die Spielteile aus dem Release 1.0.3 der Portierung; Teile, die das hier genannte Bauwerkzeug auf dem eigenen Mac baut, waren zu diesem Zeitpunkt noch nicht gespielt."
+    "en": "Played by the project on an Apple Vision Pro M5 in November 2026, with a paid Apple Developer account. First with the game parts of the port's release 1.0.3, then with parts built on a Mac by the builder named here: installed by AVP Play, it started into a world, kept its sound with the start window closed, ended with the Digital Crown and started again.",
+    "de": "Vom Projekt im November 2026 auf einer Apple Vision Pro M5 gespielt, mit einem bezahlten Apple-Entwicklerkonto. Zuerst mit den Spielteilen aus dem Release 1.0.3 der Portierung, dann mit Teilen, die das hier genannte Bauwerkzeug auf einem Mac gebaut hat: von AVP Play installiert, startete es bis in eine Welt, behielt den Ton bei geschlossenem Startfenster, endete mit der Digital Crown und startete erneut."
    },
    {
     "en": "With a free Apple account the app is built without one memory permission Apple does not grant to free accounts (extended virtual addressing), like every Klepton game. Whether the game runs then has not been tried.",
