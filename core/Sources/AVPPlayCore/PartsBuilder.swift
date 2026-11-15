@@ -403,8 +403,18 @@ public struct PartsBuild: Sendable {
         posix_spawnattr_init(&attr)
         defer { posix_spawnattr_destroy(&attr) }
         // A group of its own (so that cancelling reaches everything it starts), and none of this program's open files.
-        posix_spawnattr_setflags(&attr, Int16(POSIX_SPAWN_SETPGROUP | POSIX_SPAWN_CLOEXEC_DEFAULT))
+        // …and its signals as a program started by hand has them. Whoever started us may ignore SIGTERM, and a
+        // child inherits that: the builder's own `kill` then ended nothing, and one of its steps waited for ever on
+        // a helper it thought it had stopped.
+        posix_spawnattr_setflags(&attr, Int16(POSIX_SPAWN_SETPGROUP | POSIX_SPAWN_CLOEXEC_DEFAULT
+                                              | POSIX_SPAWN_SETSIGDEF | POSIX_SPAWN_SETSIGMASK))
         posix_spawnattr_setpgroup(&attr, 0)
+        var everySignal = sigset_t()
+        sigfillset(&everySignal)
+        posix_spawnattr_setsigdefault(&attr, &everySignal)
+        var noSignal = sigset_t()
+        sigemptyset(&noSignal)
+        posix_spawnattr_setsigmask(&attr, &noSignal)
         let cArguments: [UnsafeMutablePointer<CChar>?] = argv.map { strdup($0) } + [nil]
         let cEnvironment: [UnsafeMutablePointer<CChar>?] = environment(out: out).map { strdup("\($0.key)=\($0.value)") } + [nil]
         defer { for p in cArguments + cEnvironment { free(p) } }
