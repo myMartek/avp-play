@@ -641,7 +641,8 @@ extension AppModel {
             overall = bars.first?.value
             if let file = copy?.file {
                 let fileShare = file.total.flatMap { $0 > 0 ? min(1, Double(file.done) / Double($0)) : nil }
-                bars.append(RemoteProgress(title: L("File \(file.index) of \(file.count)", "Datei \(file.index) von \(file.count)") + " · " + file.name,
+                bars.append(RemoteProgress(title: (file.isStage ? L("Step \(file.index) of \(file.count)", "Schritt \(file.index) von \(file.count)")
+                                                                : L("File \(file.index) of \(file.count)", "Datei \(file.index) von \(file.count)")) + " · " + file.name,
                                            value: file.count > 1 ? Double(file.index - 1) / Double(file.count) : nil, text: nil))
                 if let total = file.total, total > 0 {
                     bars.append(RemoteProgress(value: fileShare, text: "\(Installer.megabytes(file.done)) \(L("of", "von")) \(Installer.megabytes(total))"))

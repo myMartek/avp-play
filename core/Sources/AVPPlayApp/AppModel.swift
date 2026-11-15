@@ -95,7 +95,9 @@ struct Game: Identifiable {
         return false
     }
     /// Liegt alles, woraus das Spiel gebaut wird, vollständig auf diesem Mac?
-    var downloaded: Bool { prepared && status.filesRequired + status.treesRequired > 0 && status.stockComplete }
+    var downloaded: Bool { prepared && (status.filesRequired + status.treesRequired > 0 || status.parts != nil) && status.stockComplete }
+    /// Werden die Teile dieses Spiels auf diesem Mac gebaut (`Recipe.builder`), und fehlen sie noch?
+    var partsToBuild: Bool { status.parts == .missing }
 }
 
 /// Die letzten Zeilen eines Verlaufs (höchstens `AppModel.logLinesKept` und ein Schub) und wie viele es insgesamt sind.
@@ -1722,7 +1724,7 @@ final class AppModel: ObservableObject {
     /// Ob es für das Spiel etwas gibt, das das Programm selbst laden kann und das noch fehlt. Gezählt werden die
     /// Dateien, nicht ihre Größe: bei einem nachgeschlagenen Spiel aus dem Meta-Store kennt die vorab niemand.
     func hasDownloads(_ game: Game) -> Bool {
-        game.status.filesToDownload > 0 || game.status.bytesToDownload > 0 || steamDraftApp(game) != nil
+        game.status.filesToDownload > 0 || game.status.bytesToDownload > 0 || steamDraftApp(game) != nil || game.partsToBuild
     }
 
     /// Wie viel für das Spiel noch zu laden ist, in Worten – bei einem Steam-Spiel, das noch nicht geladen ist, die
@@ -1730,6 +1732,8 @@ final class AppModel: ObservableObject {
     func downloadSizeText(_ game: Game) -> String {
         if let app = steamDraftApp(game) { return Installer.gigabytes(app.bytes) }
         if game.status.bytesToDownload > 0 { return Installer.gigabytes(game.status.bytesToDownload) }
+        // Spielteile, die hier gebaut werden: Ihre Größe kennt vorab niemand; was der Bau braucht, sagt die Seite des Spiels.
+        if game.partsToBuild, game.status.filesToDownload == 0 { return L("Game parts, built on this Mac", "Spielteile, auf diesem Mac gebaut") }
         return game.status.filesToDownload == 1 ? L("One file", "Eine Datei") : L("\(game.status.filesToDownload) files", "\(game.status.filesToDownload) Dateien")
     }
 
@@ -1818,6 +1822,8 @@ final class AppModel: ObservableObject {
         // Ein Spiel aus Steam: Valves Werkzeug fragt und lädt mit der Anmeldung dieses Kontos. Eine Sonderapp mit
         // Spieldaten aus Steam (Portal) lädt so, was ihr fehlt – gefragt wird dort nichts.
         if SteamFetcher.fetchesInJob(recipe), !steamAccount.isEmpty { request.steamAccount = steamAccount }
+        // A builder folder chosen by hand for this game's parts (`avpplay builder use`), instead of the recipe's.
+        if recipe.builder != nil { request.builder = BuilderChoices.load().games[recipe.id] }
         if !game.otherSourceBuilds.isEmpty { request.otherSourceBuilds = game.otherSourceBuilds }
         let chosen = options(for: game)
         request.locales = chosen.locales
@@ -1891,10 +1897,14 @@ final class AppModel: ObservableObject {
     func removeFiles(_ game: Game) {
         guard !isBusy(game.id) else { return }
         let directory = paths.store.directory(for: game.recipe)
+        // Bei einem Spiel, dessen Teile hier gebaut werden, auch der Arbeitsordner des Baus: Er ist der größere Teil.
+        let builders = PartsBuilders()
+        let buildFolders = game.recipe.builder == nil ? [] : [builders.work(for: game.recipe), builders.root.appendingPathComponent("out/\(game.recipe.id)", isDirectory: true)]
         notice = L("Removing files …", "Dateien werden entfernt …")
         Task.detached {
             let problem: String?
             do {
+                for folder in buildFolders { try? FileManager.default.removeItem(at: folder) }
                 if FileManager.default.fileExists(atPath: directory.path) { try FileManager.default.removeItem(at: directory) }
                 problem = nil
             } catch {

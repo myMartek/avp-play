@@ -38,8 +38,10 @@ public struct GameStatus: Sendable, Equatable {
     public var onDevice: OnDevice
     /// Womit die installierte App gebaut wurde, soweit ihr Stempel von diesem Werkzeug stammt.
     public var builtWith: AppStamp.Built?
+    /// For a game whose parts are built on this Mac (`Recipe.builder`): whether they are there. `nil` for every other game.
+    public var parts: GameParts.State? = nil
 
-    public var stockComplete: Bool { filesPresent == filesRequired && treesPresent == treesRequired }
+    public var stockComplete: Bool { filesPresent == filesRequired && treesPresent == treesRequired && parts?.isBuilt != false }
 
     /// - Parameter toolchainVersion: ab welcher Toolchain-Nummer ein gebautes Spiel als aktuell gilt
     ///   (`Toolchain.appRevision()`), nicht zwingend die Nummer der installierten Toolchain.
@@ -120,6 +122,7 @@ public struct GameStatus: Sendable, Equatable {
                           bytesToDownload: missing.filter { !ownToProvide($0) }.reduce(0) { $0 + ($1.size ?? 0) }
                               + treesMissing.filter { $0.source.kind == .url }.reduce(0) { $0 + ($1.source.archive?.size ?? 0) },
                           filesToDownload: missing.filter { !ownToProvide($0) }.count + treesMissing.filter { $0.source.kind == .url }.count,
-                          userProvidedMissing: byUser, onDevice: onDevice, builtWith: builtWith)
+                          userProvidedMissing: byUser, onDevice: onDevice, builtWith: builtWith,
+                          parts: GameParts.state(recipe: r, store: store))
     }
 }

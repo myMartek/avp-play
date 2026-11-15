@@ -16,7 +16,8 @@ public enum StartHero {
     }
 
     /// Reihenfolge: eigenes Bild, Querformat aus dem Meta-Store, Hintergrund aus der Steam-Bibliothek des
-    /// Nutzers, zuletzt das quadratische Titelbild. Gibt es nichts davon, zeigt das Startfenster nur den Namen.
+    /// Nutzers, das quadratische Titelbild, zuletzt das Bild aus den auf diesem Mac gebauten Spielteilen
+    /// (`ArchiveArt`). Gibt es nichts davon, zeigt das Startfenster nur den Namen.
     public static func choose(recipe: Recipe, store: ContentStore) -> (image: Data, origin: String)? {
         func usable(_ url: URL) -> Data? {
             guard let data = try? Data(contentsOf: url), AppIcon.image(data) != nil else { return nil }
@@ -33,6 +34,10 @@ public enum StartHero {
         }
         if let square = usable(Toolchain.storeCoverURL(store: store, recipe: recipe)) {
             return (square, L("cover image from the Meta Store", "Titelbild aus dem Meta-Store"))
+        }
+        // A game without a store page whose parts were built on this Mac: its own icon and picture, out of those parts.
+        if let own = ArchiveArt.hero(recipe: recipe, store: store) {
+            return (own, L("the game's own pictures", "die eigenen Bilder des Spiels"))
         }
         return nil
     }

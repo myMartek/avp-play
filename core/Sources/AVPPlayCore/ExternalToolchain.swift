@@ -42,6 +42,46 @@ public struct ToolchainSource: Codable, Sendable, Hashable {
     }
 }
 
+/// What can go wrong while one pinned state of a repository is fetched (`ToolchainSource.checkOut`).
+public enum PinnedSourceError: Error, Equatable {
+    case fetchFailed(String)
+    case wrongCommit(have: String, want: String)
+}
+
+extension ToolchainSource {
+    /// Fetches exactly this commit into an empty folder, without the repository's history, and checks that what
+    /// arrived is that commit. Used for a game's own toolchain and for the builder of a game's parts.
+    /// - Parameter remote: the address git is given – the repository's, or one on disk in a test.
+    func checkOut(into fresh: URL, from remote: String) throws {
+        func git(_ arguments: [String]) throws -> String {
+            let p = Process()
+            p.executableURL = URL(fileURLWithPath: "/usr/bin/git")
+            p.arguments = ["-C", fresh.path] + arguments
+            // Nothing of the user's git setup: no helpers, no hooks, no prompt that would wait for an answer.
+            p.environment = ["PATH": "/usr/bin:/bin:/usr/sbin:/sbin", "HOME": fresh.path, "GIT_TERMINAL_PROMPT": "0",
+                             "GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": "/dev/null"]
+            let out = Pipe(), err = Pipe()
+            p.standardOutput = out
+            p.standardError = err
+            p.standardInput = FileHandle.nullDevice
+            try p.run()
+            let text = String(decoding: out.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+            let problem = String(decoding: err.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+            p.waitUntilExit()
+            guard p.terminationStatus == 0 else {
+                let line = problem.split(whereSeparator: \.isNewline).last.map(String.init) ?? "git \(arguments.first ?? "")"
+                throw PinnedSourceError.fetchFailed(String(line.prefix(200)))
+            }
+            return text.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        _ = try git(["init", "--quiet"])
+        _ = try git(["fetch", "--quiet", "--depth", "1", remote, commit])
+        _ = try git(["-c", "advice.detachedHead=false", "checkout", "--quiet", "--detach", "FETCH_HEAD"])
+        let head = try git(["rev-parse", "HEAD"])
+        guard head == commit else { throw PinnedSourceError.wrongCommit(have: String(head.prefix(12)), want: shortCommit) }
+    }
+}
+
 public enum ExternalToolchainError: Error, CustomStringConvertible {
     case noSource(String)
     case blankInPath(String)
@@ -146,32 +186,13 @@ public struct ExternalToolchains: Sendable {
         try fm.createDirectory(at: fresh, withIntermediateDirectories: true)
         report(L("Fetching this game's toolchain from \(source.repository) (state \(source.shortCommit)) …",
                  "Die Toolchain dieses Spiels wird von \(source.repository) geholt (Stand \(source.shortCommit)) …"))
-        func git(_ arguments: [String]) throws -> String {
-            let p = Process()
-            p.executableURL = URL(fileURLWithPath: "/usr/bin/git")
-            p.arguments = ["-C", fresh.path] + arguments
-            // Nothing of the user's git setup: no helpers, no hooks, no prompt that would wait for an answer.
-            p.environment = ["PATH": "/usr/bin:/bin:/usr/sbin:/sbin", "HOME": fresh.path, "GIT_TERMINAL_PROMPT": "0",
-                             "GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": "/dev/null"]
-            let out = Pipe(), err = Pipe()
-            p.standardOutput = out
-            p.standardError = err
-            p.standardInput = FileHandle.nullDevice
-            try p.run()
-            let text = String(decoding: out.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
-            let problem = String(decoding: err.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
-            p.waitUntilExit()
-            guard p.terminationStatus == 0 else {
-                let line = problem.split(whereSeparator: \.isNewline).last.map(String.init) ?? "git \(arguments.first ?? "")"
-                throw ExternalToolchainError.fetchFailed(String(line.prefix(200)))
-            }
-            return text.trimmingCharacters(in: .whitespacesAndNewlines)
+        do {
+            try source.checkOut(into: fresh, from: remote(source))
+        } catch PinnedSourceError.fetchFailed(let detail) {
+            throw ExternalToolchainError.fetchFailed(detail)
+        } catch PinnedSourceError.wrongCommit(let have, let want) {
+            throw ExternalToolchainError.wrongCommit(have: have, want: want)
         }
-        _ = try git(["init", "--quiet"])
-        _ = try git(["fetch", "--quiet", "--depth", "1", remote(source), source.commit])
-        _ = try git(["-c", "advice.detachedHead=false", "checkout", "--quiet", "--detach", "FETCH_HEAD"])
-        let head = try git(["rev-parse", "HEAD"])
-        guard head == source.commit else { throw ExternalToolchainError.wrongCommit(have: String(head.prefix(12)), want: source.shortCommit) }
 
         let inside = source.path.map { fresh.appendingPathComponent($0, isDirectory: true) } ?? fresh
         guard fm.fileExists(atPath: inside.appendingPathComponent("visionos/run.sh").path) else {

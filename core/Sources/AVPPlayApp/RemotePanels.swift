@@ -140,15 +140,38 @@ extension AppModel {
                                           items: items))
         }
 
+        // Ein Spiel, das selbst nach seinem Konto fragt: was man braucht und wo man sich anmeldet.
+        if let account = game.recipe.gameAccount {
+            sections.append(RemoteSection(id: "game-account", title: account.title.text,
+                                          items: account.notes.enumerated().map { Item(id: "game-account-\($0.offset)", kind: .text, title: "", detail: $0.element.text) }))
+        }
+        // Ein Spiel, dessen Teile auf dem Mac gebaut werden: was der Bau braucht – bevor jemand „Installieren“ wählt.
+        if let builder = game.recipe.builder {
+            var items: [Item] = []
+            if case .built? = game.status.parts {
+                items.append(Item(id: "builder-done", kind: .text, title: "",
+                                  detail: L("The game's parts are built. Installing again does not build them again.",
+                                            "Die Spielteile sind gebaut. Eine weitere Installation baut sie nicht noch einmal."), style: .secondary))
+            } else {
+                items += builder.notes.enumerated().map { Item(id: "builder-\($0.offset)", kind: .text, title: "", detail: $0.element.text) }
+            }
+            items.append(Item(id: "builder-source", kind: .text, title: "",
+                              detail: AppModel.builderSourceText(builder, local: GameParts.usesLocalBuilder(game.recipe)), style: .secondary))
+            sections.append(RemoteSection(id: "builder", title: L("Built on the Mac", "Wird auf dem Mac gebaut"), items: items))
+        }
+
         // Auf diesem Mac
         var mac: [Item] = []
         if game.status.filesRequired > 0 {
             mac.append(Item(id: "files", kind: .fact, title: L("Files", "Dateien"),
                             value: L("\(game.status.filesPresent) of \(game.status.filesRequired) present", "\(game.status.filesPresent) von \(game.status.filesRequired) vorhanden")))
         }
-        if hasDownloads(game) {
+        if let parts = game.status.parts {
+            mac.append(Item(id: "parts", kind: .fact, title: L("Game parts", "Spielteile"), value: AppModel.partsText(parts)))
+        }
+        if hasDownloads(game), !(game.partsToBuild && game.status.filesToDownload == 0) {
             mac.append(Item(id: "to-download", kind: .fact, title: L("Still to download", "Noch zu laden"), value: downloadSizeText(game)))
-        } else if game.status.stockComplete, game.prepared {
+        } else if game.status.stockComplete, game.prepared, game.status.parts == nil {
             mac.append(Item(id: "to-download", kind: .fact, title: "Download", value: L("nothing left to download", "nichts mehr zu laden")))
         }
         if game.storeBytes > 0 {
@@ -326,7 +349,8 @@ extension AppModel {
 
         // Gut zu wissen
         var know: [Item] = []
-        let ownership = OwnershipLabel.describe(owned: owned(game), checking: checkingPurchase.contains(game.id) || checkingOwnership, source: game.recipe.source)
+        let ownership = OwnershipLabel.describe(owned: owned(game), checking: checkingPurchase.contains(game.id) || checkingOwnership, source: game.recipe.source,
+                                                inGame: game.recipe.gameAccount != nil)
         know.append(Item(id: "owned", kind: .fact, title: L("Ownership", "Besitz"), value: ownership.text))
         if game.fromStore, OwnershipCache.key(for: game.recipe) != nil {
             let checking = checkingPurchase.contains(game.id)

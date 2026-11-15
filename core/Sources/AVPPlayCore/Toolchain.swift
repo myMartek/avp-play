@@ -156,7 +156,9 @@ public struct Toolchain: Sendable {
         }
         guard let apk = recipe.files.first(where: { $0.role == "apk" }), let localName = apk.localName else {
             // Ein Spiel aus Ordnerbeständen hat kein APK: die Toolchain liest die Bäume selbst, hier fehlt nur das Icon.
-            guard recipe.trees?.isEmpty == false, Recipe.isSafeName(recipe.toolchain.target) else {
+            // The same for a game whose parts were built on this Mac: the toolchain takes them out of their archive
+            // (`gameArchiveVariable`) and makes the icon from them itself, unless the user has put one of their own.
+            guard recipe.trees?.isEmpty == false || recipe.builder != nil, Recipe.isSafeName(recipe.toolchain.target) else {
                 throw RecipeError.invalid(L("the APK or its destination name is missing", "APK oder dessen Zielname fehlt"))
             }
             if let icon = Toolchain.chooseIcon(recipe: recipe, store: store)?.source {
@@ -297,10 +299,20 @@ public struct Toolchain: Sendable {
         }
     }
 
+    /// The apps the toolchain last built for this target for the device, the newest first. Most targets are built
+    /// in the Debug configuration, a Mach-O guest in Release – so every configuration's folder is looked into.
+    func builtApps(recipe: Recipe) -> [URL] {
+        let products = root.appendingPathComponent("visionos/build/dd-device-\(recipe.toolchain.target)/Build/Products", isDirectory: true)
+        let fm = FileManager.default
+        let folders = ((try? fm.contentsOfDirectory(at: products, includingPropertiesForKeys: nil)) ?? []).filter { $0.lastPathComponent.hasSuffix("-xros") }
+        let apps = folders.flatMap { (try? fm.contentsOfDirectory(at: $0, includingPropertiesForKeys: [.contentModificationDateKey])) ?? [] }
+            .filter { $0.pathExtension == "app" }
+        func changed(_ url: URL) -> Date { (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate ?? .distantPast }
+        return apps.sorted { changed($0) > changed($1) }
+    }
+
     public func builtControllerMode(recipe: Recipe) -> ControllerMode {
-        let products = root.appendingPathComponent("visionos/build/dd-device-\(recipe.toolchain.target)/Build/Products/Debug-xros")
-        let apps = (try? FileManager.default.contentsOfDirectory(at: products, includingPropertiesForKeys: nil)) ?? []
-        for app in apps where app.pathExtension == "app" {
+        for app in builtApps(recipe: recipe) {
             if let data = try? Data(contentsOf: app.appendingPathComponent("Info.plist")),
                let info = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],
                let value = info["KLControllerModeDefault"] as? String,
@@ -446,9 +458,7 @@ public struct Toolchain: Sendable {
 
     /// Bis wann die zuletzt gebaute App dieses Targets signiert ist – aus dem Profil in ihrem Programmpaket.
     public func signingExpiry(recipe: Recipe) -> Date? {
-        let products = root.appendingPathComponent("visionos/build/dd-device-\(recipe.toolchain.target)/Build/Products/Debug-xros")
-        guard let entries = try? FileManager.default.contentsOfDirectory(at: products, includingPropertiesForKeys: nil) else { return nil }
-        for app in entries where app.pathExtension == "app" {
+        for app in builtApps(recipe: recipe) {
             if let date = SigningRecord.expiry(ofProfileAt: app.appendingPathComponent("embedded.mobileprovision")) { return date }
         }
         return nil

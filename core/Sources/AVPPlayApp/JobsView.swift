@@ -289,7 +289,8 @@ struct FileProgressLine: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
-                Text(L("File \(file.index) of \(file.count)", "Datei \(file.index) von \(file.count)")).monospacedDigit()
+                Text(file.isStage ? L("Step \(file.index) of \(file.count)", "Schritt \(file.index) von \(file.count)")
+                                  : L("File \(file.index) of \(file.count)", "Datei \(file.index) von \(file.count)")).monospacedDigit()
                 Text(file.name).lineLimit(1).truncationMode(.middle).foregroundStyle(.secondary)
             }
             .font(.callout)

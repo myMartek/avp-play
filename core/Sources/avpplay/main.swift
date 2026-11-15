@@ -133,6 +133,11 @@ avpplay – command line for the AVP Play core library
   avpplay toolchain use <id> --toolchain <folder> | --newest
                                                build this game with that toolchain from now on (an installed package or a
                                                working copy) – or with the newest one again
+  avpplay builder <id>                         for a game whose parts are built on this Mac (Minecraft): which builder
+                                               builds them, whether they are built, and what the first build needs
+  avpplay builder use <id> --builder <folder> | --recipe
+                                               build this game's parts with a builder folder on this Mac from now on (a
+                                               working copy with tools/avpplay/build_parts.sh) – or with the recipe's again
   avpplay mods <id>                            the mod sets the game's own toolchain can build it with, and whether a key
                                                for their site is stored (Skyrim VR: Nexus Mods)
   avpplay mods <id> --set-key                  store your own key for that site in the keychain; it is read from standard
@@ -234,6 +239,11 @@ avpplay – Kommandozeile zur Kern-Bibliothek von AVP Play
   avpplay toolchain use <id> --toolchain <Ordner> | --newest
                                                dieses Spiel ab jetzt mit dieser Toolchain bauen (ein installiertes Paket oder
                                                eine Arbeitskopie) – oder wieder mit der neuesten
+  avpplay builder <id>                         für ein Spiel, dessen Teile auf diesem Mac gebaut werden (Minecraft): welches
+                                               Bauwerkzeug sie baut, ob sie gebaut sind und was der erste Bau braucht
+  avpplay builder use <id> --builder <Ordner> | --recipe
+                                               die Teile dieses Spiels ab jetzt mit einem Bauwerkzeug-Ordner auf diesem Mac bauen
+                                               (eine Arbeitskopie mit tools/avpplay/build_parts.sh) – oder wieder mit dem des Rezepts
   avpplay mods <id>                            die Mod-Sets, mit denen die eigene Toolchain des Spiels es bauen kann, und ob ein
                                                Schlüssel für deren Seite hinterlegt ist (Skyrim VR: Nexus Mods)
   avpplay mods <id> --set-key                  deinen eigenen Schlüssel für diese Seite im Schlüsselbund hinterlegen; er wird von
@@ -298,7 +308,7 @@ Allgemein: --account <Name>    Eintrag im Schlüsselbund (Standard: default)
 }
 
 let valued: Set<String> = ["account", "steam-account", "source", "store", "recipes", "locale", "with", "only", "interval", "from", "to", "force", "name",
-                           "team", "device", "bundle-id", "display-name", "display-suffix", "toolchain", "controller-mode", "icon", "tool", "jobs", "toolchains", "saves", "resolution",
+                           "team", "device", "bundle-id", "display-name", "display-suffix", "toolchain", "builder", "controller-mode", "icon", "tool", "jobs", "toolchains", "saves", "resolution",
                            "room-measuring", "game-language", "game-mods", "klepton", "markdown", "json", "references", "out", "leave-out", "summary", "top",
                            "prefix", "pairing", "pairing-port", "template", "mods-template", "asc-key-id", "asc-issuer-id", "asc-key", "tag"]
 let o = Options(Array(CommandLine.arguments.dropFirst()), valued: valued)
@@ -388,6 +398,8 @@ func installRequest(_ o: Options, recipe id: String? = nil) -> InstallRequest {
     request.displayName = o.value("display-name").flatMap { $0.trimmingCharacters(in: .whitespaces).isEmpty ? nil : $0 }
     request.displaySuffix = o.value("display-suffix").flatMap { $0.isEmpty ? nil : $0 }
     request.steamAccount = o.value("steam-account")
+    // A builder folder for the game's parts: named here, otherwise the one chosen for the game (`avpplay builder use`).
+    request.builder = (o.value("builder") ?? id.flatMap { BuilderChoices.load().games[$0] }).map { URL(fileURLWithPath: $0).standardizedFileURL.path }
     request.customIcon = o.value("icon").map { URL(fileURLWithPath: $0).standardizedFileURL.path }
     request.storeArt = !o.flags.contains("no-store-art")
     if o.flags.contains("replace-running") { request.replaceRunning = true }
@@ -1466,6 +1478,57 @@ case "toolchain":
         } catch { fail("\(error)") }
     default:
         fail(L("Unknown toolchain command '\(o.positional[1])'.", "Unbekannter Toolchain-Befehl '\(o.positional[1])'."))
+    }
+
+case "builder":
+    // The builder of a game's parts (`Recipe.builder`): what it is, and a folder chosen by hand in its place.
+    let using = o.positional.count > 1 && o.positional[1] == "use"
+    let r = recipe(o, at: using ? 2 : 1)
+    guard let builder = r.builder else {
+        fail(L("\(r.title) has no parts that are built on this Mac.", "\(r.title) hat keine Teile, die auf diesem Mac gebaut werden."))
+    }
+    var choices = BuilderChoices.load()
+    if using {
+        do {
+            if o.flags.contains("recipe") {
+                choices.games[r.id] = nil
+                try choices.save()
+                print(L("The parts of \(r.title) are built with the builder its recipe names again (state \(builder.source.version), \(builder.source.shortCommit)).",
+                        "Die Teile von \(r.title) werden wieder mit dem Bauwerkzeug gebaut, das sein Rezept nennt (Stand \(builder.source.version), \(builder.source.shortCommit))."))
+            } else {
+                guard let given = o.value("builder") else {
+                    fail(L("Give the builder with --builder <folder>, or --recipe.", "Das Bauwerkzeug mit --builder <Ordner> angeben, oder --recipe."))
+                }
+                let folder = URL(fileURLWithPath: given).standardizedFileURL
+                guard FileManager.default.fileExists(atPath: folder.appendingPathComponent(PartsBuilders.entry).path) else {
+                    throw PartsError.notABuilder(folder.path)
+                }
+                choices.games[r.id] = folder.path
+                try choices.save()
+                print(L("The parts of \(r.title) are built with the builder in \(folder.path) from now on, anew for every install (finished steps are skipped). Back to the recipe's: avpplay builder use \(r.id) --recipe",
+                        "Die Teile von \(r.title) werden ab jetzt mit dem Bauwerkzeug in \(folder.path) gebaut, bei jeder Installation neu (fertige Schritte werden übersprungen). Zurück zu dem des Rezepts: avpplay builder use \(r.id) --recipe"))
+            }
+        } catch { fail("\(error)") }
+        break
+    }
+    let builders = PartsBuilders()
+    print("\(r.title) \(r.versionName)")
+    print(L("  Builder:   \(builder.source.repository), state \(builder.source.version) (\(builder.source.commit))",
+            "  Bauwerkzeug: \(builder.source.repository), Stand \(builder.source.version) (\(builder.source.commit))"))
+    if let local = choices.games[r.id] {
+        print(L("  Chosen instead: \(local)", "  Stattdessen gewählt: \(local)"))
+    } else {
+        print(builders.installed(for: r).map { L("  On this Mac: \($0.path)", "  Auf diesem Mac: \($0.path)") }
+              ?? L("  Not fetched yet; the first job fetches it.", "  Noch nicht geholt; der erste Auftrag holt es."))
+    }
+    print(L("  Work folder: \(builders.work(for: r).path)", "  Arbeitsordner: \(builders.work(for: r).path)"))
+    switch GameParts.state(recipe: r, store: contentStore(o)) {
+    case .built(let date, let bytes)?:
+        print(L("  Game parts: built \(ISO8601DateFormatter().string(from: date)) (\(gigabytes(bytes)))",
+                "  Spielteile: gebaut \(ISO8601DateFormatter().string(from: date)) (\(gigabytes(bytes)))"))
+    default:
+        print(L("  Game parts: not built yet.", "  Spielteile: noch nicht gebaut."))
+        for note in builder.notes { print("  • \(note.text)") }
     }
 
 case "mods":

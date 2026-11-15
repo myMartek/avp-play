@@ -1,0 +1,87 @@
+{
+ "schema": 1,
+ "id": "vivecraft",
+ "title": "Minecraft: Java Edition (Vivecraft)",
+ "package": "minecraft-java-vivecraft",
+ "versionName": "26.3",
+ "versionCode": 260301,
+ "store": {},
+ "toolchain": {
+  "target": "vivecraft",
+  "minCommit": "0000000"
+ },
+ "builder": {
+  "source": {
+   "repository": "https://github.com/myMartek/vivecraft-visionos",
+   "commit": "0000000000000000000000000000000000000000",
+   "version": 1
+  },
+  "notes": [
+   {
+    "en": "The first install builds the game's parts on this Mac: Minecraft is downloaded from Mojang's own servers and translated for the Vision Pro. That takes about 45 to 60 minutes. Later installs use the result again.",
+    "de": "Die erste Installation baut die Spielteile auf diesem Mac: Minecraft wird von Mojangs eigenen Servern geladen und für die Vision Pro übersetzt. Das dauert etwa 45 bis 60 Minuten. Spätere Installationen verwenden das Ergebnis wieder."
+   },
+   {
+    "en": "During the build a Minecraft window opens on this Mac for a few minutes, without sound. That is part of the build: leave it open, it closes by itself.",
+    "de": "Während des Baus öffnet sich auf diesem Mac für einige Minuten ein Minecraft-Fenster, ohne Ton. Das gehört zum Bau: Lass es offen, es schließt sich von selbst."
+   },
+   {
+    "en": "The Mac needs 16 GB of memory and about 8 GB of free disk space for the build.",
+    "de": "Der Mac braucht für den Bau 16 GB Arbeitsspeicher und etwa 8 GB freien Speicherplatz."
+   }
+  ]
+ },
+ "gameAccount": {
+  "title": {
+   "en": "You need Minecraft: Java Edition",
+   "de": "Du brauchst Minecraft: Java Edition"
+  },
+  "notes": [
+   {
+    "en": "The game does not start until a Microsoft account that owns Minecraft: Java Edition has signed in on the Vision Pro once. The Bedrock Edition (the Minecraft for consoles and phones, and “Minecraft for Windows”) does not count.",
+    "de": "Das Spiel startet erst, wenn sich auf der Vision Pro einmal ein Microsoft-Konto angemeldet hat, dem Minecraft: Java Edition gehört. Die Bedrock Edition (das Minecraft für Konsolen und Handys und „Minecraft for Windows“) zählt nicht."
+   },
+   {
+    "en": "AVP Play does not check this and never sees your Microsoft account. You sign in on the Vision Pro, in the game's start window: choose “Add account” there and it shows a short code. Open microsoft.com/link on any device, type the code in and sign in with your Microsoft account.",
+    "de": "AVP Play prüft das nicht und bekommt dein Microsoft-Konto nie zu sehen. Du meldest dich auf der Vision Pro an, im Startfenster des Spiels: Wähle dort „Add account“, dann zeigt es einen kurzen Code. Öffne microsoft.com/link auf einem beliebigen Gerät, gib den Code ein und melde dich mit deinem Microsoft-Konto an."
+   },
+   {
+    "en": "Your sign-in and your worlds are kept in the game app on the Vision Pro, not on this Mac. AVP Play does not back them up: if you remove the app from the headset, they are deleted with it.",
+    "de": "Deine Anmeldung und deine Welten liegen in der Spiel-App auf der Vision Pro, nicht auf diesem Mac. AVP Play sichert sie nicht: Wenn du die App vom Headset entfernst, werden sie mit gelöscht."
+   }
+  ]
+ },
+ "files": [],
+ "icon": {
+  "archive": {
+   "icon": "assets/objects/f0/f00657542252858a721e715a2e888a9226404e35",
+   "background": "assets/objects/6a/6a84d4afab797aaf9f6ad283ebcd5899493c5c64"
+  }
+ },
+ "status": {
+  "playability": "verified",
+  "download": "special",
+  "notes": [
+   {
+    "en": "Special app: neither a Meta Store title nor a Steam game. This is Minecraft: Java Edition 26.3 with the VR mod Vivecraft, translated ahead of time into a program for Apple's chips. The port to the Vision Pro is “vivecraft-visionos” by rebelancap; the app around it is built with Klepton.",
+    "de": "Sonderapp: weder ein Titel aus dem Meta-Store noch ein Steam-Spiel. Das ist Minecraft: Java Edition 26.3 mit der VR-Mod Vivecraft, vorab in ein Programm für Apples Chips übersetzt. Die Portierung auf die Vision Pro ist „vivecraft-visionos“ von rebelancap; die App darum wird mit Klepton gebaut."
+   },
+   {
+    "en": "Nothing of the game is distributed by this project. The game's parts are built on your own Mac from what Mojang's servers deliver, and they stay on this Mac and your headset.",
+    "de": "Vom Spiel gibt dieses Projekt nichts weiter. Die Spielteile werden auf deinem eigenen Mac aus dem gebaut, was Mojangs Server ausliefern, und bleiben auf diesem Mac und deinem Headset."
+   },
+   {
+    "en": "Nothing is copied to the Vision Pro after the install: the game's files are inside its app.",
+    "de": "Nach der Installation wird nichts auf die Vision Pro kopiert: Die Dateien des Spiels stecken in seiner App."
+   },
+   {
+    "en": "Played by the project on an Apple Vision Pro M5 in November 2026, with a paid Apple Developer account. That build used the game parts of the port's release 1.0.3; parts built on a user's own Mac by the builder named here had not been played when this was written.",
+    "de": "Vom Projekt im November 2026 auf einer Apple Vision Pro M5 gespielt, mit einem bezahlten Apple-Entwicklerkonto. Dieser Bau nutzte die Spielteile aus dem Release 1.0.3 der Portierung; Teile, die das hier genannte Bauwerkzeug auf dem eigenen Mac baut, waren zu diesem Zeitpunkt noch nicht gespielt."
+   },
+   {
+    "en": "With a free Apple account the app is built without one memory permission Apple does not grant to free accounts (extended virtual addressing), like every Klepton game. Whether the game runs then has not been tried.",
+    "de": "Mit einem kostenlosen Apple-Konto wird die App ohne eine Speicher-Berechtigung gebaut, die Apple kostenlosen Konten nicht gibt (Extended Virtual Addressing) – wie jedes Klepton-Spiel. Ob das Spiel dann läuft, ist nicht ausprobiert."
+   }
+  ]
+ }
+}
