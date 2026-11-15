@@ -233,4 +233,24 @@ final class SteamSourceTests: XCTestCase {
         XCTAssertTrue(SteamFetcher.fetchesInJob(hl2))
     }
 
+
+    /// A game made of Steam folders only: the job's download step fetches the missing folder, not only missing files.
+    /// Vice City (reVC) has one tree and no files; Skyrim VR's voices are optional files, so without a language chosen
+    /// only its two trees are missing.
+    func testJobFetchesMissingSteamFolders() throws {
+        let recipes = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+            .deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("recipes")
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = ContentStore(root: dir)
+        for id in ["revc", "skyrimvr"] {
+            let r = try RecipeStore(directory: recipes).load(id: id)
+            let want = SteamFetcher.needed(recipe: r, store: store, optionalNames: [])
+            XCTAssertTrue(want.files.isEmpty, id)
+            XCTAssertFalse(want.trees.isEmpty, id)
+            XCTAssertTrue(SteamFetcher.jobFetches(recipe: r, store: store, optionalNames: []), id)
+        }
+        XCTAssertFalse(SteamFetcher.jobFetches(recipe: meta(), store: store, optionalNames: []))
+    }
+
 }
