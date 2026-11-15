@@ -22,12 +22,12 @@
     "de": "Die erste Installation baut die Spielteile auf diesem Mac: Minecraft wird von Mojangs eigenen Servern geladen und für die Vision Pro übersetzt. Das dauert etwa 45 bis 60 Minuten. Spätere Installationen verwenden das Ergebnis wieder."
    },
    {
-    "en": "During the build a Minecraft window opens on this Mac for a few minutes, without sound. That is part of the build: leave it open, it closes by itself.",
-    "de": "Während des Baus öffnet sich auf diesem Mac für einige Minuten ein Minecraft-Fenster, ohne Ton. Das gehört zum Bau: Lass es offen, es schließt sich von selbst."
+    "en": "During the build a Minecraft window opens on this Mac twice, without sound, for about three minutes in all. That is part of the build: leave it open, it closes by itself.",
+    "de": "Während des Baus öffnet sich auf diesem Mac zweimal ein Minecraft-Fenster, ohne Ton, zusammen etwa drei Minuten lang. Das gehört zum Bau: Lass es offen, es schließt sich von selbst."
    },
    {
-    "en": "The Mac needs 16 GB of memory and about 8 GB of free disk space for the build.",
-    "de": "Der Mac braucht für den Bau 16 GB Arbeitsspeicher und etwa 8 GB freien Speicherplatz."
+    "en": "The Mac needs 16 GB of memory and about 12 GB of free disk space for the build.",
+    "de": "Der Mac braucht für den Bau 16 GB Arbeitsspeicher und etwa 12 GB freien Speicherplatz."
    }
   ]
  },
