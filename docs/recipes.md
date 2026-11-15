@@ -112,13 +112,30 @@ toolchain (its target is of the kind `macho`); the builder is a field of its own
 - The builder is entered through `tools/avpplay/build_parts.sh`, as the leader of a process group of its own, with
   `AVPPLAY_WORK` (an absolute folder without blanks for everything it downloads and builds, kept between runs:
   `~/.avpplay/builders/work/<id>`) and `AVPPLAY_OUT` (the zip to write). It prints `STAGE <i>/<n> <short name>` when
-  a step begins and anything else as plain lines; success is exit status 0 with a last line
-  `PARTS <path> <sha256>`. Steps that are finished are skipped on the next run. `build_parts.sh --check` only tests
-  what the Mac needs and prints one line per problem (status 1 if any); the app runs it first and shows the lines.
+  a step begins (`… (already done)` for one it skips) and anything else as plain lines; success is exit status 0
+  with a last line `PARTS <path> <sha256>`, a failure ends with `FAILED <i>/<n> <short name>: <sentence>` and
+  `LOG <path>`. Steps that are finished are skipped on the next run. `build_parts.sh --check` only tests what the
+  Mac needs and prints one line per problem (status 1 if any); the app runs it first and shows the lines.
+- Two optional lines feed the progress display (a builder may print neither; then the job shows “Step i of n” and
+  the time in it):
+  - `PLAN <name>:<seconds>[:<flags>] …` once, before the first `STAGE` line: every step in order with how many seconds
+    it took on the builder's reference Mac in the state its work folder is in; flag `d` = its result is there (it
+    will be skipped), `n` = its time is mostly a download.
+  - `PROGRESS <done> <total> <unit>[ <w1>,<w2>,…]` within the running step, at most about once a second. Units:
+    `files`, `bytes`, `entries`, `libraries` (counted work), `parts` (done = parts finished; the list gives each
+    part's reference seconds), `seconds` (a timed wait: done = seconds behind it when the line was written, total =
+    its expected length). An unknown unit is shown as plain numbers.
+
+  A line with a leading blank is the builder quoting a tool's output and never one of these; a line that does not
+  parse is plain text. The reference times are the builder's; the app scales them by how fast this Mac turns out to
+  be (`BuildProgress` in `AVPPlayCore`).
 - The build is part of the job's step “Download files”, so “Build Parts Only” works without Xcode, a team or the
-  headset. The job shows each step as “Step i of n”, keeps everything the builder says in `.last-parts.log` in the
-  game's folder, and on a failure names the step, the builder's last line and that log. Cancelling the job sends
-  SIGTERM to the whole group and SIGKILL to what is left after five seconds.
+  headset. The job shows the step that runs in plain words (“Step 6 of 20: Downloading Minecraft from Mojang”, the
+  builder's short name small beside it), a bar for the whole build with the time left, a bar for the step – a real
+  one where the builder counts, an indeterminate one with the time against the usual time where it does not – and
+  the list of all steps. The Remote shows the same for a job on the Mac. Everything the builder says is kept in
+  `.last-parts.log` in the game's folder; a failure names the step in plain words, the builder's reason and that
+  log. Cancelling the job sends SIGTERM to the whole group and SIGKILL to what is left after five seconds.
 - The result is checked against the checksum the builder named and kept in the game's folder in the library as
   `<id>-parts-<version>-<commit>.zip` (`<id>-parts-local.zip` from a folder chosen by hand, which is built anew for
   every job). A new builder state makes a new file and removes the old one; a new game version is a new folder.

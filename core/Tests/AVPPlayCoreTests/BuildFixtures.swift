@@ -1,0 +1,446 @@
+// Real builder output for the tests of `BuildProgress`, made from the logs of full runs of
+// tools/avpplay/build_parts.sh on the reference Mac (Mac mini M4, 16 GB). Each line is "HH:MM:SS <line>" with the
+// time the line was written. Those runs predate the PLAN and PROGRESS lines: the STAGE, FAILED, LOG and PARTS lines
+// are the logged ones; PLAN is what the builder computes for that work folder; PROGRESS is what the builder's own
+// progress rules (tools/avpplay/parts_helper.py, class Progress) print for the logged lines at their logged times
+// (byte counts, which come from watching files grow, are missing). Paths of this Mac are replaced by /work/….
+enum BuildFixtures {
+    /// The proof run from an empty work folder on the reference Mac (2026-11-15 04:01, 3110 s; downloads slow that night).
+    static let fresh = """
+04:01:44 PLAN tree:2 tools:14:n graalvm:35:n headers:2 vivecraft:290:n minecraft:420:n openal:58 lwjgl:263 klsdl:12 ltw:28 voicechat:83 shims:2 classpath:3 world:62 bake:141 launcher:17 image:975 relink:6 payload:31 zip:8
+04:01:44 STAGE 1/20 tree
+04:01:46 STAGE 2/20 tools
+04:02:02 STAGE 3/20 graalvm
+04:02:38 STAGE 4/20 headers
+04:02:41 STAGE 5/20 vivecraft
+04:02:41 PROGRESS 0 6 parts 18,32,79,74,12,3
+04:03:18 PROGRESS 1 6 parts 18,32,79,74,12,3
+04:04:47 PROGRESS 2 6 parts 18,32,79,74,12,3
+04:06:06 PROGRESS 3 6 parts 18,32,79,74,12,3
+04:10:47 PROGRESS 4 6 parts 18,32,79,74,12,3
+04:11:06 PROGRESS 5 6 parts 18,32,79,74,12,3
+04:11:06 PROGRESS 6 6 parts 18,32,79,74,12,3
+04:11:08 STAGE 6/20 minecraft
+04:11:08 PROGRESS 0 5242 files
+04:12:08 PROGRESS 25 5242 files
+04:12:13 PROGRESS 50 5242 files
+04:12:14 PROGRESS 51 5242 files
+04:12:20 PROGRESS 58 5242 files
+04:12:39 PROGRESS 80 5242 files
+04:12:46 PROGRESS 105 5242 files
+04:12:51 PROGRESS 130 5242 files
+04:13:00 PROGRESS 155 5242 files
+04:13:12 PROGRESS 180 5242 files
+04:13:20 PROGRESS 205 5242 files
+04:13:30 PROGRESS 230 5242 files
+04:13:50 PROGRESS 255 5242 files
+04:13:55 PROGRESS 280 5242 files
+04:13:56 PROGRESS 305 5242 files
+04:14:01 PROGRESS 330 5242 files
+04:14:03 PROGRESS 355 5242 files
+04:14:04 PROGRESS 380 5242 files
+04:14:05 PROGRESS 430 5242 files
+04:14:06 PROGRESS 455 5242 files
+04:14:07 PROGRESS 480 5242 files
+04:14:08 PROGRESS 530 5242 files
+04:14:09 PROGRESS 555 5242 files
+04:14:10 PROGRESS 605 5242 files
+04:14:11 PROGRESS 630 5242 files
+04:14:12 PROGRESS 655 5242 files
+04:14:13 PROGRESS 680 5242 files
+04:14:14 PROGRESS 730 5242 files
+04:14:15 PROGRESS 755 5242 files
+04:14:16 PROGRESS 780 5242 files
+04:14:22 PROGRESS 805 5242 files
+04:14:36 PROGRESS 830 5242 files
+04:14:54 PROGRESS 855 5242 files
+04:14:55 PROGRESS 880 5242 files
+04:14:56 PROGRESS 930 5242 files
+04:14:57 PROGRESS 955 5242 files
+04:14:58 PROGRESS 980 5242 files
+04:14:59 PROGRESS 1030 5242 files
+04:15:00 PROGRESS 1080 5242 files
+04:15:01 PROGRESS 1105 5242 files
+04:15:02 PROGRESS 1130 5242 files
+04:15:06 PROGRESS 1155 5242 files
+04:15:08 PROGRESS 1180 5242 files
+04:15:09 PROGRESS 1205 5242 files
+04:15:10 PROGRESS 1255 5242 files
+04:15:11 PROGRESS 1280 5242 files
+04:15:12 PROGRESS 1330 5242 files
+04:15:14 PROGRESS 1355 5242 files
+04:15:15 PROGRESS 1380 5242 files
+04:15:16 PROGRESS 1405 5242 files
+04:15:17 PROGRESS 1430 5242 files
+04:15:18 PROGRESS 1480 5242 files
+04:15:19 PROGRESS 1505 5242 files
+04:15:22 PROGRESS 1530 5242 files
+04:15:28 PROGRESS 1555 5242 files
+04:15:29 PROGRESS 1580 5242 files
+04:15:30 PROGRESS 1605 5242 files
+04:15:31 PROGRESS 1630 5242 files
+04:15:33 PROGRESS 1655 5242 files
+04:15:34 PROGRESS 1680 5242 files
+04:15:42 PROGRESS 1705 5242 files
+04:15:59 PROGRESS 1730 5242 files
+04:16:09 PROGRESS 1755 5242 files
+04:16:10 PROGRESS 1780 5242 files
+04:16:11 PROGRESS 1805 5242 files
+04:16:12 PROGRESS 1830 5242 files
+04:16:13 PROGRESS 1855 5242 files
+04:16:14 PROGRESS 1880 5242 files
+04:16:25 PROGRESS 1905 5242 files
+04:16:38 PROGRESS 1930 5242 files
+04:16:45 PROGRESS 1955 5242 files
+04:16:48 PROGRESS 1980 5242 files
+04:16:49 PROGRESS 2005 5242 files
+04:16:50 PROGRESS 2055 5242 files
+04:16:53 PROGRESS 2080 5242 files
+04:17:01 PROGRESS 2105 5242 files
+04:17:02 PROGRESS 2130 5242 files
+04:17:03 PROGRESS 2155 5242 files
+04:17:04 PROGRESS 2180 5242 files
+04:17:06 PROGRESS 2205 5242 files
+04:17:07 PROGRESS 2230 5242 files
+04:17:11 PROGRESS 2255 5242 files
+04:17:20 PROGRESS 2280 5242 files
+04:17:33 PROGRESS 2305 5242 files
+04:17:42 PROGRESS 2330 5242 files
+04:17:43 PROGRESS 2355 5242 files
+04:17:45 PROGRESS 2380 5242 files
+04:17:46 PROGRESS 2405 5242 files
+04:17:48 PROGRESS 2430 5242 files
+04:17:53 PROGRESS 2480 5242 files
+04:18:06 PROGRESS 2505 5242 files
+04:18:19 PROGRESS 2530 5242 files
+04:18:20 PROGRESS 2555 5242 files
+04:18:21 PROGRESS 2580 5242 files
+04:18:22 PROGRESS 2605 5242 files
+04:18:24 PROGRESS 2655 5242 files
+04:18:25 PROGRESS 2705 5242 files
+04:18:35 PROGRESS 2730 5242 files
+04:18:52 PROGRESS 2755 5242 files
+04:18:58 PROGRESS 2780 5242 files
+04:19:00 PROGRESS 2805 5242 files
+04:19:02 PROGRESS 2855 5242 files
+04:19:03 PROGRESS 2880 5242 files
+04:19:04 PROGRESS 2905 5242 files
+04:19:05 PROGRESS 2930 5242 files
+04:19:06 PROGRESS 2955 5242 files
+04:19:07 PROGRESS 2980 5242 files
+04:19:22 PROGRESS 3030 5242 files
+04:19:42 PROGRESS 3055 5242 files
+04:19:44 PROGRESS 3080 5242 files
+04:19:46 PROGRESS 3130 5242 files
+04:19:47 PROGRESS 3155 5242 files
+04:19:51 PROGRESS 3180 5242 files
+04:20:10 PROGRESS 3205 5242 files
+04:20:26 PROGRESS 3230 5242 files
+04:20:46 PROGRESS 3255 5242 files
+04:20:47 PROGRESS 3280 5242 files
+04:20:48 PROGRESS 3305 5242 files
+04:20:50 PROGRESS 3330 5242 files
+04:20:56 PROGRESS 3355 5242 files
+04:20:57 PROGRESS 3380 5242 files
+04:20:58 PROGRESS 3405 5242 files
+04:20:59 PROGRESS 3455 5242 files
+04:21:11 PROGRESS 3480 5242 files
+04:21:18 PROGRESS 3505 5242 files
+04:21:19 PROGRESS 3530 5242 files
+04:21:20 PROGRESS 3555 5242 files
+04:21:21 PROGRESS 3580 5242 files
+04:21:22 PROGRESS 3605 5242 files
+04:21:24 PROGRESS 3630 5242 files
+04:21:31 PROGRESS 3680 5242 files
+04:21:37 PROGRESS 3705 5242 files
+04:21:45 PROGRESS 3730 5242 files
+04:22:06 PROGRESS 3755 5242 files
+04:22:09 PROGRESS 3780 5242 files
+04:22:10 PROGRESS 3805 5242 files
+04:22:11 PROGRESS 3830 5242 files
+04:22:12 PROGRESS 3880 5242 files
+04:22:13 PROGRESS 3930 5242 files
+04:22:14 PROGRESS 3955 5242 files
+04:22:15 PROGRESS 3980 5242 files
+04:22:18 PROGRESS 4005 5242 files
+04:22:19 PROGRESS 4030 5242 files
+04:22:20 PROGRESS 4080 5242 files
+04:22:21 PROGRESS 4105 5242 files
+04:22:22 PROGRESS 4130 5242 files
+04:22:23 PROGRESS 4155 5242 files
+04:22:33 PROGRESS 4180 5242 files
+04:22:40 PROGRESS 4205 5242 files
+04:22:41 PROGRESS 4230 5242 files
+04:22:42 PROGRESS 4280 5242 files
+04:22:43 PROGRESS 4305 5242 files
+04:22:44 PROGRESS 4330 5242 files
+04:22:45 PROGRESS 4380 5242 files
+04:22:57 PROGRESS 4405 5242 files
+04:23:06 PROGRESS 4430 5242 files
+04:23:07 PROGRESS 4455 5242 files
+04:23:08 PROGRESS 4480 5242 files
+04:23:12 PROGRESS 4530 5242 files
+04:23:13 PROGRESS 4555 5242 files
+04:23:14 PROGRESS 4580 5242 files
+04:23:16 PROGRESS 4605 5242 files
+04:23:17 PROGRESS 4630 5242 files
+04:23:19 PROGRESS 4655 5242 files
+04:23:26 PROGRESS 4680 5242 files
+04:23:38 PROGRESS 4705 5242 files
+04:23:42 PROGRESS 4730 5242 files
+04:23:43 PROGRESS 4755 5242 files
+04:23:44 PROGRESS 4780 5242 files
+04:23:45 PROGRESS 4805 5242 files
+04:23:46 PROGRESS 4830 5242 files
+04:23:53 PROGRESS 4880 5242 files
+04:24:05 PROGRESS 4905 5242 files
+04:24:06 PROGRESS 4930 5242 files
+04:24:09 PROGRESS 4980 5242 files
+04:24:19 PROGRESS 5005 5242 files
+04:24:33 PROGRESS 5030 5242 files
+04:24:55 PROGRESS 5055 5242 files
+04:24:57 PROGRESS 5080 5242 files
+04:24:58 PROGRESS 5105 5242 files
+04:25:07 PROGRESS 5130 5242 files
+04:25:12 PROGRESS 5155 5242 files
+04:25:18 PROGRESS 5180 5242 files
+04:25:26 PROGRESS 5205 5242 files
+04:25:35 PROGRESS 5229 5242 files
+04:25:49 PROGRESS 5230 5242 files
+04:25:49 PROGRESS 5242 5242 files
+04:25:50 STAGE 7/20 openal
+04:27:03 STAGE 8/20 lwjgl
+04:27:03 PROGRESS 0 4 parts 76,15,19,120
+04:28:19 PROGRESS 1 4 parts 76,15,19,120
+04:28:58 PROGRESS 2 4 parts 76,15,19,120
+04:29:21 PROGRESS 3 4 parts 76,15,19,120
+04:31:25 PROGRESS 4 4 parts 76,15,19,120
+04:31:26 STAGE 9/20 klsdl
+04:31:40 STAGE 10/20 ltw
+04:32:13 STAGE 11/20 voicechat
+04:32:13 PROGRESS 0 4 libraries
+04:32:51 PROGRESS 1 4 libraries
+04:33:12 PROGRESS 2 4 libraries
+04:33:18 PROGRESS 3 4 libraries
+04:33:35 PROGRESS 4 4 libraries
+04:33:36 STAGE 12/20 shims
+04:33:38 STAGE 13/20 classpath
+04:33:42 STAGE 14/20 world
+04:34:50 STAGE 15/20 bake
+04:37:10 STAGE 16/20 launcher
+04:37:26 STAGE 17/20 image
+04:37:26 PROGRESS 0 8 parts 11,568,50,28,38,170,40,70
+04:37:37 PROGRESS 1 8 parts 11,568,50,28,38,170,40,70
+04:47:06 PROGRESS 2 8 parts 11,568,50,28,38,170,40,70
+04:48:07 PROGRESS 3 8 parts 11,568,50,28,38,170,40,70
+04:48:38 PROGRESS 4 8 parts 11,568,50,28,38,170,40,70
+04:49:21 PROGRESS 5 8 parts 11,568,50,28,38,170,40,70
+04:51:48 PROGRESS 6 8 parts 11,568,50,28,38,170,40,70
+04:52:14 PROGRESS 7 8 parts 11,568,50,28,38,170,40,70
+04:52:49 PROGRESS 8 8 parts 11,568,50,28,38,170,40,70
+04:52:51 STAGE 18/20 relink
+04:52:56 STAGE 19/20 payload
+04:53:25 STAGE 20/20 zip
+04:53:33 PARTS /work/out/vivecraft-parts-26.3.zip f06d269a1fd1e98bd1f172fbb8d6ac322315718ab81ddd36e629b720c69f5e75
+"""
+
+    /// An AVP Play job that rebuilt from the headers stage with the downloads kept (2026-11-15 11:15, 2102 s); its image stage took 1416 s against 975.
+    static let rebuild = """
+11:15:12 PLAN tree:2 tools:3:d graalvm:3:d headers:2 vivecraft:8 minecraft:9 openal:58 lwjgl:158 klsdl:12 ltw:28 voicechat:37 shims:2 classpath:3 world:62 bake:141 launcher:17 image:975 relink:6 payload:31 zip:8
+11:15:12 STAGE 1/20 tree
+11:15:14 STAGE 2/20 tools (already done)
+11:15:14 STAGE 3/20 graalvm (already done)
+11:15:14 STAGE 4/20 headers
+11:15:15 STAGE 5/20 vivecraft
+11:15:15 PROGRESS 0 6 parts 18,32,79,74,12,3
+11:15:19 PROGRESS 2 6 parts 18,32,79,74,12,3
+11:15:19 PROGRESS 3 6 parts 18,32,79,74,12,3
+11:15:20 PROGRESS 4 6 parts 18,32,79,74,12,3
+11:15:20 PROGRESS 5 6 parts 18,32,79,74,12,3
+11:15:21 PROGRESS 6 6 parts 18,32,79,74,12,3
+11:15:22 STAGE 6/20 minecraft
+11:15:22 PROGRESS 0 5242 files
+11:15:24 PROGRESS 25 5242 files
+11:15:25 PROGRESS 105 5242 files
+11:15:30 PROGRESS 5230 5242 files
+11:15:30 PROGRESS 5242 5242 files
+11:15:30 STAGE 7/20 openal
+11:16:28 STAGE 8/20 lwjgl
+11:16:28 PROGRESS 0 4 parts 3,15,19,120
+11:16:31 PROGRESS 1 4 parts 3,15,19,120
+11:16:39 PROGRESS 2 4 parts 3,15,19,120
+11:16:51 PROGRESS 3 4 parts 3,15,19,120
+11:18:54 PROGRESS 4 4 parts 3,15,19,120
+11:18:55 STAGE 9/20 klsdl
+11:19:07 STAGE 10/20 ltw
+11:19:45 STAGE 11/20 voicechat
+11:19:45 PROGRESS 0 4 libraries
+11:20:05 PROGRESS 1 4 libraries
+11:20:13 PROGRESS 2 4 libraries
+11:20:19 PROGRESS 3 4 libraries
+11:20:34 PROGRESS 4 4 libraries
+11:20:35 STAGE 12/20 shims
+11:20:37 STAGE 13/20 classpath
+11:20:42 STAGE 14/20 world
+11:21:52 STAGE 15/20 bake
+11:24:27 STAGE 16/20 launcher
+11:24:46 STAGE 17/20 image
+11:24:46 PROGRESS 0 8 parts 11,568,50,28,38,170,40,70
+11:24:59 PROGRESS 1 8 parts 11,568,50,28,38,170,40,70
+11:38:04 PROGRESS 2 8 parts 11,568,50,28,38,170,40,70
+11:39:34 PROGRESS 3 8 parts 11,568,50,28,38,170,40,70
+11:40:16 PROGRESS 4 8 parts 11,568,50,28,38,170,40,70
+11:40:57 PROGRESS 5 8 parts 11,568,50,28,38,170,40,70
+11:45:12 PROGRESS 6 8 parts 11,568,50,28,38,170,40,70
+11:46:20 PROGRESS 7 8 parts 11,568,50,28,38,170,40,70
+11:48:20 PROGRESS 8 8 parts 11,568,50,28,38,170,40,70
+11:48:22 STAGE 18/20 relink
+11:48:29 STAGE 19/20 payload
+11:50:02 STAGE 20/20 zip
+11:50:14 PARTS /work/out/vivecraft-parts-1-56ab58e.zip 5ca7ca739d7cc68faa8cc2e44414fcd204f604d0bad738bf8f91b3b335f2eece
+"""
+
+    /// The verification run of the quiet game windows (2026-11-15 12:38, 1885 s): empty Gradle home, other downloads copied in; its bake prints the timed full pass.
+    static let verification = """
+12:38:09 PLAN tree:2 tools:3 graalvm:3 headers:2 vivecraft:290:n minecraft:9 openal:58 lwjgl:158 klsdl:12 ltw:28 voicechat:37 shims:2 classpath:3 world:62 bake:141 launcher:17 image:975 relink:6 payload:31 zip:8
+12:38:09 STAGE 1/20 tree
+12:38:10 STAGE 2/20 tools
+12:38:13 STAGE 3/20 graalvm
+12:38:16 STAGE 4/20 headers
+12:38:18 STAGE 5/20 vivecraft
+12:38:18 PROGRESS 0 6 parts 18,32,79,74,12,3
+12:38:34 PROGRESS 1 6 parts 18,32,79,74,12,3
+12:39:06 PROGRESS 2 6 parts 18,32,79,74,12,3
+12:41:42 PROGRESS 3 6 parts 18,32,79,74,12,3
+12:42:52 PROGRESS 4 6 parts 18,32,79,74,12,3
+12:43:04 PROGRESS 5 6 parts 18,32,79,74,12,3
+12:43:05 PROGRESS 6 6 parts 18,32,79,74,12,3
+12:43:07 STAGE 6/20 minecraft
+12:43:07 PROGRESS 0 5242 files
+12:43:09 PROGRESS 25 5242 files
+12:43:10 PROGRESS 4980 5242 files
+12:43:16 PROGRESS 5230 5242 files
+12:43:16 PROGRESS 5242 5242 files
+12:43:16 STAGE 7/20 openal
+12:44:10 STAGE 8/20 lwjgl
+12:44:10 PROGRESS 0 4 parts 3,15,19,120
+12:44:13 PROGRESS 1 4 parts 3,15,19,120
+12:44:28 PROGRESS 2 4 parts 3,15,19,120
+12:44:47 PROGRESS 3 4 parts 3,15,19,120
+12:46:47 PROGRESS 4 4 parts 3,15,19,120
+12:46:48 STAGE 9/20 klsdl
+12:47:00 STAGE 10/20 ltw
+12:47:26 STAGE 11/20 voicechat
+12:47:26 PROGRESS 0 4 libraries
+12:47:37 PROGRESS 1 4 libraries
+12:47:44 PROGRESS 2 4 libraries
+12:47:49 PROGRESS 3 4 libraries
+12:48:01 PROGRESS 4 4 libraries
+12:48:02 STAGE 12/20 shims
+12:48:04 STAGE 13/20 classpath
+12:48:07 STAGE 14/20 world
+12:49:03 STAGE 15/20 bake
+12:49:03 PROGRESS 0 142 seconds
+12:51:25 STAGE 16/20 launcher
+12:51:42 STAGE 17/20 image
+12:51:42 PROGRESS 0 8 parts 11,568,50,28,38,170,40,70
+12:51:52 PROGRESS 1 8 parts 11,568,50,28,38,170,40,70
+13:01:20 PROGRESS 2 8 parts 11,568,50,28,38,170,40,70
+13:01:59 PROGRESS 3 8 parts 11,568,50,28,38,170,40,70
+13:02:25 PROGRESS 4 8 parts 11,568,50,28,38,170,40,70
+13:03:00 PROGRESS 5 8 parts 11,568,50,28,38,170,40,70
+13:06:12 PROGRESS 6 8 parts 11,568,50,28,38,170,40,70
+13:07:07 PROGRESS 7 8 parts 11,568,50,28,38,170,40,70
+13:08:45 PROGRESS 8 8 parts 11,568,50,28,38,170,40,70
+13:08:46 STAGE 18/20 relink
+13:08:52 STAGE 19/20 payload
+13:09:25 STAGE 20/20 zip
+13:09:33 PARTS /work/out/vivecraft-parts-26.3-bc355cd.zip 7752788cdf47132e0d0dbad2dc8a4365a34a242f959bb54b28ad636287a422bb
+"""
+
+    /// An AVP Play job whose world stage hung until the builder's 20-minute guard stopped it (2026-11-15 05:29).
+    static let hung = """
+05:29:24 PLAN tree:2 tools:3:d graalvm:3:d headers:2 vivecraft:8 minecraft:9 openal:58 lwjgl:158 klsdl:12 ltw:28 voicechat:37 shims:2 classpath:3 world:62 bake:141 launcher:17 image:975 relink:6 payload:31 zip:8
+05:29:24 STAGE 1/20 tree
+05:29:25 STAGE 2/20 tools (already done)
+05:29:25 STAGE 3/20 graalvm (already done)
+05:29:25 STAGE 4/20 headers
+05:29:27 STAGE 5/20 vivecraft
+05:29:27 PROGRESS 0 6 parts 18,32,79,74,12,3
+05:29:32 PROGRESS 2 6 parts 18,32,79,74,12,3
+05:29:32 PROGRESS 3 6 parts 18,32,79,74,12,3
+05:29:33 PROGRESS 4 6 parts 18,32,79,74,12,3
+05:29:34 PROGRESS 5 6 parts 18,32,79,74,12,3
+05:29:34 PROGRESS 6 6 parts 18,32,79,74,12,3
+05:29:36 STAGE 6/20 minecraft
+05:29:36 PROGRESS 0 5242 files
+05:29:39 PROGRESS 25 5242 files
+05:29:44 PROGRESS 5230 5242 files
+05:29:44 PROGRESS 5242 5242 files
+05:29:44 STAGE 7/20 openal
+05:30:41 STAGE 8/20 lwjgl
+05:30:41 PROGRESS 0 4 parts 3,15,19,120
+05:30:44 PROGRESS 1 4 parts 3,15,19,120
+05:31:08 PROGRESS 2 4 parts 3,15,19,120
+05:31:27 PROGRESS 3 4 parts 3,15,19,120
+05:33:25 PROGRESS 4 4 parts 3,15,19,120
+05:33:26 STAGE 9/20 klsdl
+05:33:38 STAGE 10/20 ltw
+05:34:06 STAGE 11/20 voicechat
+05:34:06 PROGRESS 0 4 libraries
+05:34:22 PROGRESS 1 4 libraries
+05:34:29 PROGRESS 2 4 libraries
+05:34:34 PROGRESS 3 4 libraries
+05:34:42 PROGRESS 4 4 libraries
+05:34:43 STAGE 12/20 shims
+05:34:45 STAGE 13/20 classpath
+05:34:48 STAGE 14/20 world
+05:55:51 FAILED 14/20 world: no output and no download progress for 20 min, so the stage was stopped as hung.
+05:55:51 LOG /work/logs/build-20261115-052923-55649.log
+"""
+
+    /// The resume of that job (2026-11-15 05:56): stages 1-13 already done, the world stage starts (the log ends there).
+    static let resume = """
+05:56:46 PLAN tree:2:d tools:3:d graalvm:3:d headers:2:d vivecraft:8:d minecraft:9:d openal:58:d lwjgl:158:d klsdl:12:d ltw:28:d voicechat:37:d shims:2:d classpath:3:d world:62 bake:141 launcher:17 image:975 relink:6 payload:31 zip:8
+05:56:46 STAGE 1/20 tree (already done)
+05:56:46 STAGE 2/20 tools (already done)
+05:56:46 STAGE 3/20 graalvm (already done)
+05:56:46 STAGE 4/20 headers (already done)
+05:56:46 STAGE 5/20 vivecraft (already done)
+05:56:46 STAGE 6/20 minecraft (already done)
+05:56:46 STAGE 7/20 openal (already done)
+05:56:46 STAGE 8/20 lwjgl (already done)
+05:56:46 STAGE 9/20 klsdl (already done)
+05:56:46 STAGE 10/20 ltw (already done)
+05:56:46 STAGE 11/20 voicechat (already done)
+05:56:46 STAGE 12/20 shims (already done)
+05:56:46 STAGE 13/20 classpath (already done)
+05:56:46 STAGE 14/20 world
+"""
+
+    /// A resume where only the zip was left (2026-11-15 06:25, 8 s).
+    static let lastStep = """
+06:25:16 PLAN tree:2:d tools:3:d graalvm:3:d headers:2:d vivecraft:8:d minecraft:9:d openal:58:d lwjgl:158:d klsdl:12:d ltw:28:d voicechat:37:d shims:2:d classpath:3:d world:62:d bake:141:d launcher:17:d image:975:d relink:6:d payload:31:d zip:8
+06:25:16 STAGE 1/20 tree (already done)
+06:25:16 STAGE 2/20 tools (already done)
+06:25:16 STAGE 3/20 graalvm (already done)
+06:25:16 STAGE 4/20 headers (already done)
+06:25:16 STAGE 5/20 vivecraft (already done)
+06:25:16 STAGE 6/20 minecraft (already done)
+06:25:16 STAGE 7/20 openal (already done)
+06:25:16 STAGE 8/20 lwjgl (already done)
+06:25:16 STAGE 9/20 klsdl (already done)
+06:25:16 STAGE 10/20 ltw (already done)
+06:25:16 STAGE 11/20 voicechat (already done)
+06:25:16 STAGE 12/20 shims (already done)
+06:25:16 STAGE 13/20 classpath (already done)
+06:25:16 STAGE 14/20 world (already done)
+06:25:16 STAGE 15/20 bake (already done)
+06:25:16 STAGE 16/20 launcher (already done)
+06:25:16 STAGE 17/20 image (already done)
+06:25:16 STAGE 18/20 relink (already done)
+06:25:16 STAGE 19/20 payload (already done)
+06:25:17 STAGE 20/20 zip
+06:25:24 PARTS /work/out/vivecraft-parts-local.zip 3907223cbdf3d126bcebab390d9641d94f86356e420dcbd65d042c458f51ef03
+"""
+}

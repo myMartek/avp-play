@@ -18,12 +18,12 @@
   },
   "notes": [
    {
-    "en": "The first install builds the game's parts on this Mac: Minecraft is downloaded from Mojang's own servers and translated for the Vision Pro. That takes about 45 to 60 minutes. Later installs use the result again.",
-    "de": "Die erste Installation baut die Spielteile auf diesem Mac: Minecraft wird von Mojangs eigenen Servern geladen und für die Vision Pro übersetzt. Das dauert etwa 45 bis 60 Minuten. Spätere Installationen verwenden das Ergebnis wieder."
+    "en": "The first install builds the game's parts on this Mac: Minecraft is downloaded from Mojang's own servers and translated for the Vision Pro. That takes about 30 to 60 minutes, depending on the Mac and the internet connection. The job shows each step and how long it will still take. Later installs use the result again.",
+    "de": "Die erste Installation baut die Spielteile auf diesem Mac: Minecraft wird von Mojangs eigenen Servern geladen und für die Vision Pro übersetzt. Das dauert etwa 30 bis 60 Minuten, je nach Mac und Internetverbindung. Der Auftrag zeigt jeden Schritt und wie lange es noch dauert. Spätere Installationen verwenden das Ergebnis wieder."
    },
    {
-    "en": "During the build a Minecraft window opens on this Mac twice, without sound, for about three minutes in all. That is part of the build: leave it open, it closes by itself.",
-    "de": "Während des Baus öffnet sich auf diesem Mac zweimal ein Minecraft-Fenster, ohne Ton, zusammen etwa drei Minuten lang. Das gehört zum Bau: Lass es offen, es schließt sich von selbst."
+    "en": "During the build Minecraft runs on this Mac twice for a short while, about three minutes in all. It runs in the background: no window shows, there is no sound, and you can keep working. Leave the Mac switched on and unlocked: while its screen is locked, Minecraft cannot run, and the build stops at that step until you unlock the Mac and choose “Resume”. Should a small Minecraft window appear after all, leave it open: it closes by itself.",
+    "de": "Während des Baus läuft Minecraft zweimal kurz auf diesem Mac, zusammen etwa drei Minuten. Es läuft im Hintergrund: Kein Fenster erscheint, es gibt keinen Ton, und du kannst weiterarbeiten. Lass den Mac dabei eingeschaltet und entsperrt: Solange sein Bildschirm gesperrt ist, kann Minecraft nicht laufen, und der Bau hält an dieser Stelle an, bis du den Mac entsperrst und „Fortsetzen“ wählst. Falls doch ein kleines Minecraft-Fenster erscheint, lass es offen: Es schließt sich von selbst."
    },
    {
     "en": "The Mac needs 16 GB of memory and about 12 GB of free disk space for the build.",

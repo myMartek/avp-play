@@ -258,11 +258,12 @@ final class PartsBuilderTests: XCTestCase {
         try Data().write(to: folder.appendingPathComponent("fail.txt"))
         let log = dir.appendingPathComponent("build.log")
         XCTAssertThrowsError(try PartsBuild(builder: folder, work: dir.appendingPathComponent("work")).run(out: dir.appendingPathComponent("o.zip"), log: log)) { error in
-            XCTAssertEqual(error as? PartsError, .buildFailed(stage: "2/3 (native image)", reason: "error: not enough memory for the image", log: log))
+            XCTAssertEqual(error as? PartsError, .buildFailed(stage: "2/3 native image", reason: "error: not enough memory for the image", log: log))
             for language in [Language.en, .de] {
                 L10n.language = language
                 let text = "\(error)"
-                XCTAssertTrue(text.contains("2/3 (native image)") && text.contains("not enough memory") && text.contains(log.path), text)
+                let step = language == .en ? "in step 2 of 3 (“native image”)" : "in Schritt 2 von 3 („native image“)"
+                XCTAssertTrue(text.contains(step) && text.contains("not enough memory") && text.contains(log.path), text)
             }
             L10n.language = .en
         }

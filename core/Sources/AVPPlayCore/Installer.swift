@@ -215,6 +215,9 @@ public struct InstallProgress: Sendable, Equatable {
     /// Beim Laden: die wievielte der zu ladenden Dateien gerade dran ist (ab 1), wie viele es sind, ihr Name und
     /// wie weit sie ist. Die Größe kennt erst die Antwort der Auslieferung; vorher ist sie nil.
     public var file: FileProgress?
+    /// While a game's parts are built on this Mac: the whole state of that build, for the bars and the estimate
+    /// (`BuildProgress.estimate(at:)`). `done` and `total` are 0 then.
+    public var build: BuildProgress?
     public struct FileProgress: Sendable, Equatable {
         public var index: Int
         public var count: Int
@@ -228,12 +231,14 @@ public struct InstallProgress: Sendable, Equatable {
             self.isStage = isStage
         }
     }
-    public init(step: InstallStep, done: Int64, total: Int64, via: Device.Transport? = nil, file: FileProgress? = nil) {
+    public init(step: InstallStep, done: Int64, total: Int64, via: Device.Transport? = nil, file: FileProgress? = nil,
+                build: BuildProgress? = nil) {
         self.step = step
         self.done = done
         self.total = total
         self.via = via
         self.file = file
+        self.build = build
     }
 }
 
@@ -403,12 +408,16 @@ public struct Installer: Sendable {
         let stop = ProcessGroupStop()
         let report = self.report, progress = self.progress
         report(L("Building the game's parts on this Mac … (log: \(log.path))", "Die Spielteile werden auf diesem Mac gebaut … (Protokoll: \(log.path))"))
+        let narrator = BuildNarrator(report: report)
         let result = try await withTaskCancellationHandler {
-            try build.run(out: out, log: log, stop: stop) { stage in
+            try build.run(out: out, log: log, stop: stop, progress: { built in
+                narrator.update(built)
+                let index = built.current ?? 0, count = max(built.count, index)
                 progress(InstallProgress(step: .fetch, done: 0, total: 0,
-                                         file: .init(index: stage.index, count: stage.count, name: stage.name, done: 0, total: nil, isStage: true)))
-                report(L("  step \(stage.index) of \(stage.count): \(stage.name)", "  Schritt \(stage.index) von \(stage.count): \(stage.name)"))
-            }
+                                         file: index > 0 ? .init(index: index, count: count, name: BuildStepNames.title(built.currentName) ?? built.currentName,
+                                                                 done: 0, total: nil, isStage: true) : nil,
+                                         build: built))
+            })
         } onCancel: { stop.stop() }
         let zip = try GameParts.adopt(result.url, sha256: result.sha256, recipe: recipe, store: store, local: usesLocalBuilder)
         report(String(format: L("Game parts built (%.0f min): \(zip.lastPathComponent), \(Installer.megabytes(ContentStore.fileSize(zip) ?? 0)).",

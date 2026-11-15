@@ -99,6 +99,7 @@ final class RemoteServer: ObservableObject {
     private var sessions: [ObjectIdentifier: RemoteSession] = [:]
     private let queue = DispatchQueue(label: "io.github.mymartek.avpplay.remote")
     private var watch: AnyCancellable?
+    private var buildTick: Task<Void, Never>?
     private var pushTask: Task<Void, Never>?
     private var lastGamesAt = Date.distantPast
     private var gamesForced = false
@@ -159,12 +160,23 @@ final class RemoteServer: ObservableObject {
                 self.watch = self.model?.objectWillChange.sink { [weak server = self] _ in
                     Task { @MainActor in server?.schedulePush() }
                 }
+                // A build of a game's parts can go minutes without a new line, while its clock and estimate move:
+                // every five seconds the Remote gets them anyway.
+                self.buildTick?.cancel()
+                self.buildTick = Task { [weak self] in
+                    while !Task.isCancelled {
+                        try? await Task.sleep(for: .seconds(5))
+                        guard let self, let model = self.model else { return }
+                        if let id = model.runningJob, model.copyProgress[id]?.build != nil { self.schedulePush() }
+                    }
+                }
             }
         }
     }
 
     private func stop() {
         watch = nil
+        buildTick?.cancel(); buildTick = nil
         listener?.cancel(); listener = nil
         pairListener?.cancel(); pairListener = nil
         for session in sessions.values { session.channel.connection.cancel() }
@@ -630,7 +642,23 @@ extension AppModel {
         // Dieselben Balken wie auf der Seite des Auftrags hier (`JobDetail`).
         var bars: [RemoteProgress] = []
         var overall: Double?
-        if phase == .running, job.current == .fetch {
+        var buildText: String?
+        if phase == .running, job.current == .fetch, let build = copyProgress[job.id]?.build {
+            // A game's parts being built on this Mac: the same as the job's page here (`BuildProgressView`) – the
+            // step in plain words with the whole build's bar and time left, then the step's own bar.
+            let e = build.estimate(at: Date())
+            let left = e.remaining.map { BuildProgress.remainingText($0, atLeast: e.open) }
+            bars.append(RemoteProgress(title: build.headline ?? L("Building the game's parts on this Mac", "Die Spielteile werden auf diesem Mac gebaut"),
+                                       value: e.overall,
+                                       text: L("\(Int((e.overall * 100).rounded(.down))) % of the whole build", "\(Int((e.overall * 100).rounded(.down))) % des ganzen Baus")
+                                           + (left.map { " · " + $0 } ?? "")))
+            // Not countable: no bar, the time against the usual time says how it goes.
+            bars.append(RemoteProgress(value: e.step, text: build.stepText(e) + (build.currentName.isEmpty ? "" : "  (\(build.currentName))")))
+            if let note = BuildStepNames.note(build.currentName) { bars.append(RemoteProgress(value: nil, text: note)) }
+            overall = e.overall
+            buildText = ([build.current.map { L("Step \($0) of \(max(build.count, $0))", "Schritt \($0) von \(max(build.count, $0))") }, left]
+                .compactMap { $0 }).joined(separator: " · ")
+        } else if phase == .running, job.current == .fetch {
             let copy = copyProgress[job.id].flatMap { $0.step == .fetch ? $0 : nil }
             if let loaded = downloadProgress(job) {
                 bars.append(remoteBar(job.id, done: loaded.done, total: loaded.total, verb: L("downloaded", "geladen")))
@@ -662,7 +690,7 @@ extension AppModel {
             overall = bars.first?.value
         }
         let progress = overall
-        let text = bars.first(where: { $0.value != nil && $0.title == nil })?.text ?? bars.first?.title
+        let text = buildText ?? bars.first(where: { $0.value != nil && $0.title == nil })?.text ?? bars.first?.title
         // Nur der Verlauf, der ohnehin im Speicher liegt – die Dateien aller Aufträge zu lesen, wäre zu teuer.
         let line = logs[job.id]?.lines.last?.trimmingCharacters(in: .whitespaces)
         return RemoteJob(id: job.id, gameId: job.recipe.id, title: job.recipe.title, state: state, kind: kind,

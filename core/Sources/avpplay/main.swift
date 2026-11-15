@@ -466,6 +466,43 @@ final class CopyProgressPrinter: @unchecked Sendable {
     }
 }
 
+/// While a game's parts are built: every 30 seconds one line with where the build is, the bars in percent and the
+/// time left – in a terminal nothing else moves for minutes.
+final class BuildTicker: @unchecked Sendable {
+    private let lock = NSLock()
+    private var latest: BuildProgress?
+    private var stopped = false
+    private var started = false
+    let every: TimeInterval
+
+    init(every: TimeInterval = 30) { self.every = every }
+
+    func show(_ p: InstallProgress) {
+        guard let build = p.build else { return }
+        lock.lock()
+        latest = build
+        let start = !started
+        started = true
+        lock.unlock()
+        guard start else { return }
+        Thread.detachNewThread { [self] in
+            while true {
+                Thread.sleep(forTimeInterval: every)
+                lock.lock()
+                let done = stopped, now = latest
+                lock.unlock()
+                if done { return }
+                guard let now, now.finished == nil, now.current != nil else { continue }
+                let stamp = DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .medium)
+                print("    [\(stamp)] " + now.summary(at: Date()))
+                fflush(stdout)
+            }
+        }
+    }
+
+    func stop() { lock.lock(); stopped = true; lock.unlock() }
+}
+
 func describe(_ j: Job) -> String {
     let state: String
     switch j.state {
@@ -1655,7 +1692,10 @@ case "job":
     let jobs = jobStore(o)
     let runner = JobRunner(store: jobs)
     func run(_ job: Job) async {
-        var installer = Installer(recipe: job.recipe, request: job.request, store: contentStore(o)) { print("  " + $0) }
+        let ticker = BuildTicker()
+        defer { ticker.stop() }
+        var installer = Installer(recipe: job.recipe, request: job.request, store: contentStore(o),
+                                  progress: { ticker.show($0) }) { print("  " + $0) }
         installer.metaTool = metaToolURL(o)
         do {
             let now = job.currentToolchainCommit() ?? L("unknown", "unbekannt")

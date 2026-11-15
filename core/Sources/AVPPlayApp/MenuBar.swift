@@ -8,8 +8,10 @@ extension AppModel {
     func menuBarStatus(remote: RemoteServer) -> MenuBarStatus {
         let running = runningJob.flatMap { id in jobs.first { $0.id == id } }
         let progress = runningJob.flatMap { copyProgress[$0] }
+        // A build of a game's parts reports no bytes: its share of the whole build stands in, in thousandths.
+        let built = progress?.build.map { Int64(($0.estimate(at: Date()).overall * 1000).rounded(.down)) }
         let job = running.map { MenuBarStatus.RunningJob(title: $0.recipe.title, step: progress?.step ?? $0.current,
-                                                           done: progress?.done, total: progress?.total) }
+                                                           done: built ?? progress?.done, total: built != nil ? 1000 : progress?.total) }
         let remoteState: MenuBarStatus.Remote =
             !remote.enabled ? .off
             : remote.problem.map { .problem($0) }

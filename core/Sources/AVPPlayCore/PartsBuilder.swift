@@ -21,6 +21,17 @@ public struct PartsBuilder: Codable, Sendable, Equatable {
 }
 
 public enum PartsError: Error, CustomStringConvertible, Equatable {
+    /// “ in step 14 of 20 (“Creating a test world”)” for `14/20 world`, in the language of the moment.
+    static func stepWords(_ stage: String) -> String {
+        let parts = stage.split(separator: " ", maxSplits: 1).map(String.init)
+        let numbers = parts.first?.split(separator: "/").compactMap { Int($0) } ?? []
+        guard numbers.count == 2 else { return L(" in step \(stage)", " in Schritt \(stage)") }
+        let name = parts.count > 1 ? parts[1] : ""
+        let title = BuildStepNames.title(name) ?? name
+        return title.isEmpty ? L(" in step \(numbers[0]) of \(numbers[1])", " in Schritt \(numbers[0]) von \(numbers[1])")
+                             : L(" in step \(numbers[0]) of \(numbers[1]) (“\(title)”)", " in Schritt \(numbers[0]) von \(numbers[1]) („\(title)“)")
+    }
+
     case blankInPath(String)
     case fetchFailed(String)
     case wrongCommit(have: String, want: String)
@@ -30,7 +41,8 @@ public enum PartsError: Error, CustomStringConvertible, Equatable {
     case couldNotStart(String)
     /// The builder's own check found something missing on this Mac; its lines, as it printed them.
     case prerequisites([String])
-    /// The build ended early: the step it was in, the last thing it said, and where everything it said is kept.
+    /// The build ended early: the step it was in (`<i>/<n> <short name>`), the builder's reason or the last thing it
+    /// said, and where everything it said is kept.
     case buildFailed(stage: String?, reason: String, log: URL)
     /// The build ended without naming what it built, or what it named is not what lies there.
     case badResult(String, log: URL)
@@ -60,8 +72,10 @@ public enum PartsError: Error, CustomStringConvertible, Equatable {
         case .prerequisites(let lines):
             return L("This Mac cannot build the game's parts yet: ", "Dieser Mac kann die Spielteile noch nicht bauen: ") + lines.joined(separator: " · ")
         case .buildFailed(let stage, let reason, let log):
-            let at = stage.map { L(" in step \($0)", " in Schritt \($0)") } ?? ""
-            let why = reason.isEmpty ? "" : ": \(reason)"
+            let at = stage.map(PartsError.stepWords) ?? ""
+            // The builder's sentence ends with its own full stop; ours follows.
+            let sentence = reason.hasSuffix(".") ? String(reason.dropLast()) : reason
+            let why = sentence.isEmpty ? "" : ": \(sentence)"
             return L("Building the game's parts stopped\(at)\(why). Log: \(log.path). “Resume” continues with the steps that are not finished.",
                      "Der Bau der Spielteile ist\(at) stehen geblieben\(why). Protokoll: \(log.path). „Fortsetzen“ macht mit den Schritten weiter, die noch nicht fertig sind.")
         case .badResult(let why, let log):
@@ -314,9 +328,24 @@ public final class ProcessGroupStop: @unchecked Sendable {
 /// One run of a builder (`tools/avpplay/build_parts.sh`).
 ///
 /// The contract: it gets `AVPPLAY_WORK` (a folder without blanks for everything it downloads and builds; kept between
-/// runs) and `AVPPLAY_OUT` (the zip to write). It prints `STAGE <i>/<n> <short name>` when a step begins, anything
-/// else as plain lines, and on success ends with status 0 and a last line `PARTS <path> <sha256>`. Finished steps are
-/// skipped on the next run. `--check` only tests what the Mac needs and prints one line per problem (status 1 if any).
+/// runs) and `AVPPLAY_OUT` (the zip to write). It prints `STAGE <i>/<n> <short name>` when a step begins
+/// (`STAGE <i>/<n> <short name> (already done)` for a step whose result is there and that it skips), anything else as
+/// plain lines, and on success ends with status 0 and a last line `PARTS <path> <sha256>`. A failure ends with
+/// `FAILED <i>/<n> <short name>: <one sentence>` and `LOG <path>`. Finished steps are skipped on the next run.
+/// `--check` only tests what the Mac needs and prints one line per problem (status 1 if any).
+///
+/// Two more lines feed the progress display (`BuildProgress`); a builder may print neither, and then the display
+/// shows “Step i of n” and the time spent in it:
+/// - `PLAN <name>:<seconds>[:<flags>] …` once, before the first `STAGE` line: every step in order with how many
+///   seconds it took on the builder's reference Mac in the state its work folder is in. Flags: `d` its result is
+///   there (it will be skipped), `n` its time is mostly a download.
+/// - `PROGRESS <done> <total> <unit>[ <w1>,<w2>,…]` within the running step, at most about once a second. Units:
+///   `files`, `bytes`, `entries`, `libraries` (counted work), `parts` (done = parts finished; the weights are the
+///   reference seconds of each part), `seconds` (a timed wait: done = seconds behind it when the line was written,
+///   total = its expected length). An unknown unit is shown as plain numbers.
+///
+/// A line with a leading blank is the builder quoting a tool's output, never one of these. Lines this side does not
+/// know are text for the log, and so is any of these lines that does not parse.
 public struct PartsBuild: Sendable {
     public struct Stage: Sendable, Equatable {
         public var index: Int
@@ -463,8 +492,10 @@ public struct PartsBuild: Sendable {
         return said.isEmpty ? [L("the builder's check ended with status \(status)", "die Prüfung des Bauwerkzeugs endete mit Status \(status)")] : said
     }
 
-    /// Builds the parts into `out`. Everything the builder says goes into `log`; each step it begins is passed on.
-    public func run(out: URL, log: URL, stop: ProcessGroupStop? = nil, stage: @escaping @Sendable (Stage) -> Void = { _ in }) throws -> Result {
+    /// Builds the parts into `out`. Everything the builder says goes into `log`; each step it begins is passed on,
+    /// and so is the state of the build whenever a display would show something new.
+    public func run(out: URL, log: URL, stop: ProcessGroupStop? = nil, stage: @escaping @Sendable (Stage) -> Void = { _ in },
+                    progress: @escaping @Sendable (BuildProgress) -> Void = { _ in }) throws -> Result {
         let fm = FileManager.default
         guard !out.path.contains("\n") else { throw PartsError.couldNotStart("output path") }
         try fm.createDirectory(at: out.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -480,21 +511,30 @@ public struct PartsBuild: Sendable {
         let state = RunState()
         let status = follow(pid, output) { raw in
             handle.write(Data((raw + "\n").utf8))
+            // Control characters out, but the leading blank stays: it marks a quoted line.
+            let plain = String(String.UnicodeScalarView(raw.unicodeScalars.filter { !CharacterSet.controlCharacters.contains($0) }).prefix(2000))
             let line = PartsBuild.clean(raw, limit: 400)
             guard !line.isEmpty else { return }
-            if let s = Stage.parse(line) {
+            let parsed = BuildProgress.Line.parse(plain)
+            if case .stage(let s, _)? = parsed {
                 state.set(stage: s)
                 stage(s)
-            } else {
+            } else if parsed == nil {
                 state.set(last: line)
             }
+            if let snapshot = state.apply(plain, result: parsed == nil && PartsBuild.parseResult(line) != nil) { progress(snapshot) }
         }
         if stop?.isStopped == true { throw CancellationError() }
         let (current, last) = state.snapshot
         guard status == 0 else {
-            let named = current.map { $0.name.isEmpty ? "\($0.index)/\($0.count)" : "\($0.index)/\($0.count) (\($0.name))" }
-            let reason = last.hasPrefix("PARTS ") ? "" : last
-            throw PartsError.buildFailed(stage: named, reason: reason.isEmpty && status < 0 ? L("ended by signal \(-status)", "durch Signal \(-status) beendet") : reason, log: log)
+            let built = state.progress
+            let index = built.failure?.index ?? current?.index
+            let count = current?.count ?? built.count
+            let name = index.flatMap { i in built.plan.flatMap { i <= $0.count ? $0[i - 1].name : nil } } ?? current?.name ?? ""
+            let named = index.map { name.isEmpty ? "\($0)/\(count)" : "\($0)/\(count) \(name)" }
+            var reason = built.failure?.reason ?? (last.hasPrefix("PARTS ") ? "" : last)
+            if reason.isEmpty, status < 0 { reason = L("ended by signal \(-status)", "durch Signal \(-status) beendet") }
+            throw PartsError.buildFailed(stage: named, reason: reason, log: log)
         }
         guard let result = PartsBuild.parseResult(last) else {
             throw PartsError.badResult(L("its last line does not name them", "seine letzte Zeile nennt sie nicht"), log: log)
@@ -520,9 +560,17 @@ public struct PartsBuild: Sendable {
         private let lock = NSLock()
         private var stage: Stage?
         private var last = ""
+        private var built = BuildProgress()
         func set(stage: Stage) { lock.lock(); self.stage = stage; lock.unlock() }
         func set(last: String) { lock.lock(); self.last = last; lock.unlock() }
         var snapshot: (Stage?, String) { lock.lock(); defer { lock.unlock() }; return (stage, last) }
+        var progress: BuildProgress { lock.lock(); defer { lock.unlock() }; return built }
+        /// The new state of the build when this line changed it.
+        func apply(_ line: String, result: Bool, at now: Date = Date()) -> BuildProgress? {
+            lock.lock(); defer { lock.unlock() }
+            if result { built.finish(at: now); return built }
+            return built.apply(line, at: now) ? built : nil
+        }
     }
 }
 
