@@ -78,10 +78,16 @@ public struct Recipe: Codable, Sendable, Identifiable {
         public var icon: String
         /// A picture of the game that goes behind the icon. Without it the icon stands on a plain ground.
         public var background: String?
+        /// Where the same two files can be fetched before the parts are built, so that the game has its picture from
+        /// the start: an `https` address under which the game's own publisher serves them by content. Each entry's
+        /// last path component must then be the SHA-1 of the file (40 hex digits); it is fetched from
+        /// `<origin>/<its first two digits>/<it>` and kept only when its SHA-1 is that name.
+        public var origin: String?
 
-        public init(icon: String, background: String? = nil) {
+        public init(icon: String, background: String? = nil, origin: String? = nil) {
             self.icon = icon
             self.background = background
+            self.origin = origin
         }
     }
 
@@ -425,7 +431,9 @@ extension Recipe {
         }
         // Paths of pictures inside the parts archive become arguments of a system tool: plain relative paths, no patterns.
         if let pictures = icon?.archive {
-            guard builder != nil, ([pictures.icon] + [pictures.background].compactMap { $0 }).allSatisfy(Recipe.isArchiveEntry) else {
+            guard builder != nil, ([pictures.icon] + [pictures.background].compactMap { $0 }).allSatisfy(Recipe.isArchiveEntry),
+                  pictures.origin.map({ ArchiveArt.originBase($0) != nil
+                      && ([pictures.icon] + [pictures.background].compactMap { $0 }).allSatisfy { ArchiveArt.contentName($0) != nil } }) ?? true else {
                 throw RecipeError.invalid(L("pictures in the archive of the game's parts", "Bilder im Archiv der Spielteile"))
             }
         }

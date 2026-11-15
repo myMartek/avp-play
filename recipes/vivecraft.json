@@ -55,7 +55,8 @@
  "icon": {
   "archive": {
    "icon": "assets/objects/f0/f00657542252858a721e715a2e888a9226404e35",
-   "background": "assets/objects/6a/6a84d4afab797aaf9f6ad283ebcd5899493c5c64"
+   "background": "assets/objects/6a/6a84d4afab797aaf9f6ad283ebcd5899493c5c64",
+   "origin": "https://resources.download.minecraft.net"
   }
  },
  "status": {

@@ -1332,6 +1332,27 @@ final class AppModel: ObservableObject {
         }
     }
 
+    private var fetchingOwnPictures = false
+
+    /// A game whose picture comes out of its own files (Minecraft) gets it from the files' origin before its parts
+    /// are built – once; afterwards the list is read again so the tile shows it.
+    func fetchOwnPictures() {
+        guard !fetchingOwnPictures else { return }
+        let store = paths.store
+        let wanted = games.map(\.recipe).filter { $0.icon?.archive?.origin != nil && ArchiveArt.hero(recipe: $0, store: store) == nil }
+        guard !wanted.isEmpty else { return }
+        fetchingOwnPictures = true
+        Task.detached(priority: .utility) {
+            var made = false
+            for recipe in wanted where await ArchiveArt.fetchFromOrigin(recipe: recipe, store: store) { made = true }
+            let any = made
+            await MainActor.run {
+                self.fetchingOwnPictures = false
+                if any { self.refresh() }
+            }
+        }
+    }
+
     var deviceWatch: Task<Void, Never>?
     private var checkingDevice = false
     static let deviceWatchInterval: Duration = .seconds(10)
@@ -1376,6 +1397,7 @@ final class AppModel: ObservableObject {
         metalFXExpected = s.metalFXExpected
         toolchainChoices = s.toolchainChoices
         games = s.games
+        fetchOwnPictures()
         loadOwnCatalogEntries()
         checkStoreVersions()
         loadProblem = s.loadProblem
