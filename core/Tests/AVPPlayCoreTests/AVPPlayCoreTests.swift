@@ -43,7 +43,7 @@ final class RecipeTests: XCTestCase {
         // Die Referenzspiele und Sonderapps sind da; dazu kommen Rezepte, die aus einem geprüften Entwurf entstanden
         // sind. Die tragen die Kennung des Entwurfs (`store-<App-Kennung>`), damit schon Geladenes weiter gilt.
         let ids = Set(all.map(\.id))
-        let byHand: Set<String> = ["alyx", "batman", "beatsaber140", "csvr", "doom3quest", "hl2", "moss", "portal", "skyrimvr", "vivecraft", "walkabout", "wrath2"]
+        let byHand: Set<String> = ["alyx", "batman", "beatsaber140", "csvr", "doom3quest", "hl2", "moss", "portal", "revc", "skyrimvr", "vivecraft", "walkabout", "wrath2"]
         XCTAssertTrue(ids.isSuperset(of: byHand))
         for recipe in all where !byHand.contains(recipe.id) {
             XCTAssertEqual(recipe.id, recipe.store.appId.map(DraftRecipe.identifier(appId:)), "\(recipe.id)")
@@ -89,8 +89,17 @@ final class RecipeTests: XCTestCase {
         XCTAssertTrue(TreeStore.dataTrees(of: skyrim).isEmpty)
         XCTAssertTrue(SteamFetcher.fetchesInJob(skyrim))
         XCTAssertEqual(Set((skyrim.trees ?? []).compactMap { $0.source.steam?.app }), ["611670", "250820"])
+        // GTA Vice City through reVC: a toolchain of its own kind, pinned to a commit; the game is one folder from the
+        // user's Steam account (no single files), for the toolchain, and a job fetches it.
+        let revc = try XCTUnwrap(all.first { $0.id == "revc" })
+        XCTAssertEqual(revc.toolchain.kind, "revc")
+        XCTAssertNotNil(revc.toolchain.source)
+        XCTAssertTrue(revc.files.isEmpty)
+        XCTAssertEqual(TreeStore.toolchainTrees(of: revc).map(\.role), [.game])
+        XCTAssertEqual((revc.trees ?? []).compactMap { $0.source.steam?.app }, ["12110"])
+        XCTAssertTrue(SteamFetcher.fetchesInJob(revc))
         // Every other shipped game is Klepton's.
-        XCTAssertEqual(all.filter { $0.toolchain.kind != nil }.map(\.id), ["skyrimvr"])
+        XCTAssertEqual(all.filter { $0.toolchain.kind != nil }.map(\.id).sorted(), ["revc", "skyrimvr"])
         // Counter-Strike: ein frei ladbares APK mit Prüfsumme, und die Daten des Originalspiels als ein Ordner aus dem
         // Steam-Konto des Nutzers – nur 'cstrike' und 'valve', an dem Ort, an dem die Engine sie sucht.
         let cs = try XCTUnwrap(all.first { $0.id == "csvr" })
