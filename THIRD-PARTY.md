@@ -82,6 +82,29 @@ source at the commit the recipe names (from <https://github.com/myMartek/Skyrim-
 the adapter for AVP Play until it is part of the original) and builds it on your Mac. The game's translated program
 is made from your own game files there and stays on your Mac and your headset.
 
+## GTA Vice City through reVC
+
+The Vice City recipe is built with [reVC for visionOS](https://github.com/LowRiderXR/revc-visionos-app) by
+LowRiderXR (MIT for its own code: the app around the engine, its renderer and scripts). It runs **reVC**, the
+reverse-engineered Grand Theft Auto: Vice City engine of the re3 project, in LowRiderXR's visionOS port
+[revc-visionos](https://github.com/LowRiderXR/revc-visionos). **The original reVC repository has no licence:** the
+re3 project's authors state that they do not feel in a position to give the engine one, and the port grants none
+either. AVP Play uses it as it is published. Grand Theft Auto and Vice City are trademarks of Take-Two Interactive;
+neither this project nor reVC is affiliated with or endorsed by Rockstar Games or Take-Two.
+
+Nothing of it is part of the app or of the toolchain package: when you install the game, AVP Play fetches the app's
+source at the commit the recipe names (from <https://github.com/myMartek/revc-visionos-app>, a fork that carries the
+adapter for AVP Play, the start window, the settings page and performance panel of AVP Play's games and MetalFX
+upscaling, all MIT like the app; the panel's drawing and GPU count come from Klepton, MIT) and builds it on your Mac.
+
+**Downloaded and built on your Mac by that build, not passed on by this project:** the engine (revc-visionos with
+[librw-visionos](https://github.com/LowRiderXR/librw-visionos), MIT; {fmt}, MIT; dr_mp3, public domain or MIT-0;
+libogg, libopus and opusfile, BSD-3-Clause) at the release tag the project's `setup.sh` names, and from the project's
+GitHub release, checked against its SHA-256 sums, prebuilt ANGLE (BSD-3-Clause, with a Klepton patch, MIT) and OpenAL
+Soft (LGPL-2.0-or-later, with its HRTF data under Apache-2.0). The project's `THIRD_PARTY_NOTICES.md` has every
+licence text. The game's files come from your own Steam copy of GTA Vice City (app 12110) and stay on your Mac and
+your headset.
+
 ## Minecraft: Java Edition with Vivecraft
 
 The Minecraft recipe builds on [vivecraft-visionos](https://github.com/rebelancap/vivecraft-visionos) by rebelancap
