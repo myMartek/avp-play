@@ -291,7 +291,8 @@ public enum CompanionHandover {
         public var bytes: Int64 { game.parts.size ?? 0 }
     }
 
-    public static func megabytes(_ bytes: Int64) -> String { String(format: "%.0f MB", Double(bytes) / 1_048_576) }
+    /// In Megabyte, wie der Finder sie zählt (eine Million Bytes): Die Zahl soll zu der passen, die der Nutzer am Mac sieht.
+    public static func megabytes(_ bytes: Int64) -> String { String(format: "%.0f MB", Double(bytes) / 1_000_000) }
 
     /// Was die Oberfläche zu einem solchen Spiel fragt, bevor etwas kopiert wird: ob seine Spielteile gebaut sind und wie groß.
     public struct PartsOffer: Sendable, Equatable, Identifiable {
