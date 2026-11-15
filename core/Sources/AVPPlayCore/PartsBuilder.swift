@@ -368,7 +368,9 @@ public struct PartsBuild: Sendable {
     }
 
     func environment(out: URL?) -> [String: String] {
-        var env = ProcessInfo.processInfo.environment
+        // AVP Play's own switches stay here. A builder reads variables of the same prefix, and one name meant two
+        // things once: a jobs folder to AVP Play, a number of compiler jobs to the builder.
+        var env = ProcessInfo.processInfo.environment.filter { !$0.key.hasPrefix("AVPPLAY_") }
         // Only what macOS and Xcode bring: the same on every Mac. What else the builder needs, it fetches into its
         // working folder itself.
         env["PATH"] = "/usr/bin:/bin:/usr/sbin:/sbin"

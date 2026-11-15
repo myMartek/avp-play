@@ -497,4 +497,18 @@ final class PartsBuilderTests: XCTestCase {
         try hero.image.write(to: keep.appendingPathComponent("vivecraft-hero.png"))
         try (seen.said.joined(separator: "\n") + "\n").write(to: keep.appendingPathComponent("job-lines.txt"), atomically: true, encoding: .utf8)
     }
+
+    /// AVP Play's own `AVPPLAY_…` switches must not reach the builder: `AVPPLAY_JOBS` is a folder here, and a builder
+    /// once read the same name as its number of compiler jobs and stopped in the middle of the build.
+    func testTheBuilderGetsNoneOfTheAppsOwnSwitches() {
+        setenv("AVPPLAY_JOBS", "/tmp/a-jobs-folder", 1)
+        setenv("AVPPLAY_STORE", "/tmp/a-store", 1)
+        defer { unsetenv("AVPPLAY_JOBS"); unsetenv("AVPPLAY_STORE") }
+        let build = PartsBuild(builder: URL(fileURLWithPath: "/tmp/builder"), work: URL(fileURLWithPath: "/tmp/work"))
+        let env = build.environment(out: URL(fileURLWithPath: "/tmp/out.zip"))
+        XCTAssertEqual(env["AVPPLAY_WORK"], "/tmp/work")
+        XCTAssertEqual(env["AVPPLAY_OUT"], "/tmp/out.zip")
+        XCTAssertEqual(env.keys.filter { $0.hasPrefix("AVPPLAY_") }.sorted(), ["AVPPLAY_OUT", "AVPPLAY_WORK"])
+        XCTAssertEqual(env["PATH"], "/usr/bin:/bin:/usr/sbin:/sbin")
+    }
 }
