@@ -165,6 +165,11 @@ Reports and fixes from the app help just as much – see *Community Verified* be
   the headset there, its program translated on your Mac before the install. AVP Play builds Skyrim VR with that
   project (it fetches the source when you install the game) and only adds the way in: the files from your own
   Steam purchase, the mods, the languages, the install.
+- **[rebelancap](https://github.com/rebelancap)** again, for
+  [vivecraft-visionos](https://github.com/rebelancap/vivecraft-visionos): Minecraft: Java Edition with the VR mod
+  [Vivecraft](https://github.com/Vivecraft/VivecraftMod) on the Vision Pro, the game compiled ahead of time for
+  Apple's chips. AVP Play's Minecraft is based on that port: its parts are built on your own Mac, and the app
+  around them with the Klepton toolchain – named in [THIRD-PARTY.md](THIRD-PARTY.md#minecraft-java-edition-with-vivecraft).
 - **Everyone who sent in a fix or a report** – the *Community Verified* games are their work.
 
 ## Legal

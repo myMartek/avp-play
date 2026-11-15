@@ -82,6 +82,24 @@ source at the commit the recipe names (from <https://github.com/myMartek/Skyrim-
 the adapter for AVP Play until it is part of the original) and builds it on your Mac. The game's translated program
 is made from your own game files there and stays on your Mac and your headset.
 
+## Minecraft: Java Edition with Vivecraft
+
+The Minecraft recipe builds on [vivecraft-visionos](https://github.com/rebelancap/vivecraft-visionos) by rebelancap
+(MIT), the port of Minecraft: Java Edition with the VR mod [Vivecraft](https://github.com/Vivecraft/VivecraftMod)
+(LGPL-3.0) to the Vision Pro: the game and its mods are compiled ahead of time into a program for Apple's chips. The
+app around it is built with this project's toolchain, the Klepton fork
+([Klepton](https://github.com/shinyquagsire23/Klepton), MIT). Nothing of the game or of the port is part of the app
+or of the toolchain package: when you install the game, AVP Play fetches the builder at the commit the recipe names
+(from <https://github.com/myMartek/vivecraft-visionos>, a fork of the port) and builds the game's parts on your Mac
+from what Mojang's servers deliver. They stay on your Mac and your headset.
+
+The built game holds, besides Minecraft itself (Minecraft EULA; it needs a Microsoft account that owns Minecraft:
+Java Edition), Vivecraft and the mods the port brings – among them Sodium (Polyform Shield 1.0.0), Lithium,
+Krypton, ImmediatelyFast and Cloth Config (LGPL-3.0), Fabric (Apache-2.0) and LWJGL (BSD-3-Clause). The port's
+`THIRD-PARTY.md` lists every part with its version and licence, and the notices and licence texts are inside the
+game's app (`Licenses/`). Minecraft is a trademark of Microsoft/Mojang; this project is not affiliated with or
+endorsed by Microsoft, Mojang Studios or the Vivecraft project.
+
 ## xrizer
 
 From version 1.0.8 on, the Half-Life: Alyx recipe downloads a build of [xrizer](https://github.com/Supreeeme/xrizer) (OpenVR on top of
