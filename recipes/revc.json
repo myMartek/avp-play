@@ -1,0 +1,83 @@
+{
+ "schema": 1,
+ "id": "revc",
+ "title": "Grand Theft Auto: Vice City (reVC)",
+ "package": "steam-app-12110",
+ "versionName": "Steam-Build 2745",
+ "versionCode": 2745,
+ "store": {},
+ "toolchain": {
+  "target": "revc",
+  "kind": "revc",
+  "title": "reVC",
+  "minCommit": "4554d32",
+  "source": {
+   "repository": "https://github.com/myMartek/revc-visionos-app",
+   "commit": "4554d329489b7cd172bd569e763891f28cd8b667",
+   "version": 83,
+   "path": "tools/avpplay_toolchain"
+  }
+ },
+ "files": [],
+ "trees": [
+  {
+   "name": "game",
+   "role": "game",
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "GTA Vice City from your own Steam account (the classic Windows version, app 12110). With a Steam sign-in under Setup the app fetches it for you (about 1.3 GB). By hand: 'download_depot 12110 12111' in the Steam client's console. Any other classic PC copy works too; the Definitive Edition does not.",
+     "de": "GTA Vice City aus dem eigenen Steam-Konto (die klassische Windows-Fassung, App 12110). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App es für dich (rund 1,3 GB). Von Hand: 'download_depot 12110 12111' in der Konsole des Steam-Clients. Jede andere klassische PC-Fassung geht auch, die Definitive Edition nicht."
+    },
+    "steam": {
+     "app": "12110",
+     "depots": [
+      {
+       "id": "12111",
+       "manifest": "5496629481013472003",
+       "bytes": 1574222382
+      }
+     ]
+    }
+   },
+   "markers": [
+    {
+     "path": "models/gta3.img",
+     "size": 327487488,
+     "sha256": "12547d034a5b114b891582e36b7214794e5eafe1ad75a653bf2d9b3e2e18849a"
+    },
+    {
+     "path": "data/main.scm",
+     "size": 1269133,
+     "sha256": "0fb3fd45b6a6dc21870cb48d9abe983510284b2b09b0c3d0eeac51d5dff338c7"
+    },
+    {
+     "path": "TEXT/american.gxt",
+     "size": 421910,
+     "sha256": "5a779f819502afa6b5d1d820bda212518df8e930194912a8e93012a08ae3e41b"
+    }
+   ]
+  }
+ ],
+ "status": {
+  "playability": "untested",
+  "download": "special",
+  "notes": [
+   {
+    "en": "Special app: not a Meta Store title and not a Klepton game. reVC, the reverse-engineered Vice City engine of the re3 project, runs natively on the Vision Pro through “reVC for visionOS” by LowRiderXR (github.com/LowRiderXR/revc-visionos-app), in a full immersive space, third-person.",
+    "de": "Sonderapp: kein Titel aus dem Meta-Store und kein Klepton-Spiel. reVC, die nachgebaute Vice-City-Engine des re3-Projekts, läuft nativ auf der Vision Pro, über „reVC for visionOS“ von LowRiderXR (github.com/LowRiderXR/revc-visionos-app), in einem vollen immersiven Raum, aus der Third-Person-Sicht."
+   },
+   {
+    "en": "The app is built from source on this Mac (a minute or two; the first build also fetches the engine and its libraries). The game files (about 1.5 GB) come from your own Steam purchase and are never distributed.",
+    "de": "Die App wird auf diesem Mac aus den Quellen gebaut (ein, zwei Minuten; der erste Bau holt dazu die Engine und ihre Bibliotheken). Die Spieldateien (rund 1,5 GB) stammen aus dem eigenen Steam-Kauf und werden nie weitergegeben."
+   },
+   {
+    "en": "Needs a game controller (Xbox or PlayStation); there is no hand input. The first start prepares the textures once, with a progress bar.",
+    "de": "Braucht einen Controller (Xbox oder PlayStation); Handeingabe gibt es nicht. Der erste Start bereitet die Texturen einmal vor, mit Fortschrittsbalken."
+   }
+  ]
+ },
+ "icon": {
+  "steamAppId": "12110"
+ }
+}
