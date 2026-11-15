@@ -32,7 +32,23 @@ struct SoftwareCreditsView: View {
          Item(name: "Surreal Touch SDK", authors: "Surreal Interactive", license: L("Surreal Interactive's terms", "Bedingungen von Surreal Interactive"),
               url: "https://github.com/surreal-interactive/SwiftSDKBinary",
               note: L("Downloaded from Surreal Interactive when a game is built with Surreal Touch support.",
-                      "Wird bei Surreal Interactive geladen, wenn ein Spiel mit Surreal-Touch-Unterstützung gebaut wird."))]
+                      "Wird bei Surreal Interactive geladen, wenn ein Spiel mit Surreal-Touch-Unterstützung gebaut wird.")),
+         Item(name: "Skyrim VR on Apple Vision Pro", authors: "gseddon", license: "MIT",
+              url: "https://github.com/gseddon/Skyrim-VR-Vision-Pro",
+              note: L("Fetched and built on this Mac for Skyrim VR only; its own notices list what it builds on.",
+                      "Wird nur für Skyrim VR geholt und auf diesem Mac gebaut; seine eigenen Hinweise nennen, worauf es aufbaut.")),
+         Item(name: "vivecraft-visionos", authors: "rebelancap", license: "MIT",
+              url: "https://github.com/rebelancap/vivecraft-visionos",
+              note: L("The port of Minecraft: Java Edition to the Vision Pro. Fetched for Minecraft only; it builds the game's parts on this Mac.",
+                      "Die Portierung von Minecraft: Java Edition auf die Vision Pro. Wird nur für Minecraft geholt und baut die Spielteile auf diesem Mac.")),
+         Item(name: "Vivecraft", authors: "The Vivecraft team", license: "LGPL-3.0",
+              url: "https://github.com/Vivecraft/VivecraftMod",
+              note: L("The VR mod in Minecraft. The game's app lists every mod and library it holds (Licenses).",
+                      "Die VR-Mod in Minecraft. Die App des Spiels nennt jede Mod und Bibliothek, die sie enthält (Licenses).")),
+         Item(name: "Oracle GraalVM", authors: "Oracle", license: L("GraalVM Free Terms and Conditions", "GraalVM Free Terms and Conditions"),
+              url: "https://www.oracle.com/downloads/licenses/graal-free-license.html",
+              note: L("Downloaded from Oracle when Minecraft's parts are built; it translates the game for Apple's chips.",
+                      "Wird bei Oracle geladen, wenn die Spielteile von Minecraft gebaut werden; es übersetzt das Spiel für Apples Chips."))]
     }
 
     var body: some View {
