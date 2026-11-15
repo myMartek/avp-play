@@ -140,15 +140,38 @@ extension AppModel {
                                           items: items))
         }
 
+        // Ein Spiel, das selbst nach seinem Konto fragt: was man braucht und wo man sich anmeldet.
+        if let account = game.recipe.gameAccount {
+            sections.append(RemoteSection(id: "game-account", title: account.title.text,
+                                          items: account.notes.enumerated().map { Item(id: "game-account-\($0.offset)", kind: .text, title: "", detail: $0.element.text) }))
+        }
+        // Ein Spiel, dessen Teile auf dem Mac gebaut werden: was der Bau braucht – bevor jemand „Installieren“ wählt.
+        if let builder = game.recipe.builder {
+            var items: [Item] = []
+            if case .built? = game.status.parts {
+                items.append(Item(id: "builder-done", kind: .text, title: "",
+                                  detail: L("The game's parts are built. Installing again does not build them again.",
+                                            "Die Spielteile sind gebaut. Eine weitere Installation baut sie nicht noch einmal."), style: .secondary))
+            } else {
+                items += builder.notes.enumerated().map { Item(id: "builder-\($0.offset)", kind: .text, title: "", detail: $0.element.text) }
+            }
+            items.append(Item(id: "builder-source", kind: .text, title: "",
+                              detail: AppModel.builderSourceText(builder, local: GameParts.usesLocalBuilder(game.recipe)), style: .secondary))
+            sections.append(RemoteSection(id: "builder", title: L("Built on the Mac", "Wird auf dem Mac gebaut"), items: items))
+        }
+
         // Auf diesem Mac
         var mac: [Item] = []
         if game.status.filesRequired > 0 {
             mac.append(Item(id: "files", kind: .fact, title: L("Files", "Dateien"),
                             value: L("\(game.status.filesPresent) of \(game.status.filesRequired) present", "\(game.status.filesPresent) von \(game.status.filesRequired) vorhanden")))
         }
-        if hasDownloads(game) {
+        if let parts = game.status.parts {
+            mac.append(Item(id: "parts", kind: .fact, title: L("Game parts", "Spielteile"), value: AppModel.partsText(parts)))
+        }
+        if hasDownloads(game), !(game.partsToBuild && game.status.filesToDownload == 0) {
             mac.append(Item(id: "to-download", kind: .fact, title: L("Still to download", "Noch zu laden"), value: downloadSizeText(game)))
-        } else if game.status.stockComplete, game.prepared {
+        } else if game.status.stockComplete, game.prepared, game.status.parts == nil {
             mac.append(Item(id: "to-download", kind: .fact, title: "Download", value: L("nothing left to download", "nichts mehr zu laden")))
         }
         if game.storeBytes > 0 {
@@ -244,6 +267,51 @@ extension AppModel {
             sections.append(RemoteSection(id: "content", title: L("Optional Content", "Wählbare Inhalte"), items: items))
         }
 
+        // Mods of the game's own toolchain (`GameMods`; the "Mods" box of the Mac's page): a switch per set. The key for the
+        // mods' site is typed in on the Mac only; here it says which way the files will come.
+        // Not on this Mac yet: fetched now, as the Mac's own page does, so that the sets are here before the first install.
+        if gameMods(game) == nil, toolchainChoices.usesRecipeToolchain(game.recipe), let source = game.recipe.toolchain.source {
+            let named = game.recipe.toolchainName(String(source.version))
+            if ownToolchainFetching.contains(game.id) {
+                sections.append(RemoteSection(id: "mods", title: L("Mods", "Mods"), items: [
+                    Item(id: "mods-fetching", kind: .progress, title: L("Fetching \(named) from GitHub; the game's mods show here afterwards …",
+                                                                      "\(named) wird von GitHub geholt; danach stehen hier die Mods des Spiels …"))]))
+            } else if let problem = ownToolchainProblem[game.id] {
+                sections.append(RemoteSection(id: "mods", title: L("Mods", "Mods"), items: [
+                    Item(id: "mods-problem", kind: .text, title: "",
+                         detail: L("\(named) could not be fetched: \(problem) Without it the game's mods cannot be shown; try again on the game's page on the Mac.",
+                                   "\(named) ließ sich nicht holen: \(problem) Ohne sie lassen sich die Mods des Spiels nicht zeigen; versuche es auf der Seite des Spiels am Mac noch einmal."),
+                         style: .warning)]))
+            } else {
+                Task { @MainActor [weak self] in self?.fetchOwnToolchainIfMissing(game) }
+            }
+        }
+        if let mods = gameMods(game) {
+            let chosen = gameModSets(game)
+            var items: [Item] = []
+            for set in mods.sets {
+                let list = (set.mods ?? []).map { $0.name + ($0.version.map { " \($0)" } ?? "") }.joined(separator: " · ")
+                let detail = [set.about?.text, list.isEmpty ? nil : list].compactMap { $0 }.joined(separator: "\n")
+                items.append(Item(id: "mods:\(set.id)", kind: .toggle, title: set.title.text, detail: detail.isEmpty ? nil : detail,
+                                  on: chosen.contains(set.id)))
+            }
+            if let about = mods.about?.text { items.append(Item(id: "mods-about", kind: .text, title: "", detail: about, style: .secondary)) }
+            items.append(Item(id: "mods-update", kind: .text, title: "",
+                              detail: L("Switching mods on or off is an update of the game: install it again afterwards. Your saved games stay.",
+                                        "Mods ein- oder auszuschalten ist ein Update des Spiels: Installiere es danach erneut. Deine Spielstände bleiben."),
+                              style: .secondary))
+            if mods.source?.key != nil {
+                items.append(Item(id: "mods-key", kind: .text, title: "",
+                                  detail: modsKeyOn
+                                    ? L("The Mac fetches the mod files with the key stored there.",
+                                        "Der Mac lädt die Mod-Dateien mit dem dort hinterlegten Schlüssel.")
+                                    : L("No key is in use on the Mac: it opens each download page in its browser, and the downloads have to be clicked there. A key can be stored on the Mac, on this game's page.",
+                                        "Auf dem Mac ist kein Schlüssel in Gebrauch: Er öffnet jede Download-Seite in seinem Browser, und die Downloads müssen dort angeklickt werden. Ein Schlüssel lässt sich am Mac auf der Seite dieses Spiels hinterlegen."),
+                                  style: modsKeyOn ? .secondary : .warning))
+            }
+            sections.append(RemoteSection(id: "mods", title: L("Mods", "Mods"), items: items))
+        }
+
         // Steam Workshop
         if game.recipe.workshop != nil, game.prepared {
             sections.append(remoteWorkshopSection(game))
@@ -281,7 +349,8 @@ extension AppModel {
 
         // Gut zu wissen
         var know: [Item] = []
-        let ownership = OwnershipLabel.describe(owned: owned(game), checking: checkingPurchase.contains(game.id) || checkingOwnership, source: game.recipe.source)
+        let ownership = OwnershipLabel.describe(owned: owned(game), checking: checkingPurchase.contains(game.id) || checkingOwnership, source: game.recipe.source,
+                                                inGame: game.recipe.gameAccount != nil)
         know.append(Item(id: "owned", kind: .fact, title: L("Ownership", "Besitz"), value: ownership.text))
         if game.fromStore, OwnershipCache.key(for: game.recipe) != nil {
             let checking = checkingPurchase.contains(game.id)
@@ -374,13 +443,11 @@ extension AppModel {
         var items: [Item] = []
         if let pin {
             items.append(Item(id: "summary", kind: .text, title: "",
-                              detail: !pin.modified && pin.commit == options.newest?.commit
-                                ? L("This game stays on toolchain \(pin.name) – the newest right now.", "Dieses Spiel bleibt bei Toolchain \(pin.name) – im Moment die neueste.")
-                                : L("This game is built with toolchain \(pin.name), not with the newest (\(newest)).", "Dieses Spiel wird mit Toolchain \(pin.name) gebaut, nicht mit der neuesten (\(newest))."),
+                              detail: ToolchainBox.pinnedSummary(pin, recipe: game.recipe, options: options),
                               style: .warning))
         } else {
             items.append(Item(id: "summary", kind: .text, title: "",
-                              detail: L("This game is built with the newest toolchain (\(newest)).", "Dieses Spiel wird mit der neuesten Toolchain gebaut (\(newest)).")))
+                              detail: ToolchainOptions.unchosenSummary(recipe: game.recipe, newest: newest)))
         }
         let all = ToolchainBox.all(options)
         let onMac = L("On the Mac", "Auf dem Mac"), copies = L("Modified working copies", "Bearbeitete Arbeitskopien")
@@ -393,7 +460,7 @@ extension AppModel {
             case .copy: section = copies
             case .released: section = github
             }
-            return RemoteChoice(id: o.id, title: ToolchainBox.label(o, in: options), section: section)
+            return RemoteChoice(id: o.id, title: ToolchainBox.label(o, in: options, recipe: game.recipe), section: section)
         }
         let selected = pin.map { options.missing != nil ? ToolchainOption.missingId : ToolchainOption.key(for: $0) } ?? ToolchainOption.newestId
         items.append(Item(id: "toolchain", kind: .choice, title: L("Build with", "Bauen mit"), value: selected, choices: choices,
@@ -403,12 +470,14 @@ extension AppModel {
                                                                      "Toolchain \(arriving.version) wird von GitHub geladen und geprüft …")))
         }
         if let note = toolchainNote[game.id] { items.append(Item(id: "toolchain-note", kind: .text, title: "", detail: note, style: .warning)) }
-        if releasedToolchainsLoading {
+        // A toolchain of the game's own is not in AVP Play's releases: nothing older to fetch from there.
+        if game.recipe.toolchain.kind != nil {
+        } else if releasedToolchainsLoading {
             items.append(Item(id: "released-loading", kind: .progress, title: L("Asking GitHub …", "GitHub wird gefragt …")))
         } else if releasedToolchains == nil {
             items.append(Item(id: "loadReleased", kind: .action, title: L("Show Older Toolchains from GitHub", "Ältere Toolchains von GitHub zeigen")))
         }
-        return RemoteSection(id: "toolchain", title: "Toolchain",
+        return RemoteSection(id: "toolchain", title: ToolchainBox.title(game.recipe),
                              footer: L("Which toolchain builds this game when it is installed, updated or its signature is renewed. A change does nothing on the Vision Pro until you install; saved games and data are kept.",
                                        "Welche Toolchain dieses Spiel baut – beim Installieren, Aktualisieren und Erneuern der Signatur. Ein Wechsel ändert nichts auf der Vision Pro, bis du installierst; Spielstände und Daten bleiben."),
                              items: items)
@@ -714,6 +783,8 @@ extension AppModel {
             var next = options(for: game)
             next.locales = on ? Array(Set(next.locales + [locale])).sorted() : next.locales.filter { $0 != locale }
             setOptions(next, for: game)
+        case _ where item.hasPrefix("mods:"):
+            setGameModSet(String(item.dropFirst(5)), on: on, for: game)
         case _ where item.hasPrefix("extra:"):
             let name = String(item.dropFirst(6))
             var next = options(for: game)

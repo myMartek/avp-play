@@ -1,0 +1,92 @@
+{
+ "schema": 1,
+ "id": "vivecraft",
+ "title": "Minecraft: Java Edition (Vivecraft)",
+ "package": "minecraft-java-vivecraft",
+ "versionName": "26.3",
+ "versionCode": 260301,
+ "store": {},
+ "toolchain": {
+  "target": "vivecraft",
+  "minCommit": "bdd3528"
+ },
+ "builder": {
+  "source": {
+   "repository": "https://github.com/myMartek/vivecraft-visionos",
+   "commit": "2223cdb649e45faf7718f344c54f6f89c3d46a27",
+   "version": 1
+  },
+  "notes": [
+   {
+    "en": "The first install builds the game's parts on this Mac: Minecraft is downloaded from Mojang's own servers and translated for the Vision Pro. That takes about 30 to 60 minutes, depending on the Mac, the internet connection and what else the Mac is doing at the time. The job shows each step and how long it will still take. Later installs use the result again.",
+    "de": "Die erste Installation baut die Spielteile auf diesem Mac: Minecraft wird von Mojangs eigenen Servern geladen und für die Vision Pro übersetzt. Das dauert etwa 30 bis 60 Minuten, je nach Mac, Internetverbindung und dem, was der Mac sonst gerade tut. Der Auftrag zeigt jeden Schritt und wie lange es noch dauert. Spätere Installationen verwenden das Ergebnis wieder."
+   },
+   {
+    "en": "During the build Minecraft runs on this Mac twice for a short while, about three minutes in all. It runs in the background: no window shows, there is no sound, and you can keep working. Leave the Mac switched on and unlocked for it: while its screen is locked, Minecraft cannot run, and the build waits at that step until you unlock the Mac; then it goes on by itself. AVP Play keeps the screen from going to sleep while it builds. Should a small Minecraft window appear after all, leave it open: it closes by itself.",
+    "de": "Während des Baus läuft Minecraft zweimal kurz auf diesem Mac, zusammen etwa drei Minuten. Es läuft im Hintergrund: Kein Fenster erscheint, es gibt keinen Ton, und du kannst weiterarbeiten. Lass den Mac dafür eingeschaltet und entsperrt: Solange sein Bildschirm gesperrt ist, kann Minecraft nicht laufen, und der Bau wartet an dieser Stelle, bis du den Mac entsperrst; danach geht es von selbst weiter. AVP Play hält den Bildschirm wach, solange es baut. Falls doch ein kleines Minecraft-Fenster erscheint, lass es offen: Es schließt sich von selbst."
+   },
+   {
+    "en": "The Mac needs 16 GB of memory and about 12 GB of free disk space for the build.",
+    "de": "Der Mac braucht für den Bau 16 GB Arbeitsspeicher und etwa 12 GB freien Speicherplatz."
+   }
+  ]
+ },
+ "gameAccount": {
+  "title": {
+   "en": "You need Minecraft: Java Edition",
+   "de": "Du brauchst Minecraft: Java Edition"
+  },
+  "notes": [
+   {
+    "en": "The game does not start until a Microsoft account that owns Minecraft: Java Edition has signed in on the Vision Pro once. The Bedrock Edition (the Minecraft for consoles and phones, and “Minecraft for Windows”) does not count.",
+    "de": "Das Spiel startet erst, wenn sich auf der Vision Pro einmal ein Microsoft-Konto angemeldet hat, dem Minecraft: Java Edition gehört. Die Bedrock Edition (das Minecraft für Konsolen und Handys und „Minecraft for Windows“) zählt nicht."
+   },
+   {
+    "en": "AVP Play does not check this and never sees your Microsoft account. You sign in on the Vision Pro, in the game's start window: choose “Add account” there and it shows a short code. Open microsoft.com/link on any device, type the code in and sign in with your Microsoft account.",
+    "de": "AVP Play prüft das nicht und bekommt dein Microsoft-Konto nie zu sehen. Du meldest dich auf der Vision Pro an, im Startfenster des Spiels: Wähle dort „Add account“, dann zeigt es einen kurzen Code. Öffne microsoft.com/link auf einem beliebigen Gerät, gib den Code ein und melde dich mit deinem Microsoft-Konto an."
+   },
+   {
+    "en": "Your sign-in and your worlds are kept in the game app on the Vision Pro, not on this Mac. AVP Play does not back them up: if you remove the app from the headset, they are deleted with it.",
+    "de": "Deine Anmeldung und deine Welten liegen in der Spiel-App auf der Vision Pro, nicht auf diesem Mac. AVP Play sichert sie nicht: Wenn du die App vom Headset entfernst, werden sie mit gelöscht."
+   }
+  ]
+ },
+ "files": [],
+ "icon": {
+  "archive": {
+   "icon": "assets/objects/f0/f00657542252858a721e715a2e888a9226404e35",
+   "background": "assets/objects/6a/6a84d4afab797aaf9f6ad283ebcd5899493c5c64",
+   "origin": "https://resources.download.minecraft.net"
+  }
+ },
+ "status": {
+  "playability": "verified",
+  "download": "special",
+  "notes": [
+   {
+    "en": "Special app: neither a Meta Store title nor a Steam game. This is Minecraft: Java Edition 26.3 with the VR mod Vivecraft, translated ahead of time into a program for Apple's chips. The port to the Vision Pro is “vivecraft-visionos” by rebelancap; the app around it is built with Klepton.",
+    "de": "Sonderapp: weder ein Titel aus dem Meta-Store noch ein Steam-Spiel. Das ist Minecraft: Java Edition 26.3 mit der VR-Mod Vivecraft, vorab in ein Programm für Apples Chips übersetzt. Die Portierung auf die Vision Pro ist „vivecraft-visionos“ von rebelancap; die App darum wird mit Klepton gebaut."
+   },
+   {
+    "en": "Nothing of the game is distributed by this project. The game's parts are built on your own Mac from what Mojang's servers deliver, and they stay on this Mac and your headset.",
+    "de": "Vom Spiel gibt dieses Projekt nichts weiter. Die Spielteile werden auf deinem eigenen Mac aus dem gebaut, was Mojangs Server ausliefern, und bleiben auf diesem Mac und deinem Headset."
+   },
+   {
+    "en": "Quit Game in the game's menu closes the app, as the Digital Crown does in other games; the next start from its icon begins at the start window.",
+    "de": "„Spiel beenden“ im Menü des Spiels schließt die App, wie die Digital Crown in anderen Spielen; der nächste Start über ihr Symbol beginnt im Startfenster."
+   },
+   {
+    "en": "Nothing is copied to the Vision Pro after the install: the game's files are inside its app.",
+    "de": "Nach der Installation wird nichts auf die Vision Pro kopiert: Die Dateien des Spiels stecken in seiner App."
+   },
+   {
+    "en": "Played by the project on an Apple Vision Pro M5 in November 2026, with a paid Apple Developer account. First with the game parts of the port's release 1.0.3, then with parts built on a Mac by the builder named here: installed by AVP Play, it started into a world, kept its sound with the start window closed, ended with the Digital Crown and started again. The creative inventory opened (left controller, triangle), and Quit Game closed the app.",
+    "de": "Vom Projekt im November 2026 auf einer Apple Vision Pro M5 gespielt, mit einem bezahlten Apple-Entwicklerkonto. Zuerst mit den Spielteilen aus dem Release 1.0.3 der Portierung, dann mit Teilen, die das hier genannte Bauwerkzeug auf einem Mac gebaut hat: von AVP Play installiert, startete es bis in eine Welt, behielt den Ton bei geschlossenem Startfenster, endete mit der Digital Crown und startete erneut. Das Kreativ-Inventar öffnete sich (linker Controller, Dreieck), und „Spiel beenden“ schloss die App."
+   },
+   {
+    "en": "With a free Apple account the app is built without one memory permission Apple does not grant to free accounts (extended virtual addressing), like every Klepton game. Whether the game runs then has not been tried.",
+    "de": "Mit einem kostenlosen Apple-Konto wird die App ohne eine Speicher-Berechtigung gebaut, die Apple kostenlosen Konten nicht gibt (Extended Virtual Addressing) – wie jedes Klepton-Spiel. Ob das Spiel dann läuft, ist nicht ausprobiert."
+   }
+  ]
+ }
+}

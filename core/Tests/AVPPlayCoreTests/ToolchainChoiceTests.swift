@@ -739,4 +739,109 @@ final class ToolchainChoiceTests: XCTestCase {
         choices.choose(packager.pin(for: copy), for: "moss")
         XCTAssertEqual(chosen(choices, installed: "7.3.1").toolchain?.root.standardizedFileURL.path, copy.root.standardizedFileURL.path)
     }
+
+    // MARK: Toolchains of another kind
+
+    /// A toolchain that says it is of another kind (`kind` in its description) builds only the games that name that
+    /// kind, and Klepton builds only the games that name none.
+    func testAToolchainBuildsOnlyGamesOfItsKind() throws {
+        let dir = temp()
+        let klepton = try plant(manifest(4), at: dir.appendingPathComponent("klepton"))
+        var described = manifest(3)
+        described.kind = "vxruntime"
+        let other = try plant(described, at: dir.appendingPathComponent("other"))
+        XCTAssertEqual(klepton.kind, Toolchain.kleptonKind)
+        XCTAssertEqual(other.kind, "vxruntime")
+
+        var special = recipe(id: "skyrimvr")
+        special.toolchain.kind = "vxruntime"
+        XCTAssertTrue(klepton.builds(recipe()))
+        XCTAssertFalse(klepton.builds(special))
+        XCTAssertTrue(other.builds(special))
+        XCTAssertFalse(other.builds(recipe()))
+
+        // The description round-trips, and one without the field is Klepton's, as every package so far.
+        let text = String(decoding: try ToolchainPackager.encoder.encode(manifest(4)), as: UTF8.self)
+        XCTAssertFalse(text.contains("\"kind\""))
+        XCTAssertEqual(try ToolchainPackager.decoder.decode(ToolchainManifest.self, from: ToolchainPackager.encoder.encode(described)).kind, "vxruntime")
+    }
+
+    /// What a game's page offers: only toolchains of the game's kind. A game with a toolchain of its own sees the
+    /// working copy chosen for it and nothing of Klepton's; every other game never sees that copy.
+    func testOptionsOfferOnlyToolchainsOfTheGamesKind() throws {
+        let dir = temp()
+        let packager = ToolchainPackager(root: dir.appendingPathComponent("toolchains"))
+        let newest = try install(4, in: packager)
+        try install(3, in: packager)
+        var described = manifest(2)
+        described.kind = "vxruntime"
+        let copy = try plant(described, at: dir.appendingPathComponent("copy"))
+        let pin = packager.pin(for: copy)
+        XCTAssertNotNil(pin.path)
+
+        var special = recipe(id: "skyrimvr", minCommit: "bbbbbbb")
+        special.toolchain.kind = "vxruntime"
+        let released = [ReleasedToolchain(version: 1, commit: "aaaaaaa", appVersion: "1.0", archive: dir, sidecar: dir)]
+        let forSpecial = ToolchainOptions.make(recipe: special, pin: pin, packager: packager, newest: newest, released: released,
+                                               workspace: dir.appendingPathComponent("none"))
+        XCTAssertNil(forSpecial.newest)
+        // With a source in the recipe, “no choice” is the state the recipe names – never Klepton's newest.
+        var sourced = special
+        sourced.toolchain.source = ToolchainSource(repository: "https://github.com/a/b", commit: String(repeating: "b", count: 40), version: 410)
+        let forSourced = ToolchainOptions.make(recipe: sourced, pin: nil, packager: packager, newest: newest, released: released,
+                                               workspace: dir.appendingPathComponent("none"))
+        XCTAssertEqual(forSourced.newest?.version, 410)
+        XCTAssertEqual(forSourced.newest?.commit, "bbbbbbb")
+        XCTAssertTrue(ToolchainOptions.unchosenSummary(recipe: sourced, newest: "4").contains("vxruntime 410"))
+        // The toolchain's number never stands bare: the recipe's title for it, else its kind, goes in front.
+        XCTAssertEqual(sourced.toolchainName("410"), "vxruntime 410")
+        sourced.toolchain.title = "VXRuntime"
+        XCTAssertNoThrow(try sourced.validate())
+        XCTAssertEqual(sourced.toolchainName("410 (modified)"), "VXRuntime 410 (modified)")
+        XCTAssertTrue(ToolchainOptions.unchosenSummary(recipe: sourced, newest: "4").contains("VXRuntime 410"))
+        XCTAssertEqual(recipe().toolchainName("4"), "4")
+        XCTAssertNil(recipe().ownToolchainTitle)
+        // A title belongs to a toolchain of another kind only, and is one short line.
+        var titled = recipe()
+        titled.toolchain.title = "VXRuntime"
+        XCTAssertThrowsError(try titled.validate())
+        sourced.toolchain.title = "two\nlines"
+        XCTAssertThrowsError(try sourced.validate())
+        XCTAssertTrue(ToolchainOptions.unchosenSummary(recipe: special, newest: "?").contains("avpplay toolchain use skyrimvr"))
+        XCTAssertTrue(ToolchainOptions.unchosenSummary(recipe: recipe(), newest: "4").contains("(4)"))
+        XCTAssertTrue(forSpecial.installed.isEmpty)
+        XCTAssertTrue(forSpecial.released.isEmpty)
+        XCTAssertEqual(forSpecial.copies.map(\.commit), ["bbbbbbb"])
+
+        // A Klepton game for which someone chose that copy by hand: it is not offered, the packages are.
+        let forUsual = ToolchainOptions.make(recipe: recipe(minCommit: "aaaaaaa"), pin: pin, packager: packager, newest: newest, released: nil,
+                                             workspace: dir.appendingPathComponent("none"))
+        XCTAssertEqual(forUsual.newest?.version, 4)
+        XCTAssertEqual(forUsual.installed.map(\.version), [4, 3])
+        XCTAssertTrue(forUsual.copies.isEmpty)
+    }
+
+    /// Where the progress of a folder copy is read on the device: Klepton's place, unless a toolchain of another kind
+    /// names one for the target in its own table – and then only a plain path below Documents.
+    func testTreeDestinationComesFromAToolchainOfAnotherKind() throws {
+        try XCTSkipUnless(DeveloperTools.present)
+        let dir = temp()
+        func toolchain(_ name: String, kind: String?, table: String) throws -> Toolchain {
+            var m = manifest(2)
+            m.kind = kind
+            let t = try plant(m, at: dir.appendingPathComponent(name))
+            try table.write(to: t.root.appendingPathComponent("visionos/targets.py"), atomically: true, encoding: .utf8)
+            return t
+        }
+        var special = recipe(id: "skyrimvr")
+        special.toolchain = .init(target: "skyrimvr", minCommit: "bbbbbbb", kind: "vxruntime")
+        let named = "TARGETS = {\"skyrimvr\": {\"kind\": \"vxruntime\", \"devicetree\": \"Documents/root/SkyrimVR\"}}\n"
+        XCTAssertEqual(try toolchain("a", kind: "vxruntime", table: named).treeDestination(recipe: special), "Documents/root/SkyrimVR")
+        // Klepton's place stays what it is, whatever a table says.
+        XCTAssertEqual(try toolchain("b", kind: nil, table: named).treeDestination(recipe: special), "Documents/lx")
+        for bad in ["Library/x", "Documents/../x", "/Documents/x", ""] {
+            let table = "TARGETS = {\"skyrimvr\": {\"devicetree\": \"\(bad)\"}}\n"
+            XCTAssertEqual(try toolchain("c-\(abs(bad.hashValue))", kind: "vxruntime", table: table).treeDestination(recipe: special), "Documents/lx", bad)
+        }
+    }
 }

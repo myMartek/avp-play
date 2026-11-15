@@ -66,8 +66,10 @@ code, and everything between the two stays in your network, encrypted. AVP Play 
 also do the work itself: download a game from Meta, build it, sign it and install it on the Vision Pro while the
 Mac is off. It is off until you switch on *Installing Games Without a Mac (Experimental)* on the *AVP Play Remote*
 page and install the Remote again; AVP Play then builds this part into it and hands over the toolchain's runtime,
-the game recipes and your Meta library. Not every game has been tried this way – installing from the Mac stays the
-tested way. See [Remote Control](https://github.com/myMartek/avp-play/wiki/Remote-Control) in the wiki.
+the game recipes and your Meta library. A game whose parts are built on the Mac (Minecraft) cannot be built on the
+headset; it can be installed there once the Mac has built it and you have switched on handing over its parts on the
+same page (about 600 MB, copied only with your yes). Not every game has been tried this way – installing from the Mac
+stays the tested way. See [Remote Control](https://github.com/myMartek/avp-play/wiki/Remote-Control) in the wiki.
 
 **In the menu bar.** An icon in the menu bar shows the running job with its progress, whether the Vision Pro and
 AVP Play Remote are connected and, with a free Apple account, when the next game runs out. With *Keep running in the
@@ -160,6 +162,16 @@ Reports and fixes from the app help just as much – see *Community Verified* be
   ([issue 110](https://github.com/myMartek/avp-play/issues/110)): a game that ends at once on a crown press,
   controllers that come back after a system interruption, and progressive immersion – a per-game switch that
   lets you turn the crown to draw the game into a portal over your room.
+- **[gseddon](https://github.com/gseddon)** for
+  [Skyrim VR on Apple Vision Pro](https://github.com/gseddon/Skyrim-VR-Vision-Pro): the Windows game itself runs on
+  the headset there, its program translated on your Mac before the install. AVP Play builds Skyrim VR with that
+  project (it fetches the source when you install the game) and only adds the way in: the files from your own
+  Steam purchase, the mods, the languages, the install.
+- **[rebelancap](https://github.com/rebelancap)** again, for
+  [vivecraft-visionos](https://github.com/rebelancap/vivecraft-visionos): Minecraft: Java Edition with the VR mod
+  [Vivecraft](https://github.com/Vivecraft/VivecraftMod) on the Vision Pro, the game compiled ahead of time for
+  Apple's chips. AVP Play's Minecraft is based on that port: its parts are built on your own Mac, and the app
+  around them with the Klepton toolchain – named in [THIRD-PARTY.md](THIRD-PARTY.md#minecraft-java-edition-with-vivecraft).
 - **Everyone who sent in a fix or a report** – the *Community Verified* games are their work.
 
 ## Legal

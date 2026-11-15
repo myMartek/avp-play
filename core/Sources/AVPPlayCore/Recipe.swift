@@ -30,6 +30,27 @@ public struct Recipe: Codable, Sendable, Identifiable {
     /// Hat das Spiel einen Steam Workshop, dessen Inhalte das Spiel als lokale Add-ons liest? Dann lassen sich Items
     /// daraus auswählen; jedes wird zu einer wählbaren Datei (siehe `WorkshopList`).
     public var workshop: WorkshopSupport?
+    /// A game that asks for its owner itself: neither Meta nor Steam confirms ownership to AVP Play, the game's own
+    /// program does, on the headset (Minecraft asks for a Microsoft account in its start window). What the player has
+    /// to know about that stands here and is shown on the game's page, on the Mac and on the Remote, where other
+    /// games name their store. Absent for every other game.
+    public var gameAccount: GameAccount?
+    /// A game whose program parts are built on the user's own Mac before the toolchain builds its app (Minecraft: the
+    /// client comes from Mojang's servers and is compiled here). Names the builder and says what the build asks of
+    /// the Mac (`PartsBuilder`). Absent for every other game.
+    public var builder: PartsBuilder?
+
+    public struct GameAccount: Codable, Sendable, Equatable {
+        /// The heading: what is needed, in a few words.
+        public var title: LocalizedText
+        /// The sentences below it, one paragraph each: what counts, where the sign-in happens, where it is kept.
+        public var notes: [LocalizedText]
+
+        public init(title: LocalizedText, notes: [LocalizedText]) {
+            self.title = title
+            self.notes = notes
+        }
+    }
 
     public struct IconSource: Codable, Sendable, Equatable {
         /// Steam-App-ID: Hintergrund und Logo aus dem lokalen Bildspeicher des Steam-Clients des Nutzers.
@@ -37,6 +58,37 @@ public struct Recipe: Codable, Sendable, Identifiable {
         /// Store-App-ID bei Meta, wenn das Rezept selbst nicht aus dem Meta-Store kommt, das Spiel dort aber eine
         /// Seite hat: Von ihr stammen dann Titelbild und Icon, und unter ihr führt der Katalog des Projekts das Spiel.
         public var metaAppId: String?
+        /// Pictures that lie inside the archive of game parts built on this Mac (`Recipe.builder`, `GameParts`), for a
+        /// game that has neither a store page nor a Steam entry: the picture of the tile and the game's page is made
+        /// from them, on this Mac, once the parts are built (`ArchiveArt`). Nothing of it is part of the project.
+        public var archive: ArchivePictures?
+
+        public init(steamAppId: String? = nil, metaAppId: String? = nil, archive: ArchivePictures? = nil) {
+            self.steamAppId = steamAppId
+            self.metaAppId = metaAppId
+            self.archive = archive
+        }
+    }
+
+    /// Where two pictures lie inside the archive of the game's parts (a zip). Each is the path of an entry below the folder of the
+    /// app in it, as it ends: `klepton-payload/…/objects/f0/f006…` names the one entry whose path is that or ends in
+    /// `/` and that, so the name of the folders above does not matter.
+    public struct ArchivePictures: Codable, Sendable, Equatable {
+        /// The game's own icon (square; any format the system reads, `.icns` too).
+        public var icon: String
+        /// A picture of the game that goes behind the icon. Without it the icon stands on a plain ground.
+        public var background: String?
+        /// Where the same two files can be fetched before the parts are built, so that the game has its picture from
+        /// the start: an `https` address under which the game's own publisher serves them by content. Each entry's
+        /// last path component must then be the SHA-1 of the file (40 hex digits); it is fetched from
+        /// `<origin>/<its first two digits>/<it>` and kept only when its SHA-1 is that name.
+        public var origin: String?
+
+        public init(icon: String, background: String? = nil, origin: String? = nil) {
+            self.icon = icon
+            self.background = background
+            self.origin = origin
+        }
     }
 
     public struct StoreInfo: Codable, Sendable {
@@ -78,6 +130,26 @@ public struct Recipe: Codable, Sendable, Identifiable {
     public struct Toolchain: Codable, Sendable {
         public var target: String
         public var minCommit: String
+        /// Which kind of toolchain builds this game, where it is not the usual one (Klepton): a game that is neither
+        /// an Android nor a Linux program needs a toolchain of its own (`vxruntime`: a Windows game recompiled ahead of
+        /// time). The game is then only ever built with a toolchain that says it is of this kind, and such a toolchain
+        /// builds nothing else. Absent for every Klepton game.
+        public var kind: String?
+        /// For a game with a toolchain of its own: where that comes from (`ToolchainSource`). The app fetches it as
+        /// part of the game's first job. Without it the toolchain has to be chosen by hand.
+        public var source: ToolchainSource?
+        /// For a game with a toolchain of its own: what that toolchain is called where the app names it (“VXRuntime”).
+        /// Its state numbers count something else than Klepton's, so they are never shown without this name. Absent:
+        /// the `kind` stands there.
+        public var title: String?
+
+        public init(target: String, minCommit: String, kind: String? = nil, source: ToolchainSource? = nil, title: String? = nil) {
+            self.target = target
+            self.minCommit = minCommit
+            self.kind = kind
+            self.source = source
+            self.title = title
+        }
     }
     public struct Status: Codable, Sendable {
         public var playability: String
@@ -207,11 +279,37 @@ public enum RecipeError: Error, CustomStringConvertible, Equatable {
 extension Recipe {
     public static let supportedSchema = 1
 
+    /// What the game's own toolchain is called, for a game that is not built with Klepton: its title, else its kind.
+    public var ownToolchainTitle: String? { toolchain.kind.map { toolchain.title ?? $0 } }
+
+    /// How a state of this game's toolchain is named in sentences and lists: the plain number for Klepton
+    /// (“891”), and with the toolchain's name in front for a game with a toolchain of its own (“VXRuntime 434”) –
+    /// that number counts another project's states and must not read as one of AVP Play's.
+    public func toolchainName(_ name: String) -> String { ownToolchainTitle.map { "\($0) \(name)" } ?? name }
+
     /// Prüft, was ein Rezept aus fremder Hand nicht dürfen soll: Pfade nach außen, uneindeutige Namen,
     /// IDs, die keine sind. Wird beim Laden immer ausgeführt.
     public func validate() throws {
         guard schema == Recipe.supportedSchema else { throw RecipeError.unsupportedSchema(schema) }
         guard Recipe.isSafeName(id) else { throw RecipeError.invalid(L("identifier '\(id)'", "Kennung '\(id)'")) }
+        // A toolchain of another kind is named plainly, and one that is fetched is fetched from a sane place – and
+        // only for a game that says which kind it is, so that nothing fetched ever stands in for Klepton.
+        if let kind = toolchain.kind {
+            guard Recipe.isSafeName(kind), kind != AVPPlayCore.Toolchain.kleptonKind, kind.allSatisfy({ $0.isASCII && ($0.isLowercase || $0.isNumber) }) else {
+                throw RecipeError.invalid(L("toolchain kind '\(kind)'", "Toolchain-Art '\(kind)'"))
+            }
+        }
+        if let title = toolchain.title {
+            guard toolchain.kind != nil, (1...40).contains(title.count), title == title.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !title.unicodeScalars.contains(where: { CharacterSet.controlCharacters.contains($0) || CharacterSet.newlines.contains($0) }) else {
+                throw RecipeError.invalid(L("toolchain title", "Name der Toolchain"))
+            }
+        }
+        if let source = toolchain.source {
+            guard toolchain.kind != nil, source.isSane, toolchain.minCommit.count >= 7, source.commit.hasPrefix(toolchain.minCommit) else {
+                throw RecipeError.invalid(L("toolchain source", "Quelle der Toolchain"))
+            }
+        }
         // Steam-Kennungen werden zu Argumenten für Valves Werkzeug: nur Ziffern. Und ein Rezept hat eine Kaufquelle.
         func steamId(_ s: String) -> Bool { (1...24).contains(s.count) && s.allSatisfy { $0.isASCII && $0.isNumber } }
         if let steam = store.steamAppId {
@@ -325,6 +423,26 @@ extension Recipe {
         if let steam = icon?.steamAppId, !(steam.allSatisfy(\.isNumber) && !steam.isEmpty) {
             throw RecipeError.invalid(L("Steam app ID", "Steam-App-ID"))
         }
+        // What builds the game's parts is fetched and run on this Mac: a sane, pinned place, and plain sentences.
+        if let builder {
+            guard builder.source.isSane, (1...8).contains(builder.notes.count), builder.notes.allSatisfy({ Recipe.isPlainText($0, upTo: 600) }) else {
+                throw RecipeError.invalid(L("builder of the game's parts", "Bauwerkzeug für die Spielteile"))
+            }
+        }
+        // Paths of pictures inside the parts archive become arguments of a system tool: plain relative paths, no patterns.
+        if let pictures = icon?.archive {
+            guard builder != nil, ([pictures.icon] + [pictures.background].compactMap { $0 }).allSatisfy(Recipe.isArchiveEntry),
+                  pictures.origin.map({ ArchiveArt.originBase($0) != nil
+                      && ([pictures.icon] + [pictures.background].compactMap { $0 }).allSatisfy { ArchiveArt.contentName($0) != nil } }) ?? true else {
+                throw RecipeError.invalid(L("pictures in the archive of the game's parts", "Bilder im Archiv der Spielteile"))
+            }
+        }
+        if let gameAccount {
+            guard Recipe.isPlainText(gameAccount.title, upTo: 80), (1...6).contains(gameAccount.notes.count),
+                  gameAccount.notes.allSatisfy({ Recipe.isPlainText($0, upTo: 600) }) else {
+                throw RecipeError.invalid(L("note on the game's own account", "Hinweis zum eigenen Konto des Spiels"))
+            }
+        }
         if let assetFiles { try AssetFilesList.validate(assetFiles, recipe: self) }
         if let workshop, !workshop.isSane {
             throw RecipeError.invalid(L("Steam Workshop entry", "Eintrag für den Steam Workshop"))
@@ -334,6 +452,28 @@ extension Recipe {
     static func isSafeName(_ s: String) -> Bool {
         !s.isEmpty && s != "." && s != ".." && !s.contains("/") && !s.contains("\\") && !s.contains("\0")
             && !s.hasPrefix(".")
+    }
+
+    /// Whether the game brings its data inside its app: its parts are built on this Mac and packed into the app, and
+    /// nothing in the recipe belongs into the app's data folder on the device. Then there is nothing to copy after
+    /// the install.
+    public var carriesItsData: Bool {
+        builder != nil && (trees ?? []).isEmpty && addons == nil && servers == nil && assetFiles == nil
+            && files.allSatisfy { $0.dest == nil }
+    }
+
+    /// A sentence a recipe shows the user: something in every language it names, of a sane length, on one line.
+    static func isPlainText(_ text: LocalizedText, upTo limit: Int) -> Bool {
+        !text.values.isEmpty && text.values.values.allSatisfy { value in
+            (1...limit).contains(value.count) && !value.unicodeScalars.contains { CharacterSet.controlCharacters.contains($0) }
+        }
+    }
+
+    /// A path of an entry inside an archive, as a recipe may name it: relative, without `.`/`..`, and without the
+    /// characters the system's unzip reads as a pattern or an option.
+    static func isArchiveEntry(_ s: String) -> Bool {
+        !s.isEmpty && s.count <= 400 && isSafeRelativePath(s) && !s.hasPrefix("-")
+            && !s.contains(where: { "*?[]\\".contains($0) || $0.isNewline })
     }
 
     static func isSafeRelativePath(_ s: String) -> Bool {

@@ -43,7 +43,7 @@ final class RecipeTests: XCTestCase {
         // Die Referenzspiele und Sonderapps sind da; dazu kommen Rezepte, die aus einem geprüften Entwurf entstanden
         // sind. Die tragen die Kennung des Entwurfs (`store-<App-Kennung>`), damit schon Geladenes weiter gilt.
         let ids = Set(all.map(\.id))
-        let byHand: Set<String> = ["alyx", "batman", "beatsaber140", "csvr", "doom3quest", "hl2", "moss", "portal", "walkabout", "wrath2"]
+        let byHand: Set<String> = ["alyx", "batman", "beatsaber140", "csvr", "doom3quest", "hl2", "moss", "portal", "skyrimvr", "vivecraft", "walkabout", "wrath2"]
         XCTAssertTrue(ids.isSuperset(of: byHand))
         for recipe in all where !byHand.contains(recipe.id) {
             XCTAssertEqual(recipe.id, recipe.store.appId.map(DraftRecipe.identifier(appId:)), "\(recipe.id)")
@@ -52,6 +52,45 @@ final class RecipeTests: XCTestCase {
                           "\(recipe.id): \(recipe.status.playability)")
             XCTAssertFalse(recipe.files.isEmpty, "\(recipe.id)")
         }
+        // Skyrim VR: a Windows game with a toolchain of its own kind; its two folders come from the user's Steam
+        // account, and both are for the toolchain (nothing goes to the device as a data folder).
+        let skyrim = try XCTUnwrap(all.first { $0.id == "skyrimvr" })
+        XCTAssertEqual(skyrim.toolchain.kind, "vxruntime")
+        // Its only files are the language packs: optional, chosen by language, each from that language's Steam depot.
+        // A voice archive has a name of its own and goes into the game's Data folder. A file that carries the name of
+        // one of the game's own (the Japanese and Chinese archives, one Polish strings file) is kept under a name of
+        // its own in the library and goes to a folder of its language on the device, from where the game's app puts
+        // it in place for the language in use. All are emptied on the device when no longer wanted (the app treats an
+        // empty one as absent). The texts of the other languages need no file.
+        XCTAssertEqual(Set(skyrim.files.compactMap(\.locale)), ["de-DE", "fr-FR", "it-IT", "es-ES", "pl-PL", "ru-RU", "ja-JP", "zh-TW"])
+        XCTAssertEqual(Set(skyrim.files.map(\.name)).count, skyrim.files.count, "every file has its own name in the library")
+        XCTAssertEqual(Set(skyrim.files.compactMap { StagePlan.destination(for: $0) }).count, skyrim.files.count, "and its own place on the device")
+        for file in skyrim.files {
+            XCTAssertFalse(file.required, file.name)
+            XCTAssertEqual(file.role, "audio-locale", file.name)
+            XCTAssertEqual(file.clearable, true, file.name)
+            XCTAssertEqual(file.source?.steam?.app, "611670", file.name)
+            XCTAssertEqual(file.source?.steam?.depots.count, 1, file.name)
+            XCTAssertNotNil(file.sha256, file.name)
+            XCTAssertNotNil(file.size, file.name)
+            let code = String((file.locale ?? "").prefix(2))
+            if file.name.hasPrefix("Skyrim - Voices_") {
+                XCTAssertEqual(file.name, "Skyrim - Voices_\(code)0.bsa")
+                XCTAssertEqual(file.dest, "root/SkyrimVR/Data", file.name)
+                XCTAssertNil(file.localName, file.name)
+            } else {
+                XCTAssertTrue(file.dest?.hasPrefix("root/lang/\(code)/Data") == true, file.name)
+                XCTAssertNotNil(file.localName, file.name)
+                XCTAssertTrue(file.name.contains(".\(code)."), file.name)
+            }
+        }
+        XCTAssertEqual(skyrim.files.filter { $0.name.hasPrefix("Skyrim - Voices_") }.count, 7, "Chinese has no voices of its own")
+        XCTAssertEqual(TreeStore.toolchainTrees(of: skyrim).map(\.role), [.game, .sysroot])
+        XCTAssertTrue(TreeStore.dataTrees(of: skyrim).isEmpty)
+        XCTAssertTrue(SteamFetcher.fetchesInJob(skyrim))
+        XCTAssertEqual(Set((skyrim.trees ?? []).compactMap { $0.source.steam?.app }), ["611670", "250820"])
+        // Every other shipped game is Klepton's.
+        XCTAssertEqual(all.filter { $0.toolchain.kind != nil }.map(\.id), ["skyrimvr"])
         // Counter-Strike: ein frei ladbares APK mit Prüfsumme, und die Daten des Originalspiels als ein Ordner aus dem
         // Steam-Konto des Nutzers – nur 'cstrike' und 'valve', an dem Ort, an dem die Engine sie sucht.
         let cs = try XCTUnwrap(all.first { $0.id == "csvr" })

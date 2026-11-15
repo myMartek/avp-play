@@ -239,6 +239,9 @@ public struct RemoteGame: Codable, Sendable, Equatable, Identifiable {
     public var downloadBlocker: String?
     /// Wie viel noch zu laden ist, in Worten.
     public var downloadSize: String?
+    /// Wie der Knopf heißt, der nur vorbereitet, wenn das kein Download ist: bei einem Spiel, dessen Teile der Mac
+    /// baut, „Nur Spielteile bauen“. `nil` (auch von einem älteren Mac): „Nur herunterladen“.
+    public var prepareTitle: String?
     /// Was das Spiel auf dem Mac belegt.
     public var storeBytes: Int64
     public var mixedReality: Bool

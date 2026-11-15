@@ -133,14 +133,23 @@ avpplay – command line for the AVP Play core library
   avpplay toolchain use <id> --toolchain <folder> | --newest
                                                build this game with that toolchain from now on (an installed package or a
                                                working copy) – or with the newest one again
+  avpplay builder <id>                         for a game whose parts are built on this Mac (Minecraft): which builder
+                                               builds them, whether they are built, and what the first build needs
+  avpplay builder use <id> --builder <folder> | --recipe
+                                               build this game's parts with a builder folder on this Mac from now on (a
+                                               working copy with tools/avpplay/build_parts.sh) – or with the recipe's again
+  avpplay mods <id>                            the mod sets the game's own toolchain can build it with, and whether a key
+                                               for their site is stored (Skyrim VR: Nexus Mods)
+  avpplay mods <id> --set-key                  store your own key for that site in the keychain; it is read from standard
+                                               input, never from an argument (--clear-key removes it)
   avpplay install <id> --team <team ID>        build, install, copy missing data, unlock add-on content
   avpplay stage <id>                           only copy missing data and add-on content (no build)
   avpplay renew [--dry-run] [--force <id>]     sign installed games again whose signature runs out soon (what the background service does)
   avpplay saves [<id> …] [--saves <folder>]    fetch the saved games of installed games from the Vision Pro to this Mac (nothing changes on the device)
   avpplay saves <id> --restore                 put the newest copy back on the Vision Pro, replacing what is there (which is fetched first)
   avpplay servers <id> [add <address> [--name <name>] [--admin-stdin] | remove <address> | push]
-  avpplay remote install --team <id> [--handover [--with-token]] [--tag <vX.Y.Z>] [--from <source folder>] [--prefix <prefix>] [--bundle-id <id>]
-  avpplay remote handover [--with-token] [--pairing <file>] [--template <zip> [--mods-template <zip>]] [--prefix <prefix>] [--bundle-id <id>]
+  avpplay remote install --team <id> [--handover [--with-token] [--with-parts <game>]] [--tag <vX.Y.Z>] [--from <source folder>] [--prefix <prefix>] [--bundle-id <id>]
+  avpplay remote handover [--with-token] [--with-parts <game>] [--pairing <file>] [--template <zip> [--mods-template <zip>] [--macho-template <zip>]] [--prefix <prefix>] [--bundle-id <id>]
                           [--asc-key-id <id> --asc-issuer-id <id> --asc-key <file>] [--pairing-port <port>]
                                                your own game servers for a game that understands such a list; the admin
                                                password is read from standard input and kept in the keychain
@@ -168,6 +177,11 @@ avpplay – command line for the AVP Play core library
                                      Settings › Advanced › Test; the game page's option “XR prediction” does the same)
              --core-mods             build with the game's mods (Beat Saber: custom songs), where the toolchain has them for
                                      this version; otherwise the game is built without them (the game page's “Mods” does the same)
+             --game-mods <sets>      build with these mod sets of the game's own toolchain (ids from `avpplay mods <id>`,
+                                     comma-separated; `default`: the ones that are on by default); their files are fetched
+                                     first, through your browser where the site needs you (the game page's “Mods” does the same)
+             --mods-key              fetch those files with the key stored by `avpplay mods <id> --set-key` (a paid account
+                                     of the site) instead of through the browser
              --room-measuring <on|off>  "Measure room" and the play area in the game from the start (default: the app's
                                      setting for all games, on unless changed; in the game under Settings › Play area)
              --game-language <code>  the language the game starts with: device, en, a locale like fr_FR, or game (no preset);
@@ -225,14 +239,23 @@ avpplay – Kommandozeile zur Kern-Bibliothek von AVP Play
   avpplay toolchain use <id> --toolchain <Ordner> | --newest
                                                dieses Spiel ab jetzt mit dieser Toolchain bauen (ein installiertes Paket oder
                                                eine Arbeitskopie) – oder wieder mit der neuesten
+  avpplay builder <id>                         für ein Spiel, dessen Teile auf diesem Mac gebaut werden (Minecraft): welches
+                                               Bauwerkzeug sie baut, ob sie gebaut sind und was der erste Bau braucht
+  avpplay builder use <id> --builder <Ordner> | --recipe
+                                               die Teile dieses Spiels ab jetzt mit einem Bauwerkzeug-Ordner auf diesem Mac bauen
+                                               (eine Arbeitskopie mit tools/avpplay/build_parts.sh) – oder wieder mit dem des Rezepts
+  avpplay mods <id>                            die Mod-Sets, mit denen die eigene Toolchain des Spiels es bauen kann, und ob ein
+                                               Schlüssel für deren Seite hinterlegt ist (Skyrim VR: Nexus Mods)
+  avpplay mods <id> --set-key                  deinen eigenen Schlüssel für diese Seite im Schlüsselbund hinterlegen; er wird von
+                                               der Standardeingabe gelesen, nie aus einem Argument (--clear-key entfernt ihn)
   avpplay install <id> --team <Team-ID>        bauen, installieren, Daten ergänzend kopieren, Zusatzinhalte freischalten
   avpplay stage <id>                           nur Daten und Zusatzinhalte ergänzend kopieren (ohne Build)
   avpplay renew [--dry-run] [--force <id>]     installierte Spiele neu signieren, deren Signatur bald abläuft (was der Hintergrunddienst tut)
   avpplay saves [<id> …] [--saves <Ordner>]    Spielstände installierter Spiele von der Vision Pro auf den Mac holen (auf dem Gerät ändert sich nichts)
   avpplay saves <id> --restore                 den neuesten Stand auf die Vision Pro zurückspielen; ersetzt, was dort liegt (das wird vorher geholt)
   avpplay servers <id> [add <Adresse> [--name <Name>] [--admin-stdin] | remove <Adresse> | push]
-  avpplay remote install --team <ID> [--handover [--with-token]] [--tag <vX.Y.Z>] [--from <Quellordner>] [--prefix <Präfix>] [--bundle-id <Kennung>]
-  avpplay remote handover [--with-token] [--pairing <Datei>] [--template <zip> [--mods-template <zip>]] [--prefix <Präfix>] [--bundle-id <Kennung>]
+  avpplay remote install --team <ID> [--handover [--with-token] [--with-parts <Spiel>]] [--tag <vX.Y.Z>] [--from <Quellordner>] [--prefix <Präfix>] [--bundle-id <Kennung>]
+  avpplay remote handover [--with-token] [--with-parts <Spiel>] [--pairing <Datei>] [--template <zip> [--mods-template <zip>] [--macho-template <zip>]] [--prefix <Präfix>] [--bundle-id <Kennung>]
                           [--asc-key-id <ID> --asc-issuer-id <ID> --asc-key <Datei>] [--pairing-port <Port>]
                                                eigene Spielserver für ein Spiel, das so eine Liste versteht; das Admin-Passwort
                                                wird von der Standardeingabe gelesen und im Schlüsselbund abgelegt
@@ -261,6 +284,11 @@ avpplay – Kommandozeile zur Kern-Bibliothek von AVP Play
                                      Einstellungen › Erweitert › Test; die Option „XR-Vorhersage“ auf der Seite des Spiels tut dasselbe)
              --core-mods             mit den Mods des Spiels bauen (Beat Saber: eigene Songs), wo die Toolchain sie für diese
                                      Fassung hat; sonst wird ohne sie gebaut („Mods“ auf der Seite des Spiels tut dasselbe)
+             --game-mods <Sets>      mit diesen Mod-Sets der eigenen Toolchain des Spiels bauen (Kennungen aus `avpplay mods <id>`,
+                                     durch Komma getrennt; `default`: die, die von sich aus an sind); ihre Dateien werden vorher
+                                     geholt, über deinen Browser, wo die Seite dich braucht („Mods“ auf der Seite des Spiels tut dasselbe)
+             --mods-key              diese Dateien mit dem per `avpplay mods <id> --set-key` hinterlegten Schlüssel holen (ein
+                                     bezahltes Konto der Seite) statt über den Browser
              --room-measuring <on|off>  „Raum vermessen“ und der Spielbereich im Spiel von Anfang an (Vorgabe: die Einstellung
                                      der App für alle Spiele, an, solange sie nicht geändert ist; im Spiel unter Einstellungen › Spielbereich)
              --game-language <Code>  die Sprache, mit der das Spiel beginnt: device, en, eine Sprache wie fr_FR oder game (keine
@@ -280,9 +308,9 @@ Allgemein: --account <Name>    Eintrag im Schlüsselbund (Standard: default)
 }
 
 let valued: Set<String> = ["account", "steam-account", "source", "store", "recipes", "locale", "with", "only", "interval", "from", "to", "force", "name",
-                           "team", "device", "bundle-id", "display-name", "display-suffix", "toolchain", "controller-mode", "icon", "tool", "jobs", "toolchains", "saves", "resolution",
-                           "room-measuring", "game-language", "klepton", "markdown", "json", "references", "out", "leave-out", "summary", "top",
-                           "prefix", "pairing", "pairing-port", "template", "mods-template", "asc-key-id", "asc-issuer-id", "asc-key", "tag"]
+                           "team", "device", "bundle-id", "display-name", "display-suffix", "toolchain", "builder", "controller-mode", "icon", "tool", "jobs", "toolchains", "saves", "resolution",
+                           "room-measuring", "game-language", "game-mods", "klepton", "markdown", "json", "references", "out", "leave-out", "summary", "top",
+                           "prefix", "pairing", "pairing-port", "template", "mods-template", "macho-template", "with-parts", "asc-key-id", "asc-issuer-id", "asc-key", "tag"]
 let o = Options(Array(CommandLine.arguments.dropFirst()), valued: valued)
 guard let command = o.positional.first else { print(usage()); exit(0) }
 OtherSources.use(recipes: recipesDirectory(o))
@@ -335,8 +363,9 @@ func jobStore(_ o: Options) -> JobStore {
 func chosenToolchain(_ o: Options, recipe id: String) -> String? {
     guard let pin = ToolchainChoices.load().games[id] else { return nil }
     guard let kept = toolchainPackager(o).toolchain(for: pin) else {
-        fail(L("Toolchain \(pin.name), chosen for this game, is no longer on this Mac. Name one with --toolchain <folder>, or go back to the newest with: avpplay toolchain use \(id) --newest",
-               "Toolchain \(pin.name), für dieses Spiel gewählt, liegt nicht mehr auf diesem Mac. Nenne eine mit --toolchain <Ordner>, oder kehre zur neuesten zurück mit: avpplay toolchain use \(id) --newest"))
+        let named = (try? RecipeStore(directory: recipesDirectory(o)).load(id: id))?.toolchainName(pin.name) ?? pin.name
+        fail(L("Toolchain \(named), chosen for this game, is no longer on this Mac. Name one with --toolchain <folder>, or go back to the newest with: avpplay toolchain use \(id) --newest",
+               "Toolchain \(named), für dieses Spiel gewählt, liegt nicht mehr auf diesem Mac. Nenne eine mit --toolchain <Ordner>, oder kehre zur neuesten zurück mit: avpplay toolchain use \(id) --newest"))
     }
     return kept.root.path
 }
@@ -347,6 +376,8 @@ func installRequest(_ o: Options, recipe id: String? = nil) -> InstallRequest {
     // zuletzt das Arbeitsverzeichnis der Entwicklung neben den Rezepten.
     let toolchain = o.value("toolchain") ?? ProcessInfo.processInfo.environment["AVPPLAY_TOOLCHAIN"]
         ?? id.flatMap { chosenToolchain(o, recipe: $0) }
+        // A game with a toolchain of its own: where the app keeps that (the job fetches it if it is not there yet).
+        ?? id.flatMap { try? RecipeStore(directory: recipesDirectory(o)).load(id: $0) }.flatMap { ExternalToolchains().directory(for: $0)?.path }
         ?? toolchainPackager(o).installed().first?.root.path
         ?? recipesDirectory(o).deletingLastPathComponent().appendingPathComponent("klepton-fork-test").path
     var request = InstallRequest(toolchain: URL(fileURLWithPath: toolchain).standardizedFileURL.path)
@@ -367,6 +398,8 @@ func installRequest(_ o: Options, recipe id: String? = nil) -> InstallRequest {
     request.displayName = o.value("display-name").flatMap { $0.trimmingCharacters(in: .whitespaces).isEmpty ? nil : $0 }
     request.displaySuffix = o.value("display-suffix").flatMap { $0.isEmpty ? nil : $0 }
     request.steamAccount = o.value("steam-account")
+    // A builder folder for the game's parts: named here, otherwise the one chosen for the game (`avpplay builder use`).
+    request.builder = (o.value("builder") ?? id.flatMap { BuilderChoices.load().games[$0] }).map { URL(fileURLWithPath: $0).standardizedFileURL.path }
     request.customIcon = o.value("icon").map { URL(fileURLWithPath: $0).standardizedFileURL.path }
     request.storeArt = !o.flags.contains("no-store-art")
     if o.flags.contains("replace-running") { request.replaceRunning = true }
@@ -378,6 +411,14 @@ func installRequest(_ o: Options, recipe id: String? = nil) -> InstallRequest {
     if o.flags.contains("metalfx") { request.metalFX = true }
     if o.flags.contains("xr-prediction") { request.xrPrediction = true }
     if o.flags.contains("core-mods") { request.coreMods = true }
+    if let value = o.value("game-mods") {
+        if value == "default" {
+            request.gameMods = (try? Toolchain(root: URL(fileURLWithPath: toolchain)))?.gameMods()?.defaultSets ?? []
+        } else {
+            request.gameMods = value.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty && $0 != "none" }
+        }
+    }
+    if o.flags.contains("mods-key") { request.modsKey = true }
     if let value = o.value("room-measuring") {
         guard value == "on" || value == "off" else {
             fail(L("--room-measuring must be on or off", "--room-measuring muss on oder off sein"))
@@ -423,6 +464,43 @@ final class CopyProgressPrinter: @unchecked Sendable {
         let over = via.map { L(" over \($0.text)", " über \($0.text)") } ?? ""
         print(L("    \(p.done / 1_000_000) of \(p.total / 1_000_000) MB copied\(over)", "    \(p.done / 1_000_000) von \(p.total / 1_000_000) MB kopiert\(over)"))
     }
+}
+
+/// While a game's parts are built: every 30 seconds one line with where the build is, the bars in percent and the
+/// time left – in a terminal nothing else moves for minutes.
+final class BuildTicker: @unchecked Sendable {
+    private let lock = NSLock()
+    private var latest: BuildProgress?
+    private var stopped = false
+    private var started = false
+    let every: TimeInterval
+
+    init(every: TimeInterval = 30) { self.every = every }
+
+    func show(_ p: InstallProgress) {
+        guard let build = p.build else { return }
+        lock.lock()
+        latest = build
+        let start = !started
+        started = true
+        lock.unlock()
+        guard start else { return }
+        Thread.detachNewThread { [self] in
+            while true {
+                Thread.sleep(forTimeInterval: every)
+                lock.lock()
+                let done = stopped, now = latest
+                lock.unlock()
+                if done { return }
+                guard let now, now.finished == nil, now.current != nil else { continue }
+                let stamp = DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .medium)
+                print("    [\(stamp)] " + now.summary(at: Date()))
+                fflush(stdout)
+            }
+        }
+    }
+
+    func stop() { lock.lock(); stopped = true; lock.unlock() }
 }
 
 func describe(_ j: Job) -> String {
@@ -1186,10 +1264,14 @@ case "remote":
                 request.replaceRunning = o.flags.contains("replace-running") ? true : nil
                 if o.flags.contains("handover") {
                     let root = o.value("toolchain") ?? ProcessInfo.processInfo.environment["AVPPLAY_TOOLCHAIN"] ?? toolchainPackager(o).installed().first?.root.path
+                    // --with-parts <Spiel>[,<Spiel>]: die Spielteile eines hier gebauten Spiels gehen mit (ein paar hundert
+                    // Megabyte; ohne die Angabe nie). Wie viel das ist, steht im Protokoll, bevor kopiert wird.
                     request.handover = CompanionHandover.Plan(bundlePrefix: prefix, withToken: o.flags.contains("with-token"),
                                                               account: o.value("account") ?? "default", recipes: recipesDirectory(o),
                                                               library: MetaLibraryCache(store: contentStore(o)).url,
-                                                              toolchain: root.map { URL(fileURLWithPath: $0).standardizedFileURL })
+                                                              toolchain: root.map { URL(fileURLWithPath: $0).standardizedFileURL },
+                                                              store: contentStore(o).root,
+                                                              parts: o.value("with-parts")?.split(separator: ",").map(String.init))
                 }
                 var installer = CompanionInstaller(recipe: CompanionApp.recipe(release: release), request: request) { print($0) }
                 installer.localSource = o.value("from").map { URL(fileURLWithPath: $0).standardizedFileURL }
@@ -1220,14 +1302,31 @@ case "remote":
         if let id = o.value("asc-key-id"), let issuer = o.value("asc-issuer-id"), let file = o.value("asc-key") {
             inputs.appleKey = .init(keyId: id, issuerId: issuer, file: URL(fileURLWithPath: file))
         }
+        // Spiele, deren Programm auf diesem Mac gebaut wird: die Liste immer, die Spielteile nur mit --with-parts <Spiel> –
+        // und beides nur an eine Remote, die solche Spiele kennt (--force übergeht auch das, für einen Testbau).
+        let documents = (try? control.files(device: device, bundle: bundle, subdirectory: "Documents")) ?? []
+        let built = CompanionHandover.builtGames(in: recipesDirectory(o), store: contentStore(o),
+                                                 agreed: Set(o.value("with-parts")?.split(separator: ",").map(String.init) ?? []))
+        if o.flags.contains("force") || CompanionHandover.takesBuiltGames(documents) {
+            inputs.built = built
+        } else if !built.isEmpty {
+            warn(CompanionHandover.builtNotTaken)
+        }
         if let template = o.value("template") {
             inputs.template = URL(fileURLWithPath: template)
             if let mods = o.value("mods-template") { inputs.modTemplates = [URL(fileURLWithPath: mods)] }
+            if let macho = o.value("macho-template") { inputs.machoTemplates = [URL(fileURLWithPath: macho)] }
         } else if let root = o.value("toolchain") ?? ProcessInfo.processInfo.environment["AVPPLAY_TOOLCHAIN"] ?? toolchainPackager(o).installed().first?.root.path {
             let toolchain = try Toolchain(root: URL(fileURLWithPath: root).standardizedFileURL)
             let cache = CompanionApp.directory.appendingPathComponent("templates", isDirectory: true)
-            inputs.template = try CompanionHandover.template(toolchain: toolchain, cache: cache) { print($0) }
-            if inputs.template != nil { inputs.modTemplates = CompanionHandover.modTemplates(toolchain: toolchain, cache: cache) }
+            inputs.template = try CompanionHandover.template(toolchain: toolchain, cache: cache, wantsMacho: !inputs.built.isEmpty,
+                                                             gameArchive: inputs.built.compactMap(\.archive).first) { print($0) }
+            if inputs.template != nil {
+                inputs.modTemplates = CompanionHandover.modTemplates(toolchain: toolchain, cache: cache)
+                let targets = Set(inputs.built.map(\.game.target))
+                inputs.machoTemplates = CompanionHandover.machoTemplates(toolchain: toolchain, cache: cache)
+                    .filter { CompanionHandover.machoTarget($0, toolchain: toolchain).map(targets.contains) ?? false }
+            }
             if inputs.template == nil {
                 warn(L("Toolchain \(toolchain.name) cannot build a runtime template; none is handed over.",
                        "Die Toolchain \(toolchain.name) kann keine Laufzeit-Vorlage bauen; es wird keine übergeben."))
@@ -1238,14 +1337,16 @@ case "remote":
         let items = try CompanionHandover.prepare(inputs, staging: staging)
         // Wie in der App: nur an eine Remote, die eine Übergabe annimmt. --force übergeht das (für einen Testbau, der
         // sein Kennzeichen noch nicht geschrieben hat).
-        if !o.flags.contains("force"), !CompanionHandover.accepts((try? control.files(device: device, bundle: bundle, subdirectory: "Documents")) ?? []) {
+        if !o.flags.contains("force"), !CompanionHandover.accepts(documents) {
             throw CompanionHandover.HandoverError.notCapable
         }
         let folder = CompanionHandover.folder
         let present = ((try? control.files(device: device, bundle: bundle, subdirectory: folder)) ?? [])
-        try CompanionHandover.push(items, present: present, copy: { local, destination in
-            try control.copy(local, to: device, bundle: bundle, destination: destination)
-        }, report: { print($0) })
+        for line in CompanionHandover.builtNotes(inputs.built, templates: inputs.machoTemplates) { print(line) }
+        try CompanionHandover.push(items, present: present,
+                                   elsewhere: { (try? control.files(device: device, bundle: bundle, subdirectory: $0)) ?? [] },
+                                   copy: { local, destination in try control.copy(local, to: device, bundle: bundle, destination: destination) },
+                                   report: { print($0) })
         print(L("AVP Play Remote takes it over at its next start.", "AVP Play Remote übernimmt es beim nächsten Start."))
     } catch { fail("\(error)") }
 
@@ -1410,13 +1511,21 @@ case "toolchain":
             if o.flags.contains("newest") {
                 choices.choose(nil, for: r.id)
                 try choices.save()
-                print(L("\(r.title) is built with the newest toolchain again.", "\(r.title) wird wieder mit der neuesten Toolchain gebaut."))
+                if let own = r.ownToolchainTitle, let source = r.toolchain.source {
+                    print(L("\(r.title) is built with the state its recipe names again (\(own) \(source.version)).",
+                            "\(r.title) wird wieder mit dem Stand gebaut, den sein Rezept nennt (\(own) \(source.version))."))
+                } else {
+                    print(L("\(r.title) is built with the newest toolchain again.", "\(r.title) wird wieder mit der neuesten Toolchain gebaut."))
+                }
             } else {
                 guard let folder = o.value("toolchain") else {
                     fail(L("Give the toolchain with --toolchain <folder>, or --newest.", "Die Toolchain mit --toolchain <Ordner> angeben, oder --newest."))
                 }
                 let t = try Toolchain(root: URL(fileURLWithPath: folder).standardizedFileURL)
                 guard t.manifest != nil else { throw PackageError.notAWorkingCopy(t.root.path) }
+                guard t.builds(r) else {
+                    throw ToolchainError.wrongKind(game: r.title, have: t.kind, need: r.toolchain.kind ?? Toolchain.kleptonKind)
+                }
                 guard r.toolchain.minCommit.isEmpty || t.satisfies(minCommit: r.toolchain.minCommit) else {
                     throw ToolchainError.tooOld(have: t.commit(), need: r.toolchain.minCommit)
                 }
@@ -1429,6 +1538,103 @@ case "toolchain":
         } catch { fail("\(error)") }
     default:
         fail(L("Unknown toolchain command '\(o.positional[1])'.", "Unbekannter Toolchain-Befehl '\(o.positional[1])'."))
+    }
+
+case "builder":
+    // The builder of a game's parts (`Recipe.builder`): what it is, and a folder chosen by hand in its place.
+    let using = o.positional.count > 1 && o.positional[1] == "use"
+    let r = recipe(o, at: using ? 2 : 1)
+    guard let builder = r.builder else {
+        fail(L("\(r.title) has no parts that are built on this Mac.", "\(r.title) hat keine Teile, die auf diesem Mac gebaut werden."))
+    }
+    var choices = BuilderChoices.load()
+    if using {
+        do {
+            if o.flags.contains("recipe") {
+                choices.games[r.id] = nil
+                try choices.save()
+                print(L("The parts of \(r.title) are built with the builder its recipe names again (state \(builder.source.version), \(builder.source.shortCommit)).",
+                        "Die Teile von \(r.title) werden wieder mit dem Bauwerkzeug gebaut, das sein Rezept nennt (Stand \(builder.source.version), \(builder.source.shortCommit))."))
+            } else {
+                guard let given = o.value("builder") else {
+                    fail(L("Give the builder with --builder <folder>, or --recipe.", "Das Bauwerkzeug mit --builder <Ordner> angeben, oder --recipe."))
+                }
+                let folder = URL(fileURLWithPath: given).standardizedFileURL
+                guard FileManager.default.fileExists(atPath: folder.appendingPathComponent(PartsBuilders.entry).path) else {
+                    throw PartsError.notABuilder(folder.path)
+                }
+                choices.games[r.id] = folder.path
+                try choices.save()
+                print(L("The parts of \(r.title) are built with the builder in \(folder.path) from now on, anew for every install (finished steps are skipped). Back to the recipe's: avpplay builder use \(r.id) --recipe",
+                        "Die Teile von \(r.title) werden ab jetzt mit dem Bauwerkzeug in \(folder.path) gebaut, bei jeder Installation neu (fertige Schritte werden übersprungen). Zurück zu dem des Rezepts: avpplay builder use \(r.id) --recipe"))
+            }
+        } catch { fail("\(error)") }
+        break
+    }
+    let builders = PartsBuilders()
+    print("\(r.title) \(r.versionName)")
+    print(L("  Builder:   \(builder.source.repository), state \(builder.source.version) (\(builder.source.commit))",
+            "  Bauwerkzeug: \(builder.source.repository), Stand \(builder.source.version) (\(builder.source.commit))"))
+    if let local = choices.games[r.id] {
+        print(L("  Chosen instead: \(local)", "  Stattdessen gewählt: \(local)"))
+    } else {
+        print(builders.installed(for: r).map { L("  On this Mac: \($0.path)", "  Auf diesem Mac: \($0.path)") }
+              ?? L("  Not fetched yet; the first job fetches it.", "  Noch nicht geholt; der erste Auftrag holt es."))
+    }
+    print(L("  Work folder: \(builders.work(for: r).path)", "  Arbeitsordner: \(builders.work(for: r).path)"))
+    switch GameParts.state(recipe: r, store: contentStore(o)) {
+    case .built(let date, let bytes)?:
+        print(L("  Game parts: built \(ISO8601DateFormatter().string(from: date)) (\(gigabytes(bytes)))",
+                "  Spielteile: gebaut \(ISO8601DateFormatter().string(from: date)) (\(gigabytes(bytes)))"))
+    default:
+        print(L("  Game parts: not built yet.", "  Spielteile: noch nicht gebaut."))
+        for note in builder.notes { print("  • \(note.text)") }
+    }
+
+case "mods":
+    // The mod sets of a game's own toolchain (`GameMods`), and the key for their site.
+    let r = recipe(o)
+    let request = installRequest(o, recipe: r.id)
+    guard let toolchain = try? Toolchain(root: URL(fileURLWithPath: request.toolchain)), toolchain.builds(r), let mods = toolchain.gameMods() else {
+        fail(L("\(r.title) has no mods to choose here (its toolchain offers none, or is not on this Mac yet).",
+               "Für \(r.title) gibt es hier keine Mods zur Wahl (seine Toolchain bietet keine an oder liegt noch nicht auf diesem Mac)."))
+    }
+    let keys = ModsKeyStore()
+    if o.flags.contains("set-key") || o.flags.contains("clear-key") {
+        guard let variable = mods.source?.key?.variable else {
+            fail(L("These mods take no key.", "Diese Mods nehmen keinen Schlüssel."))
+        }
+        if o.flags.contains("clear-key") {
+            print(keys.delete(variable: variable) ? L("The key is removed from the keychain.", "Der Schlüssel ist aus dem Schlüsselbund entfernt.")
+                                                  : L("No key was stored.", "Es war kein Schlüssel hinterlegt."))
+        } else {
+            guard let line = readLine(strippingNewline: true) else { fail(L("No key on standard input.", "Kein Schlüssel auf der Standardeingabe.")) }
+            do {
+                try keys.write(key: line, variable: variable)
+                print(L("The key for \(mods.source?.name ?? "the site") is stored in the keychain. Use it with --mods-key.",
+                        "Der Schlüssel für \(mods.source?.name ?? "die Seite") ist im Schlüsselbund hinterlegt. Benutzt wird er mit --mods-key."))
+            } catch { fail(L("The key was not stored: \(error)", "Der Schlüssel wurde nicht hinterlegt: \(error)")) }
+        }
+        break
+    }
+    if let about = mods.about?.text, !about.isEmpty { print(about + "\n") }
+    let built = GameModsRecord.built(store: contentStore(o), recipe: r)
+    for set in mods.sets {
+        let marks = [set.default == true ? L("on by default", "von sich aus an") : nil,
+                     built.contains(set.id) ? L("in the last build", "im letzten Bau") : nil,
+                     set.downloadBytes.map { gigabytes($0) }].compactMap { $0 }.joined(separator: ", ")
+        print("\(set.id)  \(set.title.text)\(marks.isEmpty ? "" : "  (\(marks))")")
+        if let about = set.about?.text { print("    \(about)") }
+        for m in set.mods ?? [] {
+            print("    - \(m.name)\(m.version.map { " \($0)" } ?? "")\(m.about.map { ": \($0.text)" } ?? "")")
+        }
+    }
+    if let source = mods.source, let key = source.key {
+        print("")
+        print(keys.has(variable: key.variable)
+              ? L("A key for \(source.name) is stored; --mods-key uses it.", "Ein Schlüssel für \(source.name) ist hinterlegt; --mods-key benutzt ihn.")
+              : L("No key for \(source.name) is stored\(key.page.map { " (it is made at \($0))" } ?? ""); without one the downloads go through your browser.",
+                  "Für \(source.name) ist kein Schlüssel hinterlegt\(key.page.map { " (er entsteht unter \($0))" } ?? ""); ohne gehen die Downloads über deinen Browser."))
     }
 
 case "status":
@@ -1445,9 +1651,9 @@ case "status":
             print(L("Toolchain: version \(toolchain.version()) (\(toolchain.commit()))",
                     "Toolchain: Version \(toolchain.version()) (\(toolchain.commit()))"))
         }
-        let pins = ToolchainChoices.load().games
+        let choices = ToolchainChoices.load()
         for r in try RecipeStore(directory: recipesDirectory(o)).loadAll() {
-            let st = GameStatus.of(recipe: r, store: store, apps: apps, toolchainVersion: toolchain?.appRevisions().forTarget(r.toolchain.target), pin: pins[r.id])
+            let st = GameStatus.of(recipe: r, store: store, apps: apps, toolchainVersion: toolchain?.appRevisions().forTarget(r.toolchain.target), pin: choices.pin(for: r))
             var bestand = L("\(st.filesPresent)/\(st.filesRequired) files", "\(st.filesPresent)/\(st.filesRequired) Dateien")
             if st.treesRequired > 0 {
                 bestand += L(", \(st.treesPresent)/\(st.treesRequired) folders", ", \(st.treesPresent)/\(st.treesRequired) Ordner")
@@ -1458,7 +1664,7 @@ case "status":
             case .notInstalled: geraet = L("not installed", "nicht installiert")
             case .current(let stamp): geraet = L("installed, \(stamp)", "installiert, \(stamp)")
             case .olderToolchain(let stamp):
-                geraet = pins[r.id].map { L("installed, \(stamp) – not built with toolchain \($0.name), which is chosen for this game",
+                geraet = choices.pin(for: r).map { L("installed, \(stamp) – not built with toolchain \($0.name), which is chosen for this game",
                                             "installiert, \(stamp) – nicht mit Toolchain \($0.name) gebaut, die für dieses Spiel gewählt ist") }
                     ?? L("installed, \(stamp) – built with an older toolchain", "installiert, \(stamp) – mit älterer Toolchain gebaut")
             case .olderGame(let stamp):
@@ -1486,10 +1692,13 @@ case "job":
     let jobs = jobStore(o)
     let runner = JobRunner(store: jobs)
     func run(_ job: Job) async {
-        var installer = Installer(recipe: job.recipe, request: job.request, store: contentStore(o)) { print("  " + $0) }
+        let ticker = BuildTicker()
+        defer { ticker.stop() }
+        var installer = Installer(recipe: job.recipe, request: job.request, store: contentStore(o),
+                                  progress: { ticker.show($0) }) { print("  " + $0) }
         installer.metaTool = metaToolURL(o)
         do {
-            let now = (try? Toolchain(root: URL(fileURLWithPath: job.request.toolchain)).commit()) ?? L("unknown", "unbekannt")
+            let now = job.currentToolchainCommit() ?? L("unknown", "unbekannt")
             let done = try await runner.run(job, currentToolchain: now, log: { print($0) }) { step, _ in try await installer.perform(step) }
             print(done.isDownloadOnly
                 ? L("Job \(done.id) finished: the files of \(done.recipe.title) are downloaded.",
@@ -1526,7 +1735,9 @@ case "job":
         if downloadOnly { request.downloadOnly = true }
         do {
             // Eingefroren wird der Stand, mit dem der Auftrag beginnt. Wer nur lädt, braucht keine Toolchain.
-            let commit = downloadOnly ? "" : try Toolchain(root: URL(fileURLWithPath: request.toolchain)).commit()
+            // A game's own toolchain that the job has yet to fetch is in the state the recipe pins.
+            let commit = downloadOnly ? "" : try Job.toolchainCommit(recipe: r, toolchain: request.toolchain)
+                ?? Toolchain(root: URL(fileURLWithPath: request.toolchain)).commit()
             let steps = downloadOnly ? InstallStep.download : addonsOnly ? InstallStep.addonSync : buildOnly ? [.account, .fetch, .build] : InstallStep.allCases
             // Auch ein Auftrag der Kommandozeile bekommt seinen Platz, sonst stünde er in der Liste unter allen anderen.
             let job = try jobs.enqueue(Job(recipe: r, request: request, steps: steps, toolchainCommit: commit))

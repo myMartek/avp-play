@@ -8,6 +8,7 @@ import SwiftUI
 enum Launcher {
     static func main() {
         if CommandLine.arguments.contains("--renew") { RenewalAgent.run() }
+        MainActor.assumeIsolated { BuildSnapshot.runIfRequested() }
         AVPPlayApp.main()
     }
 }

@@ -448,14 +448,17 @@ struct OwnershipLabel: View {
     var compact = true
     /// Bei welchem Store das Spiel gekauft ist; ohne Angabe Meta.
     var source: Recipe.Source? = .meta
+    /// Das Spiel fragt selbst nach seinem Konto (`Recipe.gameAccount`).
+    var inGame = false
 
     var body: some View {
-        let (text, symbol) = OwnershipLabel.describe(owned: owned, checking: checking, source: source)
+        let (text, symbol) = OwnershipLabel.describe(owned: owned, checking: checking, source: source, inGame: inGame)
         Label(text, systemImage: symbol).font(compact ? .caption : .callout).foregroundStyle(.secondary)
     }
 
-    static func describe(owned: Owned, checking: Bool, source: Recipe.Source?) -> (text: String, symbol: String) {
+    static func describe(owned: Owned, checking: Bool, source: Recipe.Source?, inGame: Bool = false) -> (text: String, symbol: String) {
         let store = AppModel.name(source)
+        if inGame, owned == .notApplicable { return (L("Sign-in in the game", "Anmeldung im Spiel"), "person.badge.key") }
         return {
             switch owned {
             case .yes: return (L("In your \(store) account", "In deinem \(store)-Konto"), "checkmark.seal")
@@ -556,7 +559,8 @@ struct GameCard: View {
                     SelectionMark(game: game)
                 }
                 StatusBadge(status: game.status, busy: model.isBusy(game.id))
-                OwnershipLabel(owned: model.owned(game), checking: model.checkingOwnership, source: game.recipe.source)
+                OwnershipLabel(owned: model.owned(game), checking: model.checkingOwnership, source: game.recipe.source,
+                               inGame: game.recipe.gameAccount != nil)
                 let filters = model.filters(containing: game.id)
                 if !filters.isEmpty {
                     FlowLayout(spacing: 4, lineSpacing: 4) {
@@ -786,13 +790,16 @@ struct GameDetail: View {
                         if model.hasDownloads(game), !model.isBusy(game.id),
                            blocked == nil ? game.fromStore : downloadBlocked != blocked {
                             Button(action: { model.download(game) }) {
-                                Text(L("Download Only", "Nur herunterladen")).frame(minWidth: 150)
+                                Text(game.partsToBuild ? L("Build Parts Only", "Nur Spielteile bauen") : L("Download Only", "Nur herunterladen")).frame(minWidth: 150)
                             }
                             .controlSize(.large)
                             .disabled(downloadBlocked != nil)
                             let size = model.downloadSizeText(game)
                             Text(downloadBlocked
-                                 ?? (blocked == nil
+                                 ?? (game.partsToBuild
+                                     ? L("Downloads and builds the game's parts on this Mac; nothing is installed yet. The Vision Pro is not needed for it.",
+                                         "Lädt und baut die Spielteile auf diesem Mac; installiert wird noch nichts. Die Vision Pro wird dafür nicht gebraucht.")
+                                     : blocked == nil
                                      ? L("\(size) – fetches the files to this Mac; nothing is built or installed.",
                                          "\(size) – holt die Dateien auf diesen Mac; gebaut und installiert wird nichts.")
                                      : L("\(size) – this already works; building and installing follow later.",
@@ -805,6 +812,8 @@ struct GameDetail: View {
 
                 if game.draft { untestedBox }
                 if !game.status.userProvidedMissing.isEmpty { ownFiles }
+                if let account = game.recipe.gameAccount { gameAccountBox(account) }
+                if let builder = game.recipe.builder { builderBox(builder) }
 
                 GroupBox(L("On This Mac", "Auf diesem Mac")) {
                     VStack(alignment: .leading, spacing: 6) {
@@ -826,9 +835,10 @@ struct GameDetail: View {
                                     ? L("one file, size not known in advance", "eine Datei, Größe vorab nicht bekannt")
                                     : L("\(game.status.filesRequired - game.status.filesPresent) files, size not known in advance",
                                         "\(game.status.filesRequired - game.status.filesPresent) Dateien, Größe vorab nicht bekannt"))
-                        } else if game.status.stockComplete {
+                        } else if game.status.stockComplete, game.status.parts == nil {
                             row("Download", L("nothing left to download", "nichts mehr zu laden"))
                         }
+                        if let parts = game.status.parts { row(L("Game parts", "Spielteile"), AppModel.partsText(parts)) }
                         if game.storeBytes > 0 {
                             HStack {
                                 Text(L("Space used", "Belegter Platz")).foregroundStyle(.secondary).frame(width: 130, alignment: .leading)
@@ -861,6 +871,7 @@ struct GameDetail: View {
                 if game.prepared, model.toolchainText != nil { ToolchainBox(game: game) }
 
                 if model.offersCoreMods(game) { CoreModsBox(game: game) }
+        if model.gameMods(game) != nil { GameModsBox(game: game) }
 
                 if model.hasSaves(game), game.installed || model.saveSnapshots[game.id] != nil { SavesBox(game: game) }
 
@@ -880,11 +891,14 @@ struct GameDetail: View {
                              ? L("Before anything is downloaded, Steam is asked whether you own this game – by Valve’s own tool, with your sign-in. Without a purchase, nothing is downloaded.", "Vor dem Laden wird bei Steam geprüft, dass du dieses Spiel gekauft hast – mit Valves eigenem Werkzeug und deiner Anmeldung. Ohne Kauf wird nichts geladen.")
                              : game.needsMetaAccount
                              ? L("Before anything is downloaded, Meta is asked whether you own this game. Without a purchase, nothing is downloaded.", "Vor dem Laden wird bei Meta geprüft, dass du dieses Spiel gekauft hast. Ohne Kauf wird nichts geladen.")
+                             : game.recipe.gameAccount != nil
+                             ? AppModel.gameAccountSentence
                              : L("This game does not come from the Meta Store. The game files come from your own purchase and are never downloaded.", "Dieses Spiel kommt nicht aus dem Meta-Store. Die Spieldateien stammen aus deinem eigenen Kauf und werden nie geladen."))
                         if game.fromStore {
                             PurchaseCheck(game: game)
                         } else {
-                            OwnershipLabel(owned: model.owned(game), checking: model.checkingOwnership, compact: false)
+                            OwnershipLabel(owned: model.owned(game), checking: model.checkingOwnership, compact: false,
+                                           inGame: game.recipe.gameAccount != nil)
                         }
                         if let app = game.recipe.store.appId, let page = URL(string: "https://www.meta.com/experiences/\(app)/") {
                             Link(L("View in the Meta Store", "Im Meta-Store ansehen"), destination: page)
@@ -1097,6 +1111,38 @@ struct GameDetail: View {
         }
     }
 
+    /// Für ein Spiel, das selbst nach seinem Konto fragt: was man braucht und wo man sich anmeldet – oben auf der
+    /// Seite, weil AVP Play es vor der Installation nicht prüft.
+    private func gameAccountBox(_ account: Recipe.GameAccount) -> some View {
+        GroupBox {
+            VStack(alignment: .leading, spacing: 8) {
+                Label(account.title.text, systemImage: "person.badge.key").font(.headline)
+                ForEach(account.notes, id: \.self) { Text($0.text).font(.callout).fixedSize(horizontal: false, vertical: true) }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading).padding(6)
+        }
+    }
+
+    /// Für ein Spiel, dessen Teile auf diesem Mac gebaut werden: was der Bau braucht und was man dabei sieht – bevor
+    /// jemand „Installieren“ wählt. Sind die Teile gebaut, steht es als eine Zeile da.
+    private func builderBox(_ builder: PartsBuilder) -> some View {
+        GroupBox {
+            VStack(alignment: .leading, spacing: 8) {
+                Label(L("Built on This Mac", "Wird auf diesem Mac gebaut"), systemImage: "hammer").font(.headline)
+                if case .built? = game.status.parts {
+                    Text(L("The game's parts are built. Installing again does not build them again.",
+                           "Die Spielteile sind gebaut. Eine weitere Installation baut sie nicht noch einmal."))
+                        .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                } else {
+                    ForEach(builder.notes, id: \.self) { Text($0.text).font(.callout).fixedSize(horizontal: false, vertical: true) }
+                }
+                Text(AppModel.builderSourceText(builder, local: GameParts.usesLocalBuilder(game.recipe)))
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true).textSelection(.enabled)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading).padding(6)
+        }
+    }
+
     private var ownFiles: some View {
         GroupBox {
             VStack(alignment: .leading, spacing: 8) {
@@ -1256,16 +1302,18 @@ extension AppModel {
         case .current:
             // Wo eine Toolchain gewählt ist oder der Bau aus einer bearbeiteten Arbeitskopie stammt, steht sie dabei.
             if let pin = toolchainChoices.games[game.id] {
-                return L("Installed, built with toolchain \(pin.name), which is chosen for this game.", "Installiert, gebaut mit Toolchain \(pin.name), die für dieses Spiel gewählt ist.")
+                let named = game.recipe.toolchainName(pin.name)
+                return L("Installed, built with toolchain \(named), which is chosen for this game.", "Installiert, gebaut mit Toolchain \(named), die für dieses Spiel gewählt ist.")
             }
             if let built = game.status.builtWith, built.modified {
-                return L("Installed, built with toolchain \(Toolchain.name(version: built.toolchain, modified: true)).", "Installiert, gebaut mit Toolchain \(Toolchain.name(version: built.toolchain, modified: true)).")
+                return L("Installed, built with toolchain \(game.recipe.toolchainName(Toolchain.name(version: built.toolchain, modified: true))).", "Installiert, gebaut mit Toolchain \(game.recipe.toolchainName(Toolchain.name(version: built.toolchain, modified: true))).")
             }
             return L("Installed and up to date.", "Installiert und auf dem neuesten Stand.")
         case .olderToolchain:
             if let pin = toolchainChoices.games[game.id] {
-                return L("Installed, but not built with toolchain \(pin.name), which is chosen for this game – “Update” builds it with that one; saved games and data are kept.",
-                         "Installiert, aber nicht mit Toolchain \(pin.name) gebaut, die für dieses Spiel gewählt ist – „Aktualisieren“ baut es mit ihr; Spielstände und Daten bleiben.")
+                let named = game.recipe.toolchainName(pin.name)
+                return L("Installed, but not built with toolchain \(named), which is chosen for this game – “Update” builds it with that one; saved games and data are kept.",
+                         "Installiert, aber nicht mit Toolchain \(named) gebaut, die für dieses Spiel gewählt ist – „Aktualisieren“ baut es mit ihr; Spielstände und Daten bleiben.")
             }
             if let built = game.status.builtWith, let wanted = metalFXExpected, built.metalFX != wanted,
                built.toolchain >= (toolchainRevision?.forTarget(game.recipe.toolchain.target) ?? 0) {
@@ -1276,8 +1324,12 @@ extension AppModel {
                         "Installiert mit von Anfang an eingeschaltetem MetalFX-Hochskalieren; die Einstellung ist jetzt aus – „Aktualisieren“ baut es ohne; Spielstände und Daten bleiben.")
             }
             if let built = game.status.builtWith, built.modified {
-                return L("Installed, built with toolchain \(Toolchain.name(version: built.toolchain, modified: true)). “Update” replaces this build with one from the newest toolchain, without the changes of the modified one (see “Toolchain” below); saved games and data are kept.",
-                         "Installiert, gebaut mit Toolchain \(Toolchain.name(version: built.toolchain, modified: true)). „Aktualisieren“ ersetzt diesen Bau durch einen aus der neuesten Toolchain, ohne die Änderungen der modifizierten (siehe unten unter „Toolchain“); Spielstände und Daten bleiben.")
+                return L("Installed, built with toolchain \(game.recipe.toolchainName(Toolchain.name(version: built.toolchain, modified: true))). “Update” replaces this build with one from the newest toolchain, without the changes of the modified one (see “Toolchain” below); saved games and data are kept.",
+                         "Installiert, gebaut mit Toolchain \(game.recipe.toolchainName(Toolchain.name(version: built.toolchain, modified: true))). „Aktualisieren“ ersetzt diesen Bau durch einen aus der neuesten Toolchain, ohne die Änderungen der modifizierten (siehe unten unter „Toolchain“); Spielstände und Daten bleiben.")
+            }
+            if let own = game.recipe.ownToolchainTitle, let source = game.recipe.toolchain.source {
+                return L("Installed. Its own toolchain has a newer state (\(own) \(source.version)) – “Update” builds the game with it; saved games and data are kept.",
+                         "Installiert. Seine eigene Toolchain hat einen neueren Stand (\(own) \(source.version)) – „Aktualisieren“ baut das Spiel damit; Spielstände und Daten bleiben.")
             }
             return L("Installed. The current toolchain produces a newer build – “Update” builds it; saved games and data are kept.", "Installiert. Mit der jetzigen Toolchain gibt es eine neuere Fassung – „Aktualisieren“ baut sie; Spielstände und Daten bleiben.")
         case .olderGame(let stamp): return L("Installed in an older version of the game (\(stamp)). This app now has version \(game.recipe.versionName) – “Update” downloads what is new and installs it; saved games and data are kept.",
@@ -1307,8 +1359,36 @@ extension AppModel {
     }
 
     /// Was beim Entfernen verloren geht – bei Sonderapps auch Dateien, die sich nicht neu laden lassen.
+    /// Was über ein Spiel zu sagen ist, das selbst nach seinem Konto fragt, wo andere ihren Store nennen.
+    static var gameAccountSentence: String {
+        L("This game comes neither from the Meta Store nor from Steam, and AVP Play does not check whether you own it: the game asks for your account itself, on the Vision Pro (see above).",
+          "Dieses Spiel kommt weder aus dem Meta-Store noch aus Steam, und AVP Play prüft nicht, ob es dir gehört: Das Spiel fragt auf der Vision Pro selbst nach deinem Konto (siehe oben).")
+    }
+
+    /// Der Stand der Spielteile, die auf diesem Mac gebaut werden, als Wert einer Zeile.
+    static func partsText(_ parts: GameParts.State) -> String {
+        switch parts {
+        case .missing: return L("not built yet – the first install builds them", "noch nicht gebaut – die erste Installation baut sie")
+        case .built(let date, let bytes):
+            let when = date.formatted(Date.FormatStyle(date: .abbreviated, time: .shortened, locale: L10n.locale))
+            return L("built on \(when) (\(Installer.gigabytes(bytes)))", "gebaut am \(when) (\(Installer.gigabytes(bytes)))")
+        }
+    }
+
+    /// Woher das Bauwerkzeug für die Spielteile kommt: der Stand, den das Rezept nennt, oder ein von Hand gewählter Ordner.
+    static func builderSourceText(_ builder: PartsBuilder, local: Bool) -> String {
+        local ? L("A builder folder on this Mac is chosen for this game (avpplay builder use); the recipe's is \(builder.source.repository), state \(builder.source.version) (\(builder.source.shortCommit)).",
+                  "Für dieses Spiel ist ein Bauwerkzeug-Ordner auf diesem Mac gewählt (avpplay builder use); das des Rezepts ist \(builder.source.repository), Stand \(builder.source.version) (\(builder.source.shortCommit)).")
+              : L("The builder comes from \(builder.source.repository), state \(builder.source.version) (\(builder.source.shortCommit)); AVP Play fetches exactly this state.",
+                  "Das Bauwerkzeug kommt von \(builder.source.repository), Stand \(builder.source.version) (\(builder.source.shortCommit)); AVP Play holt genau diesen Stand.")
+    }
+
     func removeWarning(_ game: Game) -> String {
         let device = L("The game on your Vision Pro is not touched.", "Das Spiel auf deiner Vision Pro bleibt unberührt.")
+        if game.recipe.builder != nil {
+            return L("This deletes the game's parts built on this Mac and the builder's working folder. For the next update they have to be built again, which takes as long as the first time. ",
+                     "Dabei werden die auf diesem Mac gebauten Spielteile und der Arbeitsordner des Baus gelöscht. Für die nächste Aktualisierung müssen sie neu gebaut werden, und das dauert so lange wie beim ersten Mal. ") + device
+        }
         if game.fromStore {
             return L("Everything this app downloaded for the game is deleted. For the next update it has to be downloaded again. ",
                      "Alles, was dieses Programm für das Spiel geladen hat, wird gelöscht. Für die nächste Aktualisierung muss es neu geladen werden. ") + device
@@ -1348,6 +1428,104 @@ private struct OfflineBox: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading).padding(6)
+        }
+    }
+}
+
+/// The mods a game's own toolchain can build it with (`GameMods`): a switch per set, and the player's key for the
+/// site the files come from.
+private struct GameModsBox: View {
+    @EnvironmentObject var model: AppModel
+    let game: Game
+    @State private var keyText = ""
+    @State private var keyStored = false
+    @State private var keyNote: String?
+
+    var body: some View {
+        if let mods = model.gameMods(game) {
+            let chosen = model.gameModSets(game)
+            GroupBox(L("Mods", "Mods")) {
+                VStack(alignment: .leading, spacing: 10) {
+                    ForEach(mods.sets) { set in
+                        Toggle(isOn: Binding(get: { chosen.contains(set.id) }, set: { model.setGameModSet(set.id, on: $0, for: game) })) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(set.title.text)
+                                if let about = set.about?.text {
+                                    Text(about).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                                }
+                                if let list = set.mods, !list.isEmpty {
+                                    Text(list.map { $0.name + ($0.version.map { " \($0)" } ?? "") }.joined(separator: " · "))
+                                        .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
+                        }
+                    }
+                    if let about = mods.about?.text {
+                        Text(about).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    }
+                    Text(L("Switching mods on or off is an update of the game: install it again afterwards. Your saved games stay.",
+                           "Mods ein- oder auszuschalten ist ein Update des Spiels: Installiere es danach erneut. Deine Spielstände bleiben."))
+                        .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    if let source = mods.source, let key = source.key {
+                        Divider()
+                        Toggle(isOn: Binding(get: { model.modsKeyOn && keyStored }, set: { model.modsKeyOn = $0 })) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(L("Download with my \(source.name) key", "Mit meinem \(source.name)-Schlüssel laden"))
+                                Text(key.premiumOnly == true
+                                     ? L("With a paid \(source.name) account (Premium) the files download by themselves. Without it, or with this off, AVP Play opens each download page in your browser.",
+                                         "Mit einem bezahlten \(source.name)-Konto (Premium) laden die Dateien von selbst. Ohne, oder wenn das hier aus ist, öffnet AVP Play jede Download-Seite in deinem Browser.")
+                                     : L("The files download by themselves with your key. With this off, AVP Play opens each download page in your browser.",
+                                         "Mit deinem Schlüssel laden die Dateien von selbst. Wenn das hier aus ist, öffnet AVP Play jede Download-Seite in deinem Browser."))
+                                    .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                        .disabled(!keyStored)
+                        HStack {
+                            SecureField(keyStored ? L("A key is stored", "Ein Schlüssel ist hinterlegt") : L("Your personal API key", "Dein persönlicher API-Schlüssel"), text: $keyText)
+                                .textFieldStyle(.roundedBorder)
+                            Button(L("Save", "Sichern")) {
+                                do {
+                                    try ModsKeyStore().write(key: keyText, variable: key.variable)
+                                    keyText = ""; keyStored = true; keyNote = nil
+                                    model.modsKeyOn = true
+                                } catch {
+                                    keyNote = L("That does not look like a key, or the keychain did not take it.", "Das sieht nicht nach einem Schlüssel aus, oder der Schlüsselbund hat ihn nicht angenommen.")
+                                }
+                            }
+                            .disabled(keyText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                            if keyStored {
+                                Button(L("Remove", "Entfernen")) {
+                                    ModsKeyStore().delete(variable: key.variable)
+                                    keyStored = false; model.modsKeyOn = false
+                                }
+                            }
+                        }
+                        if let keyNote { Text(keyNote).font(.callout).foregroundStyle(.red) }
+                        if let hint = key.hint?.text {
+                            Text(hint).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                        }
+                        HStack(spacing: 12) {
+                            if let page = key.page, let url = URL(string: page) {
+                                Link(L("Where the key is made", "Wo der Schlüssel entsteht"), destination: url)
+                            }
+                            if let account = source.account, let url = URL(string: account) {
+                                Link(L("Create a free \(source.name) account", "Kostenloses \(source.name)-Konto anlegen"), destination: url)
+                            }
+                        }
+                        .font(.callout)
+                        Text(L("The key stays in your Mac's keychain and is only handed to the download step.",
+                               "Der Schlüssel bleibt im Schlüsselbund deines Macs und geht nur an den Download-Schritt."))
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading).padding(6)
+            }
+            .task(id: game.id) {
+                if let variable = mods.source?.key?.variable {
+                    let stored = await Task.detached { ModsKeyStore().has(variable: variable) }.value
+                    keyStored = stored
+                }
+            }
         }
     }
 }

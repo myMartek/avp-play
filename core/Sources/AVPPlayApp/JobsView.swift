@@ -234,9 +234,16 @@ struct JobDetail: View {
                 }
                 // Welche Datei gerade dran ist und wie weit sie ist – das weiß der Download selbst, mit oder ohne
                 // Größen im Rezept.
-                if let p = model.copyProgress[job.id], p.step == .fetch, let file = p.file {
+                if let p = model.copyProgress[job.id], p.step == .fetch, let build = p.build {
+                    // A game's parts being built on this Mac: its own steps, bars and estimate.
+                    BuildProgressView(build: build).id("build-\(job.id)")
+                } else if let p = model.copyProgress[job.id], p.step == .fetch, let file = p.file {
                     FileProgressLine(file: file).id("fetch-file-\(job.id)-\(file.index)")
                 }
+            }
+            // Mods eines Spiels mit eigener Toolchain: Lädt eine Datei mit dem Schlüssel des Spielers, steht hier ihr Stand.
+            if phase == .running, job.current == .build, let p = model.copyProgress[job.id], p.step == .build, let file = p.file {
+                FileProgressLine(file: file).id("mods-file-\(job.id)-\(file.index)")
             }
             if phase == .running, job.current == .stage, let progress = model.copyProgress[job.id], progress.total > 0 {
                 // Bei einer großen Datei wird das Gerät währenddessen gefragt, wie viel von ihr schon dort liegt.
@@ -277,6 +284,125 @@ struct JobDetail: View {
     }
 }
 
+/// A build of a game's parts on this Mac (Minecraft): the whole build as one bar with the time left, the step that
+/// runs in plain words with its own bar – a real one where the builder counts its work, an indeterminate one with
+/// the time against the usual time where it cannot – and, folded away, every step with what became of it.
+/// Recomputed every second from the last state the builder reported (`BuildProgress.estimate(at:)`).
+struct BuildProgressView: View {
+    let build: BuildProgress
+    /// Pictures of the page (`BuildSnapshot`) can show the list of steps unfolded.
+    @MainActor static var expandedAtStart = false
+    @State private var showSteps = BuildProgressView.expandedAtStart
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 1)) { context in
+            let e = build.estimate(at: context.date)
+            VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(L("Building the game's parts on this Mac", "Die Spielteile werden auf diesem Mac gebaut")).font(.headline)
+                        Spacer(minLength: 12)
+                        if let left = e.remaining {
+                            Text(BuildProgress.pausable(BuildProgress.remainingText(left, atLeast: e.open), build.waiting != nil))
+                                .font(.headline).monospacedDigit()
+                                .foregroundStyle(e.open || build.waiting != nil ? .secondary : .primary)
+                        }
+                    }
+                    ProgressView(value: e.overall).animation(.easeOut(duration: 0.4), value: e.overall)
+                    Text(build.overallCaption(e)).font(.caption).foregroundStyle(.secondary).monospacedDigit()
+                }
+                // The build waits for the user: said first and plainly, it is the one thing to do.
+                if let wait = build.waitText {
+                    Label { Text(wait).fixedSize(horizontal: false, vertical: true) } icon: {
+                        Image(systemName: "lock.fill").foregroundStyle(.orange)
+                    }
+                    .font(.body.weight(.medium))
+                    .padding(10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
+                    .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color.orange.opacity(0.5)))
+                }
+                if let headline = build.headline {
+                    GroupBox {
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack(alignment: .firstTextBaseline) {
+                                Text(headline).font(.body.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
+                                Spacer(minLength: 8)
+                                // The builder's own name of the step: for a bug report, not for reading.
+                                Text(build.currentName).font(.caption.monospaced()).foregroundStyle(.tertiary).textSelection(.enabled)
+                            }
+                            if let share = e.step {
+                                ProgressView(value: share).animation(.easeOut(duration: 0.4), value: share)
+                            } else {
+                                ProgressView().progressViewStyle(.linear)
+                            }
+                            HStack(spacing: 5) {
+                                if e.slow { Image(systemName: "clock.badge.exclamationmark").foregroundStyle(.orange) }
+                                Text(build.stepText(e)).monospacedDigit()
+                            }
+                            .font(.callout).foregroundStyle(.secondary)
+                            if let note = BuildStepNames.note(build.currentName) {
+                                Label(note, systemImage: build.currentName == "world" || build.currentName == "bake" ? "eye.slash" : "info.circle")
+                                    .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading).padding(4)
+                    }
+                }
+                if build.plan != nil {
+                    DisclosureGroup(isExpanded: $showSteps) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            ForEach(build.steps(), id: \.index) { step in BuildStepRow(build: build, step: step, estimate: e) }
+                        }
+                        .padding(.top, 4)
+                    } label: {
+                        Text(build.stepsSummary()).font(.callout)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// One step in the folded list: done (with its time, or “already there” when an earlier build made it), running,
+/// or still to come (with its usual time).
+struct BuildStepRow: View {
+    let build: BuildProgress
+    let step: (index: Int, name: String, state: BuildProgress.StepState)
+    let estimate: BuildProgress.Estimate
+
+    var body: some View {
+        HStack(spacing: 8) {
+            icon.frame(width: 16)
+            Text(BuildStepNames.title(step.name) ?? L("Step \(step.index)", "Schritt \(step.index)"))
+                .foregroundStyle(step.state == .pending ? .secondary : .primary)
+            Text(step.name).font(.caption2.monospaced()).foregroundStyle(.tertiary)
+            Spacer(minLength: 8)
+            Text(trailing).foregroundStyle(.secondary).monospacedDigit()
+        }
+        .font(.callout)
+    }
+
+    @ViewBuilder private var icon: some View {
+        switch step.state {
+        case .done, .skipped: Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+        case .willSkip: Image(systemName: "checkmark.circle").foregroundStyle(.green)
+        case .running: ProgressView().controlSize(.mini)
+        case .pending: Image(systemName: "circle").foregroundStyle(.tertiary)
+        }
+    }
+
+    private var trailing: String {
+        switch step.state {
+        case .done(let seconds?): return BuildProgress.clock(seconds)
+        case .done(nil): return ""
+        case .skipped, .willSkip: return L("already there", "schon vorhanden")
+        case .running: return BuildProgress.clock(estimate.stepElapsed)
+        case .pending: return build.usualText(step.index, estimate: estimate)
+        }
+    }
+}
+
 /// Die Datei, die gerade geladen wird: „Datei 12 von 117“, ihr Name, und ihr eigener Stand – als Balken, sobald
 /// die Auslieferung ihre Größe genannt hat, sonst als geladene Menge.
 struct FileProgressLine: View {
@@ -285,7 +411,8 @@ struct FileProgressLine: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
-                Text(L("File \(file.index) of \(file.count)", "Datei \(file.index) von \(file.count)")).monospacedDigit()
+                Text(file.isStage ? L("Step \(file.index) of \(file.count)", "Schritt \(file.index) von \(file.count)")
+                                  : L("File \(file.index) of \(file.count)", "Datei \(file.index) von \(file.count)")).monospacedDigit()
                 Text(file.name).lineLimit(1).truncationMode(.middle).foregroundStyle(.secondary)
             }
             .font(.callout)

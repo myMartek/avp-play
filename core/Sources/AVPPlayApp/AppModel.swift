@@ -95,7 +95,9 @@ struct Game: Identifiable {
         return false
     }
     /// Liegt alles, woraus das Spiel gebaut wird, vollständig auf diesem Mac?
-    var downloaded: Bool { prepared && status.filesRequired + status.treesRequired > 0 && status.stockComplete }
+    var downloaded: Bool { prepared && (status.filesRequired + status.treesRequired > 0 || status.parts != nil) && status.stockComplete }
+    /// Werden die Teile dieses Spiels auf diesem Mac gebaut (`Recipe.builder`), und fehlen sie noch?
+    var partsToBuild: Bool { status.parts == .missing }
 }
 
 /// Die letzten Zeilen eines Verlaufs (höchstens `AppModel.logLinesKept` und ein Schub) und wie viele es insgesamt sind.
@@ -125,6 +127,9 @@ struct GameOptions: Codable, Equatable {
     /// (`defaultOn`, bisher nur bei Beat Saber an). Gilt nur für eine Fassung, für die die Toolchain Mods hat; für jede
     /// andere wird ohne sie gebaut, und die Wahl bleibt für später stehen.
     var coreMods: Bool?
+    /// The mod sets of the game's own toolchain to build with (`GameMods`; the "Mods" box). Without a choice: the sets
+    /// the toolchain's description switches on by default (so far none).
+    var gameMods: [String]?
     /// Dieses Spiel ohne Meta und Steam installieren (`InstallRequest.offline`). Ohne Angabe: wie für alle Spiele
     /// eingestellt (`AppModel.offlineMode`).
     var offline: Bool?
@@ -442,6 +447,9 @@ final class AppModel: ObservableObject {
     /// Je Spiel die Nummer des Pakets, das gerade für es geladen wird.
     @Published var toolchainArriving: [String: ReleasedToolchain] = [:]
     @Published var toolchainNote: [String: String] = [:]
+    /// Games whose own toolchain (`Recipe.Toolchain.source`) is being fetched for their page, and what went wrong.
+    @Published var ownToolchainFetching: Set<String> = []
+    @Published var ownToolchainProblem: [String: String] = [:]
     /// Besorgt diese Bilder: zwei Abrufe zugleich, mit Zwischenspeicher.
     let covers = CoverLoader()
     @AppStorage("filterFavourites") var filterFavourites = false
@@ -471,6 +479,8 @@ final class AppModel: ObservableObject {
     /// Das Entwicklerteam, das dieses Programm signiert hat; `nil` bei einem Bau ohne Identität.
     let ownTeam: String? = Bundle.main.bundleIdentifier == nil ? nil : Updater.team(of: Bundle.main.bundleURL)
     private var awake: NSObjectProtocol?
+    /// While a job of a game whose parts are built on this Mac runs: the display stays awake (see `pump`).
+    private var displayAwake: NSObjectProtocol?
     @Published private var options: [String: GameOptions] = [:]
     /// Die Filter der Übersicht; mehrere zugleich engen weiter ein.
     @AppStorage("filterVerified") var filterVerified = false
@@ -727,7 +737,7 @@ final class AppModel: ObservableObject {
         // (Gerät fragen, jeden Ordner im Bestand zählen) dauert Sekunden und ändert an den anderen Spielen nichts.
         let id = game.id, catalog = game.catalog
         let paths = paths, apps = installedApps, revision = toolchainRevision, prefix = bundlePrefix, drafts = draftsDirectory
-        let pin = toolchainChoices.games[id], metalFX = metalFXExpected
+        let pin = toolchainChoices.pin(for: game.recipe), metalFX = metalFXExpected
         let modProfiles = toolchain(for: game)?.coreModsProfiles ?? []
         Task.detached(priority: .userInitiated) {
             var fresh: Game?
@@ -1061,6 +1071,42 @@ final class AppModel: ObservableObject {
         return (games.map { toolchain(for: $0) } + [toolchain]).lazy.compactMap { $0?.modCredits }.first
     }
 
+    // MARK: Mods of a game's own toolchain (`GameMods`)
+
+    /// The mods the game's toolchain offers; nil when it has none (or the toolchain is not on this Mac yet).
+    func gameMods(_ game: Game) -> GameMods? {
+        toolchain(for: game)?.gameMods()
+    }
+
+    /// The sets this game is built with: the player's choice, else the description's defaults.
+    func gameModSets(_ game: Game) -> [String] {
+        guard let mods = gameMods(game) else { return [] }
+        return mods.known(options(for: game).gameMods ?? mods.defaultSets)
+    }
+
+    func setGameModSet(_ id: String, on: Bool, for game: Game) {
+        guard let mods = gameMods(game) else { return }
+        var sets = Set(gameModSets(game))
+        if on { sets.insert(id) } else { sets.remove(id) }
+        var next = options(for: game)
+        next.gameMods = mods.known(Array(sets))
+        setOptions(next, for: game)
+        refreshStatus(of: game.id)
+    }
+
+    /// What a current build should carry of them: the choice, where the toolchain has such mods; else nil (not compared).
+    nonisolated static func gameModsExpected(recipe: Recipe, mods: GameMods?) -> [String]? {
+        guard let mods else { return nil }
+        let stored = UserDefaults.standard.data(forKey: "gameOptions").flatMap { try? JSONDecoder().decode([String: GameOptions].self, from: $0) }
+        return mods.known(stored?[recipe.id]?.gameMods ?? mods.defaultSets)
+    }
+
+    /// Whether the player's key for the mods' site is used for the downloads (their own choice, for all games).
+    var modsKeyOn: Bool {
+        get { UserDefaults.standard.bool(forKey: "modsKeyOn") }
+        set { UserDefaults.standard.set(newValue, forKey: "modsKeyOn"); objectWillChange.send() }
+    }
+
     func setCoreMods(_ on: Bool, for game: Game) {
         var next = options(for: game)
         next.coreMods = on
@@ -1080,10 +1126,11 @@ final class AppModel: ObservableObject {
     func refreshStatus(of id: String) {
         guard var fresh = allGames.first(where: { $0.id == id }) ?? games.first(where: { $0.id == id }) else { return }
         fresh.status = GameStatus.of(recipe: fresh.recipe, store: paths.store, apps: installedApps, toolchainVersion: toolchainRevision?.forTarget(fresh.recipe.toolchain.target),
-                                     pin: toolchainChoices.games[id], bundlePrefix: bundlePrefix,
+                                     pin: toolchainChoices.pin(for: fresh.recipe), bundlePrefix: bundlePrefix,
                                      otherSourceBuilds: Set(fresh.otherSourceBuilds),
                                      metalFX: metalFXExpected,
-                                     coreMods: toolchain(for: fresh).flatMap { AppModel.coreModsExpected(recipe: fresh.recipe, profiles: $0.coreModsProfiles) })
+                                     coreMods: toolchain(for: fresh).flatMap { AppModel.coreModsExpected(recipe: fresh.recipe, profiles: $0.coreModsProfiles) },
+                                     gameMods: AppModel.gameModsExpected(recipe: fresh.recipe, mods: toolchain(for: fresh)?.gameMods()))
         replace(fresh)
     }
 
@@ -1225,13 +1272,26 @@ final class AppModel: ObservableObject {
                      "„\(name)“ ist angehakt, liegt aber noch nicht auf diesem Mac (siehe „Wählbare Inhalte“).")
         }
         // Ist für das Spiel eine Toolchain gewählt, wird mit keiner anderen gebaut – auch nicht, wenn sie fehlt.
-        let pin = toolchainChoices.games[game.id]
+        let pin = toolchainChoices.pin(for: game.recipe)
+        // The game's own toolchain, named by its recipe and not fetched yet, is no obstacle: the job fetches it.
+        let fetchedByJob = toolchainChoices.usesRecipeToolchain(game.recipe)
         if let arriving = toolchainArriving[game.id] {
             return L("Toolchain \(arriving.version) is being downloaded for this game.", "Toolchain \(arriving.version) wird für dieses Spiel geladen.")
         }
-        if let pin, paths.packager.toolchain(for: pin) == nil {
-            return L("Toolchain \(pin.name), chosen for this game, is no longer on this Mac. Choose one under “Toolchain” below.",
-                     "Toolchain \(pin.name), für dieses Spiel gewählt, liegt nicht mehr auf diesem Mac. Wähle unten unter „Toolchain“ eine.")
+        if ownToolchainFetching.contains(game.id) {
+            return L("This game's own toolchain is being fetched – a moment.", "Die eigene Toolchain dieses Spiels wird gerade geholt – einen Moment.")
+        }
+        if let pin, !fetchedByJob, paths.packager.toolchain(for: pin) == nil {
+            let named = game.recipe.toolchainName(pin.name)
+            return L("Toolchain \(named), chosen for this game, is no longer on this Mac. Choose one under “Toolchain” below.",
+                     "Toolchain \(named), für dieses Spiel gewählt, liegt nicht mehr auf diesem Mac. Wähle unten unter „Toolchain“ eine.")
+        }
+        // A game with a toolchain of its own is never built with another one.
+        if let t = toolchain(for: game), !t.builds(game.recipe) {
+            return pin == nil ? L("This game is built with a toolchain of its own (\(game.recipe.ownToolchainTitle ?? Toolchain.kleptonKind)), which is not set up on this Mac yet.",
+                                  "Dieses Spiel wird mit einer eigenen Toolchain gebaut (\(game.recipe.ownToolchainTitle ?? Toolchain.kleptonKind)), die auf diesem Mac noch nicht eingerichtet ist.")
+                              : L("The toolchain chosen for this game is not the kind it is built with (see “Toolchain” below).",
+                                  "Die für dieses Spiel gewählte Toolchain ist nicht die Art, mit der es gebaut wird (siehe unten unter „Toolchain“).")
         }
         // Ein Entwurf, der ohne Toolchain nachgeschlagen wurde, nennt noch keinen Mindeststand; der wird beim Anlegen
         // des Auftrags eingesetzt.
@@ -1268,6 +1328,27 @@ final class AppModel: ObservableObject {
             await MainActor.run {
                 self.apply(snapshot)
                 self.refreshing = false
+            }
+        }
+    }
+
+    private var fetchingOwnPictures = false
+
+    /// A game whose picture comes out of its own files (Minecraft) gets it from the files' origin before its parts
+    /// are built – once; afterwards the list is read again so the tile shows it.
+    func fetchOwnPictures() {
+        guard !fetchingOwnPictures else { return }
+        let store = paths.store
+        let wanted = games.map(\.recipe).filter { $0.icon?.archive?.origin != nil && ArchiveArt.hero(recipe: $0, store: store) == nil }
+        guard !wanted.isEmpty else { return }
+        fetchingOwnPictures = true
+        Task.detached(priority: .utility) {
+            var made = false
+            for recipe in wanted where await ArchiveArt.fetchFromOrigin(recipe: recipe, store: store) { made = true }
+            let any = made
+            await MainActor.run {
+                self.fetchingOwnPictures = false
+                if any { self.refresh() }
             }
         }
     }
@@ -1316,6 +1397,7 @@ final class AppModel: ObservableObject {
         metalFXExpected = s.metalFXExpected
         toolchainChoices = s.toolchainChoices
         games = s.games
+        fetchOwnPictures()
         loadOwnCatalogEntries()
         checkStoreVersions()
         loadProblem = s.loadProblem
@@ -1666,7 +1748,7 @@ final class AppModel: ObservableObject {
     /// Ob es für das Spiel etwas gibt, das das Programm selbst laden kann und das noch fehlt. Gezählt werden die
     /// Dateien, nicht ihre Größe: bei einem nachgeschlagenen Spiel aus dem Meta-Store kennt die vorab niemand.
     func hasDownloads(_ game: Game) -> Bool {
-        game.status.filesToDownload > 0 || game.status.bytesToDownload > 0 || steamDraftApp(game) != nil
+        game.status.filesToDownload > 0 || game.status.bytesToDownload > 0 || steamDraftApp(game) != nil || game.partsToBuild
     }
 
     /// Wie viel für das Spiel noch zu laden ist, in Worten – bei einem Steam-Spiel, das noch nicht geladen ist, die
@@ -1674,6 +1756,8 @@ final class AppModel: ObservableObject {
     func downloadSizeText(_ game: Game) -> String {
         if let app = steamDraftApp(game) { return Installer.gigabytes(app.bytes) }
         if game.status.bytesToDownload > 0 { return Installer.gigabytes(game.status.bytesToDownload) }
+        // Spielteile, die hier gebaut werden: Ihre Größe kennt vorab niemand; was der Bau braucht, sagt die Seite des Spiels.
+        if game.partsToBuild, game.status.filesToDownload == 0 { return L("Game parts, built on this Mac", "Spielteile, auf diesem Mac gebaut") }
         return game.status.filesToDownload == 1 ? L("One file", "Eine Datei") : L("\(game.status.filesToDownload) files", "\(game.status.filesToDownload) Dateien")
     }
 
@@ -1744,7 +1828,9 @@ final class AppModel: ObservableObject {
         // Nur wer baut oder aufs Gerät kopiert, braucht die Toolchain.
         let downloadOnly = steps == InstallStep.download
         let toolchain = toolchain(for: game)
-        guard toolchain != nil || downloadOnly else { return }
+        // The game's own toolchain may not be on this Mac yet; the job fetches it to this place.
+        let ownToolchain = toolchainChoices.usesRecipeToolchain(game.recipe) ? ExternalToolchains().directory(for: game.recipe)?.path : nil
+        guard toolchain != nil || ownToolchain != nil || downloadOnly else { return }
         // Ein Entwurf, der ohne Toolchain nachgeschlagen wurde: Jetzt, wo gebaut wird, steht fest, mit welchem Stand.
         var recipe = game.recipe
         if game.draft, recipe.toolchain.minCommit.isEmpty, !downloadOnly, let toolchain {
@@ -1753,13 +1839,15 @@ final class AppModel: ObservableObject {
             encoder.outputFormatting = [.sortedKeys, .prettyPrinted]
             try? encoder.encode(recipe).write(to: draftsDirectory.appendingPathComponent("\(recipe.id).json"), options: .atomic)
         }
-        var request = InstallRequest(toolchain: toolchain?.root.path ?? "")
+        var request = InstallRequest(toolchain: toolchain?.root.path ?? ownToolchain ?? "")
         if downloadOnly { request.downloadOnly = true }
         request.team = teamId
         request.device = device?.udid
         // Ein Spiel aus Steam: Valves Werkzeug fragt und lädt mit der Anmeldung dieses Kontos. Eine Sonderapp mit
         // Spieldaten aus Steam (Portal) lädt so, was ihr fehlt – gefragt wird dort nichts.
         if SteamFetcher.fetchesInJob(recipe), !steamAccount.isEmpty { request.steamAccount = steamAccount }
+        // A builder folder chosen by hand for this game's parts (`avpplay builder use`), instead of the recipe's.
+        if recipe.builder != nil { request.builder = BuilderChoices.load().games[recipe.id] }
         if !game.otherSourceBuilds.isEmpty { request.otherSourceBuilds = game.otherSourceBuilds }
         let chosen = options(for: game)
         request.locales = chosen.locales
@@ -1774,6 +1862,11 @@ final class AppModel: ObservableObject {
         }
         // Die Mods: wie für das Spiel gewählt. Gibt es sie für diese Fassung nicht, baut der Auftrag ohne sie und sagt es.
         if steps.contains(.build), chosen.coreMods ?? (coreModsProfile(game)?.defaultOn == true) { request.coreMods = true }
+        // The mod sets of the game's own toolchain, and whether the player's key fetches their files.
+        if steps.contains(.build), gameMods(game) != nil {
+            request.gameMods = gameModSets(game)
+            if modsKeyOn { request.modsKey = true }
+        }
         if steps.contains(.build), metalFXUpscaling {
             request.metalFX = true
             request.resolution = metalFXResolution
@@ -1785,7 +1878,9 @@ final class AppModel: ObservableObject {
         request.live = true
         do {
             // Eingefroren wird der Stand, mit dem der Auftrag beginnt. Seinen Platz in der Reihe bekommt er dabei.
-            let job = try paths.jobs.enqueue(Job(recipe: recipe, request: request, steps: steps, toolchainCommit: toolchain?.commit() ?? ""))
+            // A game's own toolchain that the job has yet to fetch is in the state the recipe pins.
+            let frozen = toolchain?.commit() ?? Job.toolchainCommit(recipe: recipe, toolchain: request.toolchain) ?? ""
+            let job = try paths.jobs.enqueue(Job(recipe: recipe, request: request, steps: steps, toolchainCommit: frozen))
             queued.append(job.id)
             reloadJobs()
             if show {
@@ -1805,7 +1900,7 @@ final class AppModel: ObservableObject {
         let fresh = games.filter { game in
             // Ein Bau aus einer bearbeiteten Arbeitskopie, die für das Spiel nicht gewählt ist, wird nicht im
             // Sammelauftrag ersetzt: Das entscheidet der Nutzer auf der Seite des Spiels.
-            if game.status.builtWith?.modified == true, toolchainChoices.games[game.id] == nil { return false }
+            if game.status.builtWith?.modified == true, toolchainChoices.pin(for: game.recipe) == nil { return false }
             switch game.status.onDevice {
             case .olderToolchain, .olderGame, .unstamped: return blocker(for: game) == nil
             case .current, .notInstalled, .unknown, .otherSource: return false
@@ -1826,10 +1921,14 @@ final class AppModel: ObservableObject {
     func removeFiles(_ game: Game) {
         guard !isBusy(game.id) else { return }
         let directory = paths.store.directory(for: game.recipe)
+        // Bei einem Spiel, dessen Teile hier gebaut werden, auch der Arbeitsordner des Baus: Er ist der größere Teil.
+        let builders = PartsBuilders()
+        let buildFolders = game.recipe.builder == nil ? [] : [builders.work(for: game.recipe), builders.root.appendingPathComponent("out/\(game.recipe.id)", isDirectory: true)]
         notice = L("Removing files …", "Dateien werden entfernt …")
         Task.detached {
             let problem: String?
             do {
+                for folder in buildFolders { try? FileManager.default.removeItem(at: folder) }
                 if FileManager.default.fileExists(atPath: directory.path) { try FileManager.default.removeItem(at: directory) }
                 problem = nil
             } catch {
@@ -1925,6 +2024,13 @@ final class AppModel: ObservableObject {
             awake = ProcessInfo.processInfo.beginActivity(options: [.idleSystemSleepDisabled, .suddenTerminationDisabled],
                                                           reason: "Installing a game on Apple Vision Pro")
         }
+        // A game whose parts are built on this Mac runs the game itself for a few minutes of that build, and it
+        // cannot while the screen is locked. Keeping the display awake keeps the idle lock away for the whole job
+        // (a lock by hand still happens; the builder then waits for the unlock).
+        if job.recipe.builder != nil, displayAwake == nil {
+            displayAwake = ProcessInfo.processInfo.beginActivity(options: [.idleDisplaySleepDisabled, .idleSystemSleepDisabled],
+                                                                 reason: "Building a game's parts: the game runs on this Mac for a moment")
+        }
         askForNotifications()
         let paths = paths
         let (lines, feed) = AsyncStream<String>.makeStream()
@@ -1949,8 +2055,7 @@ final class AppModel: ObservableObject {
                                       } },
                                       report: { feed.yield("    " + $0) })
             installer.metaTool = metaTool
-            let now = companion != nil ? job.toolchainCommit
-                : (try? Toolchain(root: URL(fileURLWithPath: job.request.toolchain)).commit()) ?? "unbekannt"
+            let now = companion != nil ? job.toolchainCommit : job.currentToolchainCommit() ?? L("unknown", "unbekannt")
             do {
                 _ = try await JobRunner(store: paths.jobs).run(job, currentToolchain: now, log: { feed.yield($0) }) { step, _ in
                     try Task.checkCancellation()
@@ -2010,6 +2115,10 @@ final class AppModel: ObservableObject {
         let cancelled = stopRequested.remove(id) != nil
         if cancelled { _ = try? JobRunner(store: paths.jobs).cancel(id) }
         closeLog(id)
+        if let token = displayAwake {
+            ProcessInfo.processInfo.endActivity(token)
+            displayAwake = nil
+        }
         runningTask = nil
         runningJob = nil
         copyProgress[id] = nil

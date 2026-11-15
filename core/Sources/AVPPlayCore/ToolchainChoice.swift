@@ -285,16 +285,36 @@ public struct ToolchainOptions: Equatable, Sendable {
 
     public init() {}
 
+    /// What a game's page says where nothing is chosen for the game: that it is built with the newest toolchain – or,
+    /// for a game with a toolchain of its own (`Recipe.Toolchain.kind`), with that one, and where it comes from.
+    public static func unchosenSummary(recipe: Recipe, newest: String) -> String {
+        guard let own = recipe.ownToolchainTitle else {
+            return L("This game is built with the newest toolchain (\(newest)).", "Dieses Spiel wird mit der neuesten Toolchain gebaut (\(newest)).")
+        }
+        guard let source = recipe.toolchain.source else {
+            return L("This game is not built with AVP Play's toolchain but with one of its own: \(own). It has to be chosen by hand: avpplay toolchain use \(recipe.id) --toolchain <folder>.",
+                     "Dieses Spiel wird nicht mit der Toolchain von AVP Play gebaut, sondern mit einer eigenen: \(own). Sie muss von Hand gewählt werden: avpplay toolchain use \(recipe.id) --toolchain <Ordner>.")
+        }
+        return L("This game is not built with AVP Play's toolchain but with one of its own: \(own) \(source.version). That number counts the states of \(own) and has nothing to do with the number of AVP Play's toolchain. The app fetches it from \(source.repository) by itself.",
+                 "Dieses Spiel wird nicht mit der Toolchain von AVP Play gebaut, sondern mit einer eigenen: \(own) \(source.version). Diese Nummer zählt die Stände von \(own) und hat mit der Nummer der Toolchain von AVP Play nichts zu tun. Die App holt sie selbst von \(source.repository).")
+    }
+
     /// Angeboten wird nur, womit sich das Rezept des Spiels bauen lässt: was dessen Mindeststand enthält.
     /// Für ein Paket auf GitHub lässt sich das vor dem Laden nur schätzen – aus der Reihenfolge, in der die
     /// neueste Toolchain ihre Vorgänger nennt; geprüft wird es nach dem Laden.
     public static func make(recipe: Recipe, pin: ToolchainChoices.Pin?, packager: ToolchainPackager, newest: Toolchain?,
                      released: [ReleasedToolchain]?, workspace: URL = FixWorkspace.root) -> ToolchainOptions {
         let need = recipe.toolchain.minCommit
-        func builds(_ t: Toolchain) -> Bool { need.isEmpty || t.satisfies(minCommit: need) }
+        // Only what is of the game's kind: a game with a toolchain of its own is not offered Klepton, and no other
+        // game is offered that toolchain.
+        func builds(_ t: Toolchain) -> Bool { t.builds(recipe) && (need.isEmpty || t.satisfies(minCommit: need)) }
+        let newest = newest.flatMap { $0.builds(recipe) ? $0 : nil }
         var options = ToolchainOptions()
         if let newest {
             options.newest = ToolchainOption(id: ToolchainOption.newestId, kind: .newest, version: newest.version(), commit: newest.commit())
+        } else if recipe.toolchain.kind != nil, let source = recipe.toolchain.source {
+            // A game with a toolchain of its own: “no choice” means the state its recipe names.
+            options.newest = ToolchainOption(id: ToolchainOption.newestId, kind: .newest, version: source.version, commit: source.shortCommit)
         }
         let installed = packager.installed().filter { !$0.isModified }
         options.installed = installed.filter(builds).map {
@@ -318,7 +338,8 @@ public struct ToolchainOptions: Equatable, Sendable {
         let ancestors = newest?.manifest?.ancestors ?? []
         func place(_ commit: String) -> Int? { ancestors.firstIndex { $0.hasPrefix(commit) || commit.hasPrefix($0) } }
         let needed = need.isEmpty ? nil : place(need)
-        options.released = (released ?? []).filter { r in
+        // The packages on GitHub are Klepton's.
+        options.released = (recipe.toolchain.kind == nil ? released ?? [] : []).filter { r in
             guard !have.contains(r.commit), r.version < (newest?.version() ?? Int.max) else { return false }
             guard !need.isEmpty else { return true }
             guard let needed else { return false }

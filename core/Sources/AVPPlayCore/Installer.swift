@@ -135,6 +135,15 @@ public struct InstallRequest: Codable, Sendable, Equatable {
     /// Das Spiel mit seinen Mods bauen (Beat Saber: eigene Songs) – die Option „Mods“ auf der Seite des Spiels.
     /// Ohne Angabe: nein. Nur für eine Fassung, für die die Toolchain Mods hat (`Toolchain.coreModsProfile`).
     public var coreMods: Bool?
+    /// The mod sets of the game's own toolchain to build with (`GameMods`; ids of its `visionos/mods.json`) – the
+    /// "Mods" box on the game's page. Without it, or empty: none. Sets the toolchain does not have are left out.
+    public var gameMods: [String]?
+    /// Fetch the mod files with the player's key for the mods' site, when one is stored (`ModsKeyStore`). Without
+    /// it: no, every file goes through the browser.
+    public var modsKey: Bool?
+    /// A builder folder on this Mac that builds the game's parts instead of the state the recipe names
+    /// (`BuilderChoices`; for trying a builder before it is pinned). Without it: the recipe's.
+    public var builder: String?
     /// Initial launcher mode; an existing per-game headset preference always wins.
     public var controllerMode: ControllerMode?
     /// `false`: the game is built for standard controllers only (`ControllerMode.supportKey`,
@@ -206,22 +215,30 @@ public struct InstallProgress: Sendable, Equatable {
     /// Beim Laden: die wievielte der zu ladenden Dateien gerade dran ist (ab 1), wie viele es sind, ihr Name und
     /// wie weit sie ist. Die Größe kennt erst die Antwort der Auslieferung; vorher ist sie nil.
     public var file: FileProgress?
+    /// While a game's parts are built on this Mac: the whole state of that build, for the bars and the estimate
+    /// (`BuildProgress.estimate(at:)`). `done` and `total` are 0 then.
+    public var build: BuildProgress?
     public struct FileProgress: Sendable, Equatable {
         public var index: Int
         public var count: Int
         public var name: String
         public var done: Int64
         public var total: Int64?
-        public init(index: Int, count: Int, name: String, done: Int64, total: Int64?) {
+        /// Not a file but a step of a build on this Mac (the builder of a game's parts): “Step 3 of 7”.
+        public var isStage = false
+        public init(index: Int, count: Int, name: String, done: Int64, total: Int64?, isStage: Bool = false) {
             self.index = index; self.count = count; self.name = name; self.done = done; self.total = total
+            self.isStage = isStage
         }
     }
-    public init(step: InstallStep, done: Int64, total: Int64, via: Device.Transport? = nil, file: FileProgress? = nil) {
+    public init(step: InstallStep, done: Int64, total: Int64, via: Device.Transport? = nil, file: FileProgress? = nil,
+                build: BuildProgress? = nil) {
         self.step = step
         self.done = done
         self.total = total
         self.via = via
         self.file = file
+        self.build = build
     }
 }
 
@@ -236,6 +253,8 @@ public struct Installer: Sendable {
     public var metaTool: URL?
     /// Für Tests: das Siegel statt des Schlüsselbunds dieses Macs.
     var sealOverride: OwnershipSeal.Bound?
+    /// Where builders of game parts and their working folders are kept (`Recipe.builder`).
+    public var builders = PartsBuilders()
 
     public init(recipe: Recipe, request: InstallRequest, store: ContentStore,
                 progress: @escaping @Sendable (InstallProgress) -> Void = { _ in },
@@ -339,6 +358,77 @@ public struct Installer: Sendable {
         }
         let trees = TreeStore(store: store).missing(recipe: recipe).filter { $0.role != .data }
         guard trees.isEmpty else { throw InstallError.missingTrees(trees.map(\.name), recipe: recipe.id) }
+        _ = try partsEnvironment()
+    }
+
+    // MARK: Spielteile, die auf diesem Mac gebaut werden
+
+    /// Whether a builder folder chosen by hand builds this game's parts.
+    var usesLocalBuilder: Bool { request.builder != nil }
+
+    /// What the toolchain is told about the game's parts: where their archive lies. Empty for a game without a
+    /// builder; an error when the parts are not in the library.
+    func partsEnvironment() throws -> [String: String] {
+        guard recipe.builder != nil else { return [:] }
+        guard let parts = GameParts.built(recipe: recipe, store: store, local: usesLocalBuilder) else { throw PartsError.notBuilt(recipe.title) }
+        return [Toolchain.gameArchiveVariable: parts.url.standardizedFileURL.path]
+    }
+
+    /// Builds the game's parts on this Mac, where its recipe names a builder – part of “Download files”, because
+    /// that is what it is to the user: getting the game onto this Mac. Parts the same builder already made are kept.
+    /// The builder is fetched at the commit the recipe pins, asked whether this Mac can build, and then run; each
+    /// step it begins shows in the job, and cancelling the job ends the builder and everything it started.
+    func buildParts() async throws {
+        guard let builder = recipe.builder else { return }
+        if !usesLocalBuilder, let have = GameParts.built(recipe: recipe, store: store, local: false) {
+            let when = DateFormatter.localizedString(from: have.record.built, dateStyle: .medium, timeStyle: .short)
+            report(L("Game parts: built on this Mac on \(when) (\(Installer.megabytes(have.record.size))), nothing to build.",
+                     "Spielteile: am \(when) auf diesem Mac gebaut (\(Installer.megabytes(have.record.size))), nichts zu bauen."))
+            return
+        }
+        guard !offline else { throw PartsError.offline(recipe.title) }
+        let folder: URL
+        if let local = request.builder {
+            folder = URL(fileURLWithPath: local, isDirectory: true)
+            report(L("Game parts: built with the builder chosen for this game (\(folder.path)).",
+                     "Spielteile: gebaut mit dem für dieses Spiel gewählten Bauwerkzeug (\(folder.path))."))
+        } else {
+            folder = try builders.fetch(for: recipe, report: report)
+        }
+        for note in builder.notes { report(note.text) }
+        let build = PartsBuild(builder: folder, work: builders.work(for: recipe))
+        let problems = try build.check()
+        guard problems.isEmpty else { throw PartsError.prerequisites(problems) }
+        guard let name = GameParts.url(recipe: recipe, store: store, local: usesLocalBuilder)?.lastPathComponent else { return }
+        let out = builders.outbox(for: recipe).appendingPathComponent(name)
+        let directory = store.directory(for: recipe)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let log = directory.appendingPathComponent(".last-parts.log")
+        let started = Date()
+        let stop = ProcessGroupStop()
+        let report = self.report, progress = self.progress
+        report(L("Building the game's parts on this Mac … (log: \(log.path))", "Die Spielteile werden auf diesem Mac gebaut … (Protokoll: \(log.path))"))
+        let narrator = BuildNarrator(report: report)
+        // The build runs the game on this Mac for a few minutes, which it cannot while the screen is locked: no idle
+        // display sleep (and so no idle lock) and no idle sleep while the builder runs – also for a job started on
+        // the command line. The app holds the same for the whole job.
+        let awake = ProcessInfo.processInfo.beginActivity(options: [.idleDisplaySleepDisabled, .idleSystemSleepDisabled],
+                                                          reason: "Building a game's parts: the game runs on this Mac for a moment")
+        defer { ProcessInfo.processInfo.endActivity(awake) }
+        let result = try await withTaskCancellationHandler {
+            try build.run(out: out, log: log, stop: stop, progress: { built in
+                narrator.update(built)
+                let index = built.current ?? 0, count = max(built.count, index)
+                progress(InstallProgress(step: .fetch, done: 0, total: 0,
+                                         file: index > 0 ? .init(index: index, count: count, name: BuildStepNames.title(built.currentName) ?? built.currentName,
+                                                                 done: 0, total: nil, isStage: true) : nil,
+                                         build: built))
+            })
+        } onCancel: { stop.stop() }
+        let zip = try GameParts.adopt(result.url, sha256: result.sha256, recipe: recipe, store: store, local: usesLocalBuilder)
+        report(String(format: L("Game parts built (%.0f min): \(zip.lastPathComponent), \(Installer.megabytes(ContentStore.fileSize(zip) ?? 0)).",
+                                "Spielteile gebaut (%.0f min): \(zip.lastPathComponent), \(Installer.megabytes(ContentStore.fileSize(zip) ?? 0))."),
+                      Date().timeIntervalSince(started) / 60))
     }
 
     /// Unter welcher Kennung das Spiel installiert wird: die ausdrücklich genannte; sonst bei einem kostenlosen Team
@@ -357,11 +447,26 @@ public struct Installer: Sendable {
     func target() throws -> (device: Device, bundle: String, toolchain: Toolchain) {
         let device = try control.pick(udid: request.device)
         let bundle = resolvedBundleId
+        try fetchOwnToolchainIfMissing()
         let toolchain = try Toolchain(root: URL(fileURLWithPath: request.toolchain))
+        guard toolchain.builds(recipe) else {
+            throw ToolchainError.wrongKind(game: recipe.title, have: toolchain.kind, need: recipe.toolchain.kind ?? Toolchain.kleptonKind)
+        }
         guard toolchain.satisfies(minCommit: recipe.toolchain.minCommit) else {
             throw ToolchainError.tooOld(have: toolchain.commit(), need: recipe.toolchain.minCommit)
         }
         return (device, bundle, toolchain)
+    }
+
+    /// A game with a toolchain of its own, named by its recipe (`Recipe.Toolchain.source`): fetched on first use, to
+    /// the place the job was given. Anything else the job names as its toolchain is left as it is.
+    func fetchOwnToolchainIfMissing() throws {
+        let wanted = URL(fileURLWithPath: request.toolchain).standardizedFileURL
+        let external = ExternalToolchains()
+        guard !FileManager.default.fileExists(atPath: wanted.appendingPathComponent("visionos/run.sh").path),
+              let own = external.directory(for: recipe), own.standardizedFileURL.path == wanted.path else { return }
+        guard !offline else { throw ExternalToolchainError.offline(recipe.title) }
+        try external.fetch(for: recipe, report: report)
     }
 
     // MARK: Schritte
@@ -429,6 +534,10 @@ public struct Installer: Sendable {
         guard isStoreTitle else {
             report(L("Special app: not a Meta Store title, so there is no ownership check with Meta.",
                      "Sonderapp: kein Titel aus dem Meta-Store, keine Besitzprüfung bei Meta."))
+            if let account = recipe.gameAccount {
+                report(L("The game asks for its own account on the Vision Pro: \(account.title.text).",
+                         "Das Spiel fragt auf der Vision Pro selbst nach seinem Konto: \(account.title.text)."))
+            }
             return
         }
         var source: PurchaseRecord.Source?
@@ -529,9 +638,17 @@ public struct Installer: Sendable {
         report(L("Files: \(plan.count) needed, all in the library.", "Dateien: \(plan.count) gebraucht, alle im Bestand."))
     }
 
+    /// Holt auf diesen Mac, woraus das Spiel gebaut wird: lädt, was im Bestand fehlt (`fetchFiles`), und baut die
+    /// Spielteile, wo das Rezept ein Bauwerkzeug dafür nennt (`buildParts`).
+    func fetch() async throws {
+        // A game that consists of nothing but the parts built here has no files to count.
+        if recipe.builder == nil || !recipe.files.isEmpty || !(recipe.trees ?? []).isEmpty { try await fetchFiles() }
+        try await buildParts()
+    }
+
     /// Lädt, was im Bestand fehlt. Vor dem ersten Abruf bei Meta wird der Besitz geprüft; es wird nie eine
     /// Datei angefragt, nur um zu sehen, ob Meta sie herausgibt. Lässt sich Meta nicht fragen, gilt ein früheres Ja.
-    func fetch() async throws {
+    func fetchFiles() async throws {
         if offline {
             try requireLocalFiles(FetchPlan.plan(recipe: recipe, selection: selection()) { store.state(of: $0, in: recipe) })
             return
@@ -717,6 +834,48 @@ public struct Installer: Sendable {
         // Die Raumvermessung: an, außer die Einstellung der App für alle Spiele (oder der Auftrag) sagt aus.
         let roomMeasuring = request.roomMeasuring ?? InstallDefaults.roomMeasuring()
         var extraEnvironment = TreeStore(store: store).toolchainEnvironment(recipe: recipe)
+        // The parts built on this Mac: the toolchain takes the game's libraries and files out of their archive.
+        extraEnvironment.merge(try partsEnvironment()) { _, new in new }
+        // Mods of the game's own toolchain (`GameMods`): their files first, which may need the player in the browser,
+        // then the build is told the sets. Never from this program's own environment: only the request switches them on.
+        var modSets: [String] = []
+        if let mods = toolchain.gameMods() {
+            modSets = mods.known(request.gameMods ?? [])
+            if !modSets.isEmpty {
+                let titles = mods.sets.filter { modSets.contains($0.id) }.map(\.title.text).joined(separator: ", ")
+                report(L("Mods: this build brings \(titles).", "Mods: Dieser Bau bringt \(titles) mit."))
+                var key: String?
+                if request.modsKey == true, let variable = mods.source?.key?.variable {
+                    key = ModsKeyStore().read(variable: variable)
+                    if key == nil {
+                        report(L("Mods: no key for \(mods.source?.name ?? "the site") is stored; the downloads go through the browser.",
+                                 "Mods: Für \(mods.source?.name ?? "die Seite") ist kein Schlüssel hinterlegt; die Downloads gehen über den Browser."))
+                    }
+                }
+                if mods.sets.contains(where: { modSets.contains($0.id) && $0.macRun == true }) {
+                    report(L("Mods: the game will run on this Mac for a few minutes during the build (muted, in the background), so that the mods' changes can be built in.",
+                             "Mods: Das Spiel läuft während des Baus einige Minuten auf diesem Mac (stumm, im Hintergrund), damit die Änderungen der Mods eingebaut werden können."))
+                }
+                // Cancelling the job ends the fetch at once: it may be waiting on a download that will never come.
+                let stop = GameModsFetchStop()
+                let fetchKey = key, fetchEnvironment = extraEnvironment
+                let fetchLog = store.directory(for: recipe).appendingPathComponent(".last-mods.log")
+                // A download with the player's key says how far it is: the job shows it as the bar of a file.
+                let installProgress = self.progress
+                try await withTaskCancellationHandler {
+                    try toolchain.fetchGameMods(sets: modSets, mods: mods, key: fetchKey, environment: fetchEnvironment,
+                                                log: fetchLog, stop: stop, progress: { p in
+                        guard let p else { return installProgress(InstallProgress(step: .build, done: 0, total: 0)) }
+                        installProgress(InstallProgress(step: .build, done: p.done, total: p.total ?? 0,
+                                                        file: .init(index: p.index, count: p.count, name: p.name, done: p.done, total: p.total)))
+                    }, report: report)
+                } onCancel: { stop.stop() }
+            }
+            extraEnvironment[Toolchain.gameModsVariable] = modSets.joined(separator: ",")
+        } else if !(request.gameMods ?? []).isEmpty {
+            report(L("Mods: this toolchain has none for the game; it is built without them.",
+                     "Mods: Diese Toolchain hat für das Spiel keine; es wird ohne sie gebaut."))
+        }
         if toolchain.supportsRoomMeasuring {
             extraEnvironment[Toolchain.roomMeasuringVariable] = roomMeasuring ? "1" : "0"
             if !roomMeasuring {
@@ -757,6 +916,7 @@ public struct Installer: Sendable {
             return try await build()
         }
         report(String(format: L("Built and installed (%.0f s).", "Gebaut und installiert (%.0f s)."), Date().timeIntervalSince(started)))
+        if toolchain.gameMods() != nil { GameModsRecord.save(modSets, store: store, recipe: recipe) }
         // Womit signiert wurde und bis wann: Daran erinnert die App rechtzeitig vor dem Ablauf.
         var record = SigningRecord(team: team, free: free, installed: Date(), expires: toolchain.signingExpiry(recipe: recipe),
                                    bundleId: bundle)
@@ -840,6 +1000,13 @@ public struct Installer: Sendable {
 
     /// Ergänzend kopieren: nur was auf dem Gerät fehlt oder eine andere Größe hat.
     func stage() throws {
+        // A game that brings its data inside its app: the install put everything there, and the game lays out its
+        // own folder at its first start. The device is not asked anything.
+        if recipe.carriesItsData {
+            report(L("Data: nothing to copy – this game's files are inside its app.",
+                     "Daten: nichts zu kopieren – die Dateien dieses Spiels stecken in seiner App."))
+            return
+        }
         let (device, bundle, toolchain) = try target()
         try refuseOtherSource(device: device, bundle: bundle)
         // Worüber kopiert wird, entscheidet macOS: am Kabel über das Kabel, sonst über das WLAN. Gesagt wird es hier,
@@ -989,7 +1156,7 @@ public struct Installer: Sendable {
             let totalBytes = want.values.reduce(0, +)
             let polling = StopFlag()
             defer { polling.stop() }
-            pollTreeProgress(device: device, bundle: bundle, subdirectory: Installer.treeDestination, total: totalBytes, until: polling)
+            pollTreeProgress(device: device, bundle: bundle, subdirectory: toolchain.treeDestination(recipe: recipe), total: totalBytes, until: polling)
             // Bei stundenlangen Übertragungen reißt die Verbindung gelegentlich ab (das Gerät schläft ein, ein Socket
             // schließt). Der Abgleich ist wiederholbar – was schon drüben ist, lässt devicectl aus –, also geht es
             // nach einer Pause weiter, statt den Auftrag anzuhalten. Nur Abbrüche der Übertragung werden wiederholt;
@@ -1192,9 +1359,6 @@ public struct Installer: Sendable {
         try Data("AVP Play: \(recipe.id) \(tree.name)\n".utf8).write(to: note)
         try control.copy(note, to: device, bundle: bundle, destination: "\(directory)/\(tree.deviceStampName)")
     }
-
-    /// Wo die Toolchain die Ordnerbestände auf dem Gerät ablegt (siehe stage_sync.py: `<container>/Documents/lx`).
-    static let treeDestination = "Documents/lx"
 
     /// Fragt das Gerät während eines Ordnerabgleichs alle halbe Minute, wie viel unter einem Ordner liegt (abzüglich
     /// dessen, was dort schon vorher lag), und meldet das als Fortschritt – bis `until` gesetzt ist. Eine Abfrage, die während der Übertragung scheitert,

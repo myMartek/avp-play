@@ -3,6 +3,8 @@ import Foundation
 public enum ToolchainError: Error, CustomStringConvertible {
     case notAToolchain(String)
     case tooOld(have: String, need: String)
+    /// The game needs another kind of toolchain than the one it was given (see `Recipe.Toolchain.kind`).
+    case wrongKind(game: String, have: String, need: String)
     case buildFailed(log: URL, hint: String)
     case syncFailed(log: URL, hint: String)
     case installFailed(log: URL, hint: String)
@@ -25,6 +27,12 @@ public enum ToolchainError: Error, CustomStringConvertible {
             return L("The game's shader list could not be built from its files (\(detail)).",
                      "Die Shader-Liste des Spiels ließ sich nicht aus seinen Dateien bauen (\(detail)).")
         case .notAToolchain(let p): return L("There is no toolchain at \(p) (visionos/run.sh is missing).", "Unter \(p) liegt keine Toolchain (visionos/run.sh fehlt).")
+        case .wrongKind(let game, let have, let need) where need == Toolchain.kleptonKind:
+            return L("\(game) is built with AVP Play's own toolchain. This one (\(have)) builds only the game it was made for.",
+                     "\(game) wird mit der Toolchain von AVP Play gebaut. Diese hier (\(have)) baut nur das Spiel, für das sie gemacht ist.")
+        case .wrongKind(let game, let have, let need):
+            return L("\(game) is built with a toolchain of its own (\(need)), not with this one (\(have)). Choose the game's own toolchain: avpplay toolchain use <id> --toolchain <folder>, or on the game's page.",
+                     "\(game) wird mit einer eigenen Toolchain gebaut (\(need)), nicht mit dieser (\(have)). Wähle die eigene Toolchain des Spiels: avpplay toolchain use <id> --toolchain <Ordner>, oder auf der Seite des Spiels.")
         case .tooOld(let have, let need):
             return L("The toolchain (\(have)) is older than the recipe requires (\(need)).",
                      "Die Toolchain (\(have)) ist älter als vom Rezept verlangt (\(need)).")
@@ -60,6 +68,28 @@ public struct Toolchain: Sendable {
     public var manifest: ToolchainManifest? {
         ManifestCache.shared.manifest(at: root.appendingPathComponent("toolchain.json"))
     }
+
+    /// The usual kind: the project's Klepton fork, for Android and Linux games.
+    public static let kleptonKind = "klepton"
+
+    /// What kind of toolchain this is (see `Recipe.Toolchain.kind`): what its description says, otherwise Klepton.
+    public var kind: String { manifest?.kind ?? Toolchain.kleptonKind }
+
+    /// Whether this toolchain is of the kind the recipe's game is built with. A Klepton toolchain builds every game
+    /// that names no kind; a toolchain of another kind builds only the games that name it.
+    public func builds(_ recipe: Recipe) -> Bool { kind == (recipe.toolchain.kind ?? Toolchain.kleptonKind) }
+
+    /// Where this toolchain puts a game's folder trees in the app's data container on the device, for the progress
+    /// shown while they are copied: `Documents/lx` unless the toolchain's own table names another place for the
+    /// target (`devicetree`, a plain path below `Documents/`).
+    public func treeDestination(recipe: Recipe) -> String {
+        guard kind != Toolchain.kleptonKind, let named = targetValue(recipe.toolchain.target, key: "devicetree"),
+              named.hasPrefix("Documents/"), Recipe.isSafeRelativePath(named) else { return Toolchain.kleptonTreeDestination }
+        return named
+    }
+
+    /// Wo die Toolchain die Ordnerbestände auf dem Gerät ablegt (siehe stage_sync.py: `<container>/Documents/lx`).
+    public static let kleptonTreeDestination = "Documents/lx"
 
     /// Eine bearbeitete Arbeitskopie (siehe `ToolchainManifest.modified`)?
     public var isModified: Bool { manifest?.modified == true }
@@ -126,7 +156,9 @@ public struct Toolchain: Sendable {
         }
         guard let apk = recipe.files.first(where: { $0.role == "apk" }), let localName = apk.localName else {
             // Ein Spiel aus Ordnerbeständen hat kein APK: die Toolchain liest die Bäume selbst, hier fehlt nur das Icon.
-            guard recipe.trees?.isEmpty == false, Recipe.isSafeName(recipe.toolchain.target) else {
+            // The same for a game whose parts were built on this Mac: the toolchain takes them out of their archive
+            // (`gameArchiveVariable`) and makes the icon from them itself, unless the user has put one of their own.
+            guard recipe.trees?.isEmpty == false || recipe.builder != nil, Recipe.isSafeName(recipe.toolchain.target) else {
                 throw RecipeError.invalid(L("the APK or its destination name is missing", "APK oder dessen Zielname fehlt"))
             }
             if let icon = Toolchain.chooseIcon(recipe: recipe, store: store)?.source {
@@ -267,10 +299,20 @@ public struct Toolchain: Sendable {
         }
     }
 
+    /// The apps the toolchain last built for this target for the device, the newest first. Most targets are built
+    /// in the Debug configuration, a Mach-O guest in Release – so every configuration's folder is looked into.
+    func builtApps(recipe: Recipe) -> [URL] {
+        let products = root.appendingPathComponent("visionos/build/dd-device-\(recipe.toolchain.target)/Build/Products", isDirectory: true)
+        let fm = FileManager.default
+        let folders = ((try? fm.contentsOfDirectory(at: products, includingPropertiesForKeys: nil)) ?? []).filter { $0.lastPathComponent.hasSuffix("-xros") }
+        let apps = folders.flatMap { (try? fm.contentsOfDirectory(at: $0, includingPropertiesForKeys: [.contentModificationDateKey])) ?? [] }
+            .filter { $0.pathExtension == "app" }
+        func changed(_ url: URL) -> Date { (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate ?? .distantPast }
+        return apps.sorted { changed($0) > changed($1) }
+    }
+
     public func builtControllerMode(recipe: Recipe) -> ControllerMode {
-        let products = root.appendingPathComponent("visionos/build/dd-device-\(recipe.toolchain.target)/Build/Products/Debug-xros")
-        let apps = (try? FileManager.default.contentsOfDirectory(at: products, includingPropertiesForKeys: nil)) ?? []
-        for app in apps where app.pathExtension == "app" {
+        for app in builtApps(recipe: recipe) {
             if let data = try? Data(contentsOf: app.appendingPathComponent("Info.plist")),
                let info = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],
                let value = info["KLControllerModeDefault"] as? String,
@@ -416,9 +458,7 @@ public struct Toolchain: Sendable {
 
     /// Bis wann die zuletzt gebaute App dieses Targets signiert ist – aus dem Profil in ihrem Programmpaket.
     public func signingExpiry(recipe: Recipe) -> Date? {
-        let products = root.appendingPathComponent("visionos/build/dd-device-\(recipe.toolchain.target)/Build/Products/Debug-xros")
-        guard let entries = try? FileManager.default.contentsOfDirectory(at: products, includingPropertiesForKeys: nil) else { return nil }
-        for app in entries where app.pathExtension == "app" {
+        for app in builtApps(recipe: recipe) {
             if let date = SigningRecord.expiry(ofProfileAt: app.appendingPathComponent("embedded.mobileprovision")) { return date }
         }
         return nil
@@ -483,6 +523,10 @@ public struct Toolchain: Sendable {
         // Addressing“ noch „Low-Latency Streaming“. Mit einer der beiden im Auftrag scheitert die ganze Signatur.
         if AppleTeams.isFree(team) {
             guard supportsFreeTeams else {
+                if kind != Toolchain.kleptonKind {
+                    throw RecipeError.invalid(L("a free Apple team: \(recipe.title) needs a paid Apple Developer account, because it uses a memory permission Apple does not grant to free accounts",
+                                                "ein kostenloses Apple-Team: \(recipe.title) braucht ein bezahltes Apple-Entwicklerkonto, weil es eine Speicher-Berechtigung nutzt, die Apple kostenlosen Konten nicht gibt"))
+                }
                 throw RecipeError.invalid(L("a free Apple team: this toolchain cannot build for one yet. Update the toolchain (see “Setup”)",
                                             "ein kostenloses Apple-Team: Diese Toolchain kann dafür noch nicht bauen. Aktualisiere die Toolchain (siehe „Einrichtung“)"))
             }

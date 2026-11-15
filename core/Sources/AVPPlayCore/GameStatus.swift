@@ -38,8 +38,10 @@ public struct GameStatus: Sendable, Equatable {
     public var onDevice: OnDevice
     /// Womit die installierte App gebaut wurde, soweit ihr Stempel von diesem Werkzeug stammt.
     public var builtWith: AppStamp.Built?
+    /// For a game whose parts are built on this Mac (`Recipe.builder`): whether they are there. `nil` for every other game.
+    public var parts: GameParts.State? = nil
 
-    public var stockComplete: Bool { filesPresent == filesRequired && treesPresent == treesRequired }
+    public var stockComplete: Bool { filesPresent == filesRequired && treesPresent == treesRequired && parts?.isBuilt != false }
 
     /// - Parameter toolchainVersion: ab welcher Toolchain-Nummer ein gebautes Spiel als aktuell gilt
     ///   (`Toolchain.appRevision()`), nicht zwingend die Nummer der installierten Toolchain.
@@ -56,9 +58,13 @@ public struct GameStatus: Sendable, Equatable {
     ///   dieses Spiels, nicht eine Einstellung für alle.
     /// - Parameter coreMods: dasselbe für die Mods dieses Spiels (`Toolchain.coreModsVariable`), auch bei einer für das
     ///   Spiel gewählten Toolchain. `nil`: nicht vergleichen (die Toolchain hat für diese Fassung keine Mods).
+    /// - Parameter gameMods: the same for the mod sets of the game's own toolchain (`GameMods`): the sets chosen for
+    ///   the game, compared with the ones the game in the library was last built with (`GameModsRecord`). `nil`: not
+    ///   compared (the toolchain has no such mods).
     public static func of(recipe r: Recipe, store: ContentStore, apps: [InstalledApp]?, toolchainVersion: Int?,
                           pin: ToolchainChoices.Pin? = nil, bundlePrefix: String? = nil, otherSourceBuilds: Set<Int> = [],
-                          metalFX: Bool? = nil, xrPrediction: Bool? = nil, coreMods: Bool? = nil) -> GameStatus {
+                          metalFX: Bool? = nil, xrPrediction: Bool? = nil, coreMods: Bool? = nil,
+                          gameMods: [String]? = nil) -> GameStatus {
         // Was Meta diesem Konto nicht ausliefert (ein nicht gekaufter Zusatzinhalt, siehe `ContentStore.Withheld`),
         // fehlt nicht: Es wird nie geladen und steht dem Spiel nicht im Weg. Ohne das stünde bei einem Spiel wie
         // Maestro für immer „3 von 11 Dateien“, obwohl alles da ist, was dem Konto zusteht.
@@ -93,6 +99,7 @@ public struct GameStatus: Sendable, Equatable {
                     let otherSetting = pin == nil && (metalFX.map { $0 != (built?.metalFX ?? false) } ?? false
                                                       || xrPrediction.map { $0 != (built?.xrPrediction ?? false) } ?? false)
                         || coreMods.map { $0 != (built?.coreMods ?? false) } ?? false
+                        || gameMods.map { Set($0) != Set(GameModsRecord.built(store: store, recipe: r)) } ?? false
                     let outdated = pin.map { number != $0.version || built?.modified != $0.modified } ?? toolchainVersion.map { number < $0 } ?? false
                         || otherSetting
                     onDevice = outdated ? .olderToolchain(stamp: stamp) : .current(stamp: stamp)
@@ -115,6 +122,7 @@ public struct GameStatus: Sendable, Equatable {
                           bytesToDownload: missing.filter { !ownToProvide($0) }.reduce(0) { $0 + ($1.size ?? 0) }
                               + treesMissing.filter { $0.source.kind == .url }.reduce(0) { $0 + ($1.source.archive?.size ?? 0) },
                           filesToDownload: missing.filter { !ownToProvide($0) }.count + treesMissing.filter { $0.source.kind == .url }.count,
-                          userProvidedMissing: byUser, onDevice: onDevice, builtWith: builtWith)
+                          userProvidedMissing: byUser, onDevice: onDevice, builtWith: builtWith,
+                          parts: GameParts.state(recipe: r, store: store))
     }
 }

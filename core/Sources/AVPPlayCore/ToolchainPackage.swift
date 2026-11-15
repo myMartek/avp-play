@@ -31,6 +31,9 @@ public struct ToolchainManifest: Codable, Sendable, Equatable {
     /// kein Stand des Projekts mehr, auch wenn Nummer und Commit die des Pakets sind, aus dem sie entstand. Überall,
     /// wo der Stand genannt wird, steht dann „(modified)“ dabei.
     public var modified: Bool?
+    /// What kind of toolchain this is, where it is not Klepton (see `Recipe.Toolchain.kind`). Absent in every Klepton
+    /// package.
+    public var kind: String? = nil
 
     /// Ab welchen Nummern ein gebautes Spiel als aktuell gilt.
     public var revisions: AppRevision {

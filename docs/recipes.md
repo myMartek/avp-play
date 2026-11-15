@@ -35,6 +35,137 @@ Recipes never contain game content, credentials or account data – only identif
 `toolchain.target` names the target in the toolchain; `minCommit` is the oldest toolchain state the recipe works
 with. The app refuses to build with an older toolchain.
 
+### A toolchain of the game's own
+
+Nearly every game is built with the project's toolchain, the Klepton fork. A game that is neither an Android nor a
+Linux program cannot be: it needs a toolchain of another kind, and its recipe says so.
+
+```jsonc
+"toolchain": {
+  "target": "skyrimvr",
+  "minCommit": "0123456",
+  "kind": "vxruntime",          // which kind of toolchain builds this game; absent for every Klepton game
+  "title": "VXRuntime",         // optional: what the app calls that toolchain; absent: the kind stands there
+  "source": {                   // optional: where the app fetches that toolchain from
+    "repository": "https://github.com/<owner>/<name>",
+    "commit": "0123456789abcdef0123456789abcdef01234567",   // all 40 characters; minCommit is its beginning
+    "version": 410,             // the number stamped into the built app; a larger one in a later recipe offers an update
+    "path": "tools/avpplay_toolchain"   // the folder in the repository that holds visionos/run.sh; absent: its root
+  }
+}
+```
+
+- A game with a `kind` is only ever built with a toolchain that says it is of that kind (`"kind"` in its
+  `toolchain.json`), and such a toolchain builds nothing else. The game's page offers no Klepton package for it,
+  and no other game is offered its toolchain.
+- The app never shows such a toolchain's number bare: it counts another project's states, not Klepton's. The
+  game's page, the Remote and every status line put the `title` in front (“VXRuntime 434”) and say that the game
+  is built with a toolchain of its own.
+- With `source`, the app fetches exactly that commit as part of the game's first job, into
+  `~/.avpplay/toolchains/<kind>-<version>-<commit>` (not under “Application Support”: these build tools do not
+  survive a blank in a path), checks that it got that commit, and writes the toolchain's description itself. The
+  recipe therefore pins the toolchain state as it pins the game's files. Without `source`, the toolchain has to be
+  chosen by hand: `avpplay toolchain use <id> --toolchain <folder>`, which also overrides a `source`.
+- Such a toolchain is a folder that keeps AVP Play's contract with a toolchain: `visionos/run.sh device` builds and
+  installs and ends with the line `BUILD SUCCEEDED`, `visionos/stage_sync.py` mirrors and copies the game's folder
+  trees, `visionos/targets.py` has a `TARGETS` row for the target, and `visionos/gen_xcodeproj.py` names the build
+  options it honours. The row may name where the trees go on the device (`devicetree`, a path below `Documents/`),
+  which is where the app reads the copy's progress.
+- Mods of a toolchain. A toolchain that can build its game with mods names `KLEPTON_GAME_MODS` in
+  `visionos/gen_xcodeproj.py` and brings two more files. `visionos/mods.json` describes the sets the player can
+  switch on (`schema` 1; `sets` with `id`, `title`, `about`, `default`, `macRun`, `downloadBytes` and the `mods` of
+  each; `source` with the name of the site the files come from and, where the player's own key can fetch them, the
+  environment variable it is handed over in). `visionos/mods_fetch.py` gets the files of the chosen sets onto the
+  Mac: AVP Play runs it before the build with `KLEPTON_GAME_MODS=<ids>`, shows its lines `@@mods total|n`,
+  `@@mods have|name|how`, `@@mods need|name|page` and `@@mods done|n` in its own words, draws
+  `@@mods progress|name|bytes here|bytes in all` (a download with the key, about once a second) as the bar of a file, and takes exit status 2 as
+  "the player has not downloaded everything yet". Where a file needs the player, the script opens the page in the
+  browser and waits for the file; when the player cancels the job, AVP Play ends the script with SIGTERM, and the
+  script ends whatever it started. `source.key` may carry a `hint`: which of the things on the key's page is the key. `run.sh device` then builds with the sets in `KLEPTON_GAME_MODS` (empty: none) and
+  `stage_sync.py` puts their files on the device. AVP Play holds no mod files; the key, if the player stored one
+  (`avpplay mods <id> --set-key`, or the Mods box), stays in the keychain and reaches only that script.
+
+### Game parts built on the user's Mac
+
+A game whose program is not delivered ready-made names a builder: a script in a public repository that makes the
+game's parts on the user's own Mac, before the toolchain builds the app. Minecraft: Java Edition is the first – its
+client comes from Mojang's servers and is compiled there ahead of time. Such a game is still built with the usual
+toolchain (its target is of the kind `macho`); the builder is a field of its own.
+
+```jsonc
+"builder": {
+  "source": {                   // one exact state, named like a game's own toolchain
+    "repository": "https://github.com/<owner>/<name>",
+    "commit": "0123456789abcdef0123456789abcdef01234567",   // all 40 characters
+    "version": 1,               // counts the builder's states; with the commit it names the parts in the library
+    "path": "tools/parts"       // optional: the folder in the repository that holds tools/avpplay/build_parts.sh
+  },
+  "notes": [                    // what the user is told before the first build: how long, what the Mac needs, what they will see
+    { "en": "…", "de": "…" }
+  ]
+}
+```
+
+- The app fetches exactly that commit into `~/.avpplay/builders/<id>-<version>-<commit>` and checks that it got it.
+  A folder on this Mac can stand in for it while a builder is being worked on:
+  `avpplay builder use <id> --builder <folder>` (back with `--recipe`); `avpplay builder <id>` shows what applies.
+- The builder is entered through `tools/avpplay/build_parts.sh`, as the leader of a process group of its own, with
+  `AVPPLAY_WORK` (an absolute folder without blanks for everything it downloads and builds, kept between runs:
+  `~/.avpplay/builders/work/<id>`) and `AVPPLAY_OUT` (the zip to write). It prints `STAGE <i>/<n> <short name>` when
+  a step begins (`… (already done)` for one it skips) and anything else as plain lines; success is exit status 0
+  with a last line `PARTS <path> <sha256>`, a failure ends with `FAILED <i>/<n> <short name>: <sentence>` and
+  `LOG <path>`. Steps that are finished are skipped on the next run. `build_parts.sh --check` only tests what the
+  Mac needs and prints one line per problem (status 1 if any); the app runs it first and shows the lines.
+- Two optional lines feed the progress display (a builder may print neither; then the job shows “Step i of n” and
+  the time in it):
+  - `PLAN <name>:<seconds>[:<flags>] …` once, before the first `STAGE` line: every step in order with how many seconds
+    it took on the builder's reference Mac in the state its work folder is in; flag `d` = its result is there (it
+    will be skipped), `n` = its time is mostly a download.
+  - `PROGRESS <done> <total> <unit>[ <w1>,<w2>,…]` within the running step, at most about once a second. Units:
+    `files`, `bytes`, `entries`, `libraries` (counted work), `parts` (done = parts finished; the list gives each
+    part's reference seconds), `seconds` (a timed wait: done = seconds behind it when the line was written, total =
+    its expected length). An unknown unit is shown as plain numbers.
+  - `WAIT <reason>` / `WAIT end` while the build waits for the user. Known reason: `screen-locked` – the game runs on
+    the Mac for a moment and cannot while the screen is locked. The job then asks the user to unlock the Mac and holds
+    the estimate still; the app keeps the display awake while a game's parts are built, against the idle lock.
+
+  A line with a leading blank is the builder quoting a tool's output and never one of these; a line that does not
+  parse is plain text. The reference times are the builder's; the app scales them by how fast this Mac turns out to
+  be (`BuildProgress` in `AVPPlayCore`).
+- The build is part of the job's step “Download files”, so “Build Parts Only” works without Xcode, a team or the
+  headset. The job shows the step that runs in plain words (“Step 6 of 20: Downloading Minecraft from Mojang”, the
+  builder's short name small beside it), a bar for the whole build with the time left, a bar for the step – a real
+  one where the builder counts, an indeterminate one with the time against the usual time where it does not – and
+  the list of all steps. The Remote shows the same for a job on the Mac. Everything the builder says is kept in
+  `.last-parts.log` in the game's folder; a failure names the step in plain words, the builder's reason and that
+  log. Cancelling the job sends SIGTERM to the whole group and SIGKILL to what is left after five seconds.
+- The result is checked against the checksum the builder named and kept in the game's folder in the library as
+  `<id>-parts-<version>-<commit>.zip` (`<id>-parts-local.zip` from a folder chosen by hand, which is built anew for
+  every job). A new builder state makes a new file and removes the old one; a new game version is a new folder.
+  The toolchain is told where it lies: `KLEPTON_MACHO_IPA=<absolute path>`.
+- Nothing is copied to the device afterwards when the recipe has nothing that belongs into the app's data folder:
+  the game's files travel inside its app.
+
+Two more fields belong to such a game:
+
+```jsonc
+"gameAccount": {                // the game asks for its owner itself; no store confirms ownership to AVP Play
+  "title": { "en": "You need …", "de": "Du brauchst …" },
+  "notes": [ { "en": "…", "de": "…" } ]     // what counts, where the sign-in happens, where it is kept (1–6)
+},
+"icon": {
+  "archive": {                  // pictures inside the parts archive; each the path of an entry, or the end of one after a “/”
+    "icon": "assets/objects/f0/f006…",       // the game's own icon (any format the system reads, .icns too)
+    "background": "assets/objects/6a/6a84…"  // optional: a picture of the game that goes behind it
+  }
+}
+```
+
+`gameAccount` is shown at the top of the game's page, on the Mac and on the Remote, and the overview says “Sign-in
+in the game” where other games name their store. From `icon.archive` the app makes the picture of the tile and the
+page on this Mac, once the parts are built; before that the tile shows the game's name on a plain ground. The
+project ships no picture of such a game.
+
 ## Files
 
 ```jsonc

@@ -87,8 +87,8 @@ enum Probe {
                 s.toolchainChoices = choices
                 func game(_ r: Recipe, draft: Bool, tested: Recipe? = nil) -> Game {
                     Probe.game(r, draft: draft, tested: tested, variants: variants, sources: sources, paths: paths, apps: apps,
-                               toolchainRevision: revision, pin: choices.games[r.id], bundlePrefix: bundlePrefix,
-                               metalFX: metalFX, coreModProfiles: choices.games[r.id] == nil ? modProfiles : [])
+                               toolchainRevision: revision, pin: choices.pin(for: r), bundlePrefix: bundlePrefix,
+                               metalFX: metalFX, coreModProfiles: choices.pin(for: r) == nil ? modProfiles : [])
                 }
                 let bundled = try RecipeStore(directory: recipes).loadAll()
                 // Entwürfe für ungetestete Spiele, die schon nachgeschlagen wurden. Ein mitgeliefertes Rezept für

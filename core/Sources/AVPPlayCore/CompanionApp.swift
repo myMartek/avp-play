@@ -239,7 +239,10 @@ public struct CompanionInstaller: Sendable {
         // Installation, bevor sie je geöffnet wurde, gibt es das noch nicht.
         let own = CompanionApp.variant(directory: directory).map { $0.standalone && $0.bundleId == bundle } ?? false
         do {
-            try CompanionHandover.deliver(plan, cache: directory.appendingPathComponent("templates", isDirectory: true), trusted: own,
+            // Ebenso, ob sie Spiele kennt, deren Programm auf dem Mac gebaut wird: Das sagt der Quellcode, aus dem sie
+            // eben gebaut wurde – sonst ihr eigenes Kennzeichen auf dem Gerät.
+            let knows = own && (sourceRoot().map { FileManager.default.fileExists(atPath: $0.appendingPathComponent(CompanionInstaller.builtGamesSource).path) } ?? false)
+            try CompanionHandover.deliver(plan, cache: directory.appendingPathComponent("templates", isDirectory: true), trusted: own, knowsBuiltGames: knows,
                                           list: { try control.files(device: device, bundle: bundle, subdirectory: $0) },
                                           copy: { try control.copy($0, to: device, bundle: bundle, destination: $1) },
                                           report: report)
@@ -259,6 +262,8 @@ public struct CompanionInstaller: Sendable {
     // MARK: Die Fassung mit „Auf dieser Brille“
 
     static let standaloneProjectName = "AVPPlayRemoteStandalone.xcodeproj"
+    /// Diese Datei hat der Quellcode der Remote, seit sie Spiele installieren kann, deren Programm auf dem Mac gebaut wird.
+    static let builtGamesSource = "Standalone/App/BuiltGames.swift"
     static let libraryNames = ["libidevice_ffi.a", "probe_sign.o"]
 
     /// Der Ordner des Quellcodes (in dem die Projekte liegen).

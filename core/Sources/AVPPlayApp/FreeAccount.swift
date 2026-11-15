@@ -35,6 +35,11 @@ extension AppModel {
     func freeAccountBlocker(for game: Game) -> String? {
         guard usesFreeTeam else { return nil }
         if let t = toolchain(for: game), !t.supportsFreeTeams {
+            // A toolchain of another kind says so for good: its games need a permission free accounts never get.
+            if t.kind != Toolchain.kleptonKind {
+                return L("\(game.recipe.title) needs a paid Apple Developer account: it uses a memory permission Apple does not grant to free accounts. Choose a paid team under “Setup”.",
+                         "\(game.recipe.title) braucht ein bezahltes Apple-Entwicklerkonto: Es nutzt eine Speicher-Berechtigung, die Apple kostenlosen Konten nicht gibt. Wähle unter „Einrichtung“ ein bezahltes Team.")
+            }
             return L("The installed toolchain cannot build for a free Apple account yet. Update AVP Play, or choose a paid team under “Setup”.",
                      "Die installierte Toolchain kann für ein kostenloses Apple-Konto noch nicht bauen. Aktualisiere AVP Play oder wähle unter „Einrichtung“ ein bezahltes Team.")
         }
