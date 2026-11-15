@@ -8,12 +8,12 @@
  "store": {},
  "toolchain": {
   "target": "vivecraft",
-  "minCommit": "16fecef"
+  "minCommit": "bdd3528"
  },
  "builder": {
   "source": {
    "repository": "https://github.com/myMartek/vivecraft-visionos",
-   "commit": "7b4845b38ddc1235a9c2256d77842cb285f3523e",
+   "commit": "c110c96cf2c35ce4468ed239b8febf99f70386e1",
    "version": 1
   },
   "notes": [
@@ -72,12 +72,16 @@
     "de": "Vom Spiel gibt dieses Projekt nichts weiter. Die Spielteile werden auf deinem eigenen Mac aus dem gebaut, was Mojangs Server ausliefern, und bleiben auf diesem Mac und deinem Headset."
    },
    {
+    "en": "Quit Game in the game's menu closes the app, as the Digital Crown does in other games; the next start from its icon begins at the start window.",
+    "de": "„Spiel beenden“ im Menü des Spiels schließt die App, wie die Digital Crown in anderen Spielen; der nächste Start über ihr Symbol beginnt im Startfenster."
+   },
+   {
     "en": "Nothing is copied to the Vision Pro after the install: the game's files are inside its app.",
     "de": "Nach der Installation wird nichts auf die Vision Pro kopiert: Die Dateien des Spiels stecken in seiner App."
    },
    {
-    "en": "Played by the project on an Apple Vision Pro M5 in November 2026, with a paid Apple Developer account. First with the game parts of the port's release 1.0.3, then with parts built on a Mac by the builder named here: installed by AVP Play, it started into a world, kept its sound with the start window closed, ended with the Digital Crown and started again.",
-    "de": "Vom Projekt im November 2026 auf einer Apple Vision Pro M5 gespielt, mit einem bezahlten Apple-Entwicklerkonto. Zuerst mit den Spielteilen aus dem Release 1.0.3 der Portierung, dann mit Teilen, die das hier genannte Bauwerkzeug auf einem Mac gebaut hat: von AVP Play installiert, startete es bis in eine Welt, behielt den Ton bei geschlossenem Startfenster, endete mit der Digital Crown und startete erneut."
+    "en": "Played by the project on an Apple Vision Pro M5 in November 2026, with a paid Apple Developer account. First with the game parts of the port's release 1.0.3, then with parts built on a Mac by the builder named here: installed by AVP Play, it started into a world, kept its sound with the start window closed, ended with the Digital Crown and started again. The creative inventory opened (left controller, triangle).",
+    "de": "Vom Projekt im November 2026 auf einer Apple Vision Pro M5 gespielt, mit einem bezahlten Apple-Entwicklerkonto. Zuerst mit den Spielteilen aus dem Release 1.0.3 der Portierung, dann mit Teilen, die das hier genannte Bauwerkzeug auf einem Mac gebaut hat: von AVP Play installiert, startete es bis in eine Welt, behielt den Ton bei geschlossenem Startfenster, endete mit der Digital Crown und startete erneut. Das Kreativ-Inventar öffnete sich (linker Controller, Dreieck)."
    },
    {
     "en": "With a free Apple account the app is built without one memory permission Apple does not grant to free accounts (extended virtual addressing), like every Klepton game. Whether the game runs then has not been tried.",
