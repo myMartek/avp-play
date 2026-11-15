@@ -93,11 +93,30 @@ or of the toolchain package: when you install the game, AVP Play fetches the bui
 (from <https://github.com/myMartek/vivecraft-visionos>, a fork of the port) and builds the game's parts on your Mac
 from what Mojang's servers deliver. They stay on your Mac and your headset.
 
+The fork carries this project's changes to the port, all in the same licences as the files they change: the build
+script for AVP Play (`tools/avpplay/`, MIT), one more Vivecraft patch (no seated play mode on the Vision Pro,
+LGPL-3.0 like Vivecraft), the bake's capture of the classes Mixin generates on demand, the option defaults (render
+distance 5, simulation distance 8, the HUD in front of close blocks) and a small helper that keeps the game's window
+invisible while the build runs it on the Mac (MIT).
+
+**Downloaded and built on your Mac by that build, not passed on by this project:** Oracle GraalVM JDK 25.0.4 (GraalVM
+Free Terms and Conditions; the build's log names them when it fetches it), CMake (BSD-3-Clause) and Ninja (Apache-2.0)
+for the build itself, and the sources of the game's native libraries – OpenAL Soft (LGPL-2.0-or-later), LWJGL
+(BSD-3-Clause), FreeType (FreeType License), libffi (MIT), shaderc, SPIRV-Tools and SPIRV-Cross (Apache-2.0),
+glslang (BSD-3-Clause and others), PojavLauncherTeam's LTW (LGPL-3.0) and Simple Voice Chat's codecs (Opus, RNNoise
+and Speex under BSD-style licences, LAME under LGPL-2.0), each at the commit or with the checksum the build pins. The
+game's own picture on the game's page is fetched from Mojang's resource server and checked against its name; it is
+not part of the app either.
+
+The toolchain package carries the app around the game (Klepton's `visionos/` for this target, MIT) and the licence
+texts the game's app shows (`visionos/Licenses/vivecraft/`), no part of the game.
+
 The built game holds, besides Minecraft itself (Minecraft EULA; it needs a Microsoft account that owns Minecraft:
 Java Edition), Vivecraft and the mods the port brings – among them Sodium (Polyform Shield 1.0.0), Lithium,
 Krypton, ImmediatelyFast and Cloth Config (LGPL-3.0), Fabric (Apache-2.0) and LWJGL (BSD-3-Clause). The port's
 `THIRD-PARTY.md` lists every part with its version and licence, and the notices and licence texts are inside the
-game's app (`Licenses/`). Minecraft is a trademark of Microsoft/Mojang; this project is not affiliated with or
+game's app (`Licenses/`). Some of the mods may not be passed on (Simple Voice Chat: all rights reserved; Entity
+Culling: tr7zw Protective License) – one reason more why only your own Mac builds the game. Minecraft is a trademark of Microsoft/Mojang; this project is not affiliated with or
 endorsed by Microsoft, Mojang Studios or the Vivecraft project.
 
 ## xrizer
