@@ -10,11 +10,11 @@
   "target": "revc",
   "kind": "revc",
   "title": "reVC",
-  "minCommit": "4554d32",
+  "minCommit": "14c91d3",
   "source": {
    "repository": "https://github.com/myMartek/revc-visionos-app",
-   "commit": "4554d329489b7cd172bd569e763891f28cd8b667",
-   "version": 83,
+   "commit": "14c91d3b915673728f891d431814b3119c61d54b",
+   "version": 84,
    "path": "tools/avpplay_toolchain"
   }
  },
