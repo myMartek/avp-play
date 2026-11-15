@@ -172,6 +172,12 @@ Reports and fixes from the app help just as much – see *Community Verified* be
   [Vivecraft](https://github.com/Vivecraft/VivecraftMod) on the Vision Pro, the game compiled ahead of time for
   Apple's chips. AVP Play's Minecraft is based on that port: its parts are built on your own Mac, and the app
   around them with the Klepton toolchain – named in [THIRD-PARTY.md](THIRD-PARTY.md#minecraft-java-edition-with-vivecraft).
+- **[LowRiderXR](https://github.com/LowRiderXR)** for
+  [reVC for visionOS](https://github.com/LowRiderXR/revc-visionos-app): Grand Theft Auto: Vice City on the Vision
+  Pro, through reVC, the re3 project's reverse-engineered engine (which has no licence, see
+  [THIRD-PARTY.md](THIRD-PARTY.md#gta-vice-city-through-revc)). AVP Play builds the game with that project and only adds
+  the way in: the files from your own Steam purchase, the start window and settings of its other games, the
+  performance panel and MetalFX.
 - **Everyone who sent in a fix or a report** – the *Community Verified* games are their work.
 
 ## Legal

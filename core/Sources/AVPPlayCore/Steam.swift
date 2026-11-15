@@ -458,6 +458,16 @@ public struct SteamFetcher: Sendable {
         recipe.source == .steam || (recipe.source == nil && usesSteam(recipe))
     }
 
+    /// Whether a job's download step has something to ask Steam for: a game whose job fetches (`fetchesInJob`), and a file
+    /// it wants or a folder tree missing from the library. Folder trees count too: a game made of one Steam folder and no
+    /// single files (GTA Vice City through reVC, Skyrim VR without a voice file chosen) was otherwise never fetched by a
+    /// job, which then stopped at "folders are missing from the library".
+    public static func jobFetches(recipe: Recipe, store: ContentStore, optionalNames: Set<String>) -> Bool {
+        guard fetchesInJob(recipe) else { return false }
+        let want = needed(recipe: recipe, store: store, optionalNames: optionalNames)
+        return !want.files.isEmpty || !want.trees.isEmpty
+    }
+
     /// Die wählbaren Dateien, die eine Auswahl will – auch die über ihre Sprache gewählten (die Sprachausgabe von
     /// Portal): Valves Werkzeug kennt nur Namen, keine Sprachen.
     public static func chosenNames(recipe: Recipe, locales: Set<String>, optionalNames: Set<String>) -> Set<String> {
