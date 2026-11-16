@@ -353,7 +353,8 @@ final class CompanionHandoverTests: XCTestCase {
         echo plain > build/klepton-template-\(stamp).zip
 
         """
-        if macho { script += "echo macho > build/klepton-macho-blocktarget-\(stamp).zip\n" }
+        // Wie das echte Skript: KLEPTON_TEMPLATE_MACHO=0 lässt die Vorlage des Spiels weg.
+        if macho { script += "[ \"${KLEPTON_TEMPLATE_MACHO:-1}\" = 1 ] && echo macho > build/klepton-macho-blocktarget-\(stamp).zip\nexit 0\n" }
         try script.write(to: root.appendingPathComponent("visionos/mktemplate.sh"), atomically: true, encoding: .utf8)
         return root
     }
@@ -390,6 +391,46 @@ final class CompanionHandoverTests: XCTestCase {
         XCTAssertEqual(CompanionHandover.machoTemplates(toolchain: toolchain, cache: cache).count, 1)
     }
 
+    func testWithoutABuiltGameForTheHeadsetTheToolchainLeavesItsTemplateOut() throws {
+        let root = try toolchainThatBuildsTemplates(macho: true)
+        let toolchain = try Toolchain(root: root)
+        let cache = try scratch().appendingPathComponent("cache")
+        var said: [String] = []
+        _ = try XCTUnwrap(CompanionHandover.template(toolchain: toolchain, cache: cache, report: { said.append($0) }))
+        XCTAssertEqual(CompanionHandover.machoTemplates(toolchain: toolchain, cache: cache), [], "the second Xcode build is skipped")
+        XCTAssertFalse(said.joined().contains("ten minutes"), said.joined())
+        // Wird sie später gebraucht, entsteht sie dann – und die Meldung nennt sie.
+        said = []
+        _ = try CompanionHandover.template(toolchain: toolchain, cache: cache, wantsMacho: true, report: { said.append($0) })
+        XCTAssertEqual(CompanionHandover.machoTemplates(toolchain: toolchain, cache: cache).count, 1)
+        XCTAssertTrue(said.joined().contains("ten minutes") || said.joined().contains("zehn Minuten"), said.joined())
+    }
+
+    func testTheHeadsetNeedsTheTemplateOnlyForPartsThatGoOrAreThere() throws {
+        let folder = try scratch()
+        let recipes = try recipesWithABuiltGame(in: folder)
+        let store = ContentStore(root: folder.appendingPathComponent("store"))
+        var asked: [String] = []
+        let nothing: (String) -> [RemoteFile] = { asked.append($0); return [] }
+
+        // Nie gebaut: keine Vorlage, und die Brille wird gar nicht erst gefragt.
+        XCTAssertEqual(CompanionHandover.needingTemplate(CompanionHandover.builtGames(in: recipes, store: store, agreed: ["blockgame"]), list: nothing), [])
+        XCTAssertEqual(asked, [])
+
+        _ = try buildParts(recipes, store: store)
+        // Gebaut, ohne Haken, nichts auf der Brille: keine Vorlage.
+        let unticked = CompanionHandover.builtGames(in: recipes, store: store, agreed: [])
+        XCTAssertEqual(CompanionHandover.needingTemplate(unticked, list: nothing), [])
+        XCTAssertEqual(asked, ["Documents/parts/blockgame"])
+        // Ohne Haken, aber die Spielteile einer früheren Übergabe liegen dort: Die Remote nimmt sie, also braucht sie die Vorlage.
+        let there: (String) -> [RemoteFile] = { $0 == "Documents/parts/blockgame" ? [RemoteFile(relativePath: "parts.json", size: 120, isDirectory: false)] : [] }
+        XCTAssertEqual(CompanionHandover.needingTemplate(unticked, list: there).map(\.game.id), ["blockgame"])
+        // Mit Haken: immer.
+        asked = []
+        XCTAssertEqual(CompanionHandover.needingTemplate(CompanionHandover.builtGames(in: recipes, store: store, agreed: ["blockgame"]), list: nothing).map(\.game.id), ["blockgame"])
+        XCTAssertEqual(asked, [], "no need to ask the headset")
+    }
+
     func testAToolchainWithoutSuchTemplatesIsNotBuiltAgainAndAgain() throws {
         let root = try toolchainThatBuildsTemplates(macho: false)
         let toolchain = try Toolchain(root: root)
@@ -423,11 +464,12 @@ final class CompanionHandoverTests: XCTestCase {
         XCTAssertNil(old.parts)
         XCTAssertFalse(try deliver(old).copied.contains { $0.contains("parts") || $0.contains("built-games") })
 
-        // Mit dem Bestand, ohne Zustimmung: Liste und Vorlage, keine Spielteile – und es steht da, wie groß sie wären.
+        // Mit dem Bestand, ohne Zustimmung: die Liste, keine Spielteile und keine Vorlage des Spiels (ohne Spielteile
+        // auf der Brille nützt sie nichts) – und es steht da, wie groß die Spielteile wären.
         var plan = CompanionHandover.Plan(bundlePrefix: "user.dev.klepton.target", recipes: recipes, toolchain: root, store: store.root)
         var result = try deliver(plan)
         XCTAssertTrue(result.copied.contains("Documents/handover/built-games.json"))
-        XCTAssertTrue(result.copied.contains("Documents/handover/klepton-macho-blocktarget-\(stamp).zip"))
+        XCTAssertFalse(result.copied.contains { $0.contains("klepton-macho-") }, "\(result.copied)")
         XCTAssertFalse(result.copied.contains { $0.hasPrefix("Documents/parts/") })
         XCTAssertTrue(result.said.contains { $0.contains("Block Game") && ($0.contains("not handed over") || $0.contains("nicht übergeben")) })
 
@@ -435,6 +477,7 @@ final class CompanionHandoverTests: XCTestCase {
         plan.parts = ["blockgame"]
         result = try deliver(plan)
         XCTAssertTrue(result.copied.contains("Documents/parts/blockgame/\(zip.lastPathComponent)"))
+        XCTAssertTrue(result.copied.contains("Documents/handover/klepton-macho-blocktarget-\(stamp).zip"), "\(result.copied)")
         XCTAssertEqual(result.copied.last, "Documents/parts/blockgame/parts.json")
         XCTAssertTrue(result.said.contains { $0.contains("Block Game") && ($0.contains("are copied") || $0.contains("kopiert")) })
 

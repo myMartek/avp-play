@@ -44,7 +44,7 @@ final class RecipeTests: XCTestCase {
         // Die Referenzspiele und Sonderapps sind da; dazu kommen Rezepte, die aus einem geprüften Entwurf entstanden
         // sind. Die tragen die Kennung des Entwurfs (`store-<App-Kennung>`), damit schon Geladenes weiter gilt.
         let ids = Set(all.map(\.id))
-        let byHand: Set<String> = ["alyx", "batman", "beatsaber140", "csvr", "doom3quest", "hl2", "jkxr-academy", "jkxr-outcast", "moss", "portal", "revc", "skyrimvr", "vivecraft", "walkabout", "wrath2"]
+        let byHand: Set<String> = ["alyx", "batman", "beatsaber140", "csvr", "doom3quest", "halflife", "hl2", "jkxr-academy", "jkxr-outcast", "moss", "portal", "revc", "skyrimvr", "vivecraft", "walkabout", "wrath2"]
         XCTAssertTrue(ids.isSuperset(of: byHand))
         for recipe in all where !byHand.contains(recipe.id) {
             XCTAssertEqual(recipe.id, recipe.store.appId.map(DraftRecipe.identifier(appId:)), "\(recipe.id)")
@@ -117,8 +117,18 @@ final class RecipeTests: XCTestCase {
         XCTAssertEqual(TreeStore.toolchainTrees(of: revc).map(\.role), [.game])
         XCTAssertEqual((revc.trees ?? []).compactMap { $0.source.steam?.app }, ["12110"])
         XCTAssertTrue(SteamFetcher.fetchesInJob(revc))
+        // Half-Life through LambdaVision: a toolchain of its own kind, pinned to a commit; the game is one folder from
+        // the user's Steam account (the pre-anniversary depots of app 70), for the toolchain, and a job fetches it.
+        let halflife = try XCTUnwrap(all.first { $0.id == "halflife" })
+        XCTAssertEqual(halflife.toolchain.kind, "lambdavision")
+        XCTAssertNotNil(halflife.toolchain.source)
+        XCTAssertTrue(halflife.files.isEmpty)
+        XCTAssertEqual(TreeStore.toolchainTrees(of: halflife).map(\.role), [.game])
+        XCTAssertEqual((halflife.trees ?? []).compactMap { $0.source.steam?.app }, ["70"])
+        XCTAssertEqual((halflife.trees ?? []).flatMap { $0.source.steam?.depots.map(\.id) ?? [] }, ["1", "96"])
+        XCTAssertTrue(SteamFetcher.fetchesInJob(halflife))
         // Every other shipped game is Klepton's, but for the two JKXR games.
-        XCTAssertEqual(all.filter { $0.toolchain.kind != nil }.map(\.id).sorted(), ["jkxr-academy", "jkxr-outcast", "revc", "skyrimvr"])
+        XCTAssertEqual(all.filter { $0.toolchain.kind != nil }.map(\.id).sorted(), ["halflife", "jkxr-academy", "jkxr-outcast", "revc", "skyrimvr"])
         // Counter-Strike: ein frei ladbares APK mit Prüfsumme, und die Daten des Originalspiels als ein Ordner aus dem
         // Steam-Konto des Nutzers – nur 'cstrike' und 'valve', an dem Ort, an dem die Engine sie sucht.
         let cs = try XCTUnwrap(all.first { $0.id == "csvr" })
