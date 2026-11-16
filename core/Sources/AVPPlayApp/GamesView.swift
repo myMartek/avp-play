@@ -823,7 +823,10 @@ struct GameDetail: View {
                         if game.status.treesRequired > 0 {
                             row(L("Folders", "Ordner"), L("\(game.status.treesPresent) of \(game.status.treesRequired) present", "\(game.status.treesPresent) von \(game.status.treesRequired) vorhanden"))
                         }
-                        if game.status.bytesToDownload > 0 {
+                        if game.steamFolderBytes > 0 {
+                            row(L("Still to download", "Noch zu laden"),
+                                L("\(Installer.gigabytes(game.steamFolderBytes)) from your Steam purchase", "\(Installer.gigabytes(game.steamFolderBytes)) aus deinem Steam-Kauf"))
+                        } else if game.status.bytesToDownload > 0 {
                             row(L("Still to download", "Noch zu laden"), Installer.gigabytes(game.status.bytesToDownload))
                         } else if !game.prepared, let app = model.steamDraftApp(game) {
                             row(L("Still to download", "Noch zu laden"), L("\(Installer.gigabytes(app.bytes)) from Steam", "\(Installer.gigabytes(app.bytes)) von Steam"))
@@ -837,6 +840,9 @@ struct GameDetail: View {
                                         "\(game.status.filesRequired - game.status.filesPresent) Dateien, Größe vorab nicht bekannt"))
                         } else if game.status.stockComplete, game.status.parts == nil {
                             row("Download", L("nothing left to download", "nichts mehr zu laden"))
+                        }
+                        if game.steamFolders, !game.needsSteamAccount {
+                            row(L("Source", "Quelle"), L("your own Steam purchase", "dein eigener Steam-Kauf"))
                         }
                         if let parts = game.status.parts { row(L("Game parts", "Spielteile"), AppModel.partsText(parts)) }
                         if game.storeBytes > 0 {
@@ -893,6 +899,8 @@ struct GameDetail: View {
                              ? L("Before anything is downloaded, Meta is asked whether you own this game. Without a purchase, nothing is downloaded.", "Vor dem Laden wird bei Meta geprüft, dass du dieses Spiel gekauft hast. Ohne Kauf wird nichts geladen.")
                              : game.recipe.gameAccount != nil
                              ? AppModel.gameAccountSentence
+                             : game.steamFolders
+                             ? L("This game does not come from the Meta Store. Its game files come from your own Steam purchase: with your Steam sign-in under “Setup”, Steam is first asked whether you own it, and Valve’s own tool downloads them. Without a purchase, nothing is downloaded.", "Dieses Spiel kommt nicht aus dem Meta-Store. Seine Spieldateien stammen aus deinem eigenen Steam-Kauf: Mit deiner Steam-Anmeldung unter „Einrichtung“ wird zuerst bei Steam geprüft, dass du es gekauft hast, und Valves eigenes Werkzeug lädt sie. Ohne Kauf wird nichts geladen.")
                              : L("This game does not come from the Meta Store. The game files come from your own purchase and are never downloaded.", "Dieses Spiel kommt nicht aus dem Meta-Store. Die Spieldateien stammen aus deinem eigenen Kauf und werden nie geladen."))
                         if game.fromStore {
                             PurchaseCheck(game: game)

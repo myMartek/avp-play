@@ -71,6 +71,13 @@ struct Game: Identifiable {
     var needsMetaAccount: Bool { recipe.store.appId != nil }
     /// Aus dem eigenen Steam-Kauf: Besitz und Zusatzinhalte bestätigt Steam, geladen wird mit Valves Werkzeug.
     var needsSteamAccount: Bool { recipe.source == .steam }
+    /// Kommen Ordner des Spiels aus dem eigenen Steam-Kauf (Skyrim VR, Vice City, die beiden JKXR-Spiele)?
+    var steamFolders: Bool { (recipe.trees ?? []).contains { $0.source.steam != nil } }
+    /// Was davon noch von Steam zu laden ist, nach Valves Angabe für die Depots; 0, wenn alle Ordner da sind.
+    var steamFolderBytes: Int64 {
+        guard status.treesPresent < status.treesRequired else { return 0 }
+        return Set((recipe.trees ?? []).compactMap(\.source.steam).flatMap(\.depots)).reduce(0) { $0 + ($1.bytes ?? 0) }
+    }
     /// Gibt es das Spiel im Meta-Store – als geltende Kaufquelle oder als wählbare andere?
     var fromMeta: Bool { recipe.store.appId != nil || sources.contains(.meta) }
     /// Gibt es das Spiel bei Steam – als Kaufquelle (auch als wählbare andere), oder kommen seine Dateien aus einem
