@@ -788,7 +788,7 @@ struct GameDetail: View {
                         // im Weg steht. Steht dem Laden dasselbe im Weg wie dem Installieren, sagt es der Text oben.
                         let downloadBlocked = model.downloadBlocker(for: game)
                         if model.hasDownloads(game), !model.isBusy(game.id),
-                           blocked == nil ? game.fromStore : downloadBlocked != blocked {
+                           blocked == nil ? (game.fromStore || game.steamFetchPending) : downloadBlocked != blocked {
                             Button(action: { model.download(game) }) {
                                 Text(game.partsToBuild ? L("Build Parts Only", "Nur Spielteile bauen") : L("Download Only", "Nur herunterladen")).frame(minWidth: 150)
                             }
@@ -811,7 +811,9 @@ struct GameDetail: View {
                 }
 
                 if game.draft { untestedBox }
-                if !game.status.userProvidedMissing.isEmpty { ownFiles }
+                // Was aus dem Steam-Kauf kommt, holen „Installieren“ und „Nur herunterladen“ selbst; einen Kasten, in
+                // dem man es selbst bereitstellt, gibt es dafür nicht.
+                if !game.status.userProvidedMissing.isEmpty, !game.steamProvidesOwnFiles { ownFiles }
                 if let account = game.recipe.gameAccount { gameAccountBox(account) }
                 if let builder = game.recipe.builder { builderBox(builder) }
 
@@ -823,7 +825,10 @@ struct GameDetail: View {
                         if game.status.treesRequired > 0 {
                             row(L("Folders", "Ordner"), L("\(game.status.treesPresent) of \(game.status.treesRequired) present", "\(game.status.treesPresent) von \(game.status.treesRequired) vorhanden"))
                         }
-                        if game.status.bytesToDownload > 0 {
+                        if game.steamFolderBytes > 0 {
+                            row(L("Still to download", "Noch zu laden"),
+                                L("\(Installer.gigabytes(game.steamFolderBytes)) from your Steam purchase", "\(Installer.gigabytes(game.steamFolderBytes)) aus deinem Steam-Kauf"))
+                        } else if game.status.bytesToDownload > 0 {
                             row(L("Still to download", "Noch zu laden"), Installer.gigabytes(game.status.bytesToDownload))
                         } else if !game.prepared, let app = model.steamDraftApp(game) {
                             row(L("Still to download", "Noch zu laden"), L("\(Installer.gigabytes(app.bytes)) from Steam", "\(Installer.gigabytes(app.bytes)) von Steam"))
@@ -837,6 +842,9 @@ struct GameDetail: View {
                                         "\(game.status.filesRequired - game.status.filesPresent) Dateien, Größe vorab nicht bekannt"))
                         } else if game.status.stockComplete, game.status.parts == nil {
                             row("Download", L("nothing left to download", "nichts mehr zu laden"))
+                        }
+                        if game.steamFolders, !game.needsSteamAccount {
+                            row(L("Source", "Quelle"), L("your own Steam purchase", "dein eigener Steam-Kauf"))
                         }
                         if let parts = game.status.parts { row(L("Game parts", "Spielteile"), AppModel.partsText(parts)) }
                         if game.storeBytes > 0 {
@@ -893,6 +901,8 @@ struct GameDetail: View {
                              ? L("Before anything is downloaded, Meta is asked whether you own this game. Without a purchase, nothing is downloaded.", "Vor dem Laden wird bei Meta geprüft, dass du dieses Spiel gekauft hast. Ohne Kauf wird nichts geladen.")
                              : game.recipe.gameAccount != nil
                              ? AppModel.gameAccountSentence
+                             : game.steamFolders
+                             ? L("This game does not come from the Meta Store. Its game files come from your own Steam purchase: with your Steam sign-in under “Setup”, Steam is first asked whether you own it, and Valve’s own tool downloads them. Without a purchase, nothing is downloaded.", "Dieses Spiel kommt nicht aus dem Meta-Store. Seine Spieldateien stammen aus deinem eigenen Steam-Kauf: Mit deiner Steam-Anmeldung unter „Einrichtung“ wird zuerst bei Steam geprüft, dass du es gekauft hast, und Valves eigenes Werkzeug lädt sie. Ohne Kauf wird nichts geladen.")
                              : L("This game does not come from the Meta Store. The game files come from your own purchase and are never downloaded.", "Dieses Spiel kommt nicht aus dem Meta-Store. Die Spieldateien stammen aus deinem eigenen Kauf und werden nie geladen."))
                         if game.fromStore {
                             PurchaseCheck(game: game)
@@ -1263,21 +1273,24 @@ struct ExtraContentRow: View {
         } else if file.source?.kind == .user {
             if file.source?.steam != nil, !game.status.userProvidedMissing.isEmpty {
                 // Die Dateien des Spiels fehlen auch noch: ein Abruf holt beides, und der Knopf dafür steht oben.
-                Text(L("Not on this Mac yet. “Download from Steam” above fetches it together with the game.",
-                       "Liegt noch nicht auf diesem Mac. „Von Steam laden“ oben holt sie zusammen mit dem Spiel."))
+                Text(L("Not on this Mac yet. “Install” or “Download Only” above fetches it together with the game.",
+                       "Liegt noch nicht auf diesem Mac. „Installieren“ oder „Nur herunterladen“ oben holt sie zusammen mit dem Spiel."))
                     .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             } else if file.source?.steam != nil {
                 SteamFetchRow(game: game, headline: L("Not on this Mac yet.", "Liegt noch nicht auf diesem Mac."))
             }
-            Button(L("Choose Folder …", "Ordner auswählen …")) {
-                let panel = NSOpenPanel()
-                panel.canChooseDirectories = true
-                panel.canChooseFiles = false
-                panel.message = L("Choose the folder that contains “\(file.name)”. It is copied into this app’s library.",
-                                  "Ordner wählen, in dem „\(file.name)“ liegt. Die Datei wird in den Bestand dieses Programms kopiert.")
-                if panel.runModal() == .OK, let url = panel.url { model.adopt(game, from: url) }
+            // Aus dem Steam-Kauf kommt sie von selbst; von Hand nur, was keinen Weg über Steam hat.
+            if file.source?.steam == nil {
+                Button(L("Choose Folder …", "Ordner auswählen …")) {
+                    let panel = NSOpenPanel()
+                    panel.canChooseDirectories = true
+                    panel.canChooseFiles = false
+                    panel.message = L("Choose the folder that contains “\(file.name)”. It is copied into this app’s library.",
+                                      "Ordner wählen, in dem „\(file.name)“ liegt. Die Datei wird in den Bestand dieses Programms kopiert.")
+                    if panel.runModal() == .OK, let url = panel.url { model.adopt(game, from: url) }
+                }
+                .controlSize(.small)
             }
-            .controlSize(.small)
         }
     }
 }

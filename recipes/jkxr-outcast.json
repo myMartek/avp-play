@@ -1,0 +1,98 @@
+{
+ "schema": 1,
+ "id": "jkxr-outcast",
+ "title": "Jedi Outcast",
+ "package": "steam-app-6030",
+ "versionName": "Steam-Build 131483",
+ "versionCode": 131483,
+ "store": {},
+ "toolchain": {
+  "target": "jkxr-outcast",
+  "kind": "jkxr",
+  "title": "JKXR",
+  "minCommit": "137a9f7",
+  "source": {
+   "repository": "https://github.com/myMartek/JKXR",
+   "commit": "137a9f7827ee7d2e2f938f51585b2254a03e8d7d",
+   "version": 705,
+   "path": "tools/avpplay_toolchain"
+  }
+ },
+ "files": [],
+ "trees": [
+  {
+   "name": "outcast",
+   "role": "data",
+   "dest": "JediOutcast",
+   "only": [
+    "base"
+   ],
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "Jedi Outcast from your own Steam account (the Windows build). With a Steam sign-in under Setup the app fetches it for you (about 730 MB). By hand: 'download_depot 6030 6031' in the Steam client's console; the folder 'GameData' of that depot is what is wanted.",
+     "de": "Jedi Outcast aus dem eigenen Steam-Konto (Windows-Fassung). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App es für dich (rund 730 MB). Von Hand: 'download_depot 6030 6031' in der Konsole des Steam-Clients; gebraucht wird der Ordner 'GameData' dieses Depots."
+    },
+    "steam": {
+     "app": "6030",
+     "folder": "GameData",
+     "depots": [
+      {
+       "id": "6031",
+       "manifest": "6878562535791838673",
+       "bytes": 732043258
+      }
+     ]
+    }
+   },
+   "markers": [
+    {
+     "path": "base/assets0.pk3",
+     "size": 534984353,
+     "sha256": "e8e466f219bb2faed536021bb0d10aa6b7f5cd687302aa43080da2debdae307c"
+    },
+    {
+     "path": "base/assets1.pk3",
+     "size": 86950705,
+     "sha256": "c3a9aeaf09c93e57847290e7e5cd6c1a071a560045fa8c5e8c6df3688df841c1"
+    },
+    {
+     "path": "base/assets2.pk3",
+     "size": 3764210,
+     "sha256": "aa5bf361f7623f0210473021d73fa1e6c6997f7a5cceb6af19fce951edd43368"
+    },
+    {
+     "path": "base/assets5.pk3",
+     "size": 550829,
+     "sha256": "7dc6bc7e599a32cc882fb2a9b741065f792ef39a129302fbd04d72ef77ee7a07"
+    }
+   ]
+  }
+ ],
+ "status": {
+  "playability": "untested",
+  "download": "special",
+  "notes": [
+   {
+    "en": "Special app: not a Meta Store title and not a Klepton game. Jedi Outcast runs on JKXR, Team Beef's open-source VR engine for the two classics of the early 2000s, in its port to the Vision Pro (github.com/myMartek/JKXR). AVP Play builds it from source on this Mac.",
+    "de": "Sonderapp: kein Titel aus dem Meta-Store und kein Klepton-Spiel. Jedi Outcast läuft auf JKXR, der quelloffenen VR-Engine von Team Beef für die beiden Klassiker der frühen 2000er, in ihrer Portierung auf die Vision Pro (github.com/myMartek/JKXR). AVP Play baut sie auf diesem Mac aus dem Quelltext."
+   },
+   {
+    "en": "The game files (about 730 MB) come from your own Steam purchase; only the folder 'base' is copied to the headset. Nothing of the game is ever distributed.",
+    "de": "Die Spieldateien (rund 730 MB) stammen aus dem eigenen Steam-Kauf; aufs Headset kommt nur der Ordner 'base'. Vom Spiel wird nie etwas weitergegeben."
+   },
+   {
+    "en": "Needs PlayStation VR2 Sense controllers. The app asks for no permission beyond what every signed app has, so a free Apple account should do (not tried yet). Optional sharper textures can be downloaded in the app itself, under Settings.",
+    "de": "Braucht PlayStation-VR2-Sense-Controller. Die App verlangt keine Berechtigung über das hinaus, was jede signierte App hat; ein kostenloses Apple-Konto sollte deshalb genügen (noch nicht ausprobiert). Schärfere Texturen lassen sich auf Wunsch in der App selbst laden, unter „Einstellungen“."
+   },
+   {
+    "en": "Saved games stay inside the app and are not part of AVP Play's save backup: removing the app removes them.",
+    "de": "Spielstände bleiben in der App und gehören nicht zur Spielstand-Sicherung von AVP Play: Wer die App entfernt, entfernt sie mit."
+   }
+  ]
+ },
+ "icon": {
+  "steamAppId": "6030",
+  "steamClientIcon": "e86b29c4dfc76a3acf843e65c2e3decb167dc36c"
+ }
+}

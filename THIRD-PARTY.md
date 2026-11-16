@@ -105,6 +105,23 @@ Soft (LGPL-2.0-or-later, with its HRTF data under Apache-2.0). The project's `TH
 licence text. The game's files come from your own Steam copy of GTA Vice City (app 12110) and stay on your Mac and
 your headset.
 
+## Jedi Outcast and Jedi Academy through JKXR
+
+The two recipes are built with [JKXR](https://github.com/Team-Beef-Studios/JKXR) by Team Beef (GPL-2.0, like
+[OpenJK](https://github.com/JACoders/OpenJK) and the engine it continues), in its port to the Vision Pro. Nothing of
+it is part of the app or of the toolchain package: when you install one of the games, AVP Play fetches the source at
+the commit the recipe names (from <https://github.com/myMartek/JKXR>, a fork that carries the visionOS port, the
+adapter for AVP Play, the start window and the performance panel of AVP Play's games; the panel's drawing and GPU
+count come from Klepton, MIT) and builds it on your Mac.
+
+**Built on your Mac from that source, not passed on by this project:** both games' engines, the libraries that come
+with the source (among them gl4es, MIT; libpng, libjpeg, libzip and minizip under their own licences) and the VR add-ons of the
+port; the app links prebuilt ANGLE frameworks from the same repository (BSD-3-Clause, with a foveation patch). The
+build uses cmake (BSD-3-Clause) and XcodeGen (MIT) from Homebrew where they are installed, otherwise it downloads
+each once from its project's GitHub release and checks it against a SHA-256 written in the adapter. The game's files
+come from your own Steam copies (apps 6030 and 6020); only their folder `base` is kept, on your Mac and your headset.
+The app's icon and start picture are the game's own from Valve's image server, fetched on your Mac.
+
 ## Minecraft: Java Edition with Vivecraft
 
 The Minecraft recipe builds on [vivecraft-visionos](https://github.com/rebelancap/vivecraft-visionos) by rebelancap

@@ -1,0 +1,98 @@
+{
+ "schema": 1,
+ "id": "jkxr-academy",
+ "title": "Jedi Academy",
+ "package": "steam-app-6020",
+ "versionName": "Steam-Build 131484",
+ "versionCode": 131484,
+ "store": {},
+ "toolchain": {
+  "target": "jkxr-academy",
+  "kind": "jkxr",
+  "title": "JKXR",
+  "minCommit": "137a9f7",
+  "source": {
+   "repository": "https://github.com/myMartek/JKXR",
+   "commit": "137a9f7827ee7d2e2f938f51585b2254a03e8d7d",
+   "version": 705,
+   "path": "tools/avpplay_toolchain"
+  }
+ },
+ "files": [],
+ "trees": [
+  {
+   "name": "academy",
+   "role": "data",
+   "dest": "JediAcademy",
+   "only": [
+    "base"
+   ],
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "Jedi Academy from your own Steam account (the Windows build). With a Steam sign-in under Setup the app fetches it for you (about 1.3 GB). By hand: 'download_depot 6020 6021' in the Steam client's console; the folder 'GameData' of that depot is what is wanted.",
+     "de": "Jedi Academy aus dem eigenen Steam-Konto (Windows-Fassung). Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App es für dich (rund 1,3 GB). Von Hand: 'download_depot 6020 6021' in der Konsole des Steam-Clients; gebraucht wird der Ordner 'GameData' dieses Depots."
+    },
+    "steam": {
+     "app": "6020",
+     "folder": "GameData",
+     "depots": [
+      {
+       "id": "6021",
+       "manifest": "6927902281353816404",
+       "bytes": 1332353423
+      }
+     ]
+    }
+   },
+   "markers": [
+    {
+     "path": "base/assets0.pk3",
+     "size": 561806019,
+     "sha256": "ffea9e7489bad7175411d122e0652b4272efb67c0e71805d1f4d8058084b5939"
+    },
+    {
+     "path": "base/assets1.pk3",
+     "size": 652804510,
+     "sha256": "5f196826e226b1115bd46f54697334ca970c8261dd76864c1600179ff38e4c4f"
+    },
+    {
+     "path": "base/assets2.pk3",
+     "size": 1116384,
+     "sha256": "8f21cdd89afe78fdf916d103117f4b2621c6f4781dee003716057dc705ef98af"
+    },
+    {
+     "path": "base/assets3.pk3",
+     "size": 9282026,
+     "sha256": "0f542dccb6858fc10a8083ca71f581c9eba93173386e03a9e5e05d3a56118f78"
+    }
+   ]
+  }
+ ],
+ "status": {
+  "playability": "untested",
+  "download": "special",
+  "notes": [
+   {
+    "en": "Special app: not a Meta Store title and not a Klepton game. Jedi Academy runs on JKXR, Team Beef's open-source VR engine for the two classics of the early 2000s, in its port to the Vision Pro (github.com/myMartek/JKXR). AVP Play builds it from source on this Mac.",
+    "de": "Sonderapp: kein Titel aus dem Meta-Store und kein Klepton-Spiel. Jedi Academy läuft auf JKXR, der quelloffenen VR-Engine von Team Beef für die beiden Klassiker der frühen 2000er, in ihrer Portierung auf die Vision Pro (github.com/myMartek/JKXR). AVP Play baut sie auf diesem Mac aus dem Quelltext."
+   },
+   {
+    "en": "The game files (about 1.3 GB) come from your own Steam purchase; only the folder 'base' is copied to the headset. Nothing of the game is ever distributed.",
+    "de": "Die Spieldateien (rund 1,3 GB) stammen aus dem eigenen Steam-Kauf; aufs Headset kommt nur der Ordner 'base'. Vom Spiel wird nie etwas weitergegeben."
+   },
+   {
+    "en": "Needs PlayStation VR2 Sense controllers. The app asks for no permission beyond what every signed app has, so a free Apple account should do (not tried yet). Optional sharper textures can be downloaded in the app itself, under Settings.",
+    "de": "Braucht PlayStation-VR2-Sense-Controller. Die App verlangt keine Berechtigung über das hinaus, was jede signierte App hat; ein kostenloses Apple-Konto sollte deshalb genügen (noch nicht ausprobiert). Schärfere Texturen lassen sich auf Wunsch in der App selbst laden, unter „Einstellungen“."
+   },
+   {
+    "en": "Saved games stay inside the app and are not part of AVP Play's save backup: removing the app removes them.",
+    "de": "Spielstände bleiben in der App und gehören nicht zur Spielstand-Sicherung von AVP Play: Wer die App entfernt, entfernt sie mit."
+   }
+  ]
+ },
+ "icon": {
+  "steamAppId": "6020",
+  "steamClientIcon": "b9863303185c699b5bbe7097b55e498237a4350a"
+ }
+}

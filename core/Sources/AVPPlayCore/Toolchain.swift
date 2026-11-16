@@ -229,6 +229,9 @@ public struct Toolchain: Sendable {
            let art = AppIcon.steamLibrary(appId: steam, cacheRoots: AppIcon.steamCacheRoots + [steamArtURL(store: store, recipe: recipe)]) {
             return (art, L("Steam library", "Steam-Bibliothek"))
         }
+        if let data = try? Data(contentsOf: steamIconURL(store: store, recipe: recipe)), AppIcon.image(data) != nil {
+            return (.single(data), L("the game's icon from Steam", "Icon des Spiels von Steam"))
+        }
         if let apk = recipe.files.first(where: { $0.role == "apk" }),
            let found = try? AppIcon.extract(apk: store.url(for: apk, in: recipe)), !AppIcon.isEnginePlaceholder(found) {
             return (found, L("icon from the APK", "Icon aus dem APK"))
@@ -245,6 +248,11 @@ public struct Toolchain: Sendable {
     /// wie der Bildspeicher des Steam-Clients: `<Ordner>/<App-ID>/library_hero.jpg` und `logo.png`.
     public static func steamArtURL(store: ContentStore, recipe: Recipe) -> URL {
         store.directory(for: recipe).appendingPathComponent("steam-art", isDirectory: true)
+    }
+
+    /// The game's client icon from Steam (`Recipe.IconSource.steamClientIcon`, `SteamArt.clientIcon`), as a PNG.
+    public static func steamIconURL(store: ContentStore, recipe: Recipe) -> URL {
+        store.directory(for: recipe).appendingPathComponent("steam-icon.png")
     }
 
     /// Das zwischengespeicherte Titelbild aus dem Store (siehe `StoreArt`).

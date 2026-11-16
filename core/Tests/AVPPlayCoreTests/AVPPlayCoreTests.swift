@@ -1,5 +1,6 @@
 import XCTest
 @testable import AVPPlayCore
+import ImageIO
 
 final class RecipeTests: XCTestCase {
     func recipe(files: [RecipeFile], addons: Addons? = nil) -> Recipe {
@@ -43,7 +44,7 @@ final class RecipeTests: XCTestCase {
         // Die Referenzspiele und Sonderapps sind da; dazu kommen Rezepte, die aus einem geprüften Entwurf entstanden
         // sind. Die tragen die Kennung des Entwurfs (`store-<App-Kennung>`), damit schon Geladenes weiter gilt.
         let ids = Set(all.map(\.id))
-        let byHand: Set<String> = ["alyx", "batman", "beatsaber140", "csvr", "doom3quest", "hl2", "moss", "portal", "revc", "skyrimvr", "vivecraft", "walkabout", "wrath2"]
+        let byHand: Set<String> = ["alyx", "batman", "beatsaber140", "csvr", "doom3quest", "hl2", "jkxr-academy", "jkxr-outcast", "moss", "portal", "revc", "skyrimvr", "vivecraft", "walkabout", "wrath2"]
         XCTAssertTrue(ids.isSuperset(of: byHand))
         for recipe in all where !byHand.contains(recipe.id) {
             XCTAssertEqual(recipe.id, recipe.store.appId.map(DraftRecipe.identifier(appId:)), "\(recipe.id)")
@@ -51,6 +52,24 @@ final class RecipeTests: XCTestCase {
             XCTAssertTrue(["verified", "community"].contains(recipe.status.playability),
                           "\(recipe.id): \(recipe.status.playability)")
             XCTAssertFalse(recipe.files.isEmpty, "\(recipe.id)")
+        }
+        // JKXR: an open-source engine built from source with a toolchain of its own kind, one recipe (and app) per
+        // game. Each game's data is one data folder from the player's Steam purchase, only its 'base', in the folder
+        // the app has always read; there are no single files.
+        for (id, dest) in [("jkxr-outcast", "JediOutcast"), ("jkxr-academy", "JediAcademy")] {
+            let jkxr = try XCTUnwrap(all.first { $0.id == id })
+            XCTAssertEqual(jkxr.toolchain.kind, "jkxr", id)
+            XCTAssertEqual(jkxr.toolchain.target, id)
+            XCTAssertTrue(jkxr.files.isEmpty, id)
+            let trees = TreeStore.dataTrees(of: jkxr)
+            XCTAssertEqual(trees.count, 1, id)
+            XCTAssertEqual(trees.first?.dest, dest)
+            XCTAssertEqual(trees.first?.only, ["base"])
+            XCTAssertEqual(trees.first?.source.steam?.folder, "GameData")
+            XCTAssertTrue(trees.first?.markers.allSatisfy { $0.path.hasPrefix("base/") } ?? false, id)
+            XCTAssertTrue(SteamFetcher.fetchesInJob(jkxr), id)
+            // Steam has no library pictures for these two: the app icon is the game's client icon.
+            XCTAssertEqual(jkxr.icon?.steamClientIcon?.count, 40, id)
         }
         // Skyrim VR: a Windows game with a toolchain of its own kind; its two folders come from the user's Steam
         // account, and both are for the toolchain (nothing goes to the device as a data folder).
@@ -98,8 +117,8 @@ final class RecipeTests: XCTestCase {
         XCTAssertEqual(TreeStore.toolchainTrees(of: revc).map(\.role), [.game])
         XCTAssertEqual((revc.trees ?? []).compactMap { $0.source.steam?.app }, ["12110"])
         XCTAssertTrue(SteamFetcher.fetchesInJob(revc))
-        // Every other shipped game is Klepton's.
-        XCTAssertEqual(all.filter { $0.toolchain.kind != nil }.map(\.id).sorted(), ["revc", "skyrimvr"])
+        // Every other shipped game is Klepton's, but for the two JKXR games.
+        XCTAssertEqual(all.filter { $0.toolchain.kind != nil }.map(\.id).sorted(), ["jkxr-academy", "jkxr-outcast", "revc", "skyrimvr"])
         // Counter-Strike: ein frei ladbares APK mit Prüfsumme, und die Daten des Originalspiels als ein Ordner aus dem
         // Steam-Konto des Nutzers – nur 'cstrike' und 'valve', an dem Ort, an dem die Engine sie sucht.
         let cs = try XCTUnwrap(all.first { $0.id == "csvr" })
@@ -2366,5 +2385,39 @@ final class StoreLocationTests: XCTestCase {
         private let lock = NSLock()
         private(set) var values: [StoreMove.Progress] = []
         func add(_ p: StoreMove.Progress) { lock.lock(); values.append(p); lock.unlock() }
+    }
+}
+
+final class SteamClientIconTests: XCTestCase {
+    private func recipe(icon: Recipe.IconSource) throws -> Recipe {
+        var r = try XCTUnwrap(RecipeStore(directory: URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+            .deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("recipes")).load(id: "jkxr-outcast"))
+        r.icon = icon
+        return r
+    }
+
+    func testHashIsCheckedBeforeItBecomesAnAddress() throws {
+        XCTAssertNoThrow(try recipe(icon: .init(steamAppId: "6030", steamClientIcon: String(repeating: "a1", count: 20))).validate())
+        XCTAssertThrowsError(try recipe(icon: .init(steamAppId: "6030", steamClientIcon: "../../x")).validate())
+        XCTAssertThrowsError(try recipe(icon: .init(steamAppId: "6030", steamClientIcon: String(repeating: "A1", count: 20))).validate())
+        XCTAssertThrowsError(try recipe(icon: .init(steamClientIcon: String(repeating: "a1", count: 20))).validate())
+    }
+
+    func testLargestPictureOfAnIconFile() throws {
+        // two pictures in one file, as a Windows icon has them: the larger one is taken
+        func png(_ side: Int) -> CGImage {
+            let ctx = CGContext(data: nil, width: side, height: side, bitsPerComponent: 8, bytesPerRow: 0,
+                                space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+            ctx.setFillColor(CGColor(srgbRed: 0.2, green: 0.4, blue: 0.9, alpha: 1)); ctx.fill(CGRect(x: 0, y: 0, width: side, height: side))
+            return ctx.makeImage()!
+        }
+        let out = NSMutableData()
+        let dest = try XCTUnwrap(CGImageDestinationCreateWithData(out, "com.microsoft.ico" as CFString, 2, nil))
+        CGImageDestinationAddImage(dest, png(32), nil)
+        CGImageDestinationAddImage(dest, png(256), nil)
+        XCTAssertTrue(CGImageDestinationFinalize(dest))
+        let picked = try XCTUnwrap(SteamArt.largestPicture(out as Data))
+        XCTAssertEqual(AppIcon.image(picked)?.width, 256)
+        XCTAssertNil(SteamArt.largestPicture(Data("not a picture".utf8)))
     }
 }
