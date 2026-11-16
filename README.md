@@ -178,6 +178,12 @@ Reports and fixes from the app help just as much – see *Community Verified* be
   [THIRD-PARTY.md](THIRD-PARTY.md#gta-vice-city-through-revc)). AVP Play builds the game with that project and only adds
   the way in: the files from your own Steam purchase, the start window and settings of its other games, the
   performance panel and MetalFX.
+- **[Team Beef](https://github.com/Team-Beef-Studios)** (DrBeef, Baggyg, Bummser) for
+  [JKXR](https://github.com/Team-Beef-Studios/JKXR), the open-source VR engine for Jedi Outcast and Jedi Academy, and
+  the OpenJK team it builds on. AVP Play builds both games with
+  [its port to the Vision Pro](https://github.com/myMartek/JKXR) and adds the way in: the files from your own Steam
+  purchase, the start window, the performance panel and the install – see
+  [THIRD-PARTY.md](THIRD-PARTY.md#jedi-outcast-and-jedi-academy-through-jkxr).
 - **Everyone who sent in a fix or a report** – the *Community Verified* games are their work.
 
 ## Legal
