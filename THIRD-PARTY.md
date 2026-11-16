@@ -105,6 +105,27 @@ Soft (LGPL-2.0-or-later, with its HRTF data under Apache-2.0). The project's `TH
 licence text. The game's files come from your own Steam copy of GTA Vice City (app 12110) and stay on your Mac and
 your headset.
 
+## Half-Life through LambdaVision
+
+The Half-Life recipe is built with [LambdaVision](https://github.com/illixion/halflife-visionos) by illixion
+(GPL-3.0): the [Xash3D-FWGS](https://github.com/FWGS/xash3d-fwgs) engine (GPL-3.0) with Half-Life's game code from
+[hlsdk-portable](https://github.com/FWGS/hlsdk-portable) (Valve's Half Life 1 SDK licence), drawn on Metal through
+[ANGLE](https://chromium.googlesource.com/angle/angle) (BSD-3-Clause), with illixion's Swift packages
+[RAVESDK](https://github.com/illixion/RAVESDK), [RAVEEngine](https://github.com/illixion/RAVEEngine) and
+[DebugTrace](https://github.com/illixion/DebugTrace) (MIT). Half-Life is a trademark of Valve Corporation; neither
+this project nor LambdaVision is affiliated with or endorsed by Valve.
+
+Nothing of it is part of the app or of the toolchain package: when you install the game, AVP Play fetches the source
+at the commit the recipe names (from <https://github.com/myMartek/halflife-visionos>, a fork that carries the adapter
+for AVP Play, the start window of AVP Play's games, PS VR2 Sense controller support and each eye drawn from its true
+pose, all GPL-3.0 like the project) and builds it on your Mac.
+
+**Downloaded on your Mac by that build, not passed on by this project:** the three Swift packages at the commits the
+fork pins, the engine's sources at the commits the project's `VisionPort/setup.sh` names (with MoltenVK, Apache-2.0),
+and from the fork's GitHub release, checked against their SHA-256 sums, the compiled engine pieces built from exactly
+those sources (ANGLE, libxash, the Opposing Force and Blue Shift ports). The game's files come from your own Steam
+copy of Half-Life (app 70, the build from before the 25th Anniversary Update) and stay on your Mac and your headset.
+
 ## Minecraft: Java Edition with Vivecraft
 
 The Minecraft recipe builds on [vivecraft-visionos](https://github.com/rebelancap/vivecraft-visionos) by rebelancap
