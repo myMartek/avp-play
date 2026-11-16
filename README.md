@@ -184,6 +184,12 @@ Reports and fixes from the app help just as much – see *Community Verified* be
   [its port to the Vision Pro](https://github.com/myMartek/JKXR) and adds the way in: the files from your own Steam
   purchase, the start window, the performance panel and the install – see
   [THIRD-PARTY.md](THIRD-PARTY.md#jedi-outcast-and-jedi-academy-through-jkxr).
+- **[illixion](https://github.com/illixion)** for
+  [LambdaVision](https://github.com/illixion/halflife-visionos): Half-Life running natively on the Vision Pro, the
+  Xash3D-FWGS engine drawn on Metal through ANGLE, with hand-tracked weapons and a settings window of its own. AVP Play
+  builds Half-Life with that project and only adds the way in: the files from your own Steam purchase, the start
+  window of its other games, the PS VR2 Sense controllers, and each eye drawn from its true pose – named in
+  [THIRD-PARTY.md](THIRD-PARTY.md#half-life-through-lambdavision).
 - **Everyone who sent in a fix or a report** – the *Community Verified* games are their work.
 
 ## Legal
