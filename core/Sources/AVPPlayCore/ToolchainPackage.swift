@@ -126,6 +126,18 @@ public struct ToolchainPackager: Sendable {
     /// (`Toolchain.coreModsProfiles`). Ohne sie baut die Toolchain alles wie bisher, nur ohne Mods.
     static let optionalPrebuilt = ["ports/scotland2/prebuilt"]
 
+    /// Die vorgebauten Mod-Ordner, die die Profile des Forks nennen (`ports/scotland2/avp-profiles.json`, Feld
+    /// `prebuilt`, relativ zu `ports/scotland2`). Ohne die Datei: keine.
+    static func requiredModsPrebuilt(checkout: URL) -> [String] {
+        let file = checkout.appendingPathComponent("ports/scotland2/avp-profiles.json")
+        guard let data = try? Data(contentsOf: file),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let profiles = json["profiles"] as? [[String: Any]] else { return [] }
+        return profiles.compactMap { $0["prebuilt"] as? String }
+            .filter { !$0.isEmpty && !$0.contains("..") && !$0.hasPrefix("/") }
+            .map { "ports/scotland2/" + $0 }
+    }
+
     public let root: URL
     public init(root: URL) { self.root = root }
 
@@ -147,6 +159,13 @@ public struct ToolchainPackager: Sendable {
         let dirty = try git(["status", "--porcelain", "--untracked-files=no"]).split(separator: "\n").map { String($0.dropFirst(3)) }
         guard dirty.isEmpty else { throw PackageError.uncommittedChanges(dirty) }
         for part in prebuilt where !fm.fileExists(atPath: checkout.appendingPathComponent(part).path) {
+            throw PackageError.missingPrebuilt(part)
+        }
+        // Die Mods (Beat Saber): der Ordner ist nicht versioniert. Nennt der Fork ein Profil, müssen dessen
+        // vorgebaute Teile da sein – sonst baut jedes Spiel mit diesem Paket ohne Mods, und niemand merkt es
+        // beim Packen (so ging Toolchain 896 hinaus, mit AVP Play 1.10.17 und 1.10.18).
+        for part in requiredModsPrebuilt(checkout: checkout)
+        where !fm.fileExists(atPath: checkout.appendingPathComponent(part).appendingPathComponent("libs").path) {
             throw PackageError.missingPrebuilt(part)
         }
         let version = Int(try git(["rev-list", "--count", "HEAD"]).trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
