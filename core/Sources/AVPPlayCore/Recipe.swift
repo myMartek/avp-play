@@ -62,11 +62,16 @@ public struct Recipe: Codable, Sendable, Identifiable {
         /// game that has neither a store page nor a Steam entry: the picture of the tile and the game's page is made
         /// from them, on this Mac, once the parts are built (`ArchiveArt`). Nothing of it is part of the project.
         public var archive: ArchivePictures?
+        /// The game's client icon on Valve's image server (`clienticon` in the app's Steam entry, a hash): the square
+        /// picture Steam itself shows for the game, up to 256 pixels. For an older Steam game whose library has no
+        /// background and logo to make an icon from; fetched on this Mac at install, from Valve, like the other pictures.
+        public var steamClientIcon: String?
 
-        public init(steamAppId: String? = nil, metaAppId: String? = nil, archive: ArchivePictures? = nil) {
+        public init(steamAppId: String? = nil, metaAppId: String? = nil, archive: ArchivePictures? = nil, steamClientIcon: String? = nil) {
             self.steamAppId = steamAppId
             self.metaAppId = metaAppId
             self.archive = archive
+            self.steamClientIcon = steamClientIcon
         }
     }
 
@@ -422,6 +427,12 @@ extension Recipe {
         }
         if let steam = icon?.steamAppId, !(steam.allSatisfy(\.isNumber) && !steam.isEmpty) {
             throw RecipeError.invalid(L("Steam app ID", "Steam-App-ID"))
+        }
+        // The client icon's hash becomes part of an address: 40 hex digits, and only with the game's Steam app ID.
+        if let hash = icon?.steamClientIcon {
+            guard icon?.steamAppId != nil, hash.count == 40, hash.allSatisfy({ $0.isHexDigit && ($0.isNumber || $0.isLowercase) }) else {
+                throw RecipeError.invalid(L("Steam client icon", "Steam-Client-Icon"))
+            }
         }
         // What builds the game's parts is fetched and run on this Mac: a sane, pinned place, and plain sentences.
         if let builder {

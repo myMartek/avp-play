@@ -1,4 +1,6 @@
 import Foundation
+import CoreGraphics
+import UniformTypeIdentifiers
 import ImageIO
 
 /// Holt das quadratische Titelbild eines Spiels von dessen öffentlicher Store-Seite – das Bild, das auch
@@ -161,6 +163,39 @@ public struct SteamArt: Sendable {
         }
         guard let hero = await fetch("library_hero.jpg"), let logo = await fetch("logo.png") else { return nil }
         return (hero, logo)
+    }
+
+    /// The game's client icon (`Recipe.IconSource.steamClientIcon`) from Valve's image server, as a PNG of its largest picture:
+    /// a Windows icon file holds the same picture in several sizes.
+    public func clientIcon(steamAppId: String, hash: String) async -> Data? {
+        guard SteamCatalogGame.isIdentifier(steamAppId), hash.count == 40, hash.allSatisfy(\.isHexDigit),
+              let url = URL(string: "https://cdn.cloudflare.steamstatic.com/steamcommunity/public/images/apps/\(steamAppId)/\(hash).ico"),
+              SteamArt.isAllowedImageHost(url) else { return nil }
+        let config = URLSessionConfiguration.ephemeral
+        config.httpCookieStorage = nil
+        config.urlCache = nil
+        config.timeoutIntervalForRequest = 30
+        let session = URLSession(configuration: config)
+        defer { session.finishTasksAndInvalidate() }
+        guard let (data, response) = try? await session.data(from: url), (response as? HTTPURLResponse)?.statusCode == 200,
+              data.count <= 2_000_000 else { return nil }
+        return SteamArt.largestPicture(data)
+    }
+
+    /// The largest picture of an image file (all of a Windows icon's sizes are pictures of one file), as a PNG.
+    static func largestPicture(_ data: Data) -> Data? {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
+        var best: CGImage?
+        for i in 0..<CGImageSourceGetCount(source) {
+            guard let image = CGImageSourceCreateImageAtIndex(source, i, nil) else { continue }
+            if image.width * image.height > (best.map { $0.width * $0.height } ?? 0) { best = image }
+        }
+        guard let best, best.width >= 64, best.width == best.height else { return nil }
+        let out = NSMutableData()
+        guard let dest = CGImageDestinationCreateWithData(out, UTType.png.identifier as CFString, 1, nil) else { return nil }
+        CGImageDestinationAddImage(dest, best, nil)
+        guard CGImageDestinationFinalize(dest) else { return nil }
+        return out as Data
     }
 
     public func landscapeCover(steamAppId: String) async -> Data? {

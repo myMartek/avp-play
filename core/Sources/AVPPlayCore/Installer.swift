@@ -995,6 +995,14 @@ public struct Installer: Sendable {
                 }
             }
         }
+        // An older Steam game without library pictures: its client icon, the square one Steam shows, for the app's icon.
+        if request.storeArt, let steam = recipe.icon?.steamAppId, let hash = recipe.icon?.steamClientIcon,
+           !FileManager.default.fileExists(atPath: Toolchain.steamIconURL(store: store, recipe: recipe).path) {
+            if let png = await SteamArt().clientIcon(steamAppId: steam, hash: hash) {
+                try png.write(to: Toolchain.steamIconURL(store: store, recipe: recipe), options: .atomic)
+                report(L("Icon: fetched the game's icon from Steam.", "Icon: Icon des Spiels von Steam geholt."))
+            }
+        }
         try toolchain.prepare(recipe: recipe, store: store)
     }
 

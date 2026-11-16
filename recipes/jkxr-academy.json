@@ -10,11 +10,11 @@
   "target": "jkxr-academy",
   "kind": "jkxr",
   "title": "JKXR",
-  "minCommit": "41e2389",
+  "minCommit": "137a9f7",
   "source": {
    "repository": "https://github.com/myMartek/JKXR",
-   "commit": "41e2389e7cc64cc466ea28d84735997cd373e12d",
-   "version": 704,
+   "commit": "137a9f7827ee7d2e2f938f51585b2254a03e8d7d",
+   "version": 705,
    "path": "tools/avpplay_toolchain"
   }
  },
@@ -92,6 +92,7 @@
   ]
  },
  "icon": {
-  "steamAppId": "6020"
+  "steamAppId": "6020",
+  "steamClientIcon": "b9863303185c699b5bbe7097b55e498237a4350a"
  }
 }
