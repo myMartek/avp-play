@@ -2067,6 +2067,30 @@ final class ToolchainPackageTests: XCTestCase {
         XCTAssertTrue(fm.fileExists(atPath: newest.appendingPathComponent("visionos/run.sh").path))
     }
 
+    func testCleaningUpByHandKeepsOlderToolchainsWhenTheirRemovalIsOff() throws {
+        // "Jetzt einmal aufräumen" bei ausgeschaltetem automatischem Entfernen: die Bau-Reste gehen, jede Toolchain bleibt.
+        let base = FileManager.default.temporaryDirectory.appendingPathComponent("qi-byhand-\(UUID().uuidString)", isDirectory: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: base) }
+        let fm = FileManager.default
+        let packager = ToolchainPackager(root: base.appendingPathComponent("toolchains"))
+        for (version, commit) in [(1, "aaaaaaa"), (2, "bbbbbbb")] {
+            let m = ToolchainManifest(format: 1, version: version, commit: commit, ancestors: [commit], created: Date())
+            let dir = packager.directory(for: m)
+            try fm.createDirectory(at: dir.appendingPathComponent("visionos/build/dd-device-game"), withIntermediateDirectories: true)
+            try "x".write(to: dir.appendingPathComponent("visionos/build/dd-device-game/info.plist"), atomically: true, encoding: .utf8)
+            try "#!/bin/sh\n".write(to: dir.appendingPathComponent("visionos/run.sh"), atomically: true, encoding: .utf8)
+            try ToolchainPackager.encoder.encode(m).write(to: dir.appendingPathComponent("toolchain.json"))
+        }
+        let cleared = try XCTUnwrap(packager.pruneWhenIdle(removeOlder: false, leftoversOlderThan: 0, inEveryToolchain: true,
+                                                           lock: base.appendingPathComponent("install.lock"), now: Date().addingTimeInterval(1)))
+        XCTAssertTrue(cleared.toolchains.isEmpty)
+        XCTAssertEqual(cleared.games, ["game"])
+        XCTAssertEqual(packager.installed().map { $0.manifest?.version }, [2, 1])
+        for t in packager.installed() {
+            XCTAssertFalse(fm.fileExists(atPath: t.root.appendingPathComponent("visionos/build/dd-device-game").path))
+        }
+    }
+
     func testTamperedArchiveAndDirtyCheckoutAreRefused() throws {
         let checkout = try makeCheckout()
         let out = checkout.deletingLastPathComponent().appendingPathComponent("qi-pkg-\(UUID().uuidString)")
