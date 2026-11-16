@@ -10,11 +10,11 @@
   "target": "skyrimvr",
   "kind": "vxruntime",
   "title": "VXRuntime",
-  "minCommit": "83a33fd",
+  "minCommit": "f236938",
   "source": {
    "repository": "https://github.com/myMartek/Skyrim-VR-Vision-Pro",
-   "commit": "83a33fd15487e610edbbe250f10f6dceaace46c8",
-   "version": 439,
+   "commit": "f2369380f56f6002f5a9bb6f0225a05fa0e8598d",
+   "version": 440,
    "path": "tools/avpplay_toolchain"
   }
  },
