@@ -1833,6 +1833,32 @@ final class ToolchainPackageTests: XCTestCase {
         return dir
     }
 
+    /// Nennt der Fork ein Mod-Profil, darf ohne dessen vorgebaute Teile kein Paket entstehen (Toolchain 896 ging
+    /// so hinaus und baute Beat Saber ohne Mods); mit ihnen kommen sie ins Paket.
+    func testPackRefusesAModsProfileWithoutItsPrebuiltParts() throws {
+        let checkout = try makeCheckout()
+        let fm = FileManager.default
+        let mods = checkout.appendingPathComponent("ports/scotland2")
+        try fm.createDirectory(at: mods, withIntermediateDirectories: true)
+        try #"{"schema":1,"profiles":[{"name":"1.45.3","target":"beatsaber140","versionCode":3237,"prebuilt":"prebuilt/3237","defaultOn":true}]}"#
+            .write(to: mods.appendingPathComponent("avp-profiles.json"), atomically: true, encoding: .utf8)
+        try "/ports/scotland2/prebuilt/\n".write(to: mods.appendingPathComponent(".gitignore"), atomically: true, encoding: .utf8)
+        try git(checkout, "add", "-A")
+        try git(checkout, "commit", "-q", "-m", "mods")
+        let out = checkout.deletingLastPathComponent().appendingPathComponent("qi-pkg-\(UUID().uuidString)")
+        addTeardownBlock { try? FileManager.default.removeItem(at: out) }
+        XCTAssertThrowsError(try ToolchainPackager.pack(checkout: checkout, to: out)) { error in
+            guard case PackageError.missingPrebuilt(let part) = error else { return XCTFail("\(error)") }
+            XCTAssertEqual(part, "ports/scotland2/prebuilt/3237")
+        }
+        let libs = mods.appendingPathComponent("prebuilt/3237/libs")
+        try fm.createDirectory(at: libs, withIntermediateDirectories: true)
+        try Data("mod".utf8).write(to: libs.appendingPathComponent("libsongcore.so"))
+        let (archive, _) = try ToolchainPackager.pack(checkout: checkout, to: out)
+        let list = try ToolchainPackager.run(["/usr/bin/tar", "-tzf", archive.path])
+        XCTAssertTrue(list.contains("ports/scotland2/prebuilt/3237/libs/libsongcore.so"), list)
+    }
+
     func testPackInstallRoundTrip() throws {
         let checkout = try makeCheckout()
         let out = checkout.deletingLastPathComponent().appendingPathComponent("qi-pkg-\(UUID().uuidString)")
