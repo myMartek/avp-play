@@ -668,6 +668,8 @@ extension AppModel {
                  title: L("Remove build leftovers right after every install (saves space, later builds take longer)",
                           "Bau-Reste gleich nach jeder Installation entfernen (spart Platz, spätere Baus dauern länger)"),
                  on: removeBuildLeftoversAfterInstall, enabled: autoRemoveOldToolchains),
+            Item(id: "cleanUpBuildLeftoversNow", kind: .action, title: L("Clean Up Once Now", "Jetzt einmal aufräumen"),
+                 enabled: runningJob == nil),
         ]))
         var experimental = [Item(id: "metalFX", kind: .toggle, title: L("MetalFX: switch on upscaling automatically when installing", "MetalFX: Hochskalieren bei Installation automatisch einschalten"), on: metalFXUpscaling)]
         if metalFXUpscaling {
@@ -724,6 +726,9 @@ extension AppModel {
         }
         if panel == "settings" {
             switch item {
+            case "cleanUpBuildLeftoversNow":
+                guard runningJob == nil else { return L("A job is running; clean up once it is done.", "Ein Auftrag läuft; räume auf, wenn er fertig ist.") }
+                cleanUpBuildLeftoversNow()
             case "language": if let value, let choice = LanguageChoice(rawValue: value) { languageChoice = choice }
             case "autoUpdateCheck": autoUpdateCheck = on
             case "controllerMode": if let value, let mode = ControllerMode(rawValue: value) { controllerMode = mode }

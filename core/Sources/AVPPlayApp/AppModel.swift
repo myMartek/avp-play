@@ -1680,6 +1680,22 @@ final class AppModel: ObservableObject {
 
     func removeOlderToolchainsAutomatically() {
         guard autoRemoveOldToolchains, runningJob == nil else { return }
+        let right = removeBuildLeftoversAfterInstall
+        tidyToolchains(leftoversAge: right ? 0 : AppModel.buildLeftoverAge, everyToolchain: right, removeOlder: true, manual: false)
+    }
+
+    /// The button "Clean up once now" under the toolchain settings: the build leftovers of every game in every kept
+    /// toolchain, at once, whatever the options say. Older toolchains go too only while their automatic removal is on
+    /// (whoever turned it off keeps them on purpose). Says what happened, also when there was nothing to do.
+    func cleanUpBuildLeftoversNow() {
+        guard runningJob == nil else {
+            notice = L("A job is running; clean up once it is done.", "Ein Auftrag läuft; räume auf, wenn er fertig ist.")
+            return
+        }
+        tidyToolchains(leftoversAge: 0, everyToolchain: true, removeOlder: autoRemoveOldToolchains, manual: true)
+    }
+
+    private func tidyToolchains(leftoversAge: TimeInterval, everyToolchain: Bool, removeOlder: Bool, manual: Bool) {
         let paths = paths
         let active = jobs.filter { $0.state == .waiting || $0.state == .running }
         // Was für ein Spiel gewählt ist oder gerade für eines geladen wird, bleibt wie das, womit ein Auftrag begann.
@@ -1689,13 +1705,30 @@ final class AppModel: ObservableObject {
         for recipe in games.map(\.recipe) + jobs.map(\.recipe) {
             if let name = recipe.files.first(where: { $0.role == "apk" })?.localName { apkNames[recipe.toolchain.target] = name }
         }
-        let right = removeBuildLeftoversAfterInstall
-        Task.detached(priority: .utility) {
-            guard let cleared = paths.packager.pruneWhenIdle(protecting: open,
-                                                             leftoversOlderThan: right ? 0 : AppModel.buildLeftoverAge,
-                                                             inEveryToolchain: right,
-                                                             apkNames: apkNames, busyTargets: busy),
-                  !cleared.isEmpty else { return }
+        if manual { notice = L("Cleaning up the toolchains …", "Toolchains werden aufgeräumt …") }
+        Task.detached(priority: manual ? .userInitiated : .utility) {
+            guard let cleared = paths.packager.pruneWhenIdle(protecting: open, removeOlder: removeOlder,
+                                                             leftoversOlderThan: leftoversAge,
+                                                             inEveryToolchain: everyToolchain,
+                                                             apkNames: apkNames, busyTargets: busy) else {
+                if manual {
+                    await MainActor.run {
+                        self.notice = L("Another AVP Play process is building or copying right now; clean up once it is done.",
+                                        "Ein anderer AVP-Play-Prozess baut oder kopiert gerade; räume auf, wenn er fertig ist.")
+                    }
+                }
+                return
+            }
+            guard !cleared.isEmpty else {
+                if manual {
+                    await MainActor.run {
+                        self.notice = L("Nothing to clean up: no toolchain holds build leftovers.",
+                                        "Nichts aufzuräumen: Keine Toolchain hält Bau-Reste.")
+                        self.scanStorage()
+                    }
+                }
+                return
+            }
             var parts: [String] = []
             if !cleared.toolchains.isEmpty {
                 let names = cleared.toolchains.map { String($0.version) }.joined(separator: ", ")
@@ -1703,7 +1736,7 @@ final class AppModel: ObservableObject {
                     ? L("an older toolchain (version \(names))", "eine ältere Toolchain (Version \(names))")
                     : L("\(cleared.toolchains.count) older toolchains (versions \(names))", "\(cleared.toolchains.count) ältere Toolchains (Versionen \(names))"))
             }
-            if !cleared.games.isEmpty, right {
+            if !cleared.games.isEmpty, leftoversAge == 0 {
                 parts.append(cleared.games.count == 1
                     ? L("the build leftovers of one game", "die Bau-Reste eines Spiels")
                     : L("the build leftovers of \(cleared.games.count) games", "die Bau-Reste von \(cleared.games.count) Spielen"))
