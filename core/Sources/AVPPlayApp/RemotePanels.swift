@@ -664,6 +664,10 @@ extension AppModel {
         ]))
         sections.append(RemoteSection(id: "toolchains", title: L("Toolchains", "Toolchains"), items: [
             Item(id: "autoRemoveOldToolchains", kind: .toggle, title: L("Remove toolchain data that is no longer needed automatically", "Nicht mehr gebrauchte Toolchain-Daten automatisch entfernen"), on: autoRemoveOldToolchains),
+            Item(id: "removeBuildLeftoversAfterInstall", kind: .toggle,
+                 title: L("Remove build leftovers right after every install (saves space, later builds take longer)",
+                          "Bau-Reste gleich nach jeder Installation entfernen (spart Platz, spätere Baus dauern länger)"),
+                 on: removeBuildLeftoversAfterInstall, enabled: autoRemoveOldToolchains),
         ]))
         var experimental = [Item(id: "metalFX", kind: .toggle, title: L("MetalFX: switch on upscaling automatically when installing", "MetalFX: Hochskalieren bei Installation automatisch einschalten"), on: metalFXUpscaling)]
         if metalFXUpscaling {
@@ -742,6 +746,7 @@ extension AppModel {
             case "syncSaves": syncSaves = on
             case "storePictures": storePictures = on
             case "autoRemoveOldToolchains": autoRemoveOldToolchains = on
+            case "removeBuildLeftoversAfterInstall": removeBuildLeftoversAfterInstall = on
             case "metalFX":
                 setMetalFXUpscaling(on)
                 refresh()

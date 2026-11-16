@@ -404,6 +404,9 @@ final class AppModel: ObservableObject {
     @Published var latestChoices = StoreUpdate.Choices.load()
     /// Ältere Toolchains von selbst entfernen, sobald eine neuere installiert ist und nichts mehr mit ihnen baut.
     @AppStorage("autoRemoveOldToolchains") var autoRemoveOldToolchains = true
+    /// Bau-Reste gleich nach jedem Auftrag entfernen statt nach einer Woche, in jeder behaltenen Toolchain (nur mit
+    /// `autoRemoveOldToolchains`). Spart Gigabytes, jeder spätere Bau eines Spiels dauert dafür länger.
+    @AppStorage("removeBuildLeftoversAfterInstall") var removeBuildLeftoversAfterInstall = false
     /// Initial controller mode for newly built games; the headset preference wins later.
     @AppStorage(ControllerMode.preferenceKey) var controllerMode: ControllerMode = .standard
     @AppStorage(ControllerMode.supportKey) var surrealSupport = true
@@ -1686,8 +1689,11 @@ final class AppModel: ObservableObject {
         for recipe in games.map(\.recipe) + jobs.map(\.recipe) {
             if let name = recipe.files.first(where: { $0.role == "apk" })?.localName { apkNames[recipe.toolchain.target] = name }
         }
+        let right = removeBuildLeftoversAfterInstall
         Task.detached(priority: .utility) {
-            guard let cleared = paths.packager.pruneWhenIdle(protecting: open, leftoversOlderThan: AppModel.buildLeftoverAge,
+            guard let cleared = paths.packager.pruneWhenIdle(protecting: open,
+                                                             leftoversOlderThan: right ? 0 : AppModel.buildLeftoverAge,
+                                                             inEveryToolchain: right,
                                                              apkNames: apkNames, busyTargets: busy),
                   !cleared.isEmpty else { return }
             var parts: [String] = []
@@ -1697,7 +1703,11 @@ final class AppModel: ObservableObject {
                     ? L("an older toolchain (version \(names))", "eine ältere Toolchain (Version \(names))")
                     : L("\(cleared.toolchains.count) older toolchains (versions \(names))", "\(cleared.toolchains.count) ältere Toolchains (Versionen \(names))"))
             }
-            if !cleared.games.isEmpty {
+            if !cleared.games.isEmpty, right {
+                parts.append(cleared.games.count == 1
+                    ? L("the build leftovers of one game", "die Bau-Reste eines Spiels")
+                    : L("the build leftovers of \(cleared.games.count) games", "die Bau-Reste von \(cleared.games.count) Spielen"))
+            } else if !cleared.games.isEmpty {
                 parts.append(cleared.games.count == 1
                     ? L("the build leftovers of one game built more than a week ago", "die Bau-Reste eines Spiels, das vor über einer Woche gebaut wurde")
                     : L("the build leftovers of \(cleared.games.count) games built more than a week ago", "die Bau-Reste von \(cleared.games.count) Spielen, die vor über einer Woche gebaut wurden"))
