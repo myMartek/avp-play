@@ -1,0 +1,97 @@
+{
+ "schema": 1,
+ "id": "halflife",
+ "title": "Half-Life",
+ "package": "steam-app-70",
+ "versionName": "Steam-Build 5433873 (Pre-25th Anniversary)",
+ "versionCode": 5433873,
+ "store": {},
+ "toolchain": {
+  "target": "halflife",
+  "kind": "lambdavision",
+  "title": "LambdaVision",
+  "minCommit": "5b2fe90",
+  "source": {
+   "repository": "https://github.com/myMartek/halflife-visionos",
+   "commit": "5b2fe905ea005a076d39ec0f59eb651f592a03e0",
+   "version": 339,
+   "path": "tools/avpplay_toolchain"
+  }
+ },
+ "files": [],
+ "trees": [
+  {
+   "name": "game",
+   "role": "game",
+   "source": {
+    "kind": "user",
+    "hint": {
+     "en": "Half-Life from your own Steam account, in the build from before the 25th Anniversary Update (the beta branch 'steam_legacy'), which the Xash3D engine expects. With a Steam sign-in under Setup the app fetches it for you (about 440 MB). By hand: in the Steam client's console run 'download_depot 70 1 5928322771446233610' and 'download_depot 70 96 8007990985538868417', then merge the two folders into one.",
+     "de": "Half-Life aus dem eigenen Steam-Konto, in der Fassung von vor dem Update zum 25. Jubiläum (Beta-Zweig „steam_legacy“), die die Xash3D-Engine erwartet. Mit einer Steam-Anmeldung unter „Einrichtung“ holt die App es für dich (rund 440 MB). Von Hand: in der Konsole des Steam-Clients 'download_depot 70 1 5928322771446233610' und 'download_depot 70 96 8007990985538868417' ausführen und die beiden Ordner zu einem zusammenführen."
+    },
+    "steam": {
+     "app": "70",
+     "depots": [
+      {
+       "id": "1",
+       "manifest": "5928322771446233610",
+       "bytes": 429833890
+      },
+      {
+       "id": "96",
+       "manifest": "8007990985538868417",
+       "bytes": 8060176
+      }
+     ]
+    }
+   },
+   "markers": [
+    {
+     "path": "valve/liblist.gam",
+     "size": 311,
+     "sha256": "c09ec20533af8f927f260bd5e79f94bdffa15d4911abc66f2c3b155b744fa67e"
+    },
+    {
+     "path": "valve/halflife.wad",
+     "size": 37914096,
+     "sha256": "38ababf773463fdf6133005d13e543098fc42392b458057f239469b764691300"
+    },
+    {
+     "path": "valve/maps/c1a0.bsp",
+     "size": 2546336,
+     "sha256": "898509195d9d044ddfd72bd644338182c266527184a003177230660f174822a7"
+    },
+    {
+     "path": "valve_hd/models/v_9mmhandgun.mdl",
+     "size": 141948,
+     "sha256": "c86f4923f32cb5a7e2adbe49589c9f3ce77c8a3174dc762bac0bbb175a5cd3cc"
+    }
+   ]
+  }
+ ],
+ "status": {
+  "playability": "verified",
+  "download": "special",
+  "notes": [
+   {
+    "en": "Special app: not a Meta Store title and not a Klepton game. Half-Life runs natively on the Vision Pro in LambdaVision by illixion (github.com/illixion/halflife-visionos): the Xash3D-FWGS engine with hlsdk-portable, drawn on Metal through ANGLE, in a full immersive space.",
+    "de": "Sonderapp: kein Titel aus dem Meta-Store und kein Klepton-Spiel. Half-Life läuft nativ auf der Vision Pro, in LambdaVision von illixion (github.com/illixion/halflife-visionos): die Engine Xash3D-FWGS mit hlsdk-portable, über ANGLE auf Metal gezeichnet, in einem vollen immersiven Raum."
+   },
+   {
+    "en": "The app is built from source on this Mac (a few minutes; the compiled engine pieces come from the toolchain's own release). The game files (about 440 MB) come from your own Steam purchase, in the build from before the 25th Anniversary Update, and are never distributed.",
+    "de": "Die App wird auf diesem Mac aus den Quellen gebaut (einige Minuten; die fertigen Teile der Engine kommen aus dem Release der Toolchain). Die Spieldateien (rund 440 MB) stammen aus dem eigenen Steam-Kauf, in der Fassung von vor dem Update zum 25. Jubiläum, und werden nie weitergegeben."
+   },
+   {
+    "en": "Play with PlayStation VR2 Sense controllers (the gun follows the right one; trigger fires, sticks move and turn, the menu by sticks and buttons), with your hands, a gamepad, or keyboard and mouse. A free Apple account is enough. The start window continues your newest saved game.",
+    "de": "Gespielt wird mit PlayStation-VR2-Sense-Controllern (die Waffe folgt dem rechten; Abzug schießt, Sticks laufen und drehen, das Menü mit Sticks und Tasten), mit den Händen, einem Gamepad oder Tastatur und Maus. Ein kostenloses Apple-Konto reicht. Das Startfenster setzt den neuesten Spielstand fort."
+   },
+   {
+    "en": "Played on a Vision Pro M5 with PS VR2 Sense controllers (2026-11-15/16): the start window, new game and continuing a save, the menu, shooting, reloading, the reticle at the right depth. Installed by AVP Play from the Steam copy (app 70). Opposing Force and Blue Shift are built into the app but not part of this install yet.",
+    "de": "Auf einer Vision Pro M5 mit PS VR2 Sense Controllern gespielt (2026-11-15/16): das Startfenster, neues Spiel und Fortsetzen eines Spielstands, das Menü, Schießen, Nachladen, das Fadenkreuz in der richtigen Tiefe. Von AVP Play aus der Steam-Fassung (App 70) installiert. Opposing Force und Blue Shift sind in der App enthalten, gehören aber noch nicht zu dieser Installation."
+   }
+  ]
+ },
+ "icon": {
+  "steamAppId": "70"
+ }
+}
