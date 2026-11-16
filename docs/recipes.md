@@ -35,6 +35,11 @@ Recipes never contain game content, credentials or account data – only identif
 `toolchain.target` names the target in the toolchain; `minCommit` is the oldest toolchain state the recipe works
 with. The app refuses to build with an older toolchain.
 
+`icon.steamClientIcon` (40 lowercase hex digits, only together with `steamAppId`) is the hash of the game's client icon in its
+Steam entry. Older games have no library pictures on Steam; for them the app takes the largest picture of that icon
+(fetched from Steam's CDN, kept in the library as `steam-icon.png`) as the app icon, after the game's own picture,
+the Meta Store and the local Steam library.
+
 ### A toolchain of the game's own
 
 Nearly every game is built with the project's toolchain, the Klepton fork. A game that is neither an Android nor a
