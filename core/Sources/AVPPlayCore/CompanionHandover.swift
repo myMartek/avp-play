@@ -341,6 +341,17 @@ public enum CompanionHandover {
         }
     }
 
+    /// Die Spiele, für die die Brille die App ohne das Spiel (`machoTemplates`) braucht: deren Spielteile jetzt
+    /// mitgehen, und die, deren Spielteile von einer früheren Übergabe schon dort liegen (die Remote nimmt sie, sobald
+    /// `parts.json` daneben liegt). `list` ist `DeviceControl.files` für einen Ordner der Remote.
+    public static func needingTemplate(_ built: [Built], list: (String) -> [RemoteFile]) -> [Built] {
+        built.filter { entry in
+            if entry.parts != nil { return true }
+            guard entry.game.parts.state != "missing" else { return false }
+            return list("\(partsFolder)/\(entry.game.id)").contains { !$0.isDirectory && $0.relativePath == partsRecordName && $0.size > 0 }
+        }
+    }
+
     // MARK: Die Laufzeit-Vorlage
 
     /// Ob diese Toolchain eine Vorlage bauen kann: Das Skript dafür gibt es erst in neueren.
@@ -402,7 +413,9 @@ public enum CompanionHandover {
            !needsMacho || !machoTemplates(toolchain: toolchain, cache: cache).isEmpty { return cached }
         try files.createDirectory(at: cache, withIntermediateDirectories: true)
         report(L("Building the runtime template of toolchain \(toolchain.name) (once per toolchain, a few minutes) …",
-                 "Die Laufzeit-Vorlage der Toolchain \(toolchain.name) wird gebaut (einmal pro Toolchain, ein paar Minuten) …"))
+                 "Die Laufzeit-Vorlage der Toolchain \(toolchain.name) wird gebaut (einmal pro Toolchain, ein paar Minuten) …")
+               + (needsMacho ? L(" With it the app of a game built on this Mac, without the game, so that the headset can install that game: about ten minutes more.",
+                                 " Dazu die App eines auf diesem Mac gebauten Spiels, ohne das Spiel, damit die Brille dieses Spiel installieren kann: etwa zehn Minuten mehr.") : ""))
         let log = cache.appendingPathComponent("last-template.log")
         files.createFile(atPath: log.path, contents: nil)
         let handle = try FileHandle(forWritingTo: log)
@@ -413,6 +426,9 @@ public enum CompanionHandover {
         var env = ProcessInfo.processInfo.environment
         env["PATH"] = "/usr/bin:/bin:/usr/sbin:/sbin"
         if let gameArchive, files.fileExists(atPath: gameArchive.path) { env[Toolchain.gameArchiveVariable] = gameArchive.standardizedFileURL.path }
+        // Die Vorlage eines auf dem Mac gebauten Spiels kostet einen zweiten Xcode-Bau (etwa zehn Minuten); ohne
+        // Spielteile auf der Brille kann die Remote mit ihr nichts anfangen.
+        if !needsMacho { env["KLEPTON_TEMPLATE_MACHO"] = "0" }
         p.environment = env
         p.currentDirectoryURL = toolchain.root
         p.standardOutput = handle
@@ -546,11 +562,12 @@ public enum CompanionHandover {
             }
         }
         if let root = plan.toolchain, let toolchain = try? Toolchain(root: root) {
-            inputs.template = try template(toolchain: toolchain, cache: cache, wantsMacho: !inputs.built.isEmpty,
-                                           gameArchive: inputs.built.compactMap(\.archive).first, report: report)
+            let needing = needingTemplate(inputs.built) { (try? list($0)) ?? [] }
+            inputs.template = try template(toolchain: toolchain, cache: cache, wantsMacho: !needing.isEmpty,
+                                           gameArchive: needing.compactMap(\.archive).first, report: report)
             if inputs.template != nil {
                 inputs.modTemplates = modTemplates(toolchain: toolchain, cache: cache)
-                let targets = Set(inputs.built.map(\.game.target))
+                let targets = Set(needing.map(\.game.target))
                 inputs.machoTemplates = machoTemplates(toolchain: toolchain, cache: cache).filter { machoTarget($0, toolchain: toolchain).map(targets.contains) ?? false }
             } else {
                 report(L("Toolchain \(toolchain.name) cannot build a runtime template; none is handed over.",
