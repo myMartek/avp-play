@@ -2029,6 +2029,44 @@ final class ToolchainPackageTests: XCTestCase {
         XCTAssertEqual(ToolchainPackager.removeBuildLeftovers(in: root, olderThan: 7 * day, now: now), ["waiting"], "sobald der Auftrag durch ist")
     }
 
+    func testLeftoversRightAfterInstallInEveryKeptToolchain() throws {
+        // "Bau-Reste gleich nach jeder Installation entfernen": Alter 0 und jede Toolchain, die bleibt – auch eine
+        // ältere, die für ein Spiel gewählt ist. Was ein laufender Auftrag baut, und die Toolchain selbst bleiben.
+        let base = FileManager.default.temporaryDirectory.appendingPathComponent("qi-afterinstall-\(UUID().uuidString)", isDirectory: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: base) }
+        let fm = FileManager.default
+        let packager = ToolchainPackager(root: base.appendingPathComponent("toolchains"))
+        let lock = base.appendingPathComponent("install.lock")
+        let now = Date()
+        func plant(_ version: Int, _ commit: String, built targets: [String]) throws {
+            let m = ToolchainManifest(format: 1, version: version, commit: commit, ancestors: [commit], created: Date())
+            let dir = packager.directory(for: m)
+            try fm.createDirectory(at: dir.appendingPathComponent("visionos"), withIntermediateDirectories: true)
+            try "#!/bin/sh\n".write(to: dir.appendingPathComponent("visionos/run.sh"), atomically: true, encoding: .utf8)
+            try ToolchainPackager.encoder.encode(m).write(to: dir.appendingPathComponent("toolchain.json"))
+            for t in targets {
+                let plist = dir.appendingPathComponent("visionos/build/dd-device-\(t)/info.plist")
+                try fm.createDirectory(at: plist.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try "x".write(to: plist, atomically: true, encoding: .utf8)
+                try fm.setAttributes([.modificationDate: now.addingTimeInterval(-60)], ofItemAtPath: plist.path)
+            }
+        }
+        try plant(1, "aaaaaaa", built: ["pinned"])
+        try plant(2, "bbbbbbb", built: ["justbuilt", "running"])
+        // Ohne die Option: nichts von einem Bau, der eine Minute alt ist.
+        XCTAssertEqual(packager.pruneWhenIdle(protecting: ["aaaaaaa"], leftoversOlderThan: 7 * 24 * 3600,
+                                              busyTargets: ["running"], lock: lock, now: now)?.games, [])
+        // Mit ihr: in beiden Toolchains, nur nicht, was gerade gebaut wird.
+        let cleared = try XCTUnwrap(packager.pruneWhenIdle(protecting: ["aaaaaaa"], leftoversOlderThan: 0, inEveryToolchain: true,
+                                                           busyTargets: ["running"], lock: lock, now: now))
+        XCTAssertEqual(Set(cleared.games), ["justbuilt", "pinned"])
+        XCTAssertEqual(packager.installed().map { $0.manifest?.version }, [2, 1], "die gewählte ältere Toolchain bleibt")
+        let newest = try XCTUnwrap(packager.installed().first).root
+        XCTAssertFalse(fm.fileExists(atPath: newest.appendingPathComponent("visionos/build/dd-device-justbuilt").path))
+        XCTAssertTrue(fm.fileExists(atPath: newest.appendingPathComponent("visionos/build/dd-device-running/info.plist").path))
+        XCTAssertTrue(fm.fileExists(atPath: newest.appendingPathComponent("visionos/run.sh").path))
+    }
+
     func testTamperedArchiveAndDirtyCheckoutAreRefused() throws {
         let checkout = try makeCheckout()
         let out = checkout.deletingLastPathComponent().appendingPathComponent("qi-pkg-\(UUID().uuidString)")

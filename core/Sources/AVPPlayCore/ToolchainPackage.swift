@@ -357,18 +357,23 @@ public struct ToolchainPackager: Sendable {
     /// eine Stunde sind.
     ///
     /// Mit `leftoversOlderThan` räumt es auch in der neuesten Toolchain auf: was ein Spiel beim Bauen dort
-    /// hinterlässt, fällt weg, wenn sein letzter Bau länger her ist (siehe `removeBuildLeftovers`).
+    /// hinterlässt, fällt weg, wenn sein letzter Bau länger her ist (siehe `removeBuildLeftovers`). Mit
+    /// `inEveryToolchain` in jeder, die bleibt, also auch in einer älteren, die für ein Spiel gewählt ist.
     @discardableResult
     public func pruneWhenIdle(protecting commits: Set<String> = [], leftoversOlderThan age: TimeInterval? = nil,
+                              inEveryToolchain: Bool = false,
                               apkNames: [String: String] = [:], busyTargets: Set<String> = [],
                               lock: URL = ProcessLock.installURL, now: Date = Date()) -> Cleared? {
         guard let held = ProcessLock.acquire(lock) else { return nil }
         defer { held.release() }
         let toolchains = removeOlderAndUnpackingLeftovers(protecting: commits, now: now)
         var games: [String] = []
-        if let age, let newest = installed().first {
-            games = ToolchainPackager.removeBuildLeftovers(in: newest.root, olderThan: age, apkNames: apkNames,
-                                                           skipping: busyTargets, now: now)
+        if let age {
+            for toolchain in inEveryToolchain ? installed() : Array(installed().prefix(1)) {
+                let cleared = ToolchainPackager.removeBuildLeftovers(in: toolchain.root, olderThan: age, apkNames: apkNames,
+                                                                     skipping: busyTargets, now: now)
+                games += cleared.filter { !games.contains($0) }
+            }
         }
         return Cleared(toolchains: toolchains, games: games)
     }
