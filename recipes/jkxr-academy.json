@@ -70,7 +70,7 @@
   }
  ],
  "status": {
-  "playability": "untested",
+  "playability": "verified",
   "download": "special",
   "notes": [
    {
@@ -84,6 +84,10 @@
    {
     "en": "Needs PlayStation VR2 Sense controllers. The app asks for no permission beyond what every signed app has, so a free Apple account should do (not tried yet). Optional sharper textures can be downloaded in the app itself, under Settings.",
     "de": "Braucht PlayStation-VR2-Sense-Controller. Die App verlangt keine Berechtigung über das hinaus, was jede signierte App hat; ein kostenloses Apple-Konto sollte deshalb genügen (noch nicht ausprobiert). Schärfere Texturen lassen sich auf Wunsch in der App selbst laden, unter „Einstellungen“."
+   },
+   {
+    "en": "Installed on a Vision Pro M5 with the Install button of AVP Play (2026-11-16): download from the Steam copy (app 6020), build and install; the app and its icon were seen on the headset. How far into the game it was played was not reported.",
+    "de": "Auf einer Vision Pro M5 mit dem Knopf „Installieren“ von AVP Play installiert (2026-11-16): Download aus der Steam-Fassung (App 6020), Bau und Installation; die App und ihr Icon wurden auf der Brille gesehen. Wie weit ins Spiel gespielt wurde, ist nicht berichtet."
    },
    {
     "en": "Saved games stay inside the app and are not part of AVP Play's save backup: removing the app removes them.",
