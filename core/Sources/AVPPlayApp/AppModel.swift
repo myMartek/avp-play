@@ -73,6 +73,17 @@ struct Game: Identifiable {
     var needsSteamAccount: Bool { recipe.source == .steam }
     /// Kommen Ordner des Spiels aus dem eigenen Steam-Kauf (Skyrim VR, Vice City, die beiden JKXR-Spiele)?
     var steamFolders: Bool { (recipe.trees ?? []).contains { $0.source.steam != nil } }
+    /// Kommt alles, was der Nutzer sonst selbst bereitstellt, aus seinem Steam-Kauf? Dann holt es ein Auftrag selbst
+    /// (`SteamFetcher.jobFetches`), und „Installieren“ lädt erst und installiert dann – wie bei einem Spiel aus dem
+    /// Meta-Store. Am Rezept entschieden, nicht am Bestand: das Prüfen der Kenndateien hieße Gigabytes lesen.
+    var steamProvidesOwnFiles: Bool {
+        guard SteamFetcher.fetchesInJob(recipe) else { return false }
+        let trees = (recipe.trees ?? []).filter { $0.source.kind == .user }
+        let files = recipe.files.filter { $0.source?.kind == .user }
+        return !(trees.isEmpty && files.isEmpty) && trees.allSatisfy { $0.source.steam != nil } && files.allSatisfy { $0.source?.steam != nil }
+    }
+    /// Fehlt etwas, das ein Auftrag aus dem Steam-Kauf holt?
+    var steamFetchPending: Bool { steamProvidesOwnFiles && !status.userProvidedMissing.isEmpty }
     /// Was davon noch von Steam zu laden ist, nach Valves Angabe für die Depots; 0, wenn alle Ordner da sind.
     var steamFolderBytes: Int64 {
         guard status.treesPresent < status.treesRequired else { return 0 }
@@ -1272,7 +1283,12 @@ final class AppModel: ObservableObject {
         if owned(game) == .no { return notOwnedText(game) }
         if game.otherSourceInstalled { return otherSourceText(game) }
         if let why = freeAccountBlocker(for: game) { return why }
-        if !game.status.userProvidedMissing.isEmpty { return L("Files that you provide yourself are missing (see below).", "Es fehlen Dateien, die du selbst bereitstellst (siehe unten).") }
+        if game.steamFetchPending {
+            // Der Auftrag lädt sie selbst von Steam; es braucht nur die Anmeldung dort.
+            if let why = steamBlocker(for: game) { return why }
+        } else if !game.status.userProvidedMissing.isEmpty {
+            return L("Files that you provide yourself are missing (see below).", "Es fehlen Dateien, die du selbst bereitstellst (siehe unten).")
+        }
         if let extra = missingExtras(for: game).first {
             let name = extra.title?.text ?? extra.name
             return L("“\(name)” is ticked but not on this Mac yet (see “Optional Content”).",
@@ -1309,9 +1325,10 @@ final class AppModel: ObservableObject {
         }
         if isBusy(game.id) { return L("A job for this game is already running.", "Für dieses Spiel läuft schon ein Auftrag.") }
         // Platz für den Download, mit zwei Gigabyte Luft für Bau und Zwischenstände.
-        if let free = freeBytes, game.status.bytesToDownload > 0, game.status.bytesToDownload + 2_000_000_000 > free {
-            return L("Not enough free space on this Mac: \(Installer.gigabytes(game.status.bytesToDownload)) to download, \(Installer.gigabytes(free)) free.",
-                     "Auf diesem Mac ist zu wenig Platz: \(Installer.gigabytes(game.status.bytesToDownload)) zu laden, \(Installer.gigabytes(free)) frei.")
+        let toLoad = game.status.bytesToDownload + game.steamFolderBytes
+        if let free = freeBytes, toLoad > 0, toLoad + 2_000_000_000 > free {
+            return L("Not enough free space on this Mac: \(Installer.gigabytes(toLoad)) to download, \(Installer.gigabytes(free)) free.",
+                     "Auf diesem Mac ist zu wenig Platz: \(Installer.gigabytes(toLoad)) zu laden, \(Installer.gigabytes(free)) frei.")
         }
         return nil
     }
@@ -1743,11 +1760,13 @@ final class AppModel: ObservableObject {
             }
         }
         if let why = accountBlocker(for: game) { return why }
+        if game.steamFetchPending, let why = steamBlocker(for: game) { return why }
         if owned(game) == .no { return notOwnedText(game) }
         if isBusy(game.id) { return L("A job for this game is already running.", "Für dieses Spiel läuft schon ein Auftrag.") }
-        if let free = freeBytes, game.status.bytesToDownload + 2_000_000_000 > free {
-            return L("Not enough free space on this Mac: \(Installer.gigabytes(game.status.bytesToDownload)) to download, \(Installer.gigabytes(free)) free.",
-                     "Auf diesem Mac ist zu wenig Platz: \(Installer.gigabytes(game.status.bytesToDownload)) zu laden, \(Installer.gigabytes(free)) frei.")
+        let toLoad = game.status.bytesToDownload + game.steamFolderBytes
+        if let free = freeBytes, toLoad + 2_000_000_000 > free {
+            return L("Not enough free space on this Mac: \(Installer.gigabytes(toLoad)) to download, \(Installer.gigabytes(free)) free.",
+                     "Auf diesem Mac ist zu wenig Platz: \(Installer.gigabytes(toLoad)) zu laden, \(Installer.gigabytes(free)) frei.")
         }
         return nil
     }
@@ -1756,13 +1775,17 @@ final class AppModel: ObservableObject {
     /// Dateien, nicht ihre Größe: bei einem nachgeschlagenen Spiel aus dem Meta-Store kennt die vorab niemand.
     func hasDownloads(_ game: Game) -> Bool {
         game.status.filesToDownload > 0 || game.status.bytesToDownload > 0 || steamDraftApp(game) != nil || game.partsToBuild
+            || game.steamFetchPending
     }
 
     /// Wie viel für das Spiel noch zu laden ist, in Worten – bei einem Steam-Spiel, das noch nicht geladen ist, die
     /// Größe seiner Android-Fassung laut Steam.
     func downloadSizeText(_ game: Game) -> String {
         if let app = steamDraftApp(game) { return Installer.gigabytes(app.bytes) }
-        if game.status.bytesToDownload > 0 { return Installer.gigabytes(game.status.bytesToDownload) }
+        if game.status.bytesToDownload + game.steamFolderBytes > 0 {
+            return Installer.gigabytes(game.status.bytesToDownload + game.steamFolderBytes)
+        }
+        if game.steamFetchPending { return L("From your Steam purchase", "Aus deinem Steam-Kauf") }
         // Spielteile, die hier gebaut werden: Ihre Größe kennt vorab niemand; was der Bau braucht, sagt die Seite des Spiels.
         if game.partsToBuild, game.status.filesToDownload == 0 { return L("Game parts, built on this Mac", "Spielteile, auf diesem Mac gebaut") }
         return game.status.filesToDownload == 1 ? L("One file", "Eine Datei") : L("\(game.status.filesToDownload) files", "\(game.status.filesToDownload) Dateien")

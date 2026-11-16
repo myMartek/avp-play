@@ -788,7 +788,7 @@ struct GameDetail: View {
                         // im Weg steht. Steht dem Laden dasselbe im Weg wie dem Installieren, sagt es der Text oben.
                         let downloadBlocked = model.downloadBlocker(for: game)
                         if model.hasDownloads(game), !model.isBusy(game.id),
-                           blocked == nil ? game.fromStore : downloadBlocked != blocked {
+                           blocked == nil ? (game.fromStore || game.steamFetchPending) : downloadBlocked != blocked {
                             Button(action: { model.download(game) }) {
                                 Text(game.partsToBuild ? L("Build Parts Only", "Nur Spielteile bauen") : L("Download Only", "Nur herunterladen")).frame(minWidth: 150)
                             }
@@ -811,7 +811,9 @@ struct GameDetail: View {
                 }
 
                 if game.draft { untestedBox }
-                if !game.status.userProvidedMissing.isEmpty { ownFiles }
+                // Was aus dem Steam-Kauf kommt, holen „Installieren“ und „Nur herunterladen“ selbst; einen Kasten, in
+                // dem man es selbst bereitstellt, gibt es dafür nicht.
+                if !game.status.userProvidedMissing.isEmpty, !game.steamProvidesOwnFiles { ownFiles }
                 if let account = game.recipe.gameAccount { gameAccountBox(account) }
                 if let builder = game.recipe.builder { builderBox(builder) }
 
@@ -1271,21 +1273,24 @@ struct ExtraContentRow: View {
         } else if file.source?.kind == .user {
             if file.source?.steam != nil, !game.status.userProvidedMissing.isEmpty {
                 // Die Dateien des Spiels fehlen auch noch: ein Abruf holt beides, und der Knopf dafür steht oben.
-                Text(L("Not on this Mac yet. “Download from Steam” above fetches it together with the game.",
-                       "Liegt noch nicht auf diesem Mac. „Von Steam laden“ oben holt sie zusammen mit dem Spiel."))
+                Text(L("Not on this Mac yet. “Install” or “Download Only” above fetches it together with the game.",
+                       "Liegt noch nicht auf diesem Mac. „Installieren“ oder „Nur herunterladen“ oben holt sie zusammen mit dem Spiel."))
                     .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             } else if file.source?.steam != nil {
                 SteamFetchRow(game: game, headline: L("Not on this Mac yet.", "Liegt noch nicht auf diesem Mac."))
             }
-            Button(L("Choose Folder …", "Ordner auswählen …")) {
-                let panel = NSOpenPanel()
-                panel.canChooseDirectories = true
-                panel.canChooseFiles = false
-                panel.message = L("Choose the folder that contains “\(file.name)”. It is copied into this app’s library.",
-                                  "Ordner wählen, in dem „\(file.name)“ liegt. Die Datei wird in den Bestand dieses Programms kopiert.")
-                if panel.runModal() == .OK, let url = panel.url { model.adopt(game, from: url) }
+            // Aus dem Steam-Kauf kommt sie von selbst; von Hand nur, was keinen Weg über Steam hat.
+            if file.source?.steam == nil {
+                Button(L("Choose Folder …", "Ordner auswählen …")) {
+                    let panel = NSOpenPanel()
+                    panel.canChooseDirectories = true
+                    panel.canChooseFiles = false
+                    panel.message = L("Choose the folder that contains “\(file.name)”. It is copied into this app’s library.",
+                                      "Ordner wählen, in dem „\(file.name)“ liegt. Die Datei wird in den Bestand dieses Programms kopiert.")
+                    if panel.runModal() == .OK, let url = panel.url { model.adopt(game, from: url) }
+                }
+                .controlSize(.small)
             }
-            .controlSize(.small)
         }
     }
 }
