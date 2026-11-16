@@ -1319,11 +1319,14 @@ case "remote":
         } else if let root = o.value("toolchain") ?? ProcessInfo.processInfo.environment["AVPPLAY_TOOLCHAIN"] ?? toolchainPackager(o).installed().first?.root.path {
             let toolchain = try Toolchain(root: URL(fileURLWithPath: root).standardizedFileURL)
             let cache = CompanionApp.directory.appendingPathComponent("templates", isDirectory: true)
-            inputs.template = try CompanionHandover.template(toolchain: toolchain, cache: cache, wantsMacho: !inputs.built.isEmpty,
-                                                             gameArchive: inputs.built.compactMap(\.archive).first) { print($0) }
+            let needing = CompanionHandover.needingTemplate(inputs.built) {
+                (try? control.files(device: device, bundle: bundle, subdirectory: $0)) ?? []
+            }
+            inputs.template = try CompanionHandover.template(toolchain: toolchain, cache: cache, wantsMacho: !needing.isEmpty,
+                                                             gameArchive: needing.compactMap(\.archive).first) { print($0) }
             if inputs.template != nil {
                 inputs.modTemplates = CompanionHandover.modTemplates(toolchain: toolchain, cache: cache)
-                let targets = Set(inputs.built.map(\.game.target))
+                let targets = Set(needing.map(\.game.target))
                 inputs.machoTemplates = CompanionHandover.machoTemplates(toolchain: toolchain, cache: cache)
                     .filter { CompanionHandover.machoTarget($0, toolchain: toolchain).map(targets.contains) ?? false }
             }
