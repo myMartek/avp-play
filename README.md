@@ -50,6 +50,12 @@ sent in), **Untested** or **Incompatible**. An untested game you own can be trie
 they run. Say with one click how it went, or let an AI coding assistant try to fix it and send the fix in for
 review; that is how the list grows.
 
+**A menu inside every game.** Hold *Create* and *Options* on the PS VR2 Sense controllers together for a second:
+a menu opens over the game, which waits while it is open. It shows the performance panel, switches the picture while
+you play – MetalFX, frame generation, every or every second frame, foveated rendering – and the play area's edge. In
+Half-Life: Alyx it also quick-saves and quick-loads, and with *Cheats* switched on in the game's settings it has the
+game's own cheats. What you change there lasts until you close the game; the game's settings stay as they were.
+
 Along the way the app keeps your saved games on your Mac, can keep the downloads on an external disk, shows
 mixed-reality games in your own room, and updates itself from this repository's releases. The
 [wiki](https://github.com/myMartek/avp-play/wiki) has the details.
