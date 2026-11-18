@@ -46,7 +46,8 @@ use step by step, in simple words – in English and German.
 
 Every Quest game of the Meta Store is listed in the app with a label: **Verified** (tested by the project, with
 a recipe in [`recipes/`](recipes)), **Community Verified** (players report it runs, or it runs with a fix a player
-sent in), **Untested** or **Incompatible**. An untested game you own can be tried – most need adjustments before
+sent in), **Works Partly** (it runs, but not everything works yet – its note says what does and what does not),
+**Untested** or **Incompatible**. An untested game you own can be tried – most need adjustments before
 they run. Say with one click how it went, or let an AI coding assistant try to fix it and send the fix in for
 review; that is how the list grows.
 

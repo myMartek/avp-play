@@ -133,6 +133,7 @@ extension AppModel {
                 items.append(Item(id: "prepare-note", kind: .text, title: "", detail: note, style: .secondary))
             }
             sections.append(RemoteSection(id: "untested", title: game.incompatible ? L("Reported not to work", "Läuft nach den Meldungen nicht")
+                                                                 : game.partial ? L("Works partly", "Funktioniert teilweise")
                                                                  : game.trust == .community ? L("Users report that it works", "Nutzer melden, dass es läuft")
                                                                  : L("Nobody has tested this game yet", "Noch nicht getestet"),
                                           footer: L("Each verified game needed its own adjustments, so an untested one may well not start. Say afterwards how it went.",

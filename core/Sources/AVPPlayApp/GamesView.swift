@@ -347,6 +347,10 @@ struct TrustBadge: View {
                 return (L("Community Verified", "Von Nutzern bestätigt"), "person.2.fill", .green,
                         L("More users report that it runs than that it does not. The project has not tested it.",
                           "Mehr Nutzer melden, dass es läuft, als dass es nicht läuft. Das Projekt hat es nicht getestet."))
+            case .partial:
+                return (L("Works Partly", "Funktioniert teilweise"), "circle.lefthalf.filled", .orange,
+                        L("It runs, but not everything in it works yet. The game's page says what does and what does not.",
+                          "Es läuft, aber noch nicht alles darin funktioniert. Die Seite des Spiels sagt, was geht und was nicht."))
             case .incompatible:
                 return (L("Incompatible", "Inkompatibel"), "xmark.octagon.fill", .red,
                         L("More users report that it does not run than that it does.", "Mehr Nutzer melden, dass es nicht läuft, als dass es läuft."))
@@ -963,11 +967,15 @@ struct GameDetail: View {
         GroupBox {
             VStack(alignment: .leading, spacing: 8) {
                 Label(game.incompatible ? L("This game is reported not to work at the moment", "Dieses Spiel läuft nach den Meldungen derzeit nicht")
+                      : game.partial ? L("This game works partly", "Dieses Spiel funktioniert teilweise")
                       : game.trust == .community ? L("Users report that this game works", "Nutzer melden, dass dieses Spiel läuft")
                       : L("Nobody has tested this game yet", "Dieses Spiel hat noch niemand getestet"),
-                      systemImage: game.incompatible ? "xmark.octagon" : game.trust == .community ? "person.2" : "flask")
+                      systemImage: game.incompatible ? "xmark.octagon" : game.partial ? "circle.lefthalf.filled" : game.trust == .community ? "person.2" : "flask")
                     .font(.headline)
-                Text(L("You can try it. Each of the verified games needed its own adjustments before it ran, so a game the project has not tested may well not start. Afterwards, say how it went: when more people report that a game works than that it does not, it becomes “Community Verified”, the other way round “Incompatible”.",
+                Text(game.partial
+                     ? L("It starts and much of it can be played, but not everything works yet. The note below says what does and what does not. Say afterwards how it went.",
+                         "Es startet und vieles lässt sich spielen, aber noch nicht alles funktioniert. Die Notiz unten sagt, was geht und was nicht. Sag danach, wie es lief.")
+                     : L("You can try it. Each of the verified games needed its own adjustments before it ran, so a game the project has not tested may well not start. Afterwards, say how it went: when more people report that a game works than that it does not, it becomes “Community Verified”, the other way round “Incompatible”.",
                        "Du kannst es versuchen. Jedes der geprüften Spiele brauchte eigene Anpassungen, bevor es lief – ein vom Projekt nicht getestetes startet also womöglich nicht. Sag danach, wie es lief: Melden mehr Leute, dass ein Spiel läuft, als dass es nicht läuft, wird es „Von Nutzern bestätigt“, umgekehrt „Inkompatibel“."))
                     .font(.callout).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1303,6 +1311,7 @@ extension AppModel {
         case .verified: return L("Verified: the project has tested this game on an Apple Vision Pro.", "Geprüft: Das Projekt hat dieses Spiel auf einer Apple Vision Pro getestet.")
         case .community: return L("Community Verified: more users report that it runs than that it does not. The project has not tested it.", "Von Nutzern bestätigt: Mehr Nutzer melden, dass es läuft, als dass es nicht läuft. Das Projekt hat es nicht getestet.")
         case .incompatible: return L("Incompatible: more users report that it does not run than that it does.", "Inkompatibel: Mehr Nutzer melden, dass es nicht läuft, als dass es läuft.")
+        case .partial: return L("Works partly: it runs, but not everything in it works yet – the note says what does and what does not.", "Funktioniert teilweise: Es läuft, aber noch nicht alles darin funktioniert – die Notiz sagt, was geht und was nicht.")
         case .untested: return L("Untested: nobody has confirmed yet that this game runs. You can try it.", "Ungetestet: Noch hat niemand bestätigt, dass dieses Spiel läuft. Du kannst es versuchen.")
         }
     }

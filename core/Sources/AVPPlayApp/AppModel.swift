@@ -51,6 +51,7 @@ struct Game: Identifiable {
             switch steam {
             case "verified": return .verified
             case "community": return .community
+            case "partial": return .partial
             case "incompatible": return .incompatible
             default: return .untested
             }
@@ -61,12 +62,20 @@ struct Game: Identifiable {
         switch catalog?.status {
         case "verified": return .verified
         case "community": return .community
+        case "partial": return .partial
         case "incompatible": return .incompatible
         case "untested": return .untested
-        default: return !draft && recipe.status.playability == "verified" ? .verified : .untested
+        default:
+            if draft { return .untested }
+            switch recipe.status.playability {
+            case "verified": return .verified
+            case "partial": return .partial
+            default: return .untested
+            }
         }
     }
     var incompatible: Bool { trust == .incompatible }
+    var partial: Bool { trust == .partial }
     /// Sonderapps kommen nicht aus dem Meta-Store; für sie wird kein Meta-Konto gebraucht.
     var needsMetaAccount: Bool { recipe.store.appId != nil }
     /// Aus dem eigenen Steam-Kauf: Besitz und Zusatzinhalte bestätigt Steam, geladen wird mit Valves Werkzeug.
@@ -125,7 +134,8 @@ struct LogTail: Equatable {
 }
 
 /// Vom Projekt geprüft, von Nutzern bestätigt, noch offen, oder von Nutzern als nicht lauffähig gemeldet.
-enum Trust: Int { case verified, community, untested, incompatible }
+/// In this order in the list: `partial` runs, but not everything in it works yet (the note says what).
+enum Trust: Int { case verified, community, partial, untested, incompatible }
 
 /// Gehört das Spiel dem angemeldeten Konto? Sonderapps haben keinen Store-Titel; bei ihnen stellt sich die Frage nicht.
 enum Owned { case notApplicable, unknown, yes, no }
@@ -1342,11 +1352,23 @@ final class AppModel: ObservableObject {
 
     // MARK: Lage feststellen
 
+    /// Asked for while a check was running: that check may have read the state from before the change
+    /// (a toolchain installed just now, a job just finished), so one more follows it.
+    private var refreshAgain = false
+
     func refresh() {
-        guard !refreshing else { return }
+        // Not dropped: the toolchain that comes with an update is unpacked while the first check after the start
+        // is still running, and that check read the old one. Dropping the request left every game without its
+        // "Update" until the next start of the app.
+        guard !refreshing else { refreshAgain = true; return }
         // Auf der Seite der Datenverwaltung heißt „neu laden“ auch: neu zählen.
         if section == .data { scanStorage() }
         refreshing = true
+        runProbe()
+    }
+
+    private func runProbe() {
+        refreshAgain = false
         let paths = paths
         let prefix = bundlePrefix
         let wanted = chosenDevice.isEmpty ? nil : chosenDevice
@@ -1354,7 +1376,8 @@ final class AppModel: ObservableObject {
             let snapshot = Probe.run(paths: paths, bundlePrefix: prefix, preferredDevice: wanted)
             await MainActor.run {
                 self.apply(snapshot)
-                self.refreshing = false
+                // `refreshing` stays set through the follow-up, so whoever waits for it sees the newest state.
+                if self.refreshAgain { self.runProbe() } else { self.refreshing = false }
             }
         }
     }

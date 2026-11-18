@@ -41,6 +41,18 @@ final class RemoteProtocolTests: XCTestCase {
         }
     }
 
+    /// "Works Partly" reaches a remote that asks for it; a label a remote does not know reads as untested, and an
+    /// older remote's hello (no features) is read as not knowing it.
+    func testWorksPartlyAndUnknownLabels() throws {
+        XCTAssertEqual(try JSONDecoder().decode([RemoteGame.Trust].self, from: Data(#"["partial","someday","verified"]"#.utf8)),
+                       [.partial, .untested, .verified])
+        XCTAssertTrue(RemoteHello(clientId: nil, name: "Remote").knowsPartial)
+        let older = try JSONDecoder().decode(RemoteHello.self, from: Data(#"{"name":"Remote","protocolVersion":2}"#.utf8))
+        XCTAssertFalse(older.knowsPartial)
+        let again = try JSONDecoder().decode(RemoteHello.self, from: JSONEncoder().encode(RemoteHello(clientId: "a", name: "b")))
+        XCTAssertTrue(again.knowsPartial)
+    }
+
     func testFraming() {
         let framed = RemoteWire.frame(Data("hello".utf8))
         XCTAssertEqual(framed.count, 9)
