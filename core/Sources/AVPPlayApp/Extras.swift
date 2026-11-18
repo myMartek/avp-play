@@ -75,6 +75,7 @@ extension AppModel {
         switch game.trust {
         case .verified: label = L("verified", "geprüft")
         case .community: label = L("community verified", "von Nutzern bestätigt")
+        case .partial: label = L("works partly", "funktioniert teilweise")
         case .untested: label = L("untested", "ungetestet")
         case .incompatible: label = L("incompatible", "inkompatibel")
         }

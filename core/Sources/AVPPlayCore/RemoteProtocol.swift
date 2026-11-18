@@ -189,9 +189,16 @@ public struct RemoteHello: Codable, Sendable, Equatable {
     public var protocolVersion: Int
     /// Die Sprache der Fernbedienung (`de`, `en`); Texte des Macs kommen in der Sprache des Macs.
     public var language: String?
-    public init(clientId: String?, name: String, protocolVersion: Int = RemoteWire.protocolVersion, language: String? = nil) {
+    /// What this remote can show beyond protocol 2 – `partial` for the label "Works Partly". An older remote
+    /// sends nothing here.
+    public var features: [String]?
+    public var knowsPartial: Bool { features?.contains("partial") == true }
+    public init(clientId: String?, name: String, protocolVersion: Int = RemoteWire.protocolVersion, language: String? = nil,
+                features: [String]? = RemoteHello.ownFeatures) {
         self.clientId = clientId; self.name = name; self.protocolVersion = protocolVersion; self.language = language
+        self.features = features
     }
+    public static let ownFeatures = ["partial"]
 }
 
 /// Was der Mac über sich sagt.
@@ -218,7 +225,16 @@ public struct RemotePairing: Codable, Sendable, Equatable {
 /// Ein Spiel, wie die Fernbedienung es zeigt.
 public struct RemoteGame: Codable, Sendable, Equatable, Identifiable {
     public enum OnDevice: String, Codable, Sendable { case unknown, notInstalled, current, update, otherSource }
-    public enum Trust: String, Codable, Sendable { case verified, community, untested, incompatible }
+    /// `partial`: it runs, but not everything works yet. The Mac sends it only to a remote that says in its
+    /// hello that it knows it (`RemoteHello.knowsPartial`); older ones get `community`. A value this build does
+    /// not know reads as `untested`, so a later label cannot break the list.
+    public enum Trust: String, Codable, Sendable {
+        case verified, community, partial, untested, incompatible
+        public init(from decoder: Decoder) throws {
+            let raw = try decoder.singleValueContainer().decode(String.self)
+            self = Trust(rawValue: raw) ?? .untested
+        }
+    }
 
     public var id: String
     public var title: String

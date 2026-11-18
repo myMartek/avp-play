@@ -50,6 +50,8 @@ final class RemoteSession {
     var clientId: String?
     var name = ""
     var welcomed = false
+    /// Says in its hello that it knows the label "Works Partly"; an older remote gets "Community Verified".
+    var knowsPartial = false
     /// Was zuletzt geschickt wurde – Gleiches geht nicht noch einmal über die Leitung.
     var lastStatus: Data?
     var lastGames: Data?
@@ -362,6 +364,7 @@ final class RemoteServer: ObservableObject {
                 return drop(key, closing: false)
             }
             session.name = hello.name
+            session.knowsPartial = hello.knowsPartial
             if session.pairing { return session.channel.send(RemoteServerMessage.reply(seq: message.seq, error: nil)) }
             // Der Schlüssel hat schon gezeigt, dass die Fernbedienung gekoppelt ist; die Kennung sagt, welche.
             guard let id = hello.clientId, let index = peers.firstIndex(where: { $0.clientId == id }) else {
@@ -541,10 +544,14 @@ final class RemoteServer: ObservableObject {
         guard !targets.isEmpty else { return }
         let status = try? RemoteWire.encoder.encode(RemoteServerMessage.status(model.remoteStatus()))
         var games: Data?
+        var gamesOlder: Data?
         var panels: [String: Data] = [:]
         let since = Date().timeIntervalSince(lastGamesAt)
         if gamesForced || since > 1.5 {
             games = try? RemoteWire.encoder.encode(RemoteServerMessage.library(model.remoteLibrary()))
+            if targets.contains(where: { !$0.knowsPartial }) {
+                gamesOlder = try? RemoteWire.encoder.encode(RemoteServerMessage.library(model.remoteLibrary(knowsPartial: false)))
+            }
             // Jede Seite einmal, auch wenn mehrere Fernbedienungen sie zeigen.
             for id in Set(targets.flatMap(\.panels)) {
                 if let panel = model.remotePanel(id, cache: panelCache) {
@@ -565,7 +572,7 @@ final class RemoteServer: ObservableObject {
                 session.channel.send(encoded: status)
                 session.lastStatus = status
             }
-            if let games, games != session.lastGames {
+            if let games = session.knowsPartial ? games : (gamesOlder ?? games), games != session.lastGames {
                 session.channel.send(encoded: games)
                 session.lastGames = games
             }
@@ -718,7 +725,7 @@ extension AppModel {
         return RemoteProgress(value: min(1, max(0, Double(done) / Double(max(total, 1)))), text: words + (remaining.map { " · " + $0 } ?? ""))
     }
 
-    func remoteGame(_ game: Game) -> RemoteGame {
+    func remoteGame(_ game: Game, knowsPartial: Bool = true) -> RemoteGame {
         let onDevice: RemoteGame.OnDevice
         switch game.status.onDevice {
         case .unknown: onDevice = .unknown
@@ -731,6 +738,7 @@ extension AppModel {
         switch game.trust {
         case .verified: trust = .verified
         case .community: trust = .community
+        case .partial: trust = knowsPartial ? .partial : .community
         case .untested: trust = .untested
         case .incompatible: trust = .incompatible
         }
@@ -767,8 +775,8 @@ extension AppModel {
     }
 
     /// Die Spieleliste samt eigener Filter.
-    func remoteLibrary() -> RemoteLibrary {
-        RemoteLibrary(games: allGames.map(remoteGame),
+    func remoteLibrary(knowsPartial: Bool = true) -> RemoteLibrary {
+        RemoteLibrary(games: allGames.map { remoteGame($0, knowsPartial: knowsPartial) },
                       filters: customFilters.map { RemoteFilter(id: $0.id, name: $0.name, games: $0.games.sorted()) },
                       onlineCatalog: onlineCatalog, horizonPlus: horizonPlus != nil)
     }
