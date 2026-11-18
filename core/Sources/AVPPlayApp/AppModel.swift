@@ -1342,11 +1342,23 @@ final class AppModel: ObservableObject {
 
     // MARK: Lage feststellen
 
+    /// Asked for while a check was running: that check may have read the state from before the change
+    /// (a toolchain installed just now, a job just finished), so one more follows it.
+    private var refreshAgain = false
+
     func refresh() {
-        guard !refreshing else { return }
+        // Not dropped: the toolchain that comes with an update is unpacked while the first check after the start
+        // is still running, and that check read the old one. Dropping the request left every game without its
+        // "Update" until the next start of the app.
+        guard !refreshing else { refreshAgain = true; return }
         // Auf der Seite der Datenverwaltung heißt „neu laden“ auch: neu zählen.
         if section == .data { scanStorage() }
         refreshing = true
+        runProbe()
+    }
+
+    private func runProbe() {
+        refreshAgain = false
         let paths = paths
         let prefix = bundlePrefix
         let wanted = chosenDevice.isEmpty ? nil : chosenDevice
@@ -1354,7 +1366,8 @@ final class AppModel: ObservableObject {
             let snapshot = Probe.run(paths: paths, bundlePrefix: prefix, preferredDevice: wanted)
             await MainActor.run {
                 self.apply(snapshot)
-                self.refreshing = false
+                // `refreshing` stays set through the follow-up, so whoever waits for it sees the newest state.
+                if self.refreshAgain { self.runProbe() } else { self.refreshing = false }
             }
         }
     }
