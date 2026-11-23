@@ -1921,6 +1921,13 @@ final class AppModel: ObservableObject {
     /// - Parameter show: zur Seite „Aufträge“ wechseln und den neuen Auftrag zeigen. Ein Sammelauftrag tut das
     ///   einmal am Ende, nicht für jedes Spiel.
     func enqueue(_ game: Game, steps: [InstallStep], addons: Bool? = nil, show: Bool = true) {
+        // A draft whose files have not been looked up (a Steam game not loaded from Steam yet) has no APK and no
+        // target: its job could only stop at the build. Whoever gets here with one has skipped the lookup (avp-play #144).
+        guard game.prepared else {
+            notice = L("\(game.recipe.title): its files have not been looked up yet, so it cannot be queued.",
+                       "\(game.recipe.title): Die Dateien sind noch nicht nachgeschlagen, deshalb lässt es sich nicht einreihen.")
+            return
+        }
         // Nur wer baut oder aufs Gerät kopiert, braucht die Toolchain.
         let downloadOnly = steps == InstallStep.download
         let toolchain = toolchain(for: game)
