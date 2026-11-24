@@ -178,11 +178,15 @@ extension AppModel {
                 switch action {
                 case .install:
                     why = blocker(for: game)
-                    if why == nil { enqueue(game, steps: InstallStep.allCases, show: false) }
+                    // A Steam game whose Android version is not loaded yet is loaded and drafted first, as a single
+                    // “Install” does; queued straight away, its job had no APK and no target name (avp-play #144).
+                    if why == nil, steamDraftApp(game) != nil { prepareFromSteam(game, thenInstall: true) }
+                    else if why == nil { enqueue(game, steps: InstallStep.allCases, show: false) }
                 case .download:
                     why = hasDownloads(game) ? downloadBlocker(for: game)
                                              : L("nothing left to download", "nichts mehr zu laden")
-                    if why == nil { enqueue(game, steps: InstallStep.download, show: false) }
+                    if why == nil, steamDraftApp(game) != nil { prepareFromSteam(game, thenInstall: false) }
+                    else if why == nil { enqueue(game, steps: InstallStep.download, show: false) }
                 }
                 if let why {
                     refused.append("\(game.recipe.title) – \(why)")
