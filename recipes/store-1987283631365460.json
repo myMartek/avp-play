@@ -1,0 +1,41 @@
+{
+ "files": [
+  {
+   "dest": "",
+   "id": "24653687737631727",
+   "localName": "x1987283631365460.apk",
+   "name": "IEYTD.apk",
+   "required": true,
+   "role": "apk",
+   "size": 532888801,
+   "sha256": "c85d8ec6e9d99d2f6965b41c2152cfcd3a59b66dca17fc2fcbe9c588fdcb8102"
+  }
+ ],
+ "id": "store-1987283631365460",
+ "package": "com.schellgames.ieytdquest",
+ "schema": 1,
+ "status": {
+  "playability": "verified",
+  "download": "listed",
+  "notes": [
+   {
+    "en": "Marked as verified by the project on 2026-11-25. File list as Meta's tool reports it for this build; the checksum recorded from a download.",
+    "de": "Vom Projekt am 2026-11-25 als geprüft markiert. Dateiliste, wie Metas Werkzeug sie für diesen Build nennt; Prüfsumme aus einem Download erfasst."
+   },
+   {
+    "en": "I Expect You To Die. Tested by the project on an Apple Vision Pro: the game runs. By default the eye picture is limited to 4000 pixels and a frame is drawn on every second refresh of the display (both can be changed in the start window). Needs toolchain 4b91bde or newer.",
+    "de": "I Expect You To Die. Vom Projekt auf einer Apple Vision Pro getestet: Das Spiel läuft. Standardmäßig ist das Bild je Auge auf 4000 Pixel begrenzt, und ein Bild entsteht bei jeder zweiten Bildwiederholung des Displays (beides im Startfenster änderbar). Braucht Toolchain 4b91bde oder neuer."
+   }
+  ]
+ },
+ "store": {
+  "appId": "1987283631365460"
+ },
+ "title": "I Expect You To Die",
+ "toolchain": {
+  "minCommit": "4b91bde",
+  "target": "x1987283631365460"
+ },
+ "versionCode": 74682,
+ "versionName": "1.2.174682"
+}
