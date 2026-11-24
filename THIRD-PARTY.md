@@ -19,6 +19,12 @@ runtime:
 | [Fossilize](https://github.com/ValveSoftware/Fossilize) by Valve (library sources at `556da9f`), with the [RapidJSON](https://github.com/Tencent/rapidjson) and [miniz](https://github.com/richgel999/miniz) copies it carries and the Khronos Vulkan headers | MIT (Vulkan headers: Apache 2.0 or MIT) | `vendor-fossilize/LICENSE`, `vendor-fossilize/rapidjson/license.txt`, `vendor-fossilize/miniz/LICENSE`, each header's own notice |
 | Parts of [Glovebox](https://github.com/glovebox-vr/glovebox) by the Glovebox contributors: the Vulkan pipeline recorder and replayer and their hooks, the tool that rebuilds a pipeline list from a player's own game files, the pipeline recipe for Half-Life: Alyx (references into the game's shader files, no shader code), and the Steam connection, sign-in and Steam Cloud sync (`visionos/SteamCloudKit`, from Glovebox's `SteamLauncherKit`) | MIT | `visionos/SteamCloudKit/LICENSE-Glovebox.txt`; each file names its origin |
 
+From toolchain release 933 on, the package also contains, as source that is compiled with the runtime:
+
+| Component | Licence | Where its licence text is |
+|---|---|---|
+| The VP8 decoder of [libvpx](https://chromium.googlesource.com/webm/libvpx) by the WebM Project authors, ported to C (`runtime/media/kl_vp8.c`) – plays a game's WebM video clips | BSD 3-Clause | `third-party-licenses/libvpx-LICENSE` |
+
 From toolchain release 315 on, the package also contains, as source that is compiled on your Mac the first time
 a Unity game's shader list is built:
 
