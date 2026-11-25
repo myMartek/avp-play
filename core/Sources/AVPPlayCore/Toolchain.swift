@@ -15,9 +15,14 @@ public enum ToolchainError: Error, CustomStringConvertible {
     /// Apple hat das Signieren oder Installieren abgelehnt, aus einem Grund, der sich am Wortlaut erkennen lässt
     /// (eine Grenze des Kontos, eine fehlende Anmeldung, ein gesperrtes Gerät).
     case refused(AppleRefusal, free: Bool, log: URL)
+    /// Xcode's Metal Toolchain is missing and could not be downloaded (`MetalToolchain`); the reason why not.
+    case metalToolchainMissing(String)
 
     public var description: String {
         switch self {
+        case .metalToolchainMissing(let why):
+            return L("Xcode's Metal Toolchain is missing, which this game needs while it is built (since Xcode 26 it is a download of its own, and an Xcode update leaves it out). Installing it automatically did not work (\(why)). Install it yourself: in Xcode › Settings › Components, click “Get” next to “Metal Toolchain” – or in Terminal: \(MetalToolchain.downloadCommand). Then choose “Resume”.",
+                     "Die Metal Toolchain von Xcode fehlt; dieses Spiel braucht sie beim Bauen (seit Xcode 26 ist sie ein eigener Download, und ein Xcode-Update lässt sie weg). Sie automatisch zu installieren hat nicht geklappt (\(why)). Installiere sie selbst: in Xcode › Settings › Components bei „Metal Toolchain“ auf „Get“ klicken – oder im Terminal: \(MetalToolchain.downloadCommand). Danach „Fortsetzen“ wählen.")
         case .refused(let refusal, let free, let log):
             return AppleMessages.advice(refusal, free: free) + L(" Log: \(log.path)", " Protokoll: \(log.path)")
         case .signingBlocked(let detail):
@@ -581,8 +586,7 @@ public struct Toolchain: Sendable {
                     "your Apple developer team has no registered device yet, and registering this Vision Pro did not work. Keep the headset on, unlocked and on the same Wi-Fi as this Mac, then choose “Resume”. If it stops here again, add the headset by hand: Xcode › Window › Devices and Simulators shows its identifier, and it goes under Certificates, Identifiers & Profiles › Devices at developer.apple.com (the team's Admin or Account Holder can do that)",
                     "dein Apple-Entwicklerteam hat noch kein registriertes Gerät, und diese Vision Pro ließ sich nicht registrieren. Headset anlassen, entsperrt und im selben WLAN wie dieser Mac halten, dann „Fortsetzen“ wählen. Hält es hier wieder an, das Headset von Hand eintragen: Xcode › Window › Devices and Simulators zeigt seine Kennung (Identifier), und sie gehört bei developer.apple.com unter Certificates, Identifiers & Profiles › Devices (das kann der Admin oder Account Holder des Teams)"))
             }
-            let hint = lines.last { $0.contains("error:") || $0.contains("No profiles") || $0.contains("No Account") }
-            throw ToolchainError.buildFailed(log: log, hint: hint.map { String($0.prefix(160)) } ?? "")
+            throw ToolchainError.buildFailed(log: log, hint: Toolchain.buildFailureHint(in: lines))
         }
     }
 
@@ -703,6 +707,23 @@ public struct Toolchain: Sendable {
         try FileManager.default.moveItem(at: partial, to: archive)
         try? summary.write(to: note, atomically: true, encoding: .utf8)
         return PipelineList(archive: archive, deviceInfo: deviceInfo, summary: summary)
+    }
+
+    /// What a failed build's log says as the reason: Xcode's own error line, or else the toolchain's
+    /// `!! build FAILED:` line (a toolchain of its own stops with one of those, and without it the player read only
+    /// "Build or installation failed", avp-play#149). The line `xcrun metal` prints without the Metal Toolchain
+    /// comes first: the stage that then fails names only its missing result.
+    static func buildFailureHint(in lines: [Substring]) -> String {
+        if let metal = lines.last(where: { $0.contains("missing Metal Toolchain") }) {
+            return String(metal.prefix(160))
+        }
+        if let xcode = lines.last(where: { $0.contains("error:") || $0.contains("No profiles") || $0.contains("No Account") }) {
+            return String(xcode.prefix(160))
+        }
+        if let own = lines.last(where: { $0.hasPrefix("!! build FAILED:") }) {
+            return String(own.dropFirst("!! build FAILED:".count).trimmingCharacters(in: .whitespaces).prefix(160))
+        }
+        return ""
     }
 
     static func capture(_ argv: [String]) throws -> String {

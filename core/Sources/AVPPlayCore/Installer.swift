@@ -788,6 +788,9 @@ public struct Installer: Sendable {
             report(L("Signing: a new profile is requested from Apple, so that the game opens for the full time again.",
                      "Signatur: Bei Apple wird ein neues Profil angefordert, damit das Spiel wieder die volle Zeit gilt."))
         }
+        // Xcode's Metal Toolchain: a game with a toolchain of its own compiles Metal shaders while it is built, and the
+        // toolchain is missing after every Xcode update (avp-play#149). Downloaded here first; asked for only if that fails.
+        if MetalToolchain.needed(by: toolchain), !MetalToolchain.installed() { try await installMetalToolchain() }
         let log = store.directory(for: recipe).appendingPathComponent(".last-build.log")
         let started = Date()
         let metalFX = request.metalFX == true
@@ -932,6 +935,36 @@ public struct Installer: Sendable {
                    ?? L("Signed with a free Apple team: the game opens for seven days. Install it again before then to renew it; its data stays.",
                         "Mit einem kostenlosen Apple-Team signiert: Das Spiel lässt sich sieben Tage lang öffnen. Installiere es vorher erneut, um es zu erneuern; seine Daten bleiben."))
         }
+    }
+
+    /// Downloads Xcode's Metal Toolchain (`MetalToolchain.download`), with its progress as the bar of a file.
+    func installMetalToolchain() async throws {
+        guard !offline else {
+            throw ToolchainError.metalToolchainMissing(L("this job runs offline, and the download comes from Apple",
+                                                         "dieser Auftrag läuft offline, und der Download kommt von Apple"))
+        }
+        report(L("Metal Toolchain: Xcode's Metal compiler is missing (since Xcode 26 a download of its own, which an Xcode update leaves out). Downloading it from Apple now (about 850 MB) …",
+                 "Metal Toolchain: Der Metal-Compiler von Xcode fehlt (seit Xcode 26 ein eigener Download, den ein Xcode-Update weglässt). Er wird jetzt von Apple geladen (rund 850 MB) …"))
+        let started = Date()
+        let log = store.directory(for: recipe).appendingPathComponent(".last-metal-toolchain.log")
+        let installProgress = self.progress
+        let name = "Metal Toolchain"
+        // The size comes with the first progress line; until then the bar waits.
+        installProgress(InstallProgress(step: .build, done: 0, total: 0,
+                                        file: .init(index: 1, count: 1, name: name, done: 0, total: nil)))
+        let reason = await MetalToolchain.download(log: log) { line in
+            guard let state = MetalToolchain.bytes(in: line) else { return }
+            installProgress(InstallProgress(step: .build, done: state.done, total: state.total,
+                                            file: .init(index: 1, count: 1, name: name, done: state.done, total: state.total)))
+        }
+        installProgress(InstallProgress(step: .build, done: 0, total: 0))
+        try Task.checkCancellation()
+        if let reason { throw ToolchainError.metalToolchainMissing(reason) }
+        guard MetalToolchain.installed() else {
+            throw ToolchainError.metalToolchainMissing(L("Apple's download ended, but the Metal compiler still does not run",
+                                                         "Apples Download ist durch, aber der Metal-Compiler läuft noch immer nicht"))
+        }
+        report(String(format: L("Metal Toolchain: installed (%.0f s).", "Metal Toolchain: installiert (%.0f s)."), Date().timeIntervalSince(started)))
     }
 
     /// Icon bereitlegen und die Toolchain vorbereiten.
