@@ -25,6 +25,12 @@ From toolchain release 933 on, the package also contains, as source that is comp
 |---|---|---|
 | The VP8 decoder of [libvpx](https://chromium.googlesource.com/webm/libvpx) by the WebM Project authors, ported to C (`runtime/media/kl_vp8.c`) – plays a game's WebM video clips | BSD 3-Clause | `third-party-licenses/libvpx-LICENSE` |
 
+From toolchain release 944 on, the package also contains, as a built library:
+
+| Component | Licence | Where its licence text is |
+|---|---|---|
+| [FFmpeg](https://ffmpeg.org) 9.0.2 by the FFmpeg developers, decoders and demuxers only (`KleptonFFmpeg.framework`, built from the pinned release tarball by the toolchain's `tools/ffmpeg_build.sh`, with its small change in `tools/ffmpeg/visionos.patch`) – plays MKV, AVI, WebM, TS, WMV and OGV films in Bigscreen Beta. It is embedded in Bigscreen Beta's app only, as its own framework that the game loads at run time, so it can be replaced | LGPL 2.1 or later (no GPL or non-free parts) | `third-party-licenses/FFmpeg-COPYING.LGPLv2.1`, and `COPYING.LGPLv2.1` inside the framework |
+
 From toolchain release 315 on, the package also contains, as source that is compiled on your Mac the first time
 a Unity game's shader list is built:
 
