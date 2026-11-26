@@ -151,7 +151,7 @@ extension AppModel {
         Then offer – without being asked – to send the change to the AVP Play project so that other people get it too. A maintainer reads every submission before anything is done with it. Show me what would be sent (a short summary and the diff) and ask for my go-ahead first. If I say no, leave it at that. If I say yes:
         1. Create the diff of source changes only:
            cd \(work) && git add -N . && git diff --no-color baseline -- . ':(exclude)vendor' ':(exclude)vendor-moltenvk' > /tmp/avpplay-fix.patch
-           Check that it contains no game content and no binary files, and that it is under 256 KB.
+           Check that it contains no game content and no binary files, and that it is under 8 MB.
         2. Send it as JSON (the patch as one string) with an HTTP POST to \(api):
            {"appId": "\(fixIdentifier)", "versionCode": \(recipe.versionCode), "toolchain": "\(toolchain?.commit() ?? "")", "symptoms": [\(symptomsJSON)], "summary": "<what was wrong, what you changed and why, and what I confirmed on the headset>", "patch": "<contents of /tmp/avpplay-fix.patch>", "contact": "<optional: how the maintainer can reach me, only if I want that>"}
            Build the JSON with a tool that escapes the patch correctly (for example jq or python3), not by hand. The answer contains an id; tell me that id.
