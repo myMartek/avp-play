@@ -184,12 +184,22 @@ final class SetupAssistant: ObservableObject {
     /// Beim Start: Fehlt etwas Grundlegendes, öffnet sich der Assistent von selbst.
     func offerAtStart() {
         guard let model, Snapshot.directory == nil, !AppDelegate.launchedAtLogin else { return }
+        if Self.faking { open(); return }
         let headsetKnown = UserDefaults.standard.bool(forKey: Self.headsetSeenKey) || model.device != nil || !model.devices.isEmpty
         guard model.xcodeProblem != nil || !model.teamValid || !headsetKnown else { return }
         open()
     }
 
     static let headsetSeenKey = "setupHeadsetSeen"
+
+    /// Nur im Entwickler-Bau: `AVPPLAY_ASSISTANT_FAKE` täuscht einen anderen Mac vor (zum Ansehen der Seiten).
+    static var faking: Bool {
+        #if DEBUG
+        return ProcessInfo.processInfo.environment["AVPPLAY_ASSISTANT_FAKE"] != nil
+        #else
+        return false
+        #endif
+    }
 
     func open(at start: Step? = nil) {
         isPresented = true
@@ -350,15 +360,16 @@ final class SetupAssistant: ObservableObject {
         }
         lastCheck = started
         if !f.headsets.filter(\.paired).isEmpty { UserDefaults.standard.set(true, forKey: Self.headsetSeenKey) }
-        if f.xcode == .license || f.xcode == .components, ProcessInfo.processInfo.environment["AVPPLAY_ASSISTANT_FAKE"] == nil {
+        // Vorgetäuschte Zustände ändern nichts: kein Eingriff in Xcode, kein Team, kein Download.
+        if f.xcode == .license || f.xcode == .components, !Self.faking {
             SetupMac.trimXcodeFirstLaunch()
         }
         // Genau ein bezahltes Team: das ist es. Ein einziges kostenloses ebenso – der Assistent sagt, was das heißt.
-        if let model, !model.teamValid || !f.teams.contains(where: { $0.id == model.teamId }) {
+        if let model, !Self.faking, !model.teamValid || !f.teams.contains(where: { $0.id == model.teamId }) {
             let paid = f.teams.filter { !$0.free }
             if paid.count == 1 { model.teamId = paid[0].id } else if paid.isEmpty, f.teams.count == 1 { model.teamId = f.teams[0].id }
         }
-        if f.xcode == .visionOS, !triedPlatform { downloadVisionOS() }
+        if f.xcode == .visionOS, !triedPlatform, !Self.faking { downloadVisionOS() }
         let after = (xcode, appleAccount, headsetPaired, readyHeadset?.udid)
         if before != after { model?.refresh() }
         stateChanged()
