@@ -245,6 +245,8 @@ final class AppModel: ObservableObject {
         startSaveWatch()
         startDeviceWatch()
         startNetworkWatch()
+        AppDelegate.assistant.model = self
+        AppDelegate.assistant.startKeychainWatch()
         await checkForUpdate(manual: false)
     }
 
@@ -344,6 +346,9 @@ final class AppModel: ObservableObject {
     @Published var showReport = false
     @Published var reportJob: Job?
     @Published var lookingForTool = false
+    /// Während AVP Play Metas Werkzeug selbst von Metas Server lädt: wie weit es ist.
+    @Published var toolDownload: MetaToolFetch.Progress?
+    private var toolDownloadTask: Task<Void, Never>?
     private var toolWatch: Task<Void, Never>?
     @Published var freeBytes: Int64?
     /// Der Online-Katalog: was der Dienst des Projekts über weitere Spiele sagt.
@@ -1478,9 +1483,13 @@ final class AppModel: ObservableObject {
         if horizonPlusWanted { loadHorizonPlus() }
         if filterOwned || filterSteam { loadSteamLibrary() }
         // Beim ersten Start dorthin, wo etwas zu tun ist. Ein ausgeschaltetes Headset zählt nicht dazu.
+        if device != nil || !devices.isEmpty { UserDefaults.standard.set(true, forKey: SetupAssistant.headsetSeenKey) }
         if !routed {
             routed = true
             if xcodeProblem != nil || !teamValid || toolchainText == nil { section = .setup }
+            // Beim ersten Start (oder solange Grundlegendes fehlt) führt der Assistent Schritt für Schritt hindurch.
+            AppDelegate.assistant.model = self
+            AppDelegate.assistant.offerAtStart()
         }
     }
 
@@ -1559,9 +1568,38 @@ final class AppModel: ObservableObject {
 
     static let toolPage = URL(string: "https://developers.meta.com/horizon/resources/publish-reference-platform-command-line-utility/")!
 
-    /// Öffnet Metas Seite im Browser und hält danach eine Weile im Ordner „Downloads“ Ausschau: Sobald die
-    /// Datei dort liegt, richtet die App sie ein. Geladen wird beim Nutzer, im Browser, zu Metas Bedingungen –
-    /// die App lädt das Werkzeug nie selbst und bringt es nicht mit.
+    /// Ein Klick: lädt das Werkzeug von Metas eigenem Server (`MetaToolFetch`, dieselbe Datei wie auf Metas Seite),
+    /// prüft Metas Signatur und richtet es ein. Mitgebracht wird es nicht; ohne diesen Klick lädt die App nichts.
+    func downloadTool() {
+        guard toolDownload == nil else { return }
+        toolWatch?.cancel()
+        lookingForTool = false
+        toolNote = nil
+        toolDownload = MetaToolFetch.Progress(received: 0, total: MetaToolFetch.expectedBytes)
+        toolDownloadTask = Task { [weak self] in
+            do {
+                try await MetaToolFetch.fetchAndAdopt { [weak self] p in
+                    Task { @MainActor [weak self] in if self?.toolDownload != nil { self?.toolDownload = p } }
+                }
+                self?.toolDownload = nil
+                self?.finishToolSetup(ok: true, note: nil)
+            } catch is CancellationError {
+                self?.toolDownload = nil
+            } catch {
+                self?.toolDownload = nil
+                self?.finishToolSetup(ok: false, note: "\(error)")
+            }
+        }
+    }
+
+    func cancelToolDownload() {
+        toolDownloadTask?.cancel()
+        toolDownloadTask = nil
+        toolDownload = nil
+    }
+
+    /// Der Ausweg, wenn der Download nicht geht: Metas Seite im Browser öffnen und danach eine Weile im Ordner
+    /// „Downloads“ Ausschau halten. Sobald die Datei dort liegt, richtet die App sie ein.
     func openToolPage() {
         NSWorkspace.shared.open(AppModel.toolPage)
         toolNote = L("Download the macOS version on Meta’s page. AVP Play picks it up from your Downloads folder as soon as it is there.",

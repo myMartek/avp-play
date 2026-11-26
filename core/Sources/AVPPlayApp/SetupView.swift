@@ -7,7 +7,6 @@ import UniformTypeIdentifiers
 /// jedes mit einer echten Prüfung und, wenn etwas fehlt, dem nächsten Handgriff.
 struct SetupView: View {
     @EnvironmentObject var model: AppModel
-    @State private var showLogin = false
 
     var body: some View {
         ScrollView {
@@ -15,6 +14,16 @@ struct SetupView: View {
                 Text(L("To put a game on the Vision Pro, this Mac needs four things: Xcode, the Vision Pro, an Apple developer team and the toolchain. The two accounts are only needed for their own games – Meta for games from the Meta Store, Steam for Doom 3, Counter-Strike and Half-Life: Alyx. Green means: checked and fine. Downloading a game's files already works with its account alone; building and installing follow once the four things are in place.", "Damit ein Spiel auf die Vision Pro kommt, braucht dieser Mac vier Dinge: Xcode, die Vision Pro, ein Apple-Entwicklerteam und die Toolchain. Die beiden Konten braucht es nur für ihre eigenen Spiele – Meta für Spiele aus dem Meta-Store, Steam für Doom 3, Counter-Strike und Half-Life: Alyx. Grün heißt: geprüft und in Ordnung. Die Dateien eines Spiels lassen sich schon mit dem Konto allein laden; gebaut und installiert wird, sobald die vier Dinge beisammen sind."))
                     .fixedSize(horizontal: false, vertical: true)
                     .foregroundStyle(.secondary)
+
+                // Der Assistent führt durch dasselbe, Schritt für Schritt, und zeigt in Xcode, wo zu klicken ist.
+                Button {
+                    AppDelegate.assistant.model = model
+                    AppDelegate.assistant.open()
+                } label: {
+                    Label(L("Set Up Step by Step …", "Schritt für Schritt einrichten …"), systemImage: "list.number")
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
 
                 CheckCard(title: "Xcode", state: model.xcodeProblem != nil ? .missing : model.xcodeText == nil ? .checking : model.xcodeWarning != nil ? .warning : .ok,
                           detail: model.xcodeProblem ?? model.xcodeText.map { text in model.xcodeWarning.map { "\(text) \($0)" } ?? text } ?? L("Checking …", "Wird geprüft …")) {
@@ -104,42 +113,7 @@ struct SetupView: View {
                     }
                 }
 
-                CheckCard(title: L("Meta Account (for Meta Store games)", "Meta-Konto (für Spiele aus dem Meta-Store)"), state: model.setupAccountState, detail: model.setupAccountDetail) {
-                    HStack {
-                        switch model.account {
-                        case .signedIn:
-                            Button(L("Sign Out", "Abmelden")) { model.signOut() }
-                        case .checking, .unknown:
-                            EmptyView()
-                        case .signedOut, .problem:
-                            Button(L("Sign In …", "Anmelden …")) { showLogin = true }.disabled(!model.toolPresent)
-                            if case .problem = model.account { Button(L("Check Again", "Erneut prüfen")) { model.checkAccount() } }
-                        }
-                    }
-                    if !model.toolPresent, model.account != .signedIn {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(L("Signing in uses Meta’s own sign-in tool, “ovr-platform-util”. It is free, but Meta only hands it out on its own page, so this takes two clicks:",
-                                   "Die Anmeldung läuft über Metas eigenes Werkzeug „ovr-platform-util“. Es ist kostenlos, aber Meta gibt es nur auf der eigenen Seite heraus – deshalb zwei Klicks:"))
-                                .font(.callout).foregroundStyle(.secondary)
-                            HStack {
-                                Button(L("1  Open Meta’s Download Page", "1  Metas Download-Seite öffnen")) { model.openToolPage() }
-                                Button(L("2  Find the Download", "2  Download suchen")) { model.findTool() }
-                                if model.lookingForTool { ProgressView().controlSize(.small) }
-                            }
-                            Text(L("You do not have to move or change the file. If it is somewhere other than Downloads:",
-                                   "Du musst die Datei weder verschieben noch verändern. Liegt sie woanders als in „Downloads“:"))
-                                .font(.callout).foregroundStyle(.secondary)
-                            Button(L("Choose File …", "Datei auswählen …")) { chooseTool() }.controlSize(.small)
-                        }
-                    }
-                    if let note = model.toolNote, model.account != .signedIn {
-                        Label(note, systemImage: model.toolPresent ? "checkmark.circle" : "info.circle")
-                            .font(.callout)
-                            .foregroundStyle(model.toolPresent ? Color.green : Color.primary)
-                    }
-                    Text(L("Special apps such as Doom 3 and Half-Life: Alyx do not need a Meta account – their game files come from your own Steam purchase (see below).", "Sonderapps wie Doom 3 und Half-Life: Alyx brauchen kein Meta-Konto – ihre Spieldateien kommen aus deinem eigenen Steam-Kauf (siehe unten)."))
-                        .font(.callout).foregroundStyle(.secondary)
-                }
+                MetaAccountCard()
 
                 SteamCard()
 
@@ -157,16 +131,6 @@ struct SetupView: View {
             .frame(maxWidth: .infinity)
         }
         .navigationTitle(L("Setup", "Einrichtung"))
-        .sheet(isPresented: $showLogin) { LoginSheet().environmentObject(model) }
-    }
-
-    /// Ein kostenloses Konto ist in Ordnung, aber nicht dasselbe wie ein bezahltes: Das Zeichen sagt es.
-    private func chooseTool() {
-        let panel = NSOpenPanel()
-        panel.message = L("Choose the file “ovr-platform-util”.", "Die Datei „ovr-platform-util“ auswählen.")
-        panel.directoryURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Downloads")
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        model.adoptTool(from: url)
     }
 
     private func chooseToolchain() {
@@ -174,6 +138,88 @@ struct SetupView: View {
         panel.message = L("Choose the toolchain package (ending in .tar.gz). The description file next to it is read as well.", "Das Toolchain-Paket auswählen (Endung .tar.gz). Die Beschreibungsdatei daneben wird mitgelesen.")
         panel.allowedContentTypes = [UTType.gzip]
         if panel.runModal() == .OK, let url = panel.url { model.installToolchain(archive: url) }
+    }
+}
+
+/// Das Meta-Konto: erst Metas Werkzeug (ein Klick lädt es von Meta), dann die Anmeldung. In der Einrichtung und im
+/// Assistenten dieselbe Karte.
+struct MetaAccountCard: View {
+    @EnvironmentObject var model: AppModel
+    @State private var showLogin = false
+    @State private var otherWays = false
+
+    var body: some View {
+        CheckCard(title: L("Meta Account (for Meta Store games)", "Meta-Konto (für Spiele aus dem Meta-Store)"), state: model.setupAccountState, detail: model.setupAccountDetail) {
+            HStack {
+                switch model.account {
+                case .signedIn:
+                    Button(L("Sign Out", "Abmelden")) { model.signOut() }
+                case .checking, .unknown:
+                    EmptyView()
+                case .signedOut, .problem:
+                    Button(L("Sign In …", "Anmelden …")) { showLogin = true }.disabled(!model.toolPresent)
+                    if case .problem = model.account { Button(L("Check Again", "Erneut prüfen")) { model.checkAccount() } }
+                }
+            }
+            if !model.toolPresent, model.account != .signedIn {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(L("Signing in uses Meta’s own sign-in tool, “ovr-platform-util”. It is free; AVP Play loads it from Meta’s server and checks that Meta signed it.",
+                           "Die Anmeldung läuft über Metas eigenes Werkzeug „ovr-platform-util“. Es ist kostenlos; AVP Play lädt es von Metas Server und prüft, dass Meta es signiert hat."))
+                        .font(.callout).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if let p = model.toolDownload {
+                        VStack(alignment: .leading, spacing: 4) {
+                            ProgressView(value: p.fraction)
+                            HStack {
+                                Text(L("Loading Meta’s tool: \(Format.megabytes(p.received)) of \(Format.megabytes(p.total))",
+                                       "Metas Werkzeug wird geladen: \(Format.megabytes(p.received)) von \(Format.megabytes(p.total))"))
+                                    .font(.callout.monospacedDigit()).foregroundStyle(.secondary)
+                                Spacer()
+                                Button(L("Cancel", "Abbrechen")) { model.cancelToolDownload() }.controlSize(.small)
+                            }
+                        }
+                        .frame(maxWidth: 460)
+                    } else {
+                        Button(L("Load Meta’s Tool (\(Format.megabytes(MetaToolFetch.expectedBytes)))", "Metas Werkzeug laden (\(Format.megabytes(MetaToolFetch.expectedBytes)))")) { model.downloadTool() }
+                            .buttonStyle(.borderedProminent)
+                    }
+                    DisclosureGroup(L("Other ways", "Andere Wege"), isExpanded: $otherWays) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(L("If the download does not work, get the macOS version on Meta’s page yourself. AVP Play picks it up from your Downloads folder.",
+                                   "Klappt der Download nicht, die Fassung für macOS selbst auf Metas Seite laden. AVP Play übernimmt sie aus dem Ordner „Downloads“."))
+                                .font(.callout).foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                            HStack {
+                                Button(L("Open Meta’s Download Page", "Metas Download-Seite öffnen")) { model.openToolPage() }
+                                Button(L("Find the Download", "Download suchen")) { model.findTool() }
+                                Button(L("Choose File …", "Datei auswählen …")) { chooseTool() }
+                                if model.lookingForTool { ProgressView().controlSize(.small) }
+                            }
+                            .controlSize(.small)
+                        }
+                        .padding(.top, 4)
+                    }
+                    .font(.callout)
+                }
+            }
+            if let note = model.toolNote, model.account != .signedIn {
+                Label(note, systemImage: model.toolPresent ? "checkmark.circle" : "info.circle")
+                    .font(.callout)
+                    .foregroundStyle(model.toolPresent ? Color.green : Color.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Text(L("Special apps such as Doom 3 and Half-Life: Alyx do not need a Meta account – their game files come from your own Steam purchase.", "Sonderapps wie Doom 3 und Half-Life: Alyx brauchen kein Meta-Konto – ihre Spieldateien kommen aus deinem eigenen Steam-Kauf."))
+                .font(.callout).foregroundStyle(.secondary)
+        }
+        .sheet(isPresented: $showLogin) { LoginSheet().environmentObject(model) }
+    }
+
+    private func chooseTool() {
+        let panel = NSOpenPanel()
+        panel.message = L("Choose the file “ovr-platform-util”.", "Die Datei „ovr-platform-util“ auswählen.")
+        panel.directoryURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Downloads")
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        model.adoptTool(from: url)
     }
 }
 
