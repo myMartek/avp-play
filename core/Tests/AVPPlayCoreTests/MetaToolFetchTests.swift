@@ -30,3 +30,31 @@ final class MetaToolFetchTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: dir.appendingPathComponent("installed").path))
     }
 }
+
+/// Echter Download von Metas Server (253 MB). Läuft nur mit `AVPPLAY_LIVE_META=1`; das eingerichtete
+/// Werkzeug des Nutzers bleibt unberührt, weil alles in einem eigenen temporären Ordner landet.
+final class MetaToolFetchLiveTests: XCTestCase {
+    func testRealDownloadIsSignedByMeta() async throws {
+        try XCTSkipUnless(ProcessInfo.processInfo.environment["AVPPLAY_LIVE_META"] == "1", "set AVPPLAY_LIVE_META=1")
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("metatoollive-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let destination = dir.appendingPathComponent("tools/ovr-platform-util")
+        let seen = Seen()
+        let started = Date()
+        let tool = try await MetaToolFetch.fetchAndAdopt(to: destination) { p in seen.note(p) }
+        let size = (try FileManager.default.attributesOfItem(atPath: tool.url.path)[.size] as? NSNumber)?.int64Value ?? 0
+        print("LIVE: \(size) bytes in \(Int(Date().timeIntervalSince(started))) s, \(seen.count) progress calls, last \(seen.last.map { "\($0.received)/\($0.total)" } ?? "-")")
+        XCTAssertEqual(tool.url, destination)
+        XCTAssertGreaterThan(size, 10_000_000)
+        XCTAssertGreaterThan(seen.count, 1)
+        XCTAssertEqual(seen.last?.fraction ?? 0, 1, accuracy: 0.001)
+        XCTAssertNoThrow(try tool.verify())
+    }
+
+    final class Seen: @unchecked Sendable {
+        private let lock = NSLock()
+        private(set) var count = 0
+        private(set) var last: MetaToolFetch.Progress?
+        func note(_ p: MetaToolFetch.Progress) { lock.lock(); count += 1; last = p; lock.unlock() }
+    }
+}
