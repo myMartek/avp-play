@@ -10,7 +10,12 @@ struct GamesView: View {
     @ViewBuilder private var filterToggles: some View {
         Text(L("Show only:", "Nur zeigen:")).foregroundStyle(.secondary)
         Toggle(L("Verified", "Geprüft"), isOn: $model.filterVerified)
-        if model.onlineCatalog { Toggle(L("Community Verified", "Von Nutzern bestätigt"), isOn: $model.filterCommunity) }
+        if model.onlineCatalog {
+            Toggle(L("Community Verified", "Von Nutzern bestätigt"), isOn: $model.filterCommunity)
+            Toggle(L("Works Partly", "Funktioniert teilweise"), isOn: $model.filterPartial)
+                .help(L("Games that run but where not everything works yet. The note on each game says what does and what does not.",
+                        "Spiele, die laufen, in denen aber noch nicht alles geht. Die Notiz am Spiel sagt, was geht und was nicht."))
+        }
         Toggle(L("Owned", "Im Besitz"), isOn: $model.filterOwned)
             .help(L("Games you own: in the library of your Meta account (as Meta's Horizon app shows it) or, for games that can come from Steam, in your Steam account. Needs the sign-in under “Setup”.",
                     "Spiele, die dir gehören: in der Bibliothek deines Meta-Kontos (wie Metas Horizon-App sie zeigt) oder, bei Spielen, die es auch über Steam gibt, in deinem Steam-Konto. Braucht die Anmeldung unter „Einrichtung“."))

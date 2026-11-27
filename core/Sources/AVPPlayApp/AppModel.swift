@@ -371,6 +371,7 @@ final class AppModel: ObservableObject {
     @Published var searchMore = false
     var searchNextPage = 0
     @AppStorage("filterCommunity") var filterCommunity = false
+    @AppStorage("filterPartial") var filterPartial = false
     /// Steam: der Kontoname (kein Geheimnis; Passwort und Code sieht dieses Programm nie), ob Valves Werkzeug da
     /// ist und für welches Konto die Anmeldung zuletzt gelang.
     @AppStorage("steamAccount") var steamAccount = ""
@@ -846,8 +847,10 @@ final class AppModel: ObservableObject {
         let keyed = games.compactMap { game -> (game: Game, rank: Int, works: Int)? in
             let trust = game.trust, installed = game.installed, downloaded = game.downloaded
             let favourite = isFavourite(game)
-            // „Geprüft“ und „Von Nutzern bestätigt“ ergänzen einander; alle anderen Filter engen weiter ein.
-            guard ((!filterVerified && !filterCommunity) || (filterVerified && trust == .verified) || (filterCommunity && trust == .community))
+            // „Geprüft“, „Von Nutzern bestätigt“ und „Funktioniert teilweise“ ergänzen einander; alle anderen Filter
+            // engen weiter ein.
+            guard ((!filterVerified && !filterCommunity && !filterPartial) || (filterVerified && trust == .verified)
+                    || (filterCommunity && trust == .community) || (filterPartial && trust == .partial))
                 && (!filterInstalled || installed)
                 && (!filterDownloaded || (downloaded && !installed))
                 && (!filterFavourites || favourite)

@@ -109,6 +109,7 @@ extension AppModel {
         var parts: [String] = []
         if filterVerified { parts.append(L("verified", "geprüft")) }
         if filterCommunity { parts.append(L("community verified", "von Nutzern bestätigt")) }
+        if filterPartial { parts.append(L("works partly", "funktioniert teilweise")) }
         if filterInstalled { parts.append(L("installed", "installiert")) }
         if filterDownloaded { parts.append(L("downloaded, not installed", "geladen, nicht installiert")) }
         if filterFavourites { parts.append(L("favourites", "Favoriten")) }
@@ -212,7 +213,7 @@ extension AppModel {
     /// Was eine Liste der Übersicht vor dem Schreiben noch braucht (siehe `GameList.Completion`).
     var shownListCompletion: GameList.Completion {
         GameList.completion(local: shownListKnown, online: onlineCatalog,
-                            labelled: filterVerified || filterCommunity || filterMixedReality || filterHandTracking,
+                            labelled: filterVerified || filterCommunity || filterPartial || filterMixedReality || filterHandTracking,
                             searching: searchText.trimmingCharacters(in: .whitespacesAndNewlines).count >= 3)
     }
 
@@ -229,7 +230,7 @@ extension AppModel {
             // Mit einem Filter nach Kennzeichen: alle gekennzeichneten Spiele holen, sie stehen im Katalog vorn. Die
             // Suche engt dann hier ein. Sonst: alle Treffer der Suche – eine eben getippte hat ihre erste Seite
             // vielleicht noch nicht.
-            let labelled = filterVerified || filterCommunity || filterMixedReality || filterHandTracking
+            let labelled = filterVerified || filterCommunity || filterPartial || filterMixedReality || filterHandTracking
             let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
             if !labelled, query != searchedQuery { searchCatalog() }
             var pages = 0, waits = 0
