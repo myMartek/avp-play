@@ -89,6 +89,16 @@ struct SoftwareCreditsView: View {
                 ForEach(toolchainParts) { item in
                     row(name: item.name, authors: item.authors, license: item.license, url: item.url, note: item.note)
                 }
+                Divider()
+                Text(L("In AVP Play itself", "In AVP Play selbst")).font(.headline)
+                row(name: "Glovebox", authors: "© 2026 the Glovebox contributors", license: "MIT", url: "https://github.com/glovebox-vr/glovebox",
+                    note: L("The setup assistant: the help that floats next to Xcode, the App Store and Device Hub and points at what to click, and its drawings – adapted from Glovebox's installer.",
+                            "Der Einrichtungsassistent: die Hilfe, die neben Xcode, dem App Store und Device Hub schwebt und zeigt, wohin zu klicken ist, und seine Zeichnungen – aus dem Installer von Glovebox übernommen."))
+                DisclosureGroup(L("Glovebox licence", "Lizenz von Glovebox")) {
+                    Text(Self.gloveboxLicense).font(.caption.monospaced()).foregroundStyle(.secondary).textSelection(.enabled)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .font(.callout)
                 if let credits = model.modCredits {
                     Divider()
                     Text(L("Beat Saber mods", "Beat-Saber-Mods")).font(.headline)
@@ -118,4 +128,33 @@ struct SoftwareCreditsView: View {
             if !note.isEmpty { Text(note).font(.caption).foregroundStyle(.secondary) }
         }
     }
+
+    /// Der Lizenztext von Glovebox (MIT), den jede Kopie übernommener Teile mitbringen muss.
+    static let gloveboxLicense = """
+MIT License
+
+Copyright (c) 2026 the Glovebox contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+This license covers the files outside klepton/. klepton/ is Klepton by Max Thomas
+under its own MIT license (klepton/LICENSE). Third-party components keep their own
+licenses: see THIRD_PARTY_NOTICES.md.
+"""
 }

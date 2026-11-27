@@ -13,6 +13,18 @@ public struct Device: Sendable, Equatable {
     /// im Ruhezustand: Wer es nur nebenbei fragen will, lässt es dann öfter in Ruhe.
     public var connected = false
 
+    public init(udid: String, name: String, osVersion: String, reachable: Bool, paired: Bool, developerMode: Bool,
+                transport: Transport? = nil, connected: Bool = false) {
+        self.udid = udid
+        self.name = name
+        self.osVersion = osVersion
+        self.reachable = reachable
+        self.paired = paired
+        self.developerMode = developerMode
+        self.transport = transport
+        self.connected = connected
+    }
+
     /// Der Weg zum Gerät. Apple wählt ihn selbst: Hängt das Headset am Kabel (Developer Strap), läuft alles darüber,
     /// sonst über das WLAN. Vorgeben lässt er sich nicht – aber zeigen.
     public enum Transport: Sendable, Equatable {

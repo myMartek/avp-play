@@ -1,7 +1,11 @@
 # Third-party software
 
 AVP Play itself (this repository) is MIT-licensed and has no third-party code dependencies beyond Apple's
-system frameworks.
+system frameworks. It contains code adapted from one other project:
+
+| Component | Licence | Where its licence text is |
+|---|---|---|
+| Parts of the installer of [Glovebox](https://github.com/glovebox-vr/glovebox) by the Glovebox contributors: the setup help that floats next to Xcode, the App Store and Device Hub (`core/Sources/AVPPlayApp/SetupGuide.swift`) and its drawings (`SetupArt.swift`), and the outline of the setup assistant (`SetupAssistant.swift`) | MIT | `third-party-licenses/Glovebox-LICENSE.txt`; the app shows it under Settings › Software used |
 
 The **toolchain package** that ships inside the app (`klepton-toolchain-<version>-<commit>.tar.gz`) contains:
 

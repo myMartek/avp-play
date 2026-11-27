@@ -17,6 +17,7 @@ struct AVPPlayApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @StateObject private var model = AppDelegate.model
     @StateObject private var remote = AppDelegate.remote
+    @StateObject private var assistant = AppDelegate.assistant
     @AppStorage(MenuBarPreferences.showKey) private var menuBarShow = true
     @AppStorage(MenuBarPreferences.keepRunningKey) private var menuBarKeepRunning = false
 
@@ -25,6 +26,7 @@ struct AVPPlayApp: App {
             RootView()
                 .environmentObject(model)
                 .environmentObject(remote)
+                .environmentObject(assistant)
                 .frame(minWidth: 900, minHeight: 600)
         }
         .defaultSize(width: 1120, height: 760)
@@ -89,6 +91,7 @@ struct AVPPlayApp: App {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor static let model = AppModel()
     @MainActor static let remote = RemoteServer()
+    @MainActor static let assistant = SetupAssistant()
 
     /// Ob macOS das Programm bei der Anmeldung geöffnet hat (Anmeldeobjekt, auch über `SMAppService`).
     @MainActor static var launchedAtLogin = false
@@ -230,6 +233,7 @@ enum AboutPanel {
 struct RootView: View {
     @EnvironmentObject var model: AppModel
     @EnvironmentObject var remote: RemoteServer
+    @EnvironmentObject var assistant: SetupAssistant
 
     var body: some View {
         NavigationSplitView {
@@ -268,12 +272,29 @@ struct RootView: View {
         // Die Texte werden beim Zeichnen gewählt; mit der Sprache als Kennung entsteht die Ansicht neu.
         .id(model.language)
         .sheet(isPresented: $model.showReport) { ReportSheet(job: model.reportJob).environmentObject(model) }
+        .sheet(isPresented: Binding(get: { assistant.isPresented }, set: { if !$0 { assistant.close() } })) {
+            SetupAssistantView().environmentObject(model).environmentObject(assistant)
+        }
         .task {
             // Aus der Menüleiste wieder geöffnet, entsteht diese Ansicht neu; der Start soll nur einmal laufen,
             // sonst würden Katalog, Suche und Filter neu geladen.
             guard !model.launched else { model.refresh(); return }
             await model.startUp()
             await Snapshot.runIfRequested(model: model)
+            #if DEBUG
+            if let test = ProcessInfo.processInfo.environment["AVPPLAY_GUIDE_TEST"] {
+                let parts = test.split(separator: ",").map(String.init)
+                let jobs: [String: SetupGuide.Job] = ["signIn": .signIn, "refresh": .refresh, "pair": .pair, "appStore": .appStore, "setup": .setup, "keychain": .keychain]
+                if let job = jobs[parts[0]] {
+                    let a = AppDelegate.assistant
+                    a.model = model
+                    await a.check()
+                    a.guide.testHold = true
+                    a.guide.testLoadingTeam = parts.contains("team")
+                    a.guide.start(job)
+                }
+            }
+            #endif
         }
     }
 
@@ -382,6 +403,39 @@ enum Snapshot {
         }
         while model.refreshing || model.account == .checking { await pause(0.3) }
         await pause(1)
+        // `--assistant`: der Einrichtungsassistent, jede Seite so, wie die Prüfungen sie gerade sehen, dazu die
+        // schwebende Hilfe in einigen Zuständen; danach Ende.
+        if CommandLine.arguments.contains("--assistant") {
+            let assistant = AppDelegate.assistant
+            assistant.model = model
+            assistant.open(at: .welcome)
+            await pause(4)
+            for step in SetupAssistant.Step.allCases {
+                assistant.go(step)
+                await pause(1.2)
+                let sheet = NSApp.windows.first { $0.sheetParent != nil && $0.isVisible } ?? NSApp.windows.first { $0.isSheet }
+                capture("a\(step.rawValue)-assistent-\(step)", dir, window: sheet)
+            }
+            try? "xcode=\(assistant.xcode) version=\(assistant.xcodeVersion ?? "-") konto=\(assistant.appleAccount) teams=\(assistant.teams.count) headsets=\(assistant.headsets.map { "\($0.paired)/\($0.reachable)/\($0.developerMode)" })\n"
+                .write(to: dir.appendingPathComponent("assistent.txt"), atomically: true, encoding: .utf8)
+            assistant.close()
+            #if DEBUG
+            let bubbles: [(SetupGuide.Job, SetupGuide.Stage, String)] = [
+                (.signIn, .open, "anmelden-tasten"), (.signIn, .click, "anmelden-knopf"), (.signIn, .finish, "anmelden-blatt"),
+                (.refresh, .team, "team"), (.pair, .finish, "koppeln"), (.appStore, .click, "appstore"),
+                (.setup, .confirm, "passwort"), (.keychain, .click, "schluesselbund"),
+            ]
+            for (job, stage, name) in bubbles {
+                if let panel = assistant.guide.showForSnapshot(job, stage: stage) {
+                    await pause(0.8)
+                    capture("b-hilfe-\(name)", dir, window: panel)
+                }
+                assistant.guide.hideSnapshot()
+            }
+            #endif
+            NSApp.terminate(nil)
+            return
+        }
         // die Besitzabfragen laufen mit Abstand; höchstens eine Minute darauf warten
         var waited = 0.0
         while model.checkingOwnership, waited < 60 { await pause(0.5); waited += 0.5 }

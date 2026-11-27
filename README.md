@@ -100,15 +100,17 @@ only, without its window.
 
 1. Download `AVP-Play-<version>.dmg` from the [latest release](../../releases/latest), open it and drag
    **AVP Play** into Applications.
-2. Open it. The **Setup** page checks Xcode, the Vision Pro, your Apple team and your store accounts, and says
-   what to do for anything missing.
+2. Open it. On the first start a setup assistant walks you through Xcode, your Apple Account, pairing the
+   Vision Pro and your store accounts one step at a time; a small help bubble next to Xcode, the App Store and
+   Device Hub points at each button to click (adapted from [Glovebox](https://github.com/glovebox-vr/glovebox)).
+   The **Setup** page checks the same things later and opens the assistant again.
 3. Pick a game under **Games** and click **Install**. The **Jobs** page shows each step; a job can be stopped
    and resumed at any time without losing what was downloaded.
 
 ## Your accounts and your data
 
 - **Sign-ins go to the stores' own tools** – Meta's `ovr-platform-util` and Valve's SteamCMD, both downloaded
-  from their makers. What you type goes to those tools and is not stored; Meta's token stays in the macOS keychain
+  from their makers' own servers with one click, and run only after their signatures check out. What you type goes to those tools and is not stored; Meta's token stays in the macOS keychain
   and is sent only to Meta. The one exception is yours to make: for installing without a Mac you can switch on
   *Also hand over the Meta sign-in*, and only then the token is copied to AVP Play Remote on your own headset,
   kept in that app's keychain and sent from there to Meta only. The same goes for your Apple team key, which goes
