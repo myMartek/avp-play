@@ -201,6 +201,29 @@ final class SetupAssistant: ObservableObject {
         #endif
     }
 
+    /// Die noch vorgetäuschten Zustände, in der Reihenfolge aus `AVPPLAY_ASSISTANT_FAKE`.
+    @Published private(set) var fakes: [String] = ProcessInfo.processInfo.environment["AVPPLAY_ASSISTANT_FAKE"]?
+        .split(separator: ",").map(String.init) ?? []
+
+    static func fakeStep(_ item: String) -> Step? {
+        switch item {
+        case "missing", "arriving", "license", "visionOS", "tooOld", "notChosen": return .xcode
+        case "none", "teamNotLoaded", "free": return .account
+        case "unpaired", "devmode": return .headset
+        default: return nil
+        }
+    }
+
+    /// Hat dieser Schritt noch einen vorgetäuschten Zustand?
+    func isFaked(_ step: Step) -> Bool { Self.faking && fakes.contains { Self.fakeStep($0) == step } }
+
+    /// Nur zum Testen: tut so, als hätte man den jetzigen Zustand dieses Schritts erledigt.
+    func finishFakedStep() {
+        guard let index = fakes.firstIndex(where: { Self.fakeStep($0) == step }) else { return }
+        fakes.remove(at: index)
+        recheck()
+    }
+
     func open(at start: Step? = nil) {
         isPresented = true
         startMonitor()
@@ -326,8 +349,13 @@ final class SetupAssistant: ObservableObject {
         var f = await Task.detached(priority: .userInitiated) { Self.findings(launched: launchedBefore) }.value
         #if DEBUG
         // Für Bilder der Seiten, die dieser Mac nicht zeigt: `AVPPLAY_ASSISTANT_FAKE=missing,none,unpaired` usw.
-        if let fake = ProcessInfo.processInfo.environment["AVPPLAY_ASSISTANT_FAKE"]?.split(separator: ",").map(String.init) {
-            for item in fake {
+        // Je Schritt gilt der erste vorgetäuschte Zustand; „Test: Schritt erledigt“ nimmt ihn weg, dann kommt der
+        // nächste dran (etwa missing → license → visionOS) und am Ende der echte Zustand dieses Macs.
+        if Self.faking {
+            var taken = Set<Step>()
+            for item in fakes {
+                guard let step = Self.fakeStep(item), !taken.contains(step) else { continue }
+                taken.insert(step)
                 switch item {
                 case "missing": f.xcode = .missing; f.arriving = false
                 case "arriving": f.xcode = .missing; f.arriving = true
@@ -558,6 +586,12 @@ struct SetupAssistantView: View {
                 Button(assistant.step == .finish ? L("Close", "Schließen") : L("Set Up Later", "Später einrichten")) { assistant.close() }
                     .keyboardShortcut(.cancelAction)
                 Spacer()
+                if assistant.isFaked(assistant.step) {
+                    Button(L("Test: Mark Step Done", "Test: Schritt erledigt")) { assistant.finishFakedStep() }
+                        .tint(.orange)
+                        .help(L("Only in this test build: acts as if you had done what this page asks.",
+                                "Nur in diesem Testbau: tut so, als hättest du erledigt, was diese Seite verlangt."))
+                }
                 if assistant.step != .welcome, assistant.step != .xcode {
                     Button(L("Back", "Zurück")) {
                         if let prev = SetupAssistant.Step(rawValue: assistant.step.rawValue - 1) { assistant.go(prev) }
