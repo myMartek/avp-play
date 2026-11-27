@@ -256,7 +256,7 @@ extension AppModel {
         // Nachladen nur, solange die geladenen Seiten noch ganz aus solchen Spielen bestehen. Dasselbe gilt für
         // Mixed Reality und Hand-Tracking: Die Angabe trägt nur, was das Projekt oder ein eingesandter Fix zum Laufen
         // gebracht hat.
-        if filterVerified || filterCommunity || filterMixedReality || filterHandTracking { return moreLabelled }
+        if filterVerified || filterCommunity || filterPartial || filterMixedReality || filterHandTracking { return moreLabelled }
         return catalogMore
     }
 
@@ -264,7 +264,7 @@ extension AppModel {
     /// geladenen Seiten noch ganz aus solchen bestehen.
     var moreLabelled: Bool {
         guard onlineCatalog, catalogMore else { return false }
-        return catalog.filter { $0.status == "verified" || $0.status == "community" }.count >= catalogNextPage * 60
+        return catalog.filter { $0.status == "verified" || $0.status == "community" || $0.status == "partial" }.count >= catalogNextPage * 60
     }
 
     /// Lädt die nächste Seite nach – ausgelöst, wenn das Ende der Liste in Sicht kommt.

@@ -23,7 +23,7 @@ extension AppModel {
     var companionShown: Bool {
         let words = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         let matches = words.isEmpty || CompanionApp.title.lowercased().contains(words) || L("remote control", "fernbedienung").contains(words)
-        let excluded = (filterCommunity && !filterVerified) || (filterInstalled && !companionInstalled) || filterDownloaded
+        let excluded = ((filterCommunity || filterPartial) && !filterVerified) || (filterInstalled && !companionInstalled) || filterDownloaded
             || filterFavourites || filterFavouritesMissing || filterMixedReality || filterHandTracking || filterOwned
             || horizonPlusWanted || filterMeta || filterSteam || !customFilterModes.isEmpty
         return matches && !excluded
