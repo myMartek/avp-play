@@ -127,6 +127,23 @@ final class SetupGuide: ObservableObject {
         }
     }
 
+    /// „Schon erledigt“ in der Blase: wenn AVP Play einen Schritt nicht erkennt (ein Xcode, dessen Fenster anders
+    /// aussieht, oder ein Schritt, der schon vorher gemacht war). Die Blase geht weg, der Assistent prüft neu und
+    /// geht nur weiter, wenn seine Prüfung es bestätigt.
+    func alreadyDone() {
+        #if DEBUG
+        // Im Testbau mit vorgetäuschten Zuständen: den vorgetäuschten Zustand dieses Schritts erledigen.
+        if let a = assistant, a.isFaked(a.step) {
+            a.finishFakedStep()
+            return
+        }
+        #endif
+        let apps = targetApps
+        stop()
+        if !apps.isEmpty { SetupMac.comeBack(from: apps) }
+        assistant?.recheck()
+    }
+
     func stop() {
         loop?.cancel()
         loop = nil
@@ -869,6 +886,13 @@ private struct GuideBubble: View {
                 instruction
                     .id("\(guide.job)-\(guide.stage)")
                     .transition(.asymmetric(insertion: .move(edge: .bottom).combined(with: .opacity), removal: .opacity))
+                Button(L("Already done", "Schon erledigt")) { guide.alreadyDone() }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.7))
+                    .underline()
+                    .help(L("Hides this help. AVP Play checks again and only moves on when it sees the step is done.",
+                            "Blendet diese Hilfe aus. AVP Play prüft neu und geht nur weiter, wenn der Schritt wirklich erledigt ist."))
             }
         }
         .foregroundStyle(.white)
